@@ -20,6 +20,7 @@ set(srcs
     memory.cc
     sysbus.cc
     timer.cc
+    target/arm.cc
 )
 
 add_library(qemu-cxx ${srcs})
