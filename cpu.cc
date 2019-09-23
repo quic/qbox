@@ -39,10 +39,14 @@ bool Cpu::can_run()
 }
 
 void Cpu::halt(bool halted)
-{}
+{
+    m_exports->cpu_halt(m_obj, halted);
+}
 
 void Cpu::reset()
-{}
+{
+    m_exports->cpu_reset(m_obj);
+}
 
 void Cpu::register_thread()
 {
