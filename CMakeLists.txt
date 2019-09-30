@@ -24,3 +24,13 @@ set(srcs
 )
 
 add_library(qemu-cxx ${srcs})
+
+install(FILES
+	"${CMAKE_CURRENT_SOURCE_DIR}/libqemu-cxx.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/exceptions.h"
+	DESTINATION include/libqemu-cxx)
+install(FILES
+	"${CMAKE_CURRENT_SOURCE_DIR}/target/arm.h"
+	DESTINATION include/libqemu-cxx/target)
+
+install(TARGETS qemu-cxx DESTINATION lib)
