@@ -231,6 +231,8 @@ private:
     MemoryRegionOpsPtr m_ops;
     std::set<MemoryRegion> m_subregions;
 
+    void internal_del_subregion(const MemoryRegion &mr);
+
 public:
     using MemTxResult = MemoryRegionOps::MemTxResult;
     using MemTxAttrs = MemoryRegionOps::MemTxAttrs;

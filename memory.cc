@@ -99,8 +99,10 @@ void MemoryRegionOps::set_write_callback(WriteCallback cb)
 MemoryRegion::~MemoryRegion()
 {
     for (auto &mr: m_subregions) {
-        del_subregion(mr);
+        internal_del_subregion(mr);
     }
+
+    m_subregions.clear();
 }
 
 uint64_t MemoryRegion::get_size()
@@ -145,12 +147,17 @@ void MemoryRegion::add_subregion(const MemoryRegion &mr, uint64_t offset)
     m_subregions.insert(mr);
 }
 
-void MemoryRegion::del_subregion(const MemoryRegion &mr)
+void MemoryRegion::internal_del_subregion(const MemoryRegion &mr)
 {
     QemuMemoryRegion *this_mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegion *sub_mr = reinterpret_cast<QemuMemoryRegion*>(mr.m_obj);
 
     m_exports->memory_region_del_subregion(this_mr, sub_mr);
+}
+
+void MemoryRegion::del_subregion(const MemoryRegion &mr)
+{
+    internal_del_subregion(mr);
     m_subregions.erase(mr);
 }
 
