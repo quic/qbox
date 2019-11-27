@@ -24,17 +24,25 @@
 namespace qemu {
 
 /* ::MemTxtResult <-> MemoryRegionOps::MemTxResult mapping */
-static const MemoryRegionOps::MemTxResult QEMU_TO_LIB_MEMTXRESULT_MAPPING[] {
-    [MEMTX_OK] =  MemoryRegionOps::MemTxOK ,
-    [MEMTX_ERROR] =  MemoryRegionOps::MemTxError ,
-    [MEMTX_DECODE_ERROR] =  MemoryRegionOps::MemTxDecodeError ,
-};
+static inline constexpr MemoryRegionOps::MemTxResult QEMU_TO_LIB_MEMTXRESULT_MAPPING(uint32_t value)
+{
+    switch (value) {
+    case MEMTX_OK: return MemoryRegionOps::MemTxOK;
+    case MEMTX_ERROR: return MemoryRegionOps::MemTxError;
+    case MEMTX_DECODE_ERROR: return MemoryRegionOps::MemTxDecodeError;
+    }
+    return MemoryRegionOps::MemTxError;
+}
 
-static const ::MemTxResult LIB_TO_QEMU_MEMTXRESULT_MAPPING[] {
-    [ MemoryRegionOps::MemTxOK ] =  MEMTX_OK ,
-    [ MemoryRegionOps::MemTxError ] =  MEMTX_ERROR ,
-    [ MemoryRegionOps::MemTxDecodeError ] =  MEMTX_DECODE_ERROR ,
-};
+static inline constexpr uint32_t LIB_TO_QEMU_MEMTXRESULT_MAPPING(MemoryRegionOps::MemTxResult value)
+{
+    switch (value) {
+    case MemoryRegionOps::MemTxOK: return MEMTX_OK;
+    case MemoryRegionOps::MemTxError: return MEMTX_ERROR;
+    case MemoryRegionOps::MemTxDecodeError: return MEMTX_DECODE_ERROR;
+    }
+    return MEMTX_ERROR;
+}
 
 /*
  * ===============
@@ -63,7 +71,7 @@ static ::MemTxResult generic_read_cb(void *opaque, hwaddr addr, uint64_t *data,
     MemoryRegionOps::MemTxResult res;
 
     res =  ops->get_read_callback()(addr, data, size, attrs);
-    return LIB_TO_QEMU_MEMTXRESULT_MAPPING[res];
+    return LIB_TO_QEMU_MEMTXRESULT_MAPPING(res);
 }
 
 void MemoryRegionOps::set_read_callback(ReadCallback cb)
@@ -80,7 +88,7 @@ static ::MemTxResult generic_write_cb(void *opaque, hwaddr addr, uint64_t data,
     MemoryRegionOps::MemTxResult res;
 
     res = ops->get_write_callback()(addr, data, size, attrs);
-    return LIB_TO_QEMU_MEMTXRESULT_MAPPING[res];
+    return LIB_TO_QEMU_MEMTXRESULT_MAPPING(res);
 }
 
 void MemoryRegionOps::set_write_callback(WriteCallback cb)
@@ -174,7 +182,7 @@ MemoryRegion::dispatch_read(uint64_t addr, uint64_t *data,
     qemu_res = m_exports->memory_region_dispatch_read(mr, addr, data,
                                                       size, qemu_attrs);
 
-    return QEMU_TO_LIB_MEMTXRESULT_MAPPING[qemu_res];
+    return QEMU_TO_LIB_MEMTXRESULT_MAPPING(qemu_res);
 }
 
 MemoryRegion::MemTxResult
@@ -190,7 +198,7 @@ MemoryRegion::dispatch_write(uint64_t addr, uint64_t data,
     qemu_res = m_exports->memory_region_dispatch_write(mr, addr, data,
                                                        size, qemu_attrs);
 
-    return QEMU_TO_LIB_MEMTXRESULT_MAPPING[qemu_res];
+    return QEMU_TO_LIB_MEMTXRESULT_MAPPING(qemu_res);
 }
 
 };
