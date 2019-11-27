@@ -8,8 +8,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(libqemu REQUIRED)
 
-include_directories(${LIBQEMU_INCLUDE_DIR})
-
 set(srcs
     cpu.cc
     device.cc
@@ -22,6 +20,14 @@ set(srcs
 )
 
 add_library(qemu-cxx ${srcs})
+
+target_include_directories(qemu-cxx
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+        $<INSTALL_INTERFACE:include/libqemu-cxx>
+)
+
+target_link_libraries(qemu-cxx libqemu)
 
 install(FILES
 	"${CMAKE_CURRENT_SOURCE_DIR}/libqemu-cxx.h"
