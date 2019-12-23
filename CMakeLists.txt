@@ -4,6 +4,8 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(libqemu-cxx)
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(libqemu REQUIRED)
@@ -19,7 +21,7 @@ set(srcs
     target/arm.cc
 )
 
-add_library(qemu-cxx ${srcs})
+add_library(qemu-cxx SHARED ${srcs})
 
 target_include_directories(qemu-cxx
     PUBLIC
