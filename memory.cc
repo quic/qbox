@@ -24,7 +24,7 @@
 namespace qemu {
 
 /* ::MemTxtResult <-> MemoryRegionOps::MemTxResult mapping */
-static inline constexpr MemoryRegionOps::MemTxResult QEMU_TO_LIB_MEMTXRESULT_MAPPING(uint32_t value)
+static inline MemoryRegionOps::MemTxResult QEMU_TO_LIB_MEMTXRESULT_MAPPING(uint32_t value)
 {
     switch (value) {
     case MEMTX_OK: return MemoryRegionOps::MemTxOK;
@@ -34,7 +34,7 @@ static inline constexpr MemoryRegionOps::MemTxResult QEMU_TO_LIB_MEMTXRESULT_MAP
     return MemoryRegionOps::MemTxError;
 }
 
-static inline constexpr uint32_t LIB_TO_QEMU_MEMTXRESULT_MAPPING(MemoryRegionOps::MemTxResult value)
+static inline uint32_t LIB_TO_QEMU_MEMTXRESULT_MAPPING(MemoryRegionOps::MemTxResult value)
 {
     switch (value) {
     case MemoryRegionOps::MemTxOK: return MEMTX_OK;
