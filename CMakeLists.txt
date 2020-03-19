@@ -39,4 +39,8 @@ install(FILES
 	"${CMAKE_CURRENT_SOURCE_DIR}/target/arm.h"
 	DESTINATION include/libqemu-cxx/target)
 
-install(TARGETS qemu-cxx DESTINATION lib)
+if (WIN32)
+    install(TARGETS qemu-cxx DESTINATION lib/$<IF:$<CONFIG:Debug>,debug,release>)
+else ()
+    install(TARGETS qemu-cxx DESTINATION lib)
+endif ()
