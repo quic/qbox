@@ -32,24 +32,24 @@
 #define INT_MS (INT_RI | INT_DSR | INT_DCD | INT_CTS)
 
 typedef struct PL011State {
-     uint32_t readbuff;
-     uint32_t flags;
-     uint32_t lcr;
-     uint32_t rsr;
-     uint32_t cr;
-     uint32_t dmacr;
-     uint32_t int_enabled;
-     uint32_t int_level;
-     uint32_t read_fifo[16];
-     uint32_t ilpr;
-     uint32_t ibrd;
-     uint32_t fbrd;
-     uint32_t ifl;
-     int read_pos;
-     int read_count;
-     int read_trigger;
-     const unsigned char *id;
- } PL011State;
+    uint32_t readbuff;
+    uint32_t flags;
+    uint32_t lcr;
+    uint32_t rsr;
+    uint32_t cr;
+    uint32_t dmacr;
+    uint32_t int_enabled;
+    uint32_t int_level;
+    uint32_t read_fifo[16];
+    uint32_t ilpr;
+    uint32_t ibrd;
+    uint32_t fbrd;
+    uint32_t ifl;
+    int read_pos;
+    int read_count;
+    int read_trigger;
+    const unsigned char *id;
+} PL011State;
 
 static const uint32_t irqmask[] = {
     INT_E | INT_MS | INT_RT | INT_TX | INT_RX, /* combined IRQ */
@@ -85,9 +85,9 @@ public:
 #include <ncurses.h>
 
 class CharBackendNCurses : public CharBackend, public sc_core::sc_module {
- private:
-     AsyncEvent m_event;
-     std::queue<unsigned char> m_queue;
+private:
+    AsyncEvent m_event;
+    std::queue<unsigned char> m_queue;
 
 public:
     SC_HAS_PROCESS(CharBackendNCurses);
@@ -207,12 +207,12 @@ public:
             fprintf(stderr, "error creating thread\n");
         }
 
-	signal(SIGABRT, catch_function);
-	signal(SIGINT, catch_function);
-	signal(SIGKILL, catch_function);
-	signal(SIGSEGV, catch_function);
+        signal(SIGABRT, catch_function);
+        signal(SIGINT, catch_function);
+        signal(SIGKILL, catch_function);
+        signal(SIGSEGV, catch_function);
 
-	atexit(tty_reset);
+        atexit(tty_reset);
 #endif
     }
 
