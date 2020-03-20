@@ -141,11 +141,6 @@ public:
 
         tcsetattr(fd, TCSANOW, &tty);
 
-        pthread_t async_thread;
-        if (pthread_create(&async_thread, NULL, rcv_thread, this)) {
-            fprintf(stderr, "error creating thread\n");
-        }
-
         signal(SIGABRT, catch_function);
         signal(SIGINT, catch_function);
         signal(SIGKILL, catch_function);
@@ -153,6 +148,8 @@ public:
 
         atexit(tty_reset);
 #endif
+
+        new std::thread(&CharBackendStdio::rcv_thread, this);
     }
 
     static void *rcv_thread(void *arg)
