@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queue>
+#include <mutex>
 
 #include <systemc>
 #include "tlm.h"
@@ -90,6 +91,7 @@ class CharBackendStdio : public CharBackend, public sc_core::sc_module {
 private:
     AsyncEvent m_event;
     std::queue<unsigned char> m_queue;
+    std::mutex m_mutex;
 
 public:
     SC_HAS_PROCESS(CharBackendStdio);
@@ -152,17 +154,18 @@ public:
         new std::thread(&CharBackendStdio::rcv_thread, this);
     }
 
-    static void *rcv_thread(void *arg)
+    void *rcv_thread()
     {
-        CharBackendStdio *serial = (CharBackendStdio *)arg;
-
         for (;;) {
             int c = getchar();
+
+            std::lock_guard<std::mutex> lock(m_mutex);
+
             if (c >= 0) {
-                serial->m_queue.push(c);
+                m_queue.push(c);
             }
-            if (!serial->m_queue.empty()) {
-                serial->m_event.async_notify();
+            if (!m_queue.empty()) {
+                m_event.async_notify();
             }
         }
     }
@@ -170,6 +173,9 @@ public:
     void rcv(void)
     {
         unsigned char c;
+
+        std::lock_guard<std::mutex> lock(m_mutex);
+
         while (!m_queue.empty()) {
             c = m_queue.front();
             m_queue.pop();
