@@ -65,6 +65,7 @@ class CharBackend {
 protected:
     void *m_opaque;
     void (*m_receive)(void *opaque, const uint8_t *buf, int size);
+    int (*m_can_receive)(void *opaque);
 
 public:
     CharBackend()
@@ -75,10 +76,13 @@ public:
 
     virtual void write(unsigned char c) = 0;
 
-    void register_receive(void *opaque, void (*receive)(void *opaque, const uint8_t *buf, int size))
+    void register_receive(void *opaque,
+            void (*receive)(void *opaque, const uint8_t *buf, int size),
+            int (*can_receive)(void *opaque))
     {
         m_opaque = opaque;
         m_receive = receive;
+        m_can_receive = can_receive;
     }
 };
 
@@ -177,9 +181,16 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
 
         while (!m_queue.empty()) {
-            c = m_queue.front();
-            m_queue.pop();
-            m_receive(m_opaque, &c, 1);
+            if (m_can_receive(m_opaque)) {
+                c = m_queue.front();
+                m_queue.pop();
+                m_receive(m_opaque, &c, 1);
+            }
+            else {
+                /* notify myself later, hopefully the queue drains */
+                m_event.notify(1, sc_core::SC_MS);
+                return;
+            }
         }
     }
 
@@ -224,7 +235,7 @@ public:
     void set_backend(CharBackend *backend)
     {
         chr = backend;
-        chr->register_receive(this, pl011_receive);
+        chr->register_receive(this, pl011_receive, pl011_can_receive);
     }
 
     void write(uint64_t offset, uint64_t value)
@@ -442,8 +453,10 @@ public:
         }
     }
 
-    int pl011_can_receive()
+    static int pl011_can_receive(void *opaque)
     {
+        PL011State *s = ((Uart *)opaque)->s;
+
         int r;
 
         if (s->lcr & 0x10) {
