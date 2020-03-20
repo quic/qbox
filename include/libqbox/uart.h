@@ -211,6 +211,9 @@ public:
 
     sc_core::sc_vector<sc_core::sc_signal<bool, sc_core::SC_MANY_WRITERS>> irq;
 
+    sc_core::sc_event update_event;
+
+    SC_HAS_PROCESS(Uart);
     Uart(sc_core::sc_module_name name)
         : irq("irq", 6)
     {
@@ -230,6 +233,9 @@ public:
         };
 
         s->id = pl011_id_arm;
+
+        SC_METHOD(pl011_update_sysc);
+        sensitive << update_event;
     }
 
     void set_backend(CharBackend *backend)
@@ -274,6 +280,11 @@ public:
     }
 
     void pl011_update()
+    {
+        update_event.notify();
+    }
+
+    void pl011_update_sysc()
     {
         uint32_t flags;
         size_t i;
@@ -374,6 +385,9 @@ public:
         else
 #endif
             s->read_trigger = 1;
+
+        /* fixes an issue in QBox when characters are typed before linux boots */
+        s->read_count = 0;
     }
 
     void pl011_write(uint64_t offset, uint64_t value)
