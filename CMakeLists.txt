@@ -12,6 +12,7 @@ find_package(SystemC REQUIRED)
 
 add_library(qbox SHARED
     src/libqbox.cc
+    src/tap.cc
 )
 
 if (WIN32)
@@ -28,6 +29,7 @@ target_include_directories(qbox
 
 target_link_libraries(qbox
     SystemC::SystemC
+    ssync
 )
 
 if (NOT WIN32)
