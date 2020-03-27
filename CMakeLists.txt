@@ -12,6 +12,8 @@ find_package(SystemC REQUIRED)
 
 add_library(qbox SHARED
     src/libqbox.cc
+    src/mac.cc
+    src/xgmac.cc
     src/tap.cc
 )
 
