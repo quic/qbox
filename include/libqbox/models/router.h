@@ -41,24 +41,50 @@ private:
     };
     std::vector<target_info> targets;
 
+private:
+    typedef tlm::tlm_base_initiator_socket_b<BUSWIDTH,
+            tlm::tlm_fw_transport_if<>,
+            tlm::tlm_bw_transport_if<> > initiator;
+
+    std::vector<tlm_utils::simple_target_socket_tagged<Router> *> target_socket;
+
+    struct initiator_info {
+        size_t index;
+        initiator *i;
+    };
+    std::vector<initiator_info> initiators;
+
 public:
-    tlm_utils::simple_target_socket<Router> target_socket;
 
     SC_CTOR(Router)
-        : target_socket("target_socket")
     {
-        target_socket.register_b_transport(this, &Router::b_transport);
-        target_socket.register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr);
     }
 
     void before_end_of_elaboration()
     {
+        for (size_t i = 0; i < initiators.size(); i++) {
+            tlm_utils::simple_target_socket_tagged<Router> *socket =
+                new tlm_utils::simple_target_socket_tagged<Router>(sc_core::sc_gen_unique_name("target"));
+            socket->register_b_transport(this, &Router::b_transport, i);
+            socket->register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr, i);
+            socket->bind(*initiators.at(i).i);
+            target_socket.push_back(socket);
+        }
+
         for (size_t i = 0; i < targets.size(); i++) {
             tlm_utils::simple_initiator_socket_tagged<Router> *socket =
-                new tlm_utils::simple_initiator_socket_tagged<Router>(sc_core::sc_gen_unique_name("socket"));
+                new tlm_utils::simple_initiator_socket_tagged<Router>(sc_core::sc_gen_unique_name("initiator"));
             socket->bind(*targets.at(i).t);
             initiator_socket.push_back(socket);
         }
+    }
+
+    virtual void add_initiator(initiator &i)
+    {
+        struct initiator_info ii;
+		ii.index = initiators.size();
+		ii.i = &i;
+        initiators.push_back(ii);
     }
 
     virtual void add_target(target &t, uint64_t address, uint64_t size)
@@ -71,7 +97,7 @@ public:
         targets.push_back(ti);
     }
 
-    virtual void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
+    virtual void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
     {
         sc_dt::uint64 addr = trans.get_address();
         sc_dt::uint64 target_addr;
@@ -88,8 +114,7 @@ public:
         (*initiator_socket[target_nr])->b_transport(trans, delay);
     }
 
-    virtual bool get_direct_mem_ptr(tlm::tlm_generic_payload& trans,
-            tlm::tlm_dmi& dmi_data)
+    virtual bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
         sc_dt::uint64 target_addr;
         unsigned int target_nr;
