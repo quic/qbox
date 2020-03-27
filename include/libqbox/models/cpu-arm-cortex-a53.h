@@ -1,6 +1,6 @@
 /*
  *  This file is part of libqbox
- *  Copyright (C) 2019  Clement Deschamps
+ *  Copyright (c) 2020 Clement Deschamps and Luc Michel
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -17,15 +17,15 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "libqbox.h"
+#include "libqbox/libqbox.h"
 
-class CpuArmCortexM7 : public QemuCpu {
+class CpuArmCortexA53 : public QemuCpu {
 public:
-	QemuArmNvic nvic;
+	QemuArmGic gic;
 
-	CpuArmCortexM7(sc_core::sc_module_name name, uint32_t nvic_num_irq = 64)
-		: QemuCpu(name, "cortex-m7-arm")
-		, nvic("nvic", nvic_num_irq)
+	CpuArmCortexA53(sc_core::sc_module_name name)
+		: QemuCpu(name, "cortex-a53-arm")
+        , gic("gic")
 	{
     }
 
@@ -33,13 +33,14 @@ public:
     {
         QemuCpu::before_end_of_elaboration();
 
-        /* create the nvic in the same QEMU instance */
-        nvic.set_qemu_instance(*m_lib);
+        qemu::CpuAarch64 cpu = qemu::CpuAarch64(get_qemu_obj());
+        cpu.set_aarch64_mode(true);
+        cpu.set_prop_bool("has_el2", true);
+        cpu.set_prop_bool("has_el3", false);
 
-        qemu::CpuArm cpu = qemu::CpuArm(m_obj);
-        cpu.add_nvic_link();
-        get_qemu_obj().set_prop_link("nvic", nvic.get_qemu_obj());
-        nvic.get_qemu_obj().set_prop_link("cpu", get_qemu_obj());
-        nvic.m_cpu = this;
+        /* create the gic in the same QEMU instance */
+        gic.set_qemu_instance(*m_lib);
+
+        gic.m_cpu = this;
     }
 };

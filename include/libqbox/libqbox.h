@@ -1,6 +1,6 @@
 /*
  *  This file is part of libqbox
- *  Copyright (C) 2019  Clement Deschamps
+ *  Copyright (c) 2019 Clement Deschamps and Luc Michel
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License

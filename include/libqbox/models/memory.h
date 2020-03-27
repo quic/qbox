@@ -1,3 +1,22 @@
+/*
+ *  This file is part of libqbox
+ *  Copyright (c) 2020 Clement Deschamps
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 2
+ *  of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 #pragma once
 
 #include <systemc>
@@ -15,10 +34,6 @@ private:
 
 public:
     tlm_utils::simple_target_socket<Memory> socket;
-
-#if 0
-    sc_core::sc_in <bool>  clk_in;
-#endif
 
     Memory(sc_core::sc_module_name name, uint64_t size)
         : socket("socket")
@@ -59,11 +74,6 @@ private:
         unsigned int len = txn.get_data_length();
         unsigned char *ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
-
-#if 0
-        sc_core::wait(sc_core::sc_time(1, sc_core::SC_SEC));
-        sc_core::wait(clk_in.posedge_event());
-#endif
 
         if (txn.get_byte_enable_ptr() != 0 || txn.get_streaming_width() < len) {
             SC_REPORT_ERROR("Memory", "not supported.\n");

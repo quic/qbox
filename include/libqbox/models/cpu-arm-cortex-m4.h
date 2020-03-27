@@ -1,6 +1,6 @@
 /*
  *  This file is part of libqbox
- *  Copyright (C) 2019  Clement Deschamps
+ *  Copyright (c) 2020 Clement Deschamps and Luc Michel
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -17,7 +17,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "libqbox.h"
+#include "libqbox/libqbox.h"
 
 class CpuArmCortexM4 : public QemuCpu {
 public:
