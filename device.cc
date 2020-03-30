@@ -62,4 +62,23 @@ Gpio Device::get_gpio_in_named(const char *name, int idx)
     return Gpio(obj);
 }
 
+Bus Device::get_child_bus(const char *name)
+{
+    QemuDevice *qemu_dev = reinterpret_cast<QemuDevice *>(m_obj);
+    QemuBus *qemu_bus = nullptr;
+
+    qemu_bus = m_exports->qdev_get_child_bus(qemu_dev, name);
+    Object obj(reinterpret_cast<QemuObject *>(qemu_bus), *m_exports);
+
+    return Bus(obj);
+}
+
+void Device::set_parent_bus(Bus bus)
+{
+    QemuDevice *qemu_dev = reinterpret_cast<QemuDevice *>(m_obj);
+    QemuBus *qemu_bus = reinterpret_cast<QemuBus *>(bus.get_qemu_obj());
+
+    m_exports->qdev_set_parent_bus(qemu_dev, qemu_bus);
+}
+
 }

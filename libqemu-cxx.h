@@ -54,6 +54,7 @@ class Object;
 class MemoryRegionOps;
 class Gpio;
 class Timer;
+class Bus;
 
 class LibQemu {
 private:
@@ -277,6 +278,9 @@ public:
 
     Gpio get_gpio_in(int idx);
     Gpio get_gpio_in_named(const char *name, int idx);
+
+    Bus get_child_bus(const char *name);
+    void set_parent_bus(Bus bus);
 };
 
 class SysBusDevice : public Device {
@@ -333,6 +337,15 @@ public:
     void mod(int64_t deadline);
     void del();
 
+};
+
+class Bus : public Object {
+public:
+    static constexpr const char * const TYPE = "bus";
+
+    Bus() = default;
+    Bus(const Bus &o) = default;
+    Bus(const Object &o) : Object(o) {}
 };
 
 }; /* namespace qemu */
