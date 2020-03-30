@@ -10,6 +10,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(SystemC REQUIRED)
 
+find_package(PkgConfig REQUIRED)
+if (PkgConfig_FOUND)
+    pkg_check_modules(slirp slirp)
+endif()
+
 add_library(qbox SHARED
     src/libqbox.cc
     src/mac.cc
@@ -33,6 +38,11 @@ target_link_libraries(qbox
     SystemC::SystemC
     ssync
 )
+
+if (slirp_FOUND)
+    target_sources(qbox PRIVATE src/slirp.cc)
+    target_link_libraries(qbox slirp)
+endif()
 
 if (NOT WIN32)
     target_link_libraries(qbox pthread)
