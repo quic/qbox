@@ -55,7 +55,7 @@ class Dma : public sc_core::sc_module {
 public:
     tlm_utils::simple_initiator_socket<Dma> socket;
 
-    Dma(const char *name)
+    Dma(const sc_core::sc_module_name &name)
         : sc_core::sc_module(name)
         , socket("socket")
     {
