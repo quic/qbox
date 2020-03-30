@@ -238,7 +238,9 @@ public:
     {
     }
 
-    void qemu_init(int icount, bool singlestep, int gdb_port, std::string trace, SyncPolicy *sp)
+    std::vector<std::string> m_extra_qemu_args;
+
+    void qemu_init(int icount, bool singlestep, int gdb_port, std::string trace, SyncPolicy *sp, std::vector<std::string> &extra_qemu_args)
     {
         m_lib = new qemu::LibQemu(*new LibQemuLibraryLoader());
 
@@ -281,6 +283,10 @@ public:
             std::stringstream ss;
             ss << "qemu-" << name() << ".log";
             m_lib->push_qemu_arg({ "-D", ss.str().c_str(), "-d", trace.c_str() });
+        }
+
+        for (std::string &arg : extra_qemu_args) {
+            m_lib->push_qemu_arg(arg.c_str());
         }
 
 #ifdef _WIN32
@@ -707,7 +713,12 @@ public:
     {
         m_sync_policy = SyncPolicy::create(sync_policy);
 
-        qemu_init(icount, singlestep, gdb_port, trace, m_sync_policy);
+        std::vector<std::string> extra_qemu_args;
+        for (QemuComponent *c : m_nearby_components) {
+            extra_qemu_args.insert(extra_qemu_args.end(), c->m_extra_qemu_args.begin(), c->m_extra_qemu_args.end());
+        }
+
+        qemu_init(icount, singlestep, gdb_port, trace, m_sync_policy, extra_qemu_args);
 
         QemuComponent::before_end_of_elaboration();
 
