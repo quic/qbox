@@ -720,6 +720,10 @@ public:
 
         static std::shared_ptr<sc_core::sc_event> ev = std::make_shared<sc_core::sc_event>();
         set_cross_cpu_exec_event(ev);
+
+        for (QemuComponent *c : m_nearby_components) {
+            c->set_qemu_instance(*m_lib);
+        }
     }
 
     virtual void reset_begin()
@@ -781,6 +785,13 @@ public:
     {
         m_cross_cpu_exec_ev = ev;
     }
+
+    std::vector<QemuComponent *> m_nearby_components;
+
+    void add_to_qemu_instance(QemuComponent *c)
+    {
+        m_nearby_components.push_back(c);
+    }
 };
 
 class QemuArmGic : public QemuComponent {
@@ -797,15 +808,18 @@ public:
     const uint32_t GIC_NR_SGIS = 16;
 
 public:
-    QemuArmGic(sc_core::sc_module_name name)
+    QemuArmGic(sc_core::sc_module_name name, QemuCpu *cpu)
         : QemuComponent(name, "arm_gic")
         , spis("spis")
+        , m_cpu(cpu)
     {
         m_num_irq = 256;
         m_num_cpu = 1;
         m_revision = 2;
 
         spis.init(m_num_irq, [this](const char *cname, size_t i) { return new QemuInPort(cname, *this, i); });
+
+        cpu->add_to_qemu_instance(this);
     }
 
     ~QemuArmGic()
@@ -899,12 +913,15 @@ protected:
     using QemuComponent::m_obj;
 
 public:
-    QemuArmNvic(sc_core::sc_module_name name, uint32_t num_irq)
+    QemuArmNvic(sc_core::sc_module_name name, QemuCpu *cpu, uint32_t num_irq)
         : QemuComponent(name, "armv7m_nvic")
         , irqs("irqs")
+        , m_cpu(cpu)
         , m_num_irq(num_irq)
     {
         irqs.init(m_num_irq, [this](const char *cname, size_t i) { return new QemuInPort(cname, *this, i); });
+
+        cpu->add_to_qemu_instance(this);
     }
 
     ~QemuArmNvic()
@@ -924,6 +941,7 @@ public:
 
         qemu::ArmNvic nvic(m_obj);
         nvic.add_cpu_link();
+        m_obj.set_prop_link("cpu", m_cpu->get_qemu_obj());
     }
 
     void before_end_of_elaboration()

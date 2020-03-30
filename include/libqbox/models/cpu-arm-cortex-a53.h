@@ -25,7 +25,7 @@ public:
 
 	CpuArmCortexA53(sc_core::sc_module_name name)
 		: QemuCpu(name, "cortex-a53-arm")
-        , gic("gic")
+        , gic("gic", this)
 	{
     }
 
@@ -37,10 +37,5 @@ public:
         cpu.set_aarch64_mode(true);
         cpu.set_prop_bool("has_el2", true);
         cpu.set_prop_bool("has_el3", false);
-
-        /* create the gic in the same QEMU instance */
-        gic.set_qemu_instance(*m_lib);
-
-        gic.m_cpu = this;
     }
 };

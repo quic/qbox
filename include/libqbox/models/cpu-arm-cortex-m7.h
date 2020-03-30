@@ -25,7 +25,7 @@ public:
 
 	CpuArmCortexM7(sc_core::sc_module_name name, uint32_t nvic_num_irq = 64)
 		: QemuCpu(name, "cortex-m7-arm")
-		, nvic("nvic", nvic_num_irq)
+		, nvic("nvic", this, nvic_num_irq)
 	{
     }
 
@@ -33,13 +33,8 @@ public:
     {
         QemuCpu::before_end_of_elaboration();
 
-        /* create the nvic in the same QEMU instance */
-        nvic.set_qemu_instance(*m_lib);
-
         qemu::CpuArm cpu = qemu::CpuArm(m_obj);
         cpu.add_nvic_link();
         get_qemu_obj().set_prop_link("nvic", nvic.get_qemu_obj());
-        nvic.get_qemu_obj().set_prop_link("cpu", get_qemu_obj());
-        nvic.m_cpu = this;
     }
 };
