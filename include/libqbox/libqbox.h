@@ -1053,6 +1053,7 @@ public:
         qemu::Device carddev(cardobj);
         carddev.set_parent_bus(dev.get_child_bus("sd-bus"));
         carddev.set_prop_str("drive", "drive0");
+        carddev.set_prop_bool("realized", true);
     }
 };
 
