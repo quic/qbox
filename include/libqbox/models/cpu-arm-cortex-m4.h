@@ -19,6 +19,8 @@
 
 #include "libqbox/libqbox.h"
 
+#include "nvic.h"
+
 class CpuArmCortexM4 : public QemuCpu {
 public:
 	QemuArmNvic nvic;

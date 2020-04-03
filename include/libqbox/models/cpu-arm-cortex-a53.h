@@ -17,7 +17,11 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#pragma once
+
 #include "libqbox/libqbox.h"
+
+#include "gic.h"
 
 class CpuArmCortexA53 : public QemuCpu {
 public:
