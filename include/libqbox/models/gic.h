@@ -35,7 +35,7 @@ class QemuArmGic : public QemuComponent {
 public:
     sc_core::sc_vector<QemuInPort> spis;
 
-    std::vector<QemuCpu *> &m_cores;
+    std::vector<QemuCpu *> m_cores;
 
     uint32_t m_num_irq;
     uint32_t m_revision;
@@ -44,17 +44,22 @@ public:
     const uint32_t GIC_NR_SGIS = 16;
 
 public:
-    QemuArmGic(sc_core::sc_module_name name, std::vector<QemuCpu *> &cores)
+    QemuArmGic(sc_core::sc_module_name name)
         : QemuComponent(name, "arm_gic")
         , spis("spis")
-        , m_cores(cores)
     {
         m_num_irq = 256;
         m_revision = 2;
 
         spis.init(m_num_irq, [this](const char *cname, size_t i) { return new QemuInPort(cname, *this, i); });
+    }
 
-        cores[0]->add_to_qemu_instance(this);
+    void add_core(QemuCpu *core)
+    {
+        m_cores.push_back(core);
+        if (m_cores.size() == 1) {
+            m_cores[0]->add_to_qemu_instance(this);
+        }
     }
 
     ~QemuArmGic()
@@ -96,7 +101,7 @@ public:
         gicdev = qemu::Device(get_qemu_obj());
 
 #if 1
-        for (auto core : m_cores) {
+        for (auto &core : m_cores) {
             qemu::CpuArm cpu;
             qemu::MemoryRegion dist_mr;
             qemu::MemoryRegion cpu_mr;

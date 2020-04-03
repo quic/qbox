@@ -39,26 +39,29 @@ public:
         cpu.set_prop_bool("has_el2", true);
         cpu.set_prop_bool("has_el3", false);
     }
+
+    void end_of_elaboration()
+    {
+        QemuCpu::end_of_elaboration();
+    }
 };
 
 class CpuArmCortexA53Package : sc_core::sc_module {
 public:
-    QemuArmGic *gic;
+    sc_core::sc_vector<CpuArmCortexA53> cores;
 
-    std::vector<QemuCpu *> cores;
+    QemuArmGic gic;
 
     CpuArmCortexA53Package(sc_core::sc_module_name name, uint8_t ncores)
 		: sc_module(name)
+        , cores("core", ncores, [this](const char *cname, size_t i) { return new CpuArmCortexA53(cname); })
+        , gic("gic")
 	{
         for (int i = 0; i < ncores; i++) {
-            std::stringstream ss;
-            ss << "core" << i;
-            CpuArmCortexA53 *core = new CpuArmCortexA53(ss.str().c_str());
             if (i > 0) {
-                cores[0]->add_to_qemu_instance(core);
+                cores[0].add_to_qemu_instance(&cores[i]);
             }
-            cores.push_back(core);
+            gic.add_core(&cores[i]);
         }
-        gic = new QemuArmGic("gic", cores);
     }
 };

@@ -719,11 +719,11 @@ public:
         }
 
         if (!m_lib) {
-            printf("create qemu instance for %s\n", name());
+            printf("create new qemu instance for cpu %s\n", name());
             qemu_init(icount, singlestep, gdb_port, trace, m_sync_policy, extra_qemu_args);
         }
         else {
-            printf("skip creation of qemu instance for %s\n", name());
+            printf("use existing qemu instance for cpu %s\n", name());
         }
 
         QemuComponent::before_end_of_elaboration();
