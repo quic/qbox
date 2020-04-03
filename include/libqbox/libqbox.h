@@ -718,7 +718,13 @@ public:
             extra_qemu_args.insert(extra_qemu_args.end(), c->m_extra_qemu_args.begin(), c->m_extra_qemu_args.end());
         }
 
-        qemu_init(icount, singlestep, gdb_port, trace, m_sync_policy, extra_qemu_args);
+        if (!m_lib) {
+            printf("create qemu instance for %s\n", name());
+            qemu_init(icount, singlestep, gdb_port, trace, m_sync_policy, extra_qemu_args);
+        }
+        else {
+            printf("skip creation of qemu instance for %s\n", name());
+        }
 
         QemuComponent::before_end_of_elaboration();
 

@@ -25,11 +25,8 @@
 
 class CpuArmCortexA53 : public QemuCpu {
 public:
-	QemuArmGic gic;
-
 	CpuArmCortexA53(sc_core::sc_module_name name)
 		: QemuCpu(name, "cortex-a53-arm")
-        , gic("gic", this)
 	{
     }
 
@@ -41,5 +38,27 @@ public:
         cpu.set_aarch64_mode(true);
         cpu.set_prop_bool("has_el2", true);
         cpu.set_prop_bool("has_el3", false);
+    }
+};
+
+class CpuArmCortexA53Package : sc_core::sc_module {
+public:
+    QemuArmGic *gic;
+
+    std::vector<QemuCpu *> cores;
+
+    CpuArmCortexA53Package(sc_core::sc_module_name name, uint8_t ncores)
+		: sc_module(name)
+	{
+        for (int i = 0; i < ncores; i++) {
+            std::stringstream ss;
+            ss << "core" << i;
+            CpuArmCortexA53 *core = new CpuArmCortexA53(ss.str().c_str());
+            if (i > 0) {
+                cores[0]->add_to_qemu_instance(core);
+            }
+            cores.push_back(core);
+        }
+        gic = new QemuArmGic("gic", cores);
     }
 };
