@@ -735,6 +735,11 @@ public:
         for (QemuComponent *c : m_nearby_components) {
             c->set_qemu_instance(*m_lib);
         }
+
+        if (!reset.get_interface()) {
+            sc_core::sc_signal<bool>* stub = new sc_core::sc_signal<bool>(sc_core::sc_gen_unique_name("stub"));
+            reset.bind(*stub);
+        }
     }
 
     virtual void reset_begin()
