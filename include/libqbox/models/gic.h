@@ -46,7 +46,7 @@ public:
 public:
     QemuArmGic(sc_core::sc_module_name name)
         : QemuComponent(name, "arm_gic")
-        , spis("spis")
+        , spis("spi")
     {
         m_num_irq = 256;
         m_revision = 2;

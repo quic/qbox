@@ -35,7 +35,7 @@ protected:
 public:
     QemuArmNvic(sc_core::sc_module_name name, QemuCpu *cpu, uint32_t num_irq)
         : QemuComponent(name, "armv7m_nvic")
-        , irqs("irqs")
+        , irqs("irq")
         , m_cpu(cpu)
         , m_num_irq(num_irq)
     {
