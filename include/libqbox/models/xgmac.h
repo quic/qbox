@@ -94,6 +94,15 @@ public:
 };
 
 class Xgmac : public sc_core::sc_module {
+public:
+    sc_core::sc_signal<bool, sc_core::SC_MANY_WRITERS> sbd_irq;
+    sc_core::sc_signal<bool, sc_core::SC_MANY_WRITERS> pmt_irq;
+    sc_core::sc_signal<bool, sc_core::SC_MANY_WRITERS> mci_irq;
+
+    tlm_utils::simple_target_socket<Xgmac> socket;
+
+    Dma dma;
+
 protected:
     RxTxStats m_stats;
     uint32_t m_regs[R_MAX];
@@ -104,19 +113,18 @@ protected:
     void xgmac_write_desc(XGmacDesc *d, int rx);
     void xgmac_enet_send();
     void enet_update_irq();
+    void enet_update_irq_sysc();
     uint64_t enet_read(uint64_t addr, unsigned size);
     void enet_write(uint64_t addr, uint64_t value, unsigned size);
 
-public:
-    sc_core::sc_signal<bool, sc_core::SC_MANY_WRITERS> sbd_irq;
-    sc_core::sc_signal<bool, sc_core::SC_MANY_WRITERS> pmt_irq;
-    sc_core::sc_signal<bool, sc_core::SC_MANY_WRITERS> mci_irq;
-    tlm_utils::simple_target_socket<Xgmac> socket;
-    Dma dma;
+private:
     Payload m_tx_frame;
 
     MACAddress m_mac;
 
+    sc_core::sc_event update_event;
+
+public:
     SC_HAS_PROCESS(Xgmac);
     Xgmac(sc_core::sc_module_name name);
     virtual ~Xgmac();

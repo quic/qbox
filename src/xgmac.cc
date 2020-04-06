@@ -135,6 +135,9 @@ Xgmac::Xgmac(sc_module_name name)
     m_regs[XGMAC_ADDR_LOW(0)] = m_mac.lo();
 
     socket.register_b_transport(this, &Xgmac::b_transport);
+
+    SC_METHOD(enet_update_irq_sysc);
+    sensitive << update_event;
 }
 
 Xgmac::~Xgmac() { }
@@ -283,6 +286,11 @@ void Xgmac::xgmac_enet_send()
 }
 
 void Xgmac::enet_update_irq()
+{
+    update_event.notify();
+}
+
+void Xgmac::enet_update_irq_sysc()
 {
     int stat = m_regs[DMA_STATUS] & m_regs[DMA_INTR_ENA];
     sbd_irq = !!stat;
