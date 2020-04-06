@@ -25,7 +25,10 @@ add_library(qbox SHARED
 if (WIN32)
     target_compile_options(qbox PRIVATE -Wall -DSC_WIN_DLL -DSC_INCLUDE_DYNAMIC_PROCESSES /vmg)
 else ()
-    target_compile_options(qbox PRIVATE -Wall)
+    target_compile_options(qbox PRIVATE
+        -Wall
+        "$<$<CONFIG:Debug>:-O0;-g3;-ggdb>"
+    )
 endif ()
 
 target_include_directories(qbox
