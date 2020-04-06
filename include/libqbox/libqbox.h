@@ -44,9 +44,8 @@
     std::cout << "[" << name() << "] "
 #else
 #include <fstream>
-static std::ofstream ofs("/dev/null");
 #define MLOG(foo, bar) \
-    ofs
+    if (0) std::cout
 #endif
 
 static void copy_file(const char* srce_file, const char* dest_file)

@@ -47,9 +47,8 @@
     printf(args)
 #else
 #include <fstream>
-static std::ofstream ofs("/dev/null");
 #define MLOG(foo, bar) \
-    ofs
+    if (0) std::cout
 #define MLOG_F(foo, bar, args...)
 #endif
 
