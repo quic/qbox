@@ -23,6 +23,11 @@ set(srcs
 
 add_library(qemu-cxx SHARED ${srcs})
 
+target_compile_options(qemu-cxx PRIVATE
+    -Wall
+    "$<$<CONFIG:Debug>:-O0;-g3;-ggdb>"
+)
+
 target_include_directories(qemu-cxx
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
