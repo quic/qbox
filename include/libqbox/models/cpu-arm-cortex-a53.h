@@ -46,17 +46,20 @@ public:
     }
 };
 
-class CpuArmCortexA53Package : sc_core::sc_module {
+class CpuArmCortexA53Cluster : sc_core::sc_module {
 public:
     sc_core::sc_vector<CpuArmCortexA53> cores;
 
     QemuArmGic gic;
 
-    CpuArmCortexA53Package(sc_core::sc_module_name name, uint8_t ncores)
+    CpuArmCortexA53Cluster(sc_core::sc_module_name name, uint8_t ncores)
 		: sc_module(name)
         , cores("core", ncores, [this](const char *cname, size_t i) { return new CpuArmCortexA53(cname); })
         , gic("gic")
 	{
+        /* 1-4 cores per cluster */
+        assert(ncores <= 4);
+
         for (int i = 0; i < ncores; i++) {
             if (i > 0) {
                 cores[0].add_to_qemu_instance(&cores[i]);
