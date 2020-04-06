@@ -251,7 +251,7 @@ public:
         m_lib->push_qemu_arg({ "-serial", "null" });
         m_lib->push_qemu_arg({ "-nographic" });
 
-#if 0 /* FIXME: How to mix icount and SyncPolicy::SYSTEM_THREAD */
+        /* FIXME: How to mix icount and SyncPolicy::SYSTEM_THREAD */
         switch (sp->get_thread_type()) {
         case SyncPolicy::COROUTINE:
             m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=single" });
@@ -261,9 +261,6 @@ public:
             m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=multi" });
             break;
         }
-#else
-        m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=single" });
-#endif
 
         if (icount >= 0) {
             std::stringstream ss;
