@@ -24,6 +24,7 @@
 #ifndef WIN32
 #include <termios.h>
 #include <signal.h>
+#include <sys/epoll.h>
 #endif
 
 class CharBackendStdio : public CharBackend, public sc_core::sc_module {
@@ -95,7 +96,33 @@ public:
 
     void *rcv_thread()
     {
+#ifndef _WIN32
+        int epollfd;
+        struct epoll_event ev, events[1];
+
+        epollfd = epoll_create1(0);
+        if (epollfd == -1) {
+            perror("epoll_fd");
+            return NULL;
+        }
+
+        ev.events = EPOLLIN;
+        ev.data.fd = STDIN_FILENO;
+        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev) == -1) {
+            perror("epoll_ctl");
+            return NULL;
+        }
+#endif
+
         for (;;) {
+#ifndef _WIN32
+            int nfds = epoll_wait(epollfd, events, 1, -1);
+            if (nfds == -1) {
+                perror("epoll_wait");
+                break;
+            }
+#endif
+
             int c = getchar();
 
             std::lock_guard<std::mutex> lock(m_mutex);
@@ -107,6 +134,8 @@ public:
                 m_event.async_notify();
             }
         }
+
+        return NULL;
     }
 
     void rcv(void)
