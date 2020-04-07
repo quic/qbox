@@ -449,6 +449,8 @@ public:
     gs_param<std::string> sync_policy;
 #endif
 
+    unsigned m_max_access_size;
+
     /* A CPU address space */
     struct AddressSpace {
         qemu::MemoryRegion mr;      /* The associated MR */
@@ -592,7 +594,7 @@ public:
         trans.set_address(addr);
         trans.set_data_ptr(reinterpret_cast<unsigned char*>(val));
         trans.set_data_length(size);
-        trans.set_streaming_width(4);
+        trans.set_streaming_width(size);
         trans.set_byte_enable_length(0);
         trans.set_dmi_allowed(false);
         trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
@@ -673,6 +675,8 @@ public:
                     return qemu_io_write(as, addr, val, size, attrs);
             });
 
+        ops->set_max_access_size(m_max_access_size);
+
         /* The root memory region maps the whole address space */
         as.mr.init_io(m_obj, as.port->name().c_str(), (std::numeric_limits<uint64_t>::max)(), ops);
 
@@ -701,6 +705,7 @@ public:
         , trace("trace", "", "Specify tracing options")
         , sync_policy("sync_policy", "synchronous", "Synchronization Policy to use")
     {
+        m_max_access_size = 4;
     }
 
     virtual ~QemuCpu() {}

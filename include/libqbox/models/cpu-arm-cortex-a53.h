@@ -28,6 +28,7 @@ public:
 	CpuArmCortexA53(sc_core::sc_module_name name)
 		: QemuCpu(name, "cortex-a53-arm")
 	{
+        m_max_access_size = 8;
     }
 
     void before_end_of_elaboration()
