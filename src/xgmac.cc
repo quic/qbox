@@ -123,7 +123,7 @@ Xgmac::Xgmac(sc_module_name name)
     , mci_irq("mci_irq")
     , socket("socket")
     , dma("dma")
-    //, p_net("net", *this)
+    , m_regs()
     , m_tx_frame(9018u)
 {
     std::string mac = "0a:a0:db:c0:49:c3";
