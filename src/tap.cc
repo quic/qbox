@@ -59,8 +59,6 @@ NetworkBackendTap::NetworkBackendTap(sc_core::sc_module_name name, std::string t
     SC_METHOD(rcv);
     sensitive << m_event;
     dont_initialize();
-
-    new std::thread(&NetworkBackendTap::rcv_thread, this);
 }
 
 NetworkBackendTap::~NetworkBackendTap()
@@ -87,6 +85,8 @@ void NetworkBackendTap::open(std::string &tun) {
     }
 
     LOG_F(APP, DBG, "TAP opened\n");
+
+    new std::thread(&NetworkBackendTap::rcv_thread, this);
 }
 
 void NetworkBackendTap::close() {
@@ -153,6 +153,9 @@ void NetworkBackendTap::rcv()
 
 void NetworkBackendTap::send(Payload &frame)
 {
+    if (m_fd < 0) {
+        return;
+    }
     MLOG(SIM, TRC) << "frame of size " << frame.size() << " VP -> EXT\n";
     ::write(m_fd, frame.data(), (int)frame.size());
 }
