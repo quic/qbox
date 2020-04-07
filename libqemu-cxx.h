@@ -219,6 +219,8 @@ public:
     void set_read_callback(ReadCallback cb);
     void set_write_callback(WriteCallback cb);
 
+    void set_max_access_size(unsigned size);
+
     ReadCallback get_read_callback() { return m_read_cb; }
     WriteCallback get_write_callback() { return m_write_cb; }
 

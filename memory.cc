@@ -97,6 +97,10 @@ void MemoryRegionOps::set_write_callback(WriteCallback cb)
     m_exports.mr_ops_set_write_cb(m_ops, generic_write_cb);
 }
 
+void MemoryRegionOps::set_max_access_size(unsigned size)
+{
+    m_exports.mr_ops_set_max_access_size(m_ops, size);
+}
 
 /*
  * ============
