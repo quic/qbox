@@ -61,7 +61,7 @@ public:
         , gic("gic")
 	{
         /* 1-4 cores per cluster */
-        assert(ncores <= 4);
+        assert(ncores > 0 && ncores <= 4);
 
         for (int i = 0; i < ncores; i++) {
             if (i > 0) {
