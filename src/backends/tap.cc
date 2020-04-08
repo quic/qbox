@@ -76,7 +76,7 @@ void NetworkBackendTap::open(std::string &tun) {
 
     memset(&ifr, 0, sizeof(ifr));
     ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-    strncpy(ifr.ifr_name, tun.c_str(), IFNAMSIZ);
+    strncpy(ifr.ifr_name, tun.c_str(), IFNAMSIZ - 1);
     if(ioctl(m_fd, TUNSETIFF, (void *) &ifr) < 0 ) {
         LOG_F(APP, WRN, "%s: tap device setup failed: %s\n", ifr.ifr_name, strerror(errno));
         ::close(m_fd);
