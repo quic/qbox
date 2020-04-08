@@ -8,7 +8,11 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-find_package(SystemC REQUIRED)
+if (WIN32)
+    find_package(SystemC REQUIRED)
+else ()
+    find_package(SystemC REQUIRED COMPONENTS CCI)
+endif ()
 
 find_package(PkgConfig REQUIRED)
 if (PkgConfig_FOUND)
@@ -19,7 +23,7 @@ add_library(qbox SHARED
     src/libqbox.cc
     src/mac.cc
     src/xgmac.cc
-    src/tap.cc
+    src/backends/tap.cc
 )
 
 if (WIN32)
@@ -40,15 +44,16 @@ target_include_directories(qbox
 target_link_libraries(qbox
     SystemC::SystemC
     ssync
+    qemu-cxx
 )
 
 if (slirp_FOUND)
-    target_sources(qbox PRIVATE src/slirp.cc)
+    target_sources(qbox PRIVATE src/backends/slirp.cc)
     target_link_libraries(qbox slirp)
 endif()
 
 if (NOT WIN32)
-    target_link_libraries(qbox pthread)
+    target_link_libraries(qbox pthread SystemC::CCI)
 endif ()
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox" DESTINATION include)

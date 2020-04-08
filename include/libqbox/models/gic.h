@@ -21,6 +21,8 @@
 
 #include "libqbox/libqbox.h"
 
+#include <libqemu-cxx/target/arm.h>
+
 #define GTIMER_PHYS 0
 #define GTIMER_VIRT 1
 #define GTIMER_HYP  2

@@ -21,6 +21,8 @@
 
 #include "libqbox/libqbox.h"
 
+#include <libqemu-cxx/target/arm.h>
+
 #include "gic.h"
 
 class CpuArmCortexA53 : public QemuCpu {
