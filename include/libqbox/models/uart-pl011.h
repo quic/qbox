@@ -83,25 +83,30 @@ static const uint32_t irqmask[] = {
     INT_E,
 };
 
-class Uart : public sc_core::sc_module {
+class Pl011;
+
+/* for legacy */
+typedef Pl011 Uart;
+
+class Pl011 : public sc_core::sc_module {
 public:
     PL011State *s;
 
     CharBackend *chr;
 
-    tlm_utils::simple_target_socket<Uart> socket;
+    tlm_utils::simple_target_socket<Pl011> socket;
 
     sc_core::sc_vector<sc_core::sc_signal<bool, sc_core::SC_MANY_WRITERS>> irq;
 
     sc_core::sc_event update_event;
 
-    SC_HAS_PROCESS(Uart);
-    Uart(sc_core::sc_module_name name)
+    SC_HAS_PROCESS(Pl011);
+    Pl011(sc_core::sc_module_name name)
         : irq("irq", 6)
     {
         chr = NULL;
 
-        socket.register_b_transport(this, &Uart::b_transport);
+        socket.register_b_transport(this, &Pl011::b_transport);
 
         s = new PL011State();
 
@@ -351,7 +356,7 @@ public:
 
     static int pl011_can_receive(void *opaque)
     {
-        PL011State *s = ((Uart *)opaque)->s;
+        PL011State *s = ((Pl011 *)opaque)->s;
 
         int r;
 
@@ -384,7 +389,7 @@ public:
 
     static void pl011_receive(void *opaque, const uint8_t *buf, int size)
     {
-        Uart *uart = (Uart *)opaque;
+        Pl011 *uart = (Pl011 *)opaque;
         uart->pl011_put_fifo(*buf);
     }
 
