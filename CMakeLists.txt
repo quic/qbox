@@ -22,9 +22,13 @@ endif()
 add_library(qbox SHARED
     src/libqbox.cc
     src/mac.cc
-    src/xgmac.cc
-    src/backends/tap.cc
 )
+
+if (NOT WIN32)
+    target_sources(qbox
+        PUBLIC src/xgmac.cc src/backends/tap.cc
+    )
+endif()
 
 if (WIN32)
     target_compile_options(qbox PRIVATE -Wall -DSC_WIN_DLL -DSC_INCLUDE_DYNAMIC_PROCESSES /vmg)
