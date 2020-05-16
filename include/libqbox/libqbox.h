@@ -464,6 +464,24 @@ public:
         }
     }
 
+    /**
+     *  Called before b_transport. Can be overloaded by cpu specialization.
+     *  Return false for skipping b_transport
+     */
+    virtual bool before_b_transport(tlm::tlm_generic_payload &trans,
+            qemu::MemoryRegionOps::MemTxAttrs &attrs)
+    {
+        return true;
+    }
+
+    /**
+     *  Called after b_transport. Can be overloaded by cpu specialization.
+     */
+    virtual void after_b_transport(tlm::tlm_generic_payload &trans,
+            qemu::MemoryRegionOps::MemTxAttrs &attrs)
+    {
+    }
+
     qemu::MemoryRegionOps::MemTxResult
     qemu_io_access(AddressSpace& as, tlm::tlm_command command,
                    uint64_t addr, uint64_t* val, unsigned int size,
@@ -488,13 +506,19 @@ public:
 
         m_lib->unlock_iothread();
 
-        run_on_sysc([this, &as, &trans, &addr, &local_drift, &local_drift_before] () {
+        run_on_sysc([this, &as, &trans, &addr, &local_drift, &local_drift_before, &attrs] () {
             local_drift = local_drift_before = get_local_time() - get_global_time();
+
+            if (!before_b_transport(trans, attrs)) {
+                return;
+            }
 
             socket->b_transport(trans, local_drift);
 
             /* reset transaction address before dmi check (could be altered by b_transport) */
             trans.set_address(addr);
+
+            after_b_transport(trans, attrs);
 
             check_dmi_hint(trans, as);
         });
