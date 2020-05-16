@@ -43,6 +43,31 @@
     if (0) std::cout
 #endif
 
+struct lock_extension : tlm::tlm_extension<lock_extension> {
+    int lock;
+    int source;
+
+    lock_extension()
+    {
+        lock = 0;
+        source = -1;
+    }
+
+    virtual tlm_extension_base* clone() const
+    {
+        lock_extension* ext = new lock_extension;
+        ext->lock = lock;
+        ext->source = source;
+        return ext;
+    }
+
+    virtual void copy_from(tlm_extension_base const& ext)
+    {
+        lock = static_cast<lock_extension const &>(ext).lock;
+        source = static_cast<lock_extension const &>(ext).source;
+    }
+};
+
 class QemuComponent : public sc_core::sc_module
 {
 private:
