@@ -68,8 +68,8 @@ public:
         memcpy(&m_ptr[addr], ptr, len);
     }
 
-private:
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+protected:
+    virtual void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
         unsigned int len = txn.get_data_length();
         unsigned char *ptr = txn.get_data_ptr();
@@ -101,7 +101,7 @@ private:
         txn.set_dmi_allowed(true);
     }
 
-    bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
+    virtual bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
     {
         static const sc_core::sc_time LATENCY(10, sc_core::SC_NS);
 
