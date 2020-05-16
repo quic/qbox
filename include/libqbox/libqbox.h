@@ -397,6 +397,33 @@ public:
         }
     }
 
+    struct dmi_region {
+        uint64_t start;
+        uint64_t end;
+        AddressSpace *as;
+        qemu::MemoryRegion mr;
+    };
+
+    std::vector<struct dmi_region> dmis;
+
+    virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
+    {
+        m_lib->lock_iothread();
+
+        /* TODO: flush TBs if region overlaps */
+        /* TODO: flush TLBs to prevent dmi (or will the memory region change trigger it ?) */
+
+        for (auto it = dmis.begin(); it != dmis.end(); it++) {
+            auto r = *it;
+            if (start <= r.end && end >= r.start) {
+                r.as->mr.del_subregion(r.mr);
+                dmis.erase(it--);
+            }
+        }
+
+        m_lib->unlock_iothread();
+    }
+
     void check_dmi_hint(tlm::tlm_generic_payload &trans, AddressSpace& as)
     {
         if (trans.is_dmi_allowed()) {
@@ -407,6 +434,14 @@ public:
                 uint64_t size = dmi_data.get_end_address() - dmi_data.get_start_address();
                 mr.init_ram_ptr(m_obj, "dmi", size, dmi_data.get_dmi_ptr());
                 as.mr.add_subregion(mr, dmi_data.get_start_address());
+
+                struct dmi_region r = {
+                    .start = dmi_data.get_start_address(),
+                    .end = dmi_data.get_end_address(),
+                    .as = &as,
+                    .mr = mr
+                };
+                dmis.push_back(r);
             }
         }
     }
@@ -536,6 +571,8 @@ public:
         , sync_policy("sync_policy", "synchronous", "Synchronization Policy to use")
     {
         m_max_access_size = 4;
+
+        socket.register_invalidate_direct_mem_ptr(this, &QemuCpu::invalidate_direct_mem_ptr);
     }
 
     virtual ~QemuCpu() {}
