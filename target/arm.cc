@@ -33,6 +33,11 @@ void CpuArm::add_nvic_link()
     m_exports->cpu_arm_add_nvic_link(m_obj);
 }
 
+uint64_t CpuArm::get_exclusive_val()
+{
+    return m_exports->cpu_arm_get_exclusive_val(m_obj);
+}
+
 void CpuAarch64::set_aarch64_mode(bool aarch64_mode)
 {
     m_exports->cpu_aarch64_set_aarch64_mode(m_obj, aarch64_mode);

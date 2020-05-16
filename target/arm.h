@@ -33,6 +33,7 @@ public:
 
     void set_cp15_cbar(uint64_t cbar);
     void add_nvic_link();
+    uint64_t get_exclusive_val();
 };
 
 class CpuAarch64 : public CpuArm {
