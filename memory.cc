@@ -51,7 +51,7 @@ static inline uint32_t LIB_TO_QEMU_MEMTXRESULT_MAPPING(MemoryRegionOps::MemTxRes
  */
 
 MemoryRegionOps::MemTxAttrs::MemTxAttrs(const ::MemTxAttrs &qemu_attrs)
-    : secure(qemu_attrs.secure)
+    : secure(qemu_attrs.secure), exclusive(qemu_attrs.exclusive)
 {}
 
 MemoryRegionOps::MemoryRegionOps(QemuMemoryRegionOps *ops, LibQemuExports &exports)
