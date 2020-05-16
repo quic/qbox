@@ -74,6 +74,7 @@ public:
         for (size_t i = 0; i < targets.size(); i++) {
             tlm_utils::simple_initiator_socket_tagged<Router> *socket =
                 new tlm_utils::simple_initiator_socket_tagged<Router>(sc_core::sc_gen_unique_name("initiator"));
+            socket->register_invalidate_direct_mem_ptr(this, &Router::invalidate_direct_mem_ptr, i);
             socket->bind(*targets.at(i).t);
             initiator_socket.push_back(socket);
         }
@@ -130,6 +131,16 @@ public:
         dmi_data.set_start_address(compose_address(target_nr, dmi_data.get_start_address()));
         dmi_data.set_end_address(compose_address(target_nr, dmi_data.get_end_address()));
         return status;
+    }
+
+    virtual void invalidate_direct_mem_ptr(int id, sc_dt::uint64 start, sc_dt::uint64 end)
+    {
+        sc_dt::uint64 bw_start_range = compose_address(id, start);
+        sc_dt::uint64 bw_end_range = compose_address(id, end);
+
+        for (auto *socket : target_socket) {
+            (*socket)->invalidate_direct_mem_ptr(bw_start_range, bw_end_range);
+        }
     }
 
     bool decode_address(sc_dt::uint64 addr, sc_dt::uint64& addr_out, unsigned int &index_out)
