@@ -406,6 +406,16 @@ public:
 
     std::vector<struct dmi_region> dmis;
 
+    void dump_dmis()
+    {
+#if 0
+        printf("%s.dmis:\n", name());
+        for (auto &r : dmis) {
+            printf("  [0x%08lx:0x%08lx]\n", r.start, r.end);
+        }
+#endif
+    }
+
     virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
     {
         m_lib->lock_iothread();
@@ -422,6 +432,8 @@ public:
         }
 
         m_lib->unlock_iothread();
+
+        dump_dmis();
     }
 
     void check_dmi_hint(tlm::tlm_generic_payload &trans, AddressSpace& as)
@@ -430,6 +442,8 @@ public:
             tlm::tlm_dmi dmi_data;
             bool dmi_ptr_valid = socket->get_direct_mem_ptr(trans, dmi_data);
             if (dmi_ptr_valid) {
+                /* TODO: merge contiguous regions */
+
                 qemu::MemoryRegion mr = m_lib->object_new<qemu::MemoryRegion>();
                 uint64_t size = dmi_data.get_end_address() - dmi_data.get_start_address();
                 mr.init_ram_ptr(m_obj, "dmi", size, dmi_data.get_dmi_ptr());
@@ -442,6 +456,10 @@ public:
                     .mr = mr
                 };
                 dmis.push_back(r);
+
+                /* TODO: sort dmis */
+
+                dump_dmis();
             }
         }
     }
