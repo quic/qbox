@@ -68,7 +68,7 @@ public:
             if (trans.get_command() == tlm::TLM_READ_COMMAND) {
                 /* cmpxchg read */
                 qemu::CpuArm cpu = qemu::CpuArm(get_qemu_obj());
-                uint64_t e_val = 0; cpu.get_exclusive_val();
+                uint64_t e_val = cpu.get_exclusive_val();
                 uint8_t *ptr = trans.get_data_ptr();
                 *(uint64_t *)ptr = ~e_val;
                 trans.set_response_status(tlm::TLM_OK_RESPONSE);
