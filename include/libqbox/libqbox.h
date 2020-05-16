@@ -467,7 +467,7 @@ public:
     qemu::MemoryRegionOps::MemTxResult
     qemu_io_access(AddressSpace& as, tlm::tlm_command command,
                    uint64_t addr, uint64_t* val, unsigned int size,
-                   qemu::MemoryRegionOps::MemTxAttrs attr)
+                   qemu::MemoryRegionOps::MemTxAttrs attrs)
     {
         int64_t before = m_lib->get_virtual_clock();
         sc_core::sc_time local_drift, local_drift_before;
@@ -522,17 +522,17 @@ public:
     qemu::MemoryRegionOps::MemTxResult
     qemu_io_read(AddressSpace& as,
                  uint64_t addr, uint64_t* val, unsigned int size,
-                 qemu::MemoryRegionOps::MemTxAttrs attr)
+                 qemu::MemoryRegionOps::MemTxAttrs attrs)
     {
-        return qemu_io_access(as, tlm::TLM_READ_COMMAND, addr, val, size, attr);
+        return qemu_io_access(as, tlm::TLM_READ_COMMAND, addr, val, size, attrs);
     }
 
     qemu::MemoryRegionOps::MemTxResult
     qemu_io_write(AddressSpace& as,
                   uint64_t addr, uint64_t val, unsigned int size,
-                  qemu::MemoryRegionOps::MemTxAttrs attr)
+                  qemu::MemoryRegionOps::MemTxAttrs attrs)
     {
-        return qemu_io_access(as, tlm::TLM_WRITE_COMMAND, addr, &val, size, attr);
+        return qemu_io_access(as, tlm::TLM_WRITE_COMMAND, addr, &val, size, attrs);
     }
 
     void add_initiator(const char* port_name, const char* mr_link_name)
