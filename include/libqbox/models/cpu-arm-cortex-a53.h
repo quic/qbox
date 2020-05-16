@@ -47,6 +47,34 @@ public:
     {
         QemuCpu::end_of_elaboration();
     }
+
+    virtual bool before_b_transport(tlm::tlm_generic_payload &trans,
+            qemu::MemoryRegionOps::MemTxAttrs &attrs)
+    {
+        if (attrs.exclusive) {
+            if (trans.get_command() == tlm::TLM_WRITE_COMMAND) {
+                /* cmpxchg write */
+                trans.set_response_status(tlm::TLM_OK_RESPONSE);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    virtual void after_b_transport(tlm::tlm_generic_payload &trans,
+            qemu::MemoryRegionOps::MemTxAttrs &attrs)
+    {
+        if (attrs.exclusive) {
+            if (trans.get_command() == tlm::TLM_READ_COMMAND) {
+                /* cmpxchg read */
+                qemu::CpuArm cpu = qemu::CpuArm(get_qemu_obj());
+                uint64_t e_val = 0; cpu.get_exclusive_val();
+                uint8_t *ptr = trans.get_data_ptr();
+                *(uint64_t *)ptr = ~e_val;
+                trans.set_response_status(tlm::TLM_OK_RESPONSE);
+            }
+        }
+    }
 };
 
 class CpuArmCortexA53Cluster : sc_core::sc_module {
