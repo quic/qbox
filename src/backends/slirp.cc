@@ -20,6 +20,7 @@
 #include "backends/net/slirp.h"
 
 #include <systemc>
+#include <cstring>
 
 #ifndef _WIN32
 #include <sys/time.h>
