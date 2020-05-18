@@ -53,7 +53,15 @@ public:
     {
         if (attrs.exclusive) {
             if (trans.get_command() == tlm::TLM_WRITE_COMMAND) {
-                /* cmpxchg write */
+                /*
+                 * cmpxchg write:
+                 * QEMU will do a write transaction in exclusive store,
+                 * regardless the result of the compare.
+                 * In such a case, skip the write and simply return OK
+                 * to prevent QEMU from generating a CPU fault.
+                 * The exclusive store will fail anyway, thanks to the
+                 * instrumentation in read path below.
+                 */
                 trans.set_response_status(tlm::TLM_OK_RESPONSE);
                 return false;
             }
@@ -66,7 +74,11 @@ public:
     {
         if (attrs.exclusive) {
             if (trans.get_command() == tlm::TLM_READ_COMMAND) {
-                /* cmpxchg read */
+                /*
+                 * cmpxchg read:
+                 * make QEMU fail the compare and exchange in exclusive store
+                 * by returning an unexpected value.
+                 */
                 qemu::CpuArm cpu = qemu::CpuArm(get_qemu_obj());
                 uint64_t e_val = cpu.get_exclusive_val();
                 uint8_t *ptr = trans.get_data_ptr();
