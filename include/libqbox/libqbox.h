@@ -425,7 +425,6 @@ public:
     struct dmi_region {
         uint64_t start;
         uint64_t end;
-        AddressSpace *as;
         qemu::MemoryRegion mr;
     };
 
@@ -441,24 +440,52 @@ public:
 #endif
     }
 
+    struct dmi_inval_args {
+        QemuCpu *cpu;
+        uint64_t start;
+        uint64_t end;
+        std::vector<qemu::MemoryRegion> mrs;
+    };
+
+    static void do_dmi_inval(void *opaque)
+    {
+        struct dmi_inval_args *args = (struct dmi_inval_args *)opaque;
+
+        args->cpu->m_lib->tb_invalidate_phys_range(args->start, args->end);
+
+        args->cpu->m_lib->lock_iothread();
+
+        for (auto &mr : args->mrs) {
+            mr.container->del_subregion(mr);
+        }
+
+        args->cpu->m_lib->unlock_iothread();
+
+        delete args;
+    }
+
     virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
     {
-        m_lib->lock_iothread();
-
-        /* TODO: flush TBs if region overlaps */
-        /* TODO: flush TLBs to prevent dmi (or will the memory region change trigger it ?) */
+        std::vector<qemu::MemoryRegion> mrs;
 
         for (auto it = dmis.begin(); it != dmis.end(); it++) {
             auto r = *it;
             if (start <= r.end && end >= r.start) {
-                r.as->mr.del_subregion(r.mr);
+                mrs.push_back(r.mr);
                 dmis.erase(it--);
             }
         }
 
-        m_lib->unlock_iothread();
+        if (mrs.size() > 0) {
+            struct dmi_inval_args *args = new struct dmi_inval_args;
+            args->cpu = this;
+            args->start = start;
+            args->end = end;
+            args->mrs = mrs;
+            m_cpu.async_safe_run(do_dmi_inval, args);
 
-        dump_dmis();
+            dump_dmis();
+        }
     }
 
     void check_dmi_hint(tlm::tlm_generic_payload &trans, AddressSpace& as)
@@ -477,7 +504,6 @@ public:
                 struct dmi_region r = {
                     .start = dmi_data.get_start_address(),
                     .end = dmi_data.get_end_address(),
-                    .as = &as,
                     .mr = mr
                 };
                 dmis.push_back(r);
