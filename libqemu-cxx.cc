@@ -81,6 +81,11 @@ int64_t LibQemu::get_virtual_clock()
     return m_qemu_exports->clock_virtual_get_ns();
 }
 
+void LibQemu::tb_invalidate_phys_range(uint64_t start, uint64_t end)
+{
+    m_qemu_exports->tb_invalidate_phys_range(start, end);
+}
+
 QemuObject* LibQemu::object_new_internal(const char *type_name)
 {
     QemuObject *o = m_qemu_exports->object_new(type_name);

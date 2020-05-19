@@ -100,6 +100,8 @@ public:
     Gpio gpio_new();
 
     std::shared_ptr<Timer> timer_new();
+
+    void tb_invalidate_phys_range(uint64_t start, uint64_t end);
 };
 
 class Object {
