@@ -197,6 +197,7 @@ public:
     struct MemTxAttrs {
         bool secure = false;
         bool exclusive = false;
+        bool debug = false;
 
         MemTxAttrs() = default;
         MemTxAttrs(const ::MemTxAttrs &qemu_attrs);
