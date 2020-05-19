@@ -150,13 +150,14 @@ void MemoryRegion::init_alias(Object owner, const char *name, MemoryRegion &root
                                         offset, size);
 }
 
-void MemoryRegion::add_subregion(const MemoryRegion &mr, uint64_t offset)
+void MemoryRegion::add_subregion(MemoryRegion &mr, uint64_t offset)
 {
     QemuMemoryRegion *this_mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegion *sub_mr = reinterpret_cast<QemuMemoryRegion*>(mr.m_obj);
 
     m_exports->memory_region_add_subregion(this_mr, offset, sub_mr);
     m_subregions.insert(mr);
+    mr.container = this;
 }
 
 void MemoryRegion::internal_del_subregion(const MemoryRegion &mr)

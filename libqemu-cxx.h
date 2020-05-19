@@ -245,6 +245,8 @@ public:
 
     static constexpr const char * const TYPE = "qemu:memory-region";
 
+    MemoryRegion *container;
+
     MemoryRegion() = default;
     MemoryRegion(const MemoryRegion &) = default;
     MemoryRegion(const Object &o) : Object(o) {}
@@ -258,7 +260,7 @@ public:
     void init_alias(Object owner, const char *name, MemoryRegion &root,
                     uint64_t offset, uint64_t size);
 
-    void add_subregion(const MemoryRegion &mr, uint64_t offset);
+    void add_subregion(MemoryRegion &mr, uint64_t offset);
     void del_subregion(const MemoryRegion &mr);
 
     MemTxResult dispatch_read(uint64_t addr, uint64_t *data,
