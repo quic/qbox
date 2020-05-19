@@ -67,5 +67,10 @@ void Cpu::kick()
     m_exports->cpu_kick(m_obj);
 }
 
+void Cpu::async_safe_run(void (*handler)(void *), void *arg)
+{
+    m_exports->async_safe_run_on_cpu(m_obj, handler, arg);
+}
+
 };
 

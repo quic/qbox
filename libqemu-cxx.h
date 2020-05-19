@@ -320,6 +320,8 @@ public:
     Cpu set_as_current();
 
     void kick();
+
+    void async_safe_run(void (*handler)(void *), void *arg);
 };
 
 class Timer {
