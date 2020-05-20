@@ -66,6 +66,7 @@ public:
             tlm_utils::simple_target_socket_tagged<Router> *socket =
                 new tlm_utils::simple_target_socket_tagged<Router>(sc_core::sc_gen_unique_name("target"));
             socket->register_b_transport(this, &Router::b_transport, i);
+            socket->register_transport_dbg(this, &Router::transport_dbg, i);
             socket->register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr, i);
             socket->bind(*initiators.at(i).i);
             target_socket.push_back(socket);
@@ -113,6 +114,24 @@ public:
         trans.set_address(target_addr);
 
         (*initiator_socket[target_nr])->b_transport(trans, delay);
+    }
+
+    virtual unsigned int transport_dbg(int id, tlm::tlm_generic_payload& trans)
+    {
+        sc_dt::uint64 addr = trans.get_address();
+        sc_dt::uint64 target_addr;
+        unsigned int target_nr;
+
+        bool success = decode_address(addr, target_addr, target_nr);
+
+        if (!success) {
+            trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
+            return 0;
+        }
+
+        trans.set_address(target_addr);
+
+        return (*initiator_socket[target_nr])->transport_dbg(trans);
     }
 
     virtual bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
