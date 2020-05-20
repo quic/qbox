@@ -564,7 +564,11 @@ public:
                 return;
             }
 
-            socket->b_transport(trans, local_drift);
+            if (attrs.debug) {
+                socket->transport_dbg(trans);
+            } else {
+                socket->b_transport(trans, local_drift);
+            }
 
             /* reset transaction address before dmi check (could be altered by b_transport) */
             trans.set_address(addr);
