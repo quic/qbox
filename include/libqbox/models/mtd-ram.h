@@ -51,7 +51,7 @@ public:
         assert(m_ptr != MAP_FAILED);
 
         socket.register_b_transport(this, &MTDRam::b_transport);
-
+        socket.register_transport_dbg(this, &MTDRam::transport_dbg);
         socket.register_get_direct_mem_ptr(this, &MTDRam::get_direct_mem_ptr);
     }
 
@@ -96,6 +96,39 @@ private:
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
 
         txn.set_dmi_allowed(true);
+    }
+
+    unsigned int transport_dbg(tlm::tlm_generic_payload& txn)
+    {
+        unsigned int len = txn.get_data_length();
+        unsigned char *ptr = txn.get_data_ptr();
+        sc_dt::uint64 addr = txn.get_address();
+
+        if (txn.get_byte_enable_ptr() != 0 || txn.get_streaming_width() < len) {
+            SC_REPORT_ERROR("MTDRam", "not supported.\n");
+        }
+
+        if ((addr + len) > m_size) {
+            txn.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
+            return 0;
+        }
+
+        switch (txn.get_command()) {
+        case tlm::TLM_READ_COMMAND:
+            memcpy(ptr, &m_ptr[addr], len);
+            break;
+        case tlm::TLM_WRITE_COMMAND:
+            memcpy(&m_ptr[addr], ptr, len);
+            break;
+        default:
+            len = 0;
+            SC_REPORT_ERROR("MTDRam", "TLM command not supported\n");
+            break;
+        }
+
+        txn.set_response_status(tlm::TLM_OK_RESPONSE);
+
+        return len;
     }
 
     bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
