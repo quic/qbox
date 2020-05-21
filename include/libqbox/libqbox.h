@@ -501,11 +501,10 @@ public:
                 mr.init_ram_ptr(m_obj, "dmi", size, dmi_data.get_dmi_ptr());
                 as.mr.add_subregion(mr, dmi_data.get_start_address());
 
-                struct dmi_region r = {
-                    .start = dmi_data.get_start_address(),
-                    .end = dmi_data.get_end_address(),
-                    .mr = mr
-                };
+                struct dmi_region r;
+                r.start = dmi_data.get_start_address();
+                r.end = dmi_data.get_end_address();
+                r.mr = mr;
                 dmis.push_back(r);
 
                 /* TODO: sort dmis */
