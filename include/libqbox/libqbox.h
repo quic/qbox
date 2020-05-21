@@ -447,6 +447,8 @@ public:
         std::vector<qemu::MemoryRegion> mrs;
     };
 
+    static bool dmi_force_exit_on_io;
+
     static void do_dmi_inval(void *opaque)
     {
         struct dmi_inval_args *args = (struct dmi_inval_args *)opaque;
@@ -460,6 +462,8 @@ public:
         }
 
         args->cpu->m_lib->unlock_iothread();
+
+        dmi_force_exit_on_io = 0;
 
         delete args;
     }
@@ -483,6 +487,8 @@ public:
             args->end = end;
             args->mrs = mrs;
             m_cpu.async_safe_run(do_dmi_inval, args);
+
+            dmi_force_exit_on_io = 1;
 
             dump_dmis();
         }
@@ -610,6 +616,13 @@ public:
         m_last_vclock = m_lib->get_virtual_clock();
 
         auto sta = trans.get_response_status();
+
+        if (dmi_force_exit_on_io) {
+            if (sta == tlm::TLM_OK_RESPONSE) {
+                return qemu::MemoryRegionOps::MemTxOKExitTB;
+            }
+            /* in case of error, QEMU will exit the TB anyway */
+        }
 
         if (sta == tlm::TLM_OK_RESPONSE) {
             return qemu::MemoryRegionOps::MemTxOK;
