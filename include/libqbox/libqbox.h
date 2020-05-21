@@ -550,6 +550,29 @@ public:
         trans.set_dmi_allowed(false);
         trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
 
+        if (attrs.debug) {
+            /* run transport_dbg on SystemC thread with no sync */
+            bool sync_on_io = m_sync_policy->m_sync_on_io;
+
+            m_sync_policy->m_sync_on_io = false;
+
+            run_on_sysc([this, &trans, &attrs] () {
+                socket->transport_dbg(trans);
+            });
+
+            m_sync_policy->m_sync_on_io = sync_on_io;
+
+            switch (trans.get_response_status()) {
+            case tlm::TLM_OK_RESPONSE:
+                return qemu::MemoryRegionOps::MemTxOK;
+            case tlm::TLM_ADDRESS_ERROR_RESPONSE:
+                return qemu::MemoryRegionOps::MemTxDecodeError;
+            default:
+                break;
+            }
+            return qemu::MemoryRegionOps::MemTxError;
+        }
+
         sc_core::sc_time elapsed(before - m_last_vclock, sc_core::SC_NS);
 
         local_wait(elapsed);
