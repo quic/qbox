@@ -30,6 +30,7 @@ static inline MemoryRegionOps::MemTxResult QEMU_TO_LIB_MEMTXRESULT_MAPPING(uint3
     case MEMTX_OK: return MemoryRegionOps::MemTxOK;
     case MEMTX_ERROR: return MemoryRegionOps::MemTxError;
     case MEMTX_DECODE_ERROR: return MemoryRegionOps::MemTxDecodeError;
+    case MEMTX_OK_EXIT_TB: return MemoryRegionOps::MemTxOKExitTB;
     }
     return MemoryRegionOps::MemTxError;
 }
@@ -40,6 +41,7 @@ static inline uint32_t LIB_TO_QEMU_MEMTXRESULT_MAPPING(MemoryRegionOps::MemTxRes
     case MemoryRegionOps::MemTxOK: return MEMTX_OK;
     case MemoryRegionOps::MemTxError: return MEMTX_ERROR;
     case MemoryRegionOps::MemTxDecodeError: return MEMTX_DECODE_ERROR;
+    case MemoryRegionOps::MemTxOKExitTB: return MEMTX_OK_EXIT_TB;
     }
     return MEMTX_ERROR;
 }

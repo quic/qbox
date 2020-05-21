@@ -192,6 +192,7 @@ public:
         MemTxOK,
         MemTxError,
         MemTxDecodeError,
+        MemTxOKExitTB
     };
 
     struct MemTxAttrs {
