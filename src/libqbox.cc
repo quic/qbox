@@ -6,5 +6,3 @@ void copy_file(const char* srce_file, const char* dest_file)
     std::ofstream dest(dest_file, std::ios::binary);
     dest << srce.rdbuf();
 }
-
-bool QemuCpu::dmi_force_exit_on_io = false;
