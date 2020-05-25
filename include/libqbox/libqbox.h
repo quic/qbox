@@ -288,7 +288,7 @@ public:
 
     tlm_utils::simple_initiator_socket<QemuCpu> socket;
 
-    sc_core::sc_in<bool> reset;
+    sc_core::sc_port<sc_core::sc_signal_in_if<bool>, 1, sc_core::SC_ZERO_OR_MORE_BOUND> reset;
 
 #ifndef _WIN32
     cci::cci_param<int> icount;
@@ -728,11 +728,6 @@ public:
         for (QemuComponent *c : m_nearby_components) {
             c->set_qemu_instance(*m_lib);
         }
-
-        if (!reset.get_interface()) {
-            sc_core::sc_signal<bool>* stub = new sc_core::sc_signal<bool>(sc_core::sc_gen_unique_name("stub"));
-            reset.bind(*stub);
-        }
     }
 
     virtual void reset_begin()
@@ -754,14 +749,17 @@ public:
 
         QemuComponent::end_of_elaboration();
 
-        SC_METHOD(reset_begin);
-        sc_core::sc_module::sensitive << reset.negedge_event();
+        sc_core::sc_signal_in_if<bool> *reset_i_f = reset.get_interface(0);
+        if (reset_i_f) {
+            SC_METHOD(reset_begin);
+            sc_core::sc_module::sensitive << reset_i_f->negedge_event();
 
-        SC_METHOD(reset_end);
-        sc_core::sc_module::sensitive << reset.posedge_event();
+            SC_METHOD(reset_end);
+            sc_core::sc_module::sensitive << reset_i_f->posedge_event();
 
-        m_external_ev |= reset.negedge_event();
-        m_external_ev |= reset.posedge_event();
+            m_external_ev |= reset_i_f->negedge_event();
+            m_external_ev |= reset_i_f->posedge_event();
+        }
 
 #if 0
         bool gdb_server_alias = m_params["create-gdb-server-alias"].template as<bool>();
