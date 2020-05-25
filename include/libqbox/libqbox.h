@@ -112,7 +112,14 @@ public:
             break;
 
         case SyncPolicy::SYSTEM_THREAD:
-            m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=multi" });
+            if (icount >= 0) {
+                /* icount is not compatile witg MTTCG */
+                m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=single" });
+                /* TODO: ensure only one core per qemu instance */
+            }
+            else {
+                m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=multi" });
+            }
             break;
         }
 
