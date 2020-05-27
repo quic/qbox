@@ -103,7 +103,7 @@ public:
         }
     }
 
-    void qemu_init(int icount, bool singlestep, int gdb_port, std::string trace, SyncPolicy *sp, std::vector<std::string> &extra_qemu_args)
+    void qemu_init(int icount, bool singlestep, int gdb_port, std::string trace, std::string semihosting, SyncPolicy *sp, std::vector<std::string> &extra_qemu_args)
     {
         m_lib = new qemu::LibQemu(*new LibQemuLibraryLoader());
 
@@ -150,6 +150,12 @@ public:
             std::stringstream ss;
             ss << "qemu-" << name() << ".log";
             m_lib->push_qemu_arg({ "-D", ss.str().c_str(), "-d", trace.c_str() });
+        }
+
+        if (!semihosting.empty()) {
+            std::stringstream ss;
+            ss << "enable=on,target=" << semihosting;
+            m_lib->push_qemu_arg({ "-semihosting-config", ss.str().c_str() });
         }
 
         for (std::string &arg : extra_qemu_args) {
@@ -311,12 +317,14 @@ public:
     cci::cci_param<bool> singlestep;
     cci::cci_param<int> gdb_port;
     cci::cci_param<std::string> trace;
+    cci::cci_param<std::string> semihosting;
     cci::cci_param<std::string> sync_policy;
 #else
     gs_param<int> icount;
     gs_param<bool> singlestep;
     gs_param<int> gdb_port;
     gs_param<std::string> trace;
+    gs_param<std::string> semihosting;
     gs_param<std::string> sync_policy;
 #endif
 
@@ -703,6 +711,7 @@ public:
         , singlestep("singlestep", false, "Run the emulation in single step mode")
         , gdb_port("gdb_port", -1, "Wait for gdb connection on TCP port <gdb_port>")
         , trace("trace", "", "Specify tracing options")
+        , semihosting("semihosting", "", "Enable and configure semihosting ")
         , sync_policy("sync_policy", "synchronous", "Synchronization Policy to use")
     {
         m_max_access_size = 4;
