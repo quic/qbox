@@ -94,6 +94,15 @@ public:
 
     std::vector<std::string> m_extra_qemu_args;
 
+    void add_extra_qemu_args(std::initializer_list<const char *> args)
+    {
+        for (auto arg: args) {
+            char * dst = new char[std::strlen(arg)+1];
+            std::strcpy(dst, arg);
+            m_extra_qemu_args.push_back(dst);
+        }
+    }
+
     void qemu_init(int icount, bool singlestep, int gdb_port, std::string trace, SyncPolicy *sp, std::vector<std::string> &extra_qemu_args)
     {
         m_lib = new qemu::LibQemu(*new LibQemuLibraryLoader());
@@ -707,14 +716,13 @@ public:
     {
         m_sync_policy = SyncPolicy::create(sync_policy);
 
-        std::vector<std::string> extra_qemu_args;
         for (QemuComponent *c : m_nearby_components) {
-            extra_qemu_args.insert(extra_qemu_args.end(), c->m_extra_qemu_args.begin(), c->m_extra_qemu_args.end());
+            m_extra_qemu_args.insert(m_extra_qemu_args.end(), c->m_extra_qemu_args.begin(), c->m_extra_qemu_args.end());
         }
 
         if (!m_lib) {
             printf("create new qemu instance for cpu %s\n", name());
-            qemu_init(icount, singlestep, gdb_port, trace, m_sync_policy, extra_qemu_args);
+            qemu_init(icount, singlestep, gdb_port, trace, semihosting, m_sync_policy, m_extra_qemu_args);
         }
         else {
             printf("use existing qemu instance for cpu %s\n", name());
