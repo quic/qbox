@@ -146,10 +146,14 @@ public:
             m_lib->push_qemu_arg({ "-S" });
         }
 
-        if (!trace.empty()) {
+        {
             std::stringstream ss;
             ss << "qemu-" << name() << ".log";
-            m_lib->push_qemu_arg({ "-D", ss.str().c_str(), "-d", trace.c_str() });
+            m_lib->push_qemu_arg({ "-D", ss.str().c_str() });
+        }
+
+        if (!trace.empty()) {
+            m_lib->push_qemu_arg({ "-d", trace.c_str() });
         }
 
         if (!semihosting.empty()) {
