@@ -525,7 +525,7 @@ public:
                 /* TODO: merge contiguous regions */
 
                 qemu::MemoryRegion mr = m_lib->object_new<qemu::MemoryRegion>();
-                uint64_t size = dmi_data.get_end_address() - dmi_data.get_start_address();
+                uint64_t size = dmi_data.get_end_address() - dmi_data.get_start_address() + 1;
                 mr.init_ram_ptr(m_obj, "dmi", size, dmi_data.get_dmi_ptr());
                 as.mr.add_subregion(mr, dmi_data.get_start_address());
 
