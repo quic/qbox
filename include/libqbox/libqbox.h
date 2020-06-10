@@ -520,6 +520,16 @@ public:
     {
         if (trans.is_dmi_allowed()) {
             tlm::tlm_dmi dmi_data;
+
+            /* check if there is already a dmi region covering this range */
+            for (auto &r : dmis) {
+                uint64_t addr = trans.get_address();
+                uint64_t len = trans.get_data_length();
+                if (addr >= r.start && (addr + len - 1) <= r.end) {
+                    return;
+                }
+            }
+
             bool dmi_ptr_valid = socket->get_direct_mem_ptr(trans, dmi_data);
             if (dmi_ptr_valid) {
                 /* TODO: merge contiguous regions */
