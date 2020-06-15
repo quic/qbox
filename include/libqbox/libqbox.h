@@ -167,9 +167,9 @@ public:
         }
 
 #ifdef _WIN32
-        m_lib->init("libqemu-system-aarch64.dll");
+        m_lib->init("libqemu-system-riscv32.dll");
 #else
-        m_lib->init("libqemu-system-aarch64.so");
+        m_lib->init("libqemu-system-riscv32.so");
 #endif
     }
 
