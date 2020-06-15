@@ -18,7 +18,7 @@ set(srcs
     memory.cc
     sysbus.cc
     timer.cc
-    target/arm.cc
+    target/riscv.cc
 )
 
 add_library(qemu-cxx SHARED ${srcs})
@@ -41,7 +41,7 @@ install(FILES
 	"${CMAKE_CURRENT_SOURCE_DIR}/exceptions.h"
 	DESTINATION include/libqemu-cxx)
 install(FILES
-	"${CMAKE_CURRENT_SOURCE_DIR}/target/arm.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/target/riscv.h"
 	DESTINATION include/libqemu-cxx/target)
 
 if (WIN32)
