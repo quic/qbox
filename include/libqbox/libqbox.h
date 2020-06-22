@@ -453,6 +453,7 @@ public:
     struct dmi_region {
         uint64_t start;
         uint64_t end;
+        uint8_t *ptr;
         qemu::MemoryRegion mr;
     };
 
@@ -461,9 +462,9 @@ public:
     void dump_dmis()
     {
 #if 0
-        printf("%s.dmis:\n", name());
+        printf("%s.dmis: (%lu)\n", name(), dmis.size());
         for (auto &r : dmis) {
-            printf("  [0x%08lx:0x%08lx]\n", r.start, r.end);
+            printf("  [0x%08lx:0x%08lx] ptr=%p\n", r.start, r.end, r.ptr);
         }
 #endif
     }
@@ -474,6 +475,8 @@ public:
         uint64_t end;
         std::vector<qemu::MemoryRegion> mrs;
     };
+
+    static bool dmi_force_exit_on_io;
 
     static void do_dmi_inval(void *opaque)
     {
@@ -488,6 +491,8 @@ public:
         }
 
         args->cpu->m_lib->unlock_iothread();
+
+        dmi_force_exit_on_io = 0;
 
         delete args;
     }
@@ -512,19 +517,40 @@ public:
             args->mrs = mrs;
             m_cpu.async_safe_run(do_dmi_inval, args);
 
+            dmi_force_exit_on_io = 1;
+
             dump_dmis();
         }
     }
 
-    void check_dmi_hint(tlm::tlm_generic_payload &trans, AddressSpace& as)
+    void add_dmi_region(uint64_t start, uint64_t end, uint8_t *ptr, AddressSpace &as)
+    {
+        qemu::MemoryRegion mr = m_lib->object_new<qemu::MemoryRegion>();
+        uint64_t size = end - start + 1;
+        mr.init_ram_ptr(m_obj, "dmi", size, ptr);
+
+        as.mr.add_subregion(mr, start);
+
+        struct dmi_region r;
+        r.start = start;
+        r.end = end;
+        r.ptr = ptr;
+        r.mr = mr;
+
+        dmis.push_back(r);
+
+        /* TODO: sort */
+    }
+
+    void check_dmi_hint(tlm::tlm_generic_payload &trans, AddressSpace &as)
     {
         if (trans.is_dmi_allowed()) {
             tlm::tlm_dmi dmi_data;
+            uint64_t addr = trans.get_address();
+            uint64_t len = trans.get_data_length();
 
             /* check if there is already a dmi region covering this range */
             for (auto &r : dmis) {
-                uint64_t addr = trans.get_address();
-                uint64_t len = trans.get_data_length();
                 if (addr >= r.start && (addr + len - 1) <= r.end) {
                     return;
                 }
@@ -532,20 +558,25 @@ public:
 
             bool dmi_ptr_valid = socket->get_direct_mem_ptr(trans, dmi_data);
             if (dmi_ptr_valid) {
-                /* TODO: merge contiguous regions */
+                uint64_t start = dmi_data.get_start_address();
+                uint64_t end = dmi_data.get_end_address();
+                uint8_t *ptr = dmi_data.get_dmi_ptr();
 
-                qemu::MemoryRegion mr = m_lib->object_new<qemu::MemoryRegion>();
-                uint64_t size = dmi_data.get_end_address() - dmi_data.get_start_address() + 1;
-                mr.init_ram_ptr(m_obj, "dmi", size, dmi_data.get_dmi_ptr());
-                as.mr.add_subregion(mr, dmi_data.get_start_address());
+                for (auto &r : dmis) {
+                    if (start <= r.end && end >= r.start) {
+                        /* intersection */
+                        if (start < r.start) {
+                            /* new dmi region starts before existing dmi region */
+                            add_dmi_region(start, r.start - 1, ptr, as);
+                        }
+                        ptr += r.end - start + 1;
+                        start = r.end + 1;
+                    }
+                }
 
-                struct dmi_region r;
-                r.start = dmi_data.get_start_address();
-                r.end = dmi_data.get_end_address();
-                r.mr = mr;
-                dmis.push_back(r);
-
-                /* TODO: sort dmis */
+                if (end > start) {
+                    add_dmi_region(start, end, ptr, as);
+                }
 
                 dump_dmis();
             }
@@ -648,6 +679,13 @@ public:
         m_last_vclock = m_lib->get_virtual_clock();
 
         auto sta = trans.get_response_status();
+
+        if (dmi_force_exit_on_io) {
+            if (sta == tlm::TLM_OK_RESPONSE) {
+                return qemu::MemoryRegionOps::MemTxOKExitTB;
+            }
+            /* in case of error, QEMU will exit the TB anyway */
+        }
 
         if (sta == tlm::TLM_OK_RESPONSE) {
             return qemu::MemoryRegionOps::MemTxOK;
