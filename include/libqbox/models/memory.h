@@ -60,6 +60,10 @@ public:
     void load(std::string filename, uint64_t addr)
     {
         std::ifstream fin(filename, std::ios::in | std::ios::binary);
+        if (!fin.good()) {
+            printf("Memory::load(): error file not found (%s)\n", filename.c_str());
+            exit(1);
+        }
         fin.read((char *)&m_ptr[addr], m_size);
     }
 
