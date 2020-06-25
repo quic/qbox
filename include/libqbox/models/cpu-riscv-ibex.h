@@ -23,10 +23,15 @@
 
 #include <libqemu-cxx/target/riscv.h>
 
+#include "plic-ibex.h"
+
 class CpuRiscvIbex : public QemuCpu {
 public:
-    CpuRiscvIbex(sc_core::sc_module_name name)
+    QemuRiscvIbexPlic plic;
+
+    CpuRiscvIbex(sc_core::sc_module_name name, uint32_t plic_num_irq = 80)
         : QemuCpu(name, "lowrisc-ibex-riscv")
+        , plic("plic", this, plic_num_irq)
     {
     }
 };
