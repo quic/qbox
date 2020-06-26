@@ -34,4 +34,14 @@ public:
     CpuRiscv(const Object &o) : Cpu(o) {}
 };
 
+class RiscvIbexPlic : public Device {
+public:
+    static constexpr const char * const TYPE = "ibex-plic";
+
+    RiscvIbexPlic() = default;
+    RiscvIbexPlic(const RiscvIbexPlic &) = default;
+    RiscvIbexPlic(const Object &o) : Device(o) {}
+
+};
+
 }
