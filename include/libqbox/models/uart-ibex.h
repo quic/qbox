@@ -35,41 +35,99 @@
 class IbexUart : public sc_core::sc_module {
 public:
     enum Reg {
+        REG_ITSTAT = 0x00,
+        REG_ITEN = 0x04,
+        REG_ITTEST = 0x08,
         REG_CTRL = 0x0c,
         REG_STATUS = 0x10,
+        REG_RDATA = 0x14,
         REG_WDATA = 0x18,
     };
 
     enum {
+        FIELD_IT_RXWATERMARK = 0x2,
         FIELD_CTRL_TXENABLE = 0x1,
-        FIELD_STATUS_TXEMPTY = 0x4,
+        FIELD_CTRL_RXENABLE = 0x2,
+        FIELD_STATUS_TXEMPTY = 0x04,
+        FIELD_STATUS_RXIDLE  = 0x10,
+        FIELD_STATUS_RXEMPTY = 0x20,
     };
 
-private:
+    sc_core::sc_out<bool> irq_rxwatermark;
+
+    uint32_t it_state;
+    uint32_t it_enable;
     uint32_t ctrl;
     uint32_t status;
 
+    uint8_t rdata;
+
     CharBackend *chr;
+
+    static int can_receive(void *opaque)
+    {
+        IbexUart *ptr = (IbexUart *) opaque;
+
+        return ptr->ctrl & FIELD_CTRL_RXENABLE;
+    }
+
+    void update_irqs(void)
+    {
+        uint32_t it = it_state & it_enable;
+        if (it & FIELD_IT_RXWATERMARK) {
+            irq_rxwatermark = true;
+        } else {
+            irq_rxwatermark = false;
+        }
+    }
+
+    void recv(const uint8_t *buf, int size)
+    {
+        if ((ctrl & FIELD_CTRL_RXENABLE) && (status & FIELD_STATUS_RXEMPTY)) {
+            rdata = *buf;
+            status &= ~(FIELD_STATUS_RXEMPTY | FIELD_STATUS_RXIDLE);
+            it_state |= FIELD_IT_RXWATERMARK;
+            update_event.notify();
+        } else {
+            fprintf(stderr, "IbexUart: rx char overflow, ignoring character 0x%x '%c'\n",
+                    (unsigned) *buf, *buf);
+        }
+    }
+
+    static void receive(void *opaque, const uint8_t *buf, int size)
+    {
+        IbexUart *ptr = (IbexUart *) opaque;
+
+        ptr->recv(buf, size);
+    }
 
 public:
     tlm_utils::simple_target_socket<IbexUart> socket;
-
-    sc_core::sc_vector<sc_core::sc_signal<bool, sc_core::SC_MANY_WRITERS>> irq;
 
     sc_core::sc_event update_event;
 
     SC_HAS_PROCESS(IbexUart);
     IbexUart(sc_core::sc_module_name name)
+        : irq_rxwatermark("irq_rx_watermark")
     {
         ctrl = 0;
-        status = FIELD_STATUS_TXEMPTY;
+        status = FIELD_STATUS_TXEMPTY |
+                 FIELD_STATUS_RXIDLE |
+                 FIELD_STATUS_RXEMPTY;
+        rdata = 0;
+        it_enable = 0;
+        it_state = 0;
 
         socket.register_b_transport(this, &IbexUart::b_transport);
+
+        SC_METHOD(update_irqs);
+        sensitive << update_event;
     }
 
     void set_backend(CharBackend *backend)
     {
         chr = backend;
+        chr->register_receive(this, receive, can_receive);
     }
 
     void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
@@ -105,13 +163,24 @@ public:
         uint64_t r = 0;
 
         switch (addr) {
+        case REG_ITSTAT:
+            r = it_state;
+            break;
+        case REG_ITEN:
+            r = it_enable;
+            break;
         case REG_CTRL:
             r = ctrl;
             break;
         case REG_STATUS:
             r = status;
             break;
-        case REG_WDATA:
+        case REG_RDATA:
+            r = rdata;
+            if (ctrl & FIELD_CTRL_RXENABLE) {
+                status |= FIELD_STATUS_RXIDLE | FIELD_STATUS_RXEMPTY;
+                rdata = 0;
+            }
             break;
         }
         return r;
@@ -120,6 +189,14 @@ public:
     void reg_write(uint64_t addr, uint32_t data)
     {
         switch (addr) {
+        case REG_ITSTAT:
+            it_state &= ~data;
+            update_event.notify();
+            break;
+        case REG_ITEN:
+            it_enable = data & FIELD_IT_RXWATERMARK;
+            update_event.notify();
+            break;
         case REG_CTRL:
             ctrl = data;
             break;
@@ -130,6 +207,14 @@ public:
                 chr->write(data);
             }
             break;
+        }
+    }
+
+    void before_end_of_elaboration()
+    {
+        if (!irq_rxwatermark.get_interface()) {
+            sc_core::sc_signal<bool>* stub = new sc_core::sc_signal<bool>(sc_core::sc_gen_unique_name("stub"));
+            irq_rxwatermark.bind(*stub);
         }
     }
 };
