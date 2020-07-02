@@ -27,10 +27,13 @@
 
 class CpuArmCortexA53 : public QemuCpu {
 public:
+    int m_affinity;
+
 	CpuArmCortexA53(sc_core::sc_module_name name)
 		: QemuCpu(name, "cortex-a53-arm")
 	{
         m_max_access_size = 8;
+        m_affinity = -1;
     }
 
     void before_end_of_elaboration()
@@ -39,6 +42,9 @@ public:
 
         qemu::CpuAarch64 cpu = qemu::CpuAarch64(get_qemu_obj());
         cpu.set_aarch64_mode(true);
+        if (m_affinity >= 0) {
+            cpu.set_prop_int("mp-affinity", m_affinity);
+        }
         cpu.set_prop_bool("has_el2", true);
         cpu.set_prop_bool("has_el3", false);
     }
@@ -85,29 +91,6 @@ public:
                 *(uint64_t *)ptr = ~e_val;
                 trans.set_response_status(tlm::TLM_OK_RESPONSE);
             }
-        }
-    }
-};
-
-class CpuArmCortexA53Cluster : sc_core::sc_module {
-public:
-    sc_core::sc_vector<CpuArmCortexA53> cores;
-
-    QemuArmGic gic;
-
-    CpuArmCortexA53Cluster(sc_core::sc_module_name name, uint8_t ncores)
-		: sc_module(name)
-        , cores("core", ncores, [this](const char *cname, size_t i) { return new CpuArmCortexA53(cname); })
-        , gic("gic")
-	{
-        /* 1-4 cores per cluster */
-        assert(ncores > 0 && ncores <= 4);
-
-        for (int i = 0; i < ncores; i++) {
-            if (i > 0) {
-                cores[0].add_to_qemu_instance(&cores[i]);
-            }
-            gic.add_core(&cores[i]);
         }
     }
 };
