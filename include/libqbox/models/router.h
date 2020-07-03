@@ -22,6 +22,7 @@
 #include <systemc>
 #include "tlm.h"
 #include "tlm_utils/simple_target_socket.h"
+#include <cinttypes>
 
 template<unsigned int BUSWIDTH = 32>
 struct Router : sc_core::sc_module
@@ -107,6 +108,20 @@ public:
 
         bool success = decode_address(addr, target_addr, target_nr);
         if (!success) {
+            const char *cmd = "unknown";
+            switch (trans.get_command()) {
+                case tlm::TLM_IGNORE_COMMAND:
+                    cmd = "ignore";
+                    break;
+                case tlm::TLM_WRITE_COMMAND:
+                    cmd = "write";
+                    break;
+                case tlm::TLM_READ_COMMAND:
+                    cmd = "read";
+                    break;
+            }
+            fprintf(stderr, "Warning: '%s' access to unmapped address 0x%" PRIx64 " in '%s' module\n",
+                    cmd, (uint64_t) trans.get_address(), name());
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return;
         }
