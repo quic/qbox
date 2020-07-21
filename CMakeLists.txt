@@ -22,6 +22,7 @@ endif()
 add_library(qbox SHARED
     src/libqbox.cc
     src/mac.cc
+    src/async_stop.cc
 )
 
 if (NOT WIN32)
