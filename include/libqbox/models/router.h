@@ -82,6 +82,37 @@ public:
         }
     }
 
+    void end_of_elaboration()
+    {
+        /*
+         * Create a direct bind when a qemu target shares the qemu instance of a cpu
+         */
+        for (auto &i : initiators) {
+            sc_object *ii = i.i->get_base_port().get_parent_object();
+            if(QemuCpu *core = dynamic_cast<QemuCpu *>(ii)) {
+                /* QemuCpu */
+                for (auto &t : targets) {
+                    sc_object *tt = t.t->get_base_port().get_parent_object();
+                    if(QemuComponent *comp = dynamic_cast<QemuComponent *>(tt)) {
+                        /* QemuComponent */
+                        qemu::LibQemu& lib = core->get_qemu_inst();
+                        // TODO: check same qemu instance
+
+                        comp->realize();
+                        qemu::SysBusDevice sbd = qemu::SysBusDevice(comp->get_qemu_obj());
+
+                        uint64_t addr = t.address;
+                        qemu::CpuArm cpu = qemu::CpuArm(core->get_qemu_obj());
+                        qemu::MemoryRegion root_mr = sbd.mmio_get_region(0);
+                        qemu::MemoryRegion mr = lib.object_new<qemu::MemoryRegion>();
+                        mr.init_alias(cpu, "cpu-alias", root_mr, 0, root_mr.get_size());
+                        core->m_ases[0].mr.add_subregion(mr, addr);
+                    }
+                }
+            }
+        }
+    }
+
     virtual void add_initiator(initiator &i)
     {
         struct initiator_info ii;
