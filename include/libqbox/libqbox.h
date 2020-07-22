@@ -173,8 +173,18 @@ public:
 #endif
     }
 
+    bool realized = false;
+
+    void realize()
+    {
+        if (!realized) {
+            get_qemu_obj().set_prop_bool("realized", true);
+            realized = true;
+        }
+    }
+
     void end_of_elaboration() {
-        get_qemu_obj().set_prop_bool("realized", true);
+        realize();
     }
 
     const std::string& get_qemu_obj_id() const { return m_qemu_obj_id; }
