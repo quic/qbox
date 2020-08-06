@@ -28,12 +28,16 @@
 class CpuArmCortexA53 : public QemuCpu {
 public:
     int affinity;
+    bool has_el2;
+    bool has_el3;
 
 	CpuArmCortexA53(sc_core::sc_module_name name)
 		: QemuCpu(name, "cortex-a53-arm")
 	{
         m_max_access_size = 8;
         m_affinity = -1;
+        has_el2 = true;
+        has_el3 = false;
     }
 
     void before_end_of_elaboration()
@@ -45,8 +49,8 @@ public:
         if (m_affinity >= 0) {
             cpu.set_prop_int("mp-affinity", affinity);
         }
-        cpu.set_prop_bool("has_el2", true);
-        cpu.set_prop_bool("has_el3", false);
+        cpu.set_prop_bool("has_el2", has_el2);
+        cpu.set_prop_bool("has_el3", has_el3);
     }
 
     void end_of_elaboration()
