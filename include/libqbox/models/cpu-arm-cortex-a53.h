@@ -27,7 +27,7 @@
 
 class CpuArmCortexA53 : public QemuCpu {
 public:
-    int m_affinity;
+    int affinity;
 
 	CpuArmCortexA53(sc_core::sc_module_name name)
 		: QemuCpu(name, "cortex-a53-arm")
@@ -43,7 +43,7 @@ public:
         qemu::CpuAarch64 cpu = qemu::CpuAarch64(get_qemu_obj());
         cpu.set_aarch64_mode(true);
         if (m_affinity >= 0) {
-            cpu.set_prop_int("mp-affinity", m_affinity);
+            cpu.set_prop_int("mp-affinity", affinity);
         }
         cpu.set_prop_bool("has_el2", true);
         cpu.set_prop_bool("has_el3", false);
