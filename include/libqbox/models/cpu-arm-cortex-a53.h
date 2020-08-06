@@ -35,7 +35,7 @@ public:
 		: QemuCpu(name, "cortex-a53-arm")
 	{
         m_max_access_size = 8;
-        m_affinity = -1;
+        affinity = -1;
         has_el2 = true;
         has_el3 = false;
     }
@@ -46,7 +46,7 @@ public:
 
         qemu::CpuAarch64 cpu = qemu::CpuAarch64(get_qemu_obj());
         cpu.set_aarch64_mode(true);
-        if (m_affinity >= 0) {
+        if (affinity >= 0) {
             cpu.set_prop_int("mp-affinity", affinity);
         }
         cpu.set_prop_bool("has_el2", has_el2);
