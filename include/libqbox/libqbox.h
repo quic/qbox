@@ -323,6 +323,7 @@ public:
     cci::cci_param<std::string> trace;
     cci::cci_param<std::string> semihosting;
     cci::cci_param<std::string> sync_policy;
+    cci::cci_param<int> quantum;
 #else
     gs_param<int> icount;
     gs_param<bool> singlestep;
@@ -330,6 +331,7 @@ public:
     gs_param<std::string> trace;
     gs_param<std::string> semihosting;
     gs_param<std::string> sync_policy;
+    gs_param<int> quantum;
 #endif
 
     unsigned m_max_access_size;
@@ -727,6 +729,7 @@ public:
         , trace("trace", "", "Specify tracing options")
         , semihosting("semihosting", "", "Enable and configure semihosting ")
         , sync_policy("sync_policy", "synchronous", "Synchronization Policy to use")
+        , quantum("quantum", 10000, "TLM-2.0 Quantum in ns")
     {
         m_max_access_size = 4;
 
@@ -738,6 +741,8 @@ public:
     void before_end_of_elaboration()
     {
         m_sync_policy = SyncPolicy::create(sync_policy);
+
+        m_sync_policy->m_quantum = sc_core::sc_time(quantum, sc_core::SC_NS);
 
         for (QemuComponent *c : m_nearby_components) {
             m_extra_qemu_args.insert(m_extra_qemu_args.end(), c->m_extra_qemu_args.begin(), c->m_extra_qemu_args.end());
