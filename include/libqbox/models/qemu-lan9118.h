@@ -26,20 +26,6 @@
 
 #include "gic.h"
 
-class QemuSignal : public sc_core::sc_signal<bool> {
-public:
-    sc_core::sc_port_base* bound_port;
-
-    QemuSignal(sc_core::sc_module_name nm) : sc_signal<bool>(nm), bound_port(NULL)
-    {
-    }
-
-    void register_port(sc_core::sc_port_base& port, const char *)
-    {
-        bound_port = &port;
-    }
-};
-
 class QemuLan9118 : public QemuComponent {
 public:
     QemuSignal irq;
