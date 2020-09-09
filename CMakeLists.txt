@@ -26,7 +26,11 @@ add_library(qbox SHARED
 
 if (NOT WIN32)
     target_sources(qbox
-        PRIVATE src/xgmac.cc src/backends/tap.cc
+        PRIVATE
+        src/xgmac.cc
+        src/dwmac.cc
+        src/phy.cc
+        src/backends/tap.cc
     )
 endif()
 
