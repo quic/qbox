@@ -28,30 +28,36 @@
 
 class QemuXgmac : public QemuComponent {
 public:
-    QemuCpu* m_cpu;
-    QemuArmGic *m_gic;
-    uint64_t m_addr;
+    QemuSignal irq;
+
+    tlm_utils::simple_target_socket<QemuXgmac> socket;
 
 protected:
     using QemuComponent::m_obj;
 
 public:
-    QemuXgmac(sc_core::sc_module_name name, QemuCpu *cpu,
-            /* FIXME */ QemuArmGic *gic,
-            /* FIXME */ uint64_t addr)
+    QemuXgmac(sc_core::sc_module_name name)
         : QemuComponent(name, "xgmac")
-        , m_cpu(cpu)
-        , m_gic(gic)
-        , m_addr(addr)
+        , irq("irq")
     {
-        m_extra_qemu_args.push_back("-netdev");
-        m_extra_qemu_args.push_back("user,id=net0");
-
-        cpu->add_to_qemu_instance(this);
     }
 
     ~QemuXgmac()
     {
+    }
+
+    void set_backend_slirp()
+    {
+        m_extra_qemu_args.push_back("-netdev");
+        m_extra_qemu_args.push_back("user,id=net0");
+    }
+
+    void set_backend_tap(std::string name = "qbox0")
+    {
+        std::stringstream ss;
+        m_extra_qemu_args.push_back("-netdev");
+        ss << "tap,id=net0,ifname=" << name << ",script=no,downscript=no";
+        m_extra_qemu_args.push_back(ss.str());
     }
 
     void set_qemu_properties_callback()
@@ -74,18 +80,14 @@ public:
     {
         QemuComponent::end_of_elaboration();
 
-        /* FIXME: expose socket */
-        qemu::CpuArm cpu = qemu::CpuArm(m_cpu->get_qemu_obj());
         qemu::SysBusDevice sbd = qemu::SysBusDevice(get_qemu_obj());
-        qemu::MemoryRegion root_mr = sbd.mmio_get_region(0);
-        qemu::MemoryRegion mr = m_lib->object_new<qemu::MemoryRegion>();
-        mr.init_alias(cpu, "cpu-alias", root_mr, 0, root_mr.get_size());
-        m_cpu->m_ases[0].mr.add_subregion(mr, m_addr);
 
-        /* FIXME: implement qemu direct mapping */
-        qemu::Device gic_dev(m_gic->get_qemu_obj());
-        sbd.connect_gpio_out(0, gic_dev.get_gpio_in(80));
-        sbd.connect_gpio_out(1, gic_dev.get_gpio_in(81));
-        sbd.connect_gpio_out(2, gic_dev.get_gpio_in(82));
+        if(QemuInPort *port = dynamic_cast<QemuInPort *>(irq.bound_port)) {
+            sbd.connect_gpio_out(0, port->get_gpio());
+        }
+        else {
+            printf("error: connecting irq outside qemu is not yet implemented\n");
+            exit(1);
+        }
     }
 };
