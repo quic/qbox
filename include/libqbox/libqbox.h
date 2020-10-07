@@ -475,13 +475,11 @@ public:
         }
     };
 
-    std::vector<struct dmi_region> dmis;
-
     void dump_dmis()
     {
 #if 0
-        printf("%s.dmis: (%lu)\n", name(), dmis.size());
-        for (auto &r : dmis) {
+        printf("%s.dmi_aliases: (%lu)\n", name(), dmi_aliases.size());
+        for (auto &r : dmi_aliases) {
             printf("  [0x%08lx:0x%08lx] ptr=%p\n", r.start, r.end, r.ptr);
         }
 #endif
@@ -519,11 +517,11 @@ public:
     {
         std::vector<qemu::MemoryRegion> mrs;
 
-        for (auto it = dmis.begin(); it != dmis.end(); it++) {
+        for (auto it = dmi_aliases.begin(); it != dmi_aliases.end(); it++) {
             auto r = *it;
             if (start <= r.end && end >= r.start) {
                 mrs.push_back(r.mr);
-                dmis.erase(it--);
+                dmi_aliases.erase(it--);
             }
         }
 
@@ -541,16 +539,21 @@ public:
         }
     }
 
-    void add_dmi_region(uint64_t start, uint64_t end, uint8_t *ptr, AddressSpace &as)
+    /* global dmi regions (must not intersect with each other) */
+    static std::vector<struct dmi_region> g_dmis;
+
+    /* local aliases to dmi regions */
+    std::vector<struct dmi_region> dmi_aliases;
+
+    void add_dmi_region(uint64_t start, uint64_t end, uint8_t *ptr)
     {
         uint64_t size = end - start + 1;
 
         qemu::MemoryRegion mr = m_lib->object_new<qemu::MemoryRegion>();
         mr.init_ram_ptr(m_obj, "dmi", size, ptr);
-        as.mr.add_subregion(mr, start);
 
         struct dmi_region r(start, end, ptr, mr);
-        dmis.push_back(r); /* TODO: sort */
+        g_dmis.push_back(r); /* TODO: sort */
     }
 
     void check_dmi_hint(tlm::tlm_generic_payload &trans, AddressSpace &as)
@@ -567,7 +570,7 @@ public:
         }
 
         /* check if there is already a dmi region covering this range */
-        for (auto &r : dmis) {
+        for (auto &r : dmi_aliases) {
             if (addr >= r.start && (addr + len - 1) <= r.end) {
                 return;
             }
@@ -578,23 +581,40 @@ public:
             return;
         }
 
+        /* phase 1: create qemu memory regions */
+
         dmi_start = dmi_data.get_start_address();
         dmi_end = dmi_data.get_end_address();
         dmi_ptr = dmi_data.get_dmi_ptr();
 
-        for (auto &r : dmis) {
+        for (auto &r : g_dmis) {
             if (dmi_start <= r.end && dmi_end >= r.start) {
                 /* intersection */
                 if (dmi_start < r.start) {
                     /* new dmi region starts before existing dmi region */
-                    add_dmi_region(dmi_start, r.start - 1, dmi_ptr, as);
+                    add_dmi_region(dmi_start, r.start - 1, dmi_ptr);
                 }
                 dmi_ptr += r.end - dmi_start + 1;
                 dmi_start = r.end + 1;
             }
         }
         if (dmi_end > dmi_start) {
-            add_dmi_region(dmi_start, dmi_end, dmi_ptr, as);
+            add_dmi_region(dmi_start, dmi_end, dmi_ptr);
+        }
+        /* TODO: merge adjacent regions (require invalidating aliases) */
+
+        /* phase 2: alias qemu memory regions */
+
+        for (auto &r : g_dmis) {
+            if (addr >= r.start && (addr + len - 1) <= r.end) {
+                uint64_t size = r.end - r.start + 1;
+                qemu::MemoryRegion mr = m_lib->object_new<qemu::MemoryRegion>();
+                mr.init_alias(m_obj, "dmi-alias", r.mr, 0, size);
+                as.mr.add_subregion(mr, r.start);
+
+                struct dmi_region r(r.start, r.end, r.ptr, mr);
+                dmi_aliases.push_back(r); /* TODO: sort */
+            }
         }
 
         dump_dmis();

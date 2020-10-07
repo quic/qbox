@@ -8,3 +8,5 @@ void copy_file(const char* srce_file, const char* dest_file)
 }
 
 bool QemuCpu::dmi_force_exit_on_io = false;
+
+std::vector<struct QemuCpu::dmi_region> QemuCpu::g_dmis;
