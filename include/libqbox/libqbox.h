@@ -465,6 +465,14 @@ public:
         uint64_t end;
         uint8_t *ptr;
         qemu::MemoryRegion mr;
+
+        dmi_region(uint64_t start, uint64_t end, uint8_t *ptr, qemu::MemoryRegion mr)
+        {
+            this->start = start;
+            this->end = end;
+            this->ptr = ptr;
+            this->mr = mr;
+        }
     };
 
     std::vector<struct dmi_region> dmis;
@@ -535,21 +543,14 @@ public:
 
     void add_dmi_region(uint64_t start, uint64_t end, uint8_t *ptr, AddressSpace &as)
     {
-        qemu::MemoryRegion mr = m_lib->object_new<qemu::MemoryRegion>();
         uint64_t size = end - start + 1;
-        mr.init_ram_ptr(m_obj, "dmi", size, ptr);
 
+        qemu::MemoryRegion mr = m_lib->object_new<qemu::MemoryRegion>();
+        mr.init_ram_ptr(m_obj, "dmi", size, ptr);
         as.mr.add_subregion(mr, start);
 
-        struct dmi_region r;
-        r.start = start;
-        r.end = end;
-        r.ptr = ptr;
-        r.mr = mr;
-
-        dmis.push_back(r);
-
-        /* TODO: sort */
+        struct dmi_region r(start, end, ptr, mr);
+        dmis.push_back(r); /* TODO: sort */
     }
 
     void check_dmi_hint(tlm::tlm_generic_payload &trans, AddressSpace &as)
