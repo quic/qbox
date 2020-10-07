@@ -554,43 +554,49 @@ public:
 
     void check_dmi_hint(tlm::tlm_generic_payload &trans, AddressSpace &as)
     {
-        if (trans.is_dmi_allowed()) {
-            tlm::tlm_dmi dmi_data;
-            uint64_t addr = trans.get_address();
-            uint64_t len = trans.get_data_length();
+        tlm::tlm_dmi dmi_data;
+        uint64_t addr = trans.get_address();
+        uint64_t len = trans.get_data_length();
+        uint64_t dmi_start;
+        uint64_t dmi_end;
+        uint8_t *dmi_ptr;
 
-            /* check if there is already a dmi region covering this range */
-            for (auto &r : dmis) {
-                if (addr >= r.start && (addr + len - 1) <= r.end) {
-                    return;
-                }
-            }
+        if (!trans.is_dmi_allowed()) {
+            return;
+        }
 
-            bool dmi_ptr_valid = socket->get_direct_mem_ptr(trans, dmi_data);
-            if (dmi_ptr_valid) {
-                uint64_t start = dmi_data.get_start_address();
-                uint64_t end = dmi_data.get_end_address();
-                uint8_t *ptr = dmi_data.get_dmi_ptr();
-
-                for (auto &r : dmis) {
-                    if (start <= r.end && end >= r.start) {
-                        /* intersection */
-                        if (start < r.start) {
-                            /* new dmi region starts before existing dmi region */
-                            add_dmi_region(start, r.start - 1, ptr, as);
-                        }
-                        ptr += r.end - start + 1;
-                        start = r.end + 1;
-                    }
-                }
-
-                if (end > start) {
-                    add_dmi_region(start, end, ptr, as);
-                }
-
-                dump_dmis();
+        /* check if there is already a dmi region covering this range */
+        for (auto &r : dmis) {
+            if (addr >= r.start && (addr + len - 1) <= r.end) {
+                return;
             }
         }
+
+        bool dmi_ptr_valid = socket->get_direct_mem_ptr(trans, dmi_data);
+        if (!dmi_ptr_valid) {
+            return;
+        }
+
+        dmi_start = dmi_data.get_start_address();
+        dmi_end = dmi_data.get_end_address();
+        dmi_ptr = dmi_data.get_dmi_ptr();
+
+        for (auto &r : dmis) {
+            if (dmi_start <= r.end && dmi_end >= r.start) {
+                /* intersection */
+                if (dmi_start < r.start) {
+                    /* new dmi region starts before existing dmi region */
+                    add_dmi_region(dmi_start, r.start - 1, dmi_ptr, as);
+                }
+                dmi_ptr += r.end - dmi_start + 1;
+                dmi_start = r.end + 1;
+            }
+        }
+        if (dmi_end > dmi_start) {
+            add_dmi_region(dmi_start, dmi_end, dmi_ptr, as);
+        }
+
+        dump_dmis();
     }
 
     /**
