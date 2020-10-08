@@ -92,7 +92,7 @@ QemuObject* LibQemu::object_new_internal(const char *type_name)
     QemuObject *root = m_qemu_exports->object_get_root();
     QemuError *err = nullptr;
 
-    m_qemu_exports->object_property_add_child(root, "libqemu-obj[*]", o, &err);
+    m_qemu_exports->object_property_add_child(root, "libqemu-obj[*]", o);
 
     if (err != nullptr) {
         throw LibQemuException("Error while parenting the new object");
@@ -196,7 +196,7 @@ Object::~Object()
 void Object::set_prop_bool(const char *name, bool val)
 {
     QemuError *e = nullptr;
-    m_exports->object_property_set_bool(m_obj, val, name, &e);
+    m_exports->object_property_set_bool(m_obj, name, val, &e);
 
     if (e != nullptr) {
         throw SetPropertyException("bool", name);
@@ -206,7 +206,7 @@ void Object::set_prop_bool(const char *name, bool val)
 void Object::set_prop_int(const char *name, int64_t val)
 {
     QemuError *e = nullptr;
-    m_exports->object_property_set_int(m_obj, val, name, &e);
+    m_exports->object_property_set_int(m_obj, name, val, &e);
 
     if (e != nullptr) {
         throw SetPropertyException("int", name);
@@ -226,7 +226,7 @@ void Object::set_prop_str(const char *name, const char *val)
 void Object::set_prop_link(const char *name, const Object &link)
 {
     QemuError *e = nullptr;
-    m_exports->object_property_set_link(m_obj, link.m_obj, name, &e);
+    m_exports->object_property_set_link(m_obj, name, link.m_obj, &e);
 
     if (e != nullptr) {
         throw SetPropertyException("link", name);
