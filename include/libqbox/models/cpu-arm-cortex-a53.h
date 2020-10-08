@@ -30,6 +30,7 @@ public:
     int affinity;
     bool has_el2;
     bool has_el3;
+    bool start_powered_off;
 
 	CpuArmCortexA53(sc_core::sc_module_name name)
 		: QemuCpu(name, "cortex-a53-arm")
@@ -38,6 +39,7 @@ public:
         affinity = -1;
         has_el2 = true;
         has_el3 = false;
+        start_powered_off = false;
     }
 
     void before_end_of_elaboration()
@@ -51,6 +53,9 @@ public:
         }
         cpu.set_prop_bool("has_el2", has_el2);
         cpu.set_prop_bool("has_el3", has_el3);
+
+        cpu.set_prop_bool("start-powered-off", start_powered_off);
+        cpu.set_prop_int("psci-conduit", 2 /* HVC */);
     }
 
     void end_of_elaboration()
