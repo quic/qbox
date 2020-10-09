@@ -33,7 +33,7 @@ public:
     bool start_powered_off;
 
 	CpuArmCortexA53(sc_core::sc_module_name name)
-		: QemuCpu(name, "cortex-a53-arm")
+		: QemuCpu(name, "aarch64", "cortex-a53-arm")
 	{
         m_max_access_size = 8;
         affinity = -1;

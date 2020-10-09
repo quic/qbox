@@ -28,7 +28,7 @@ public:
 	QemuArmNvic nvic;
 
 	CpuArmCortexM4(sc_core::sc_module_name name, uint32_t nvic_num_irq = 64)
-		: QemuCpu(name, "cortex-m4-arm")
+		: QemuCpu(name, "aarch64", "cortex-m4-arm")
 		, nvic("nvic", this, nvic_num_irq)
 	{
     }

@@ -103,7 +103,7 @@ public:
         }
     }
 
-    void qemu_init(int icount, bool singlestep, int gdb_port, std::string trace, std::string semihosting, SyncPolicy *sp, std::vector<std::string> &extra_qemu_args)
+    void qemu_init(const std::string &arch, int icount, bool singlestep, int gdb_port, std::string trace, std::string semihosting, SyncPolicy *sp, std::vector<std::string> &extra_qemu_args)
     {
         m_lib = new qemu::LibQemu(*new LibQemuLibraryLoader());
 
@@ -166,11 +166,15 @@ public:
             m_lib->push_qemu_arg(arg.c_str());
         }
 
+        {
+            std::stringstream ss;
 #ifdef _WIN32
-        m_lib->init("libqemu-system-aarch64.dll");
+            ss << "libqemu-system-" << arch << ".dll";
 #else
-        m_lib->init("libqemu-system-aarch64.so");
+            ss << "libqemu-system-" << arch << ".so";
 #endif
+            m_lib->init(ss.str().c_str());
+        }
     }
 
     bool realized = false;
@@ -320,6 +324,7 @@ public:
 
 class QemuCpu : public QemuComponent {
 public:
+    const std::string m_arch;
     qemu::Cpu m_cpu;
 
     tlm_utils::simple_initiator_socket<QemuCpu> socket;
@@ -795,8 +800,9 @@ public:
 public:
     SC_HAS_PROCESS(QemuCpu);
 
-    QemuCpu(sc_core::sc_module_name name, const std::string type_name)
+    QemuCpu(sc_core::sc_module_name name, const std::string arch_name, const std::string type_name)
         : QemuComponent(name, (type_name + "-cpu").c_str())
+        , m_arch(arch_name)
         , reset("reset")
         , icount("icount", -1, "Enable virtual instruction counter")
         , singlestep("singlestep", false, "Run the emulation in single step mode")
@@ -825,7 +831,7 @@ public:
 
         if (!m_lib) {
             printf("create new qemu instance for cpu %s\n", name());
-            qemu_init(icount, singlestep, gdb_port, trace, semihosting, m_sync_policy, m_extra_qemu_args);
+            qemu_init(m_arch, icount, singlestep, gdb_port, trace, semihosting, m_sync_policy, m_extra_qemu_args);
         }
         else {
             printf("use existing qemu instance for cpu %s\n", name());
