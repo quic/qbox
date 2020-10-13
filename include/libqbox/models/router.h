@@ -102,7 +102,7 @@ public:
                         qemu::SysBusDevice sbd = qemu::SysBusDevice(comp->get_qemu_obj());
 
                         uint64_t addr = t.address;
-                        qemu::CpuArm cpu = qemu::CpuArm(core->get_qemu_obj());
+                        qemu::Cpu cpu = qemu::Cpu(core->get_qemu_obj());
                         qemu::MemoryRegion root_mr = sbd.mmio_get_region(0);
                         qemu::MemoryRegion mr = lib.object_new<qemu::MemoryRegion>();
                         mr.init_alias(cpu, "cpu-alias", root_mr, 0, root_mr.get_size());
