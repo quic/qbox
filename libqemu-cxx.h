@@ -59,7 +59,7 @@ class Bus;
 class LibQemu {
 private:
     LibraryLoaderIface &m_library_loader;
-    std::vector<const char *> m_qemu_argv;
+    std::vector<char *> m_qemu_argv;
 
     LibQemuExports *m_qemu_exports = nullptr;
     LibraryLoaderIface::LibraryIfacePtr m_lib;
