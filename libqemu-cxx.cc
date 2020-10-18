@@ -71,6 +71,11 @@ void LibQemu::init(const char *libname)
     m_qemu_exports = qemu_init(m_qemu_argv.size(), &m_qemu_argv[0]);
 }
 
+void LibQemu::resume_all_vcpus()
+{
+    m_qemu_exports->resume_all_vcpus();
+}
+
 void LibQemu::start_gdb_server(std::string port)
 {
     m_qemu_exports->gdbserver_start(port.c_str());
