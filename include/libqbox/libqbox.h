@@ -20,6 +20,7 @@
 #pragma once
 
 #include <sstream>
+#include <mutex>
 
 #include <systemc>
 #include <tlm>
@@ -30,7 +31,7 @@
 
 #include <libqemu-cxx/libqemu-cxx.h>
 
-#include <libssync/libssync.h>
+#include <libgs/libgs.h>
 
 #include "loader.h"
 
@@ -78,11 +79,14 @@ protected:
     qemu::Object m_obj;
 
 public:
+    cci::cci_param<bool> coroutines;
+
     SC_HAS_PROCESS(QemuComponent);
 
     QemuComponent(sc_core::sc_module_name name, const char* qemu_obj_id)
         : sc_module(name)
         , m_qemu_obj_id(qemu_obj_id)
+        , coroutines("coroutines", false, "Run using coroutines in Qemu")
     {
     }
 
@@ -103,7 +107,7 @@ public:
         }
     }
 
-    void qemu_init(const std::string &arch, int icount, bool singlestep, int gdb_port, std::string trace, std::string semihosting, SyncPolicy *sp, std::vector<std::string> &extra_qemu_args)
+    void qemu_init(const std::string &arch, int icount, bool singlestep, int gdb_port, std::string trace, std::string semihosting, gs::SyncPolicy::Type type, std::vector<std::string> &extra_qemu_args)
     {
         m_lib = new qemu::LibQemu(*new LibQemuLibraryLoader());
 
@@ -114,22 +118,21 @@ public:
         m_lib->push_qemu_arg({ "-serial", "null" });
         m_lib->push_qemu_arg({ "-nographic" });
 
-        /* FIXME: How to mix icount and SyncPolicy::SYSTEM_THREAD */
-        switch (sp->get_thread_type()) {
-        case SyncPolicy::COROUTINE:
-            m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=single" });
-            break;
-
-        case SyncPolicy::SYSTEM_THREAD:
-            if (icount >= 0) {
-                /* icount is not compatile witg MTTCG */
-                m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=single" });
-                /* TODO: ensure only one core per qemu instance */
-            }
-            else {
-                m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=multi" });
-            }
-            break;
+        switch (type) {
+            case gs::SyncPolicy::SYSTEMC_THREAD:
+                if (coroutines) {
+                    m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=single" });
+                } else {
+                    m_lib->push_qemu_arg({ "-accel", "tcg,thread=single" });
+                }
+                break;
+            case gs::SyncPolicy::OS_THREAD:
+                if (coroutines) {
+                    m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=single" });
+                } else {
+                    m_lib->push_qemu_arg({ "-accel", "tcg,thread=multi" });
+                }
+                break;
         }
 
         if (icount >= 0) {
@@ -179,8 +182,7 @@ public:
 
     bool realized = false;
 
-    void realize()
-    {
+    void realize() {
         if (!realized) {
             get_qemu_obj().set_prop_bool("realized", true);
             realized = true;
@@ -189,6 +191,11 @@ public:
 
     void end_of_elaboration() {
         realize();
+    }
+
+    void start_of_simulation()
+    {
+        m_lib->resume_all_vcpus();
     }
 
     const std::string& get_qemu_obj_id() const { return m_qemu_obj_id; }
@@ -323,6 +330,8 @@ public:
 #endif
 
 class QemuCpu : public QemuComponent {
+    gs::RunOnSysC onSystemC; // Private SystemC helper
+    std::mutex mutex;
 public:
     const std::string m_arch;
     qemu::Cpu m_cpu;
@@ -338,7 +347,8 @@ public:
     cci::cci_param<std::string> trace;
     cci::cci_param<std::string> semihosting;
     cci::cci_param<std::string> sync_policy;
-    cci::cci_param<int> quantum;
+    cci::cci_param<int> quantum_ns;
+    cci::cci_param<bool> threadsafe_access;
 #else
     gs_param<int> icount;
     gs_param<bool> singlestep;
@@ -346,7 +356,8 @@ public:
     gs_param<std::string> trace;
     gs_param<std::string> semihosting;
     gs_param<std::string> sync_policy;
-    gs_param<int> quantum;
+    gs_param<int> quantum_ns;
+    gs_param<bool> threadsafe_access;
 #endif
 
     unsigned m_max_access_size;
@@ -363,54 +374,9 @@ public:
     sc_core::sc_event_or_list m_external_ev;
     std::shared_ptr<sc_core::sc_event> m_cross_cpu_exec_ev;
 
-    SyncPolicy *m_sync_policy;
-
     int64_t m_last_vclock;
 
-    sc_core::sc_time get_run_budget(void)
-    {
-        return m_sync_policy->get_run_budget();
-    }
-
-    sc_core::sc_time run_cpu(std::shared_ptr<qemu::Timer>& deadline_timer,
-        const sc_core::sc_time& run_budget)
-    {
-        int64_t budget = int64_t(get_run_budget().to_seconds() * 1e9);
-
-        m_last_vclock = m_lib->get_virtual_clock();
-
-        deadline_timer->mod(m_last_vclock + budget);
-
-        m_cpu.loop();
-
-        if (m_lib->get_virtual_clock() == m_last_vclock) {
-            m_cpu.loop();
-        }
-
-        deadline_timer->del();
-
-        return sc_core::sc_time(m_lib->get_virtual_clock() - m_last_vclock, sc_core::SC_NS);
-    }
-
-    void run_on_sysc(std::function<void()> job)
-    {
-        m_sync_policy->run_on_sysc(job, SyncPolicy::JOB_WAIT);
-    }
-
-    void local_wait(sc_core::sc_time amount)
-    {
-        m_sync_policy->local_wait(amount);
-    }
-
-    const sc_core::sc_time & get_local_time()
-    {
-        return m_sync_policy->get_local_time();
-    }
-
-    const sc_core::sc_time & get_global_time()
-    {
-        return m_sync_policy->get_global_time();
-    }
+    gs::tlm_quantumkeeper_extended *m_qk;
 
     void wait_for_work()
     {
@@ -429,41 +395,82 @@ public:
     void mainloop_thread()
     {
         std::shared_ptr<qemu::Timer> deadline_timer;
-
-        deadline_timer = m_lib->timer_new();
-
-        deadline_timer->set_callback([this]() { m_cpu.kick(); });
-
-        m_cpu.register_thread();
-
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            deadline_timer = m_lib->timer_new();
+        }
+        if (coroutines)
+            m_cpu.register_thread();
         for (;;) {
             sc_core::sc_time elapsed;
 
-            run_on_sysc([this] {
-                if (!m_cpu.can_run()) {
-                    MLOG(SIM, DBG) << "No more cpu work\n";
-                    wait_for_work();
-                }
+            if (!m_cpu.can_run()) {
+                m_qk->sync();
+            }
 
-                while (m_cpu.loop_is_busy()) {
-                    MLOG(SIM, DBG) << "Another CPU is running, waiting...\n";
-                    wait(*m_cross_cpu_exec_ev);
-                }
-            });
+            sc_core::sc_time run_budget = m_qk->time_to_sync();
+            if (run_budget == sc_core::sc_time(sc_core::SC_ZERO_TIME)) {
+                wait(run_budget);
+                continue;
+            }
+            MLOG(SIM, TRC) << "CPU run, budget: " << run_budget << "\n";
+            int64_t budget = int64_t(run_budget.to_seconds() * 1e9);
 
-            MLOG(SIM, TRC) << "CPU run, budget: " << get_run_budget() << "\n";
+            if (coroutines) {
+                deadline_timer->set_callback([this]() { m_cpu.kick();});
+                std::function<void()> job = [this] {
+                    if (!m_cpu.can_run()) {
+                        MLOG(SIM, DBG) << "No more cpu work\n";
+                        wait_for_work();
+                    }
 
-            elapsed = run_cpu(deadline_timer, get_run_budget());
-
-            if (m_sync_policy->get_thread_type() == SyncPolicy::COROUTINE) {
-                run_on_sysc([this] {
-                    m_cross_cpu_exec_ev->notify();
+                    while (m_cpu.loop_is_busy()) {
+                        MLOG(SIM, DBG) << "Another CPU is running, waiting...\n";
+                        wait(*m_cross_cpu_exec_ev);
+                    }
+                };
+                onSystemC.run_on_sysc(job);
+            } else {
+                deadline_timer->set_callback([this, run_budget]() {
+                    std::function<void()> job = [this, run_budget] {
+                        m_qk->set_and_sync(run_budget);
+                    };
+                    onSystemC.run_on_sysc(job);
                 });
+            }
+
+            m_last_vclock = m_lib->get_virtual_clock();
+            int64_t next_point = m_last_vclock + budget;
+            deadline_timer->mod(next_point);
+
+            if (coroutines) {
+                m_cpu.loop();
+                // FIXME LJ: Why do we need this?
+                if (m_lib->get_virtual_clock() == m_last_vclock) {
+                    m_cpu.loop();
+                }
+                std::function<void()> job = [this] {
+                    m_cross_cpu_exec_ev->notify();
+                };
+                onSystemC.run_on_sysc(job);
+            } else {
+                wait(run_budget);
+            }
+
+            int64_t now = m_lib->get_virtual_clock();
+
+            deadline_timer->del();
+
+            elapsed = sc_core::sc_time(now - m_last_vclock, sc_core::SC_NS);
+            if (coroutines) {
+                m_qk->inc(elapsed);
             }
 
             MLOG(SIM, TRC) << "elapsed: " << elapsed << "\n";
 
-            local_wait(elapsed);
+            if (m_qk->need_sync()) {
+                m_qk->sync();
+            }
         }
     }
 
@@ -482,8 +489,7 @@ public:
         }
     };
 
-    void dump_dmis()
-    {
+    void dump_dmis() {
 #if 0
         printf("%s.dmi_aliases: (%lu)\n", name(), dmi_aliases.size());
         for (auto &r : dmi_aliases) {
@@ -664,61 +670,56 @@ public:
         trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
 
         if (attrs.debug) {
-            /* run transport_dbg on SystemC thread with no sync */
-            bool sync_on_io = m_sync_policy->m_sync_on_io;
-
-            m_sync_policy->m_sync_on_io = false;
-
-            run_on_sysc([this, &trans, &attrs] () {
+            std::function<void()> job=[this, &trans] {
                 socket->transport_dbg(trans);
-            });
-
-            m_sync_policy->m_sync_on_io = sync_on_io;
-
+            };
+            onSystemC.run_on_sysc(job);
             switch (trans.get_response_status()) {
-            case tlm::TLM_OK_RESPONSE:
-                return qemu::MemoryRegionOps::MemTxOK;
-            case tlm::TLM_ADDRESS_ERROR_RESPONSE:
-                return qemu::MemoryRegionOps::MemTxDecodeError;
-            default:
-                break;
+                case tlm::TLM_OK_RESPONSE:
+                    return qemu::MemoryRegionOps::MemTxOK;
+                case tlm::TLM_ADDRESS_ERROR_RESPONSE:
+                    return qemu::MemoryRegionOps::MemTxDecodeError;
+                default:
+                    break;
             }
             return qemu::MemoryRegionOps::MemTxError;
         }
-
         sc_core::sc_time elapsed(before - m_last_vclock, sc_core::SC_NS);
 
-        local_wait(elapsed);
+        m_qk->inc(elapsed);
 
         m_lib->unlock_iothread();
 
-        run_on_sysc([this, &as, &trans, &addr, &local_drift, &local_drift_before, &attrs] () {
-            local_drift = local_drift_before = get_local_time() - get_global_time();
-
+        std::function<void()> job = [this, &trans, &attrs] {
+            sc_core::sc_time delay = m_qk->get_local_time();
             if (!before_b_transport(trans, attrs)) {
                 return;
             }
+            socket->b_transport(trans, delay);
+            m_qk->set(delay);
+        };
 
-            if (attrs.debug) {
-                socket->transport_dbg(trans);
-            } else {
-                socket->b_transport(trans, local_drift);
-            }
+        if (threadsafe_access) {
+            std::lock_guard<std::mutex> lock(mutex);
+            job();
+        } else {
+            onSystemC.run_on_sysc(job);
+        }
 
-            /* reset transaction address before dmi check (could be altered by b_transport) */
-            trans.set_address(addr);
+        /* reset transaction address before dmi check (could be altered by b_transport) */
+        trans.set_address(addr);
 
-            after_b_transport(trans, attrs);
-
-            check_dmi_hint(trans, as);
-        });
+        after_b_transport(trans, attrs);
+        check_dmi_hint(trans, as);
+  
+        /*
+         * NB it is unsafe to 'sync' from within an io access as potentially
+         * Qemu will need to do exclusive work, and will deadlock
+         */
+        if (m_qk->need_sync())
+            m_cpu.request_exit();
 
         m_lib->lock_iothread();
-
-        if (local_drift > local_drift_before) {
-            /* Account for time passed during the transaction */
-            local_wait(local_drift - local_drift_before);
-        }
 
         m_last_vclock = m_lib->get_virtual_clock();
 
@@ -809,11 +810,13 @@ public:
         , gdb_port("gdb_port", -1, "Wait for gdb connection on TCP port <gdb_port>")
         , trace("trace", "", "Specify tracing options")
         , semihosting("semihosting", "", "Enable and configure semihosting ")
-        , sync_policy("sync_policy", "synchronous", "Synchronization Policy to use")
-        , quantum("quantum", 10000, "TLM-2.0 Quantum in ns")
+        , sync_policy("sync_policy", "tlm2", "Synchronization Policy to use")
+        , quantum_ns("quantum", 10000, "TLM-2.0 Quantum in ns")
+        , threadsafe_access("threadsafe_access", false, "Qemu calls b_transport from tcg thread")
+        , m_last_vclock(0)
     {
         m_max_access_size = 4;
-
+        tlm_utils::tlm_quantumkeeper::set_global_quantum(sc_core::sc_time(quantum_ns,sc_core::SC_NS));
         socket.register_invalidate_direct_mem_ptr(this, &QemuCpu::invalidate_direct_mem_ptr);
     }
 
@@ -821,9 +824,11 @@ public:
 
     void before_end_of_elaboration()
     {
-        m_sync_policy = SyncPolicy::create(sync_policy);
-
-        m_sync_policy->m_quantum = sc_core::sc_time(quantum, sc_core::SC_NS);
+        m_qk = gs::tlm_quantumkeeper_factory(sync_policy);
+        if (!m_qk) {
+            SC_REPORT_FATAL("qbox", "Sync policy unknown");
+        }
+        m_qk->reset();
 
         for (QemuComponent *c : m_nearby_components) {
             m_extra_qemu_args.insert(m_extra_qemu_args.end(), c->m_extra_qemu_args.begin(), c->m_extra_qemu_args.end());
@@ -831,7 +836,7 @@ public:
 
         if (!m_lib) {
             printf("create new qemu instance for cpu %s\n", name());
-            qemu_init(m_arch, icount, singlestep, gdb_port, trace, semihosting, m_sync_policy, m_extra_qemu_args);
+            qemu_init(m_arch, icount, singlestep, gdb_port, trace, semihosting,  m_qk->get_thread_type(), m_extra_qemu_args);
         }
         else {
             printf("use existing qemu instance for cpu %s\n", name());
@@ -844,7 +849,7 @@ public:
 
         set_qemu_instance(*m_lib);
 
-        m_sync_policy->spawn_thread(std::bind(&QemuCpu::mainloop_thread, this));
+        sc_core::sc_spawn(std::bind(&QemuCpu::mainloop_thread, this));
 
         static std::shared_ptr<sc_core::sc_event> ev = std::make_shared<sc_core::sc_event>();
         set_cross_cpu_exec_event(ev);

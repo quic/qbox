@@ -29,7 +29,7 @@
 
 class CharBackendStdio : public CharBackend, public sc_core::sc_module {
 private:
-    AsyncEvent m_event;
+    gs::async_event m_event;
     std::queue<unsigned char> m_queue;
     std::mutex m_mutex;
 
@@ -116,7 +116,10 @@ public:
 
         for (;;) {
 #ifndef _WIN32
-            int nfds = epoll_wait(epollfd, events, 1, -1);
+            int nfds;
+            do {
+                nfds = epoll_wait(epollfd, events, 1, -1);
+            } while (nfds < 0 && errno == EINTR);
             if (nfds == -1) {
                 perror("epoll_wait");
                 break;
@@ -152,7 +155,7 @@ public:
             }
             else {
                 /* notify myself later, hopefully the queue drains */
-                m_event.notify(1, sc_core::SC_MS);
+                m_event.notify(sc_core::sc_time(1, sc_core::SC_MS));
                 return;
             }
         }

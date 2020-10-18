@@ -24,11 +24,11 @@
 
 #include "../net-backend.h"
 
-#include <libssync/async-event.h>
+#include <libgs/sync/async_event.h>
 
 class NetworkBackendTap : public NetworkBackend, public sc_core::sc_module {
 private:
-    AsyncEvent m_event;
+    gs::async_event m_event;
     std::queue<Payload *> m_queue;
     std::mutex m_mutex;
     int m_fd;
