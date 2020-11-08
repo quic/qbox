@@ -130,7 +130,7 @@ public:
                 if (coroutines) {
                     m_lib->push_qemu_arg({ "-accel", "tcg,coroutine=on,thread=single" });
                 } else {
-                    m_lib->push_qemu_arg({ "-accel", "tcg,thread=multi" });
+                    m_lib->push_qemu_arg({ "-accel", "tcg,thread=single" });
                 }
                 break;
         }
@@ -392,15 +392,30 @@ public:
         }
     }
 
-    void mainloop_thread()
+    void mainloop_thread_coroutine()
     {
+        m_qk->start();
         std::shared_ptr<qemu::Timer> deadline_timer;
         {
             std::lock_guard<std::mutex> lock(mutex);
             deadline_timer = m_lib->timer_new();
         }
-        if (coroutines)
-            m_cpu.register_thread();
+
+        sc_core::sc_time run_budget;
+
+        deadline_timer->set_callback([this]() { m_cpu.kick();});
+        if (!m_cpu.can_run()) {
+            MLOG(SIM, DBG) << "No more cpu work\n";
+            wait_for_work();
+        }
+
+        while (m_cpu.loop_is_busy()) {
+            MLOG(SIM, DBG) << "Another CPU is running, waiting...\n";
+            wait(*m_cross_cpu_exec_ev);
+        }
+
+        m_cpu.register_thread();
+
         for (;;) {
             sc_core::sc_time elapsed;
 
@@ -408,7 +423,7 @@ public:
                 m_qk->sync();
             }
 
-            sc_core::sc_time run_budget = m_qk->time_to_sync();
+            run_budget = m_qk->time_to_sync();
             if (run_budget == sc_core::sc_time(sc_core::SC_ZERO_TIME)) {
                 wait(run_budget);
                 continue;
@@ -416,55 +431,23 @@ public:
             MLOG(SIM, TRC) << "CPU run, budget: " << run_budget << "\n";
             int64_t budget = int64_t(run_budget.to_seconds() * 1e9);
 
-            if (coroutines) {
-                deadline_timer->set_callback([this]() { m_cpu.kick();});
-                std::function<void()> job = [this] {
-                    if (!m_cpu.can_run()) {
-                        MLOG(SIM, DBG) << "No more cpu work\n";
-                        wait_for_work();
-                    }
-
-                    while (m_cpu.loop_is_busy()) {
-                        MLOG(SIM, DBG) << "Another CPU is running, waiting...\n";
-                        wait(*m_cross_cpu_exec_ev);
-                    }
-                };
-                onSystemC.run_on_sysc(job);
-            } else {
-                deadline_timer->set_callback([this, run_budget]() {
-                    std::function<void()> job = [this, run_budget] {
-                        m_qk->set_and_sync(run_budget);
-                    };
-                    onSystemC.run_on_sysc(job);
-                });
-            }
-
             m_last_vclock = m_lib->get_virtual_clock();
             int64_t next_point = m_last_vclock + budget;
             deadline_timer->mod(next_point);
 
-            if (coroutines) {
+            m_cpu.loop();
+            if (m_lib->get_virtual_clock() == m_last_vclock) {
                 m_cpu.loop();
-                // FIXME LJ: Why do we need this?
-                if (m_lib->get_virtual_clock() == m_last_vclock) {
-                    m_cpu.loop();
-                }
-                std::function<void()> job = [this] {
-                    m_cross_cpu_exec_ev->notify();
-                };
-                onSystemC.run_on_sysc(job);
-            } else {
-                wait(run_budget);
             }
+
+            m_cross_cpu_exec_ev->notify();
 
             int64_t now = m_lib->get_virtual_clock();
 
             deadline_timer->del();
 
             elapsed = sc_core::sc_time(now - m_last_vclock, sc_core::SC_NS);
-            if (coroutines) {
-                m_qk->inc(elapsed);
-            }
+            m_qk->inc(elapsed);
 
             MLOG(SIM, TRC) << "elapsed: " << elapsed << "\n";
 
@@ -473,6 +456,43 @@ public:
             }
         }
     }
+
+    void mainloop_thread_tcg() {
+        m_qk->start();
+        std::shared_ptr<qemu::Timer> deadline_timer;
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            deadline_timer = m_lib->timer_new();
+        }
+
+        sc_core::sc_time run_budget;
+
+        deadline_timer->set_callback([this, &run_budget, deadline_timer]() {
+            deadline_timer->del();
+            m_qk->inc(run_budget);
+            m_lib->unlock_iothread();
+            m_qk->sync();
+            m_lib->lock_iothread();
+        });
+
+        for (;;) {
+            if (!m_cpu.can_run()) {
+                m_qk->sync();
+            }
+
+            run_budget = m_qk->time_to_sync();
+            if (run_budget == sc_core::sc_time(sc_core::SC_ZERO_TIME)) {
+                wait(run_budget);
+                continue;
+            }
+            MLOG(SIM, TRC) << "CPU run, budget: " << run_budget << "\n";
+            int64_t budget = int64_t(run_budget.to_seconds() * 1e9);
+            m_last_vclock = m_lib->get_virtual_clock();
+            int64_t next_point = m_last_vclock + budget;
+            deadline_timer->mod(next_point);
+            wait(run_budget);
+        }
+    };
 
     struct dmi_region {
         uint64_t start;
@@ -810,7 +830,7 @@ public:
         , gdb_port("gdb_port", -1, "Wait for gdb connection on TCP port <gdb_port>")
         , trace("trace", "", "Specify tracing options")
         , semihosting("semihosting", "", "Enable and configure semihosting ")
-        , sync_policy("sync_policy", "tlm2", "Synchronization Policy to use")
+        , sync_policy("sync_policy", "multithread-quantum", "Synchronization Policy to use")
         , quantum_ns("quantum", 10000, "TLM-2.0 Quantum in ns")
         , threadsafe_access("threadsafe_access", false, "Qemu calls b_transport from tcg thread")
         , m_last_vclock(0)
@@ -849,7 +869,10 @@ public:
 
         set_qemu_instance(*m_lib);
 
-        sc_core::sc_spawn(std::bind(&QemuCpu::mainloop_thread, this));
+        if (coroutines)
+            sc_core::sc_spawn(std::bind(&QemuCpu::mainloop_thread_coroutine, this));
+        else
+            sc_core::sc_spawn(std::bind(&QemuCpu::mainloop_thread_tcg, this));
 
         static std::shared_ptr<sc_core::sc_event> ev = std::make_shared<sc_core::sc_event>();
         set_cross_cpu_exec_event(ev);
