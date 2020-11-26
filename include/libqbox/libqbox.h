@@ -332,6 +332,8 @@ public:
 class QemuCpu : public QemuComponent {
     gs::RunOnSysC onSystemC; // Private SystemC helper
     std::mutex mutex;
+    std::shared_ptr<qemu::Timer> m_deadline_timer;
+    sc_core::sc_time m_run_budget;
 public:
     const std::string m_arch;
     qemu::Cpu m_cpu;
@@ -456,43 +458,6 @@ public:
             }
         }
     }
-
-    void mainloop_thread_tcg() {
-        m_qk->start();
-        std::shared_ptr<qemu::Timer> deadline_timer;
-        {
-            std::lock_guard<std::mutex> lock(mutex);
-            deadline_timer = m_lib->timer_new();
-        }
-
-        sc_core::sc_time run_budget;
-
-        deadline_timer->set_callback([this, &run_budget, deadline_timer]() {
-            deadline_timer->del();
-            m_qk->inc(run_budget);
-            m_lib->unlock_iothread();
-            m_qk->sync();
-            m_lib->lock_iothread();
-        });
-
-        for (;;) {
-            if (!m_cpu.can_run()) {
-                m_qk->sync();
-            }
-
-            run_budget = m_qk->time_to_sync();
-            if (run_budget == sc_core::sc_time(sc_core::SC_ZERO_TIME)) {
-                wait(run_budget);
-                continue;
-            }
-            MLOG(SIM, TRC) << "CPU run, budget: " << run_budget << "\n";
-            int64_t budget = int64_t(run_budget.to_seconds() * 1e9);
-            m_last_vclock = m_lib->get_virtual_clock();
-            int64_t next_point = m_last_vclock + budget;
-            deadline_timer->mod(next_point);
-            wait(run_budget);
-        }
-    };
 
     struct dmi_region {
         uint64_t start;
@@ -825,7 +790,7 @@ public:
         : QemuComponent(name, (type_name + "-cpu").c_str())
         , m_arch(arch_name)
         , reset("reset")
-        , icount("icount", -1, "Enable virtual instruction counter")
+        , icount("icount", 1, "Enable virtual instruction counter")
         , singlestep("singlestep", false, "Run the emulation in single step mode")
         , gdb_port("gdb_port", -1, "Wait for gdb connection on TCP port <gdb_port>")
         , trace("trace", "", "Specify tracing options")
@@ -854,6 +819,10 @@ public:
             m_extra_qemu_args.insert(m_extra_qemu_args.end(), c->m_extra_qemu_args.begin(), c->m_extra_qemu_args.end());
         }
 
+        if (!coroutines && (icount < 0)) {
+            SC_REPORT_FATAL("qbox", "Cannot use TCG without icount");
+        }
+
         if (!m_lib) {
             printf("create new qemu instance for cpu %s\n", name());
             qemu_init(m_arch, icount, singlestep, gdb_port, trace, semihosting,  m_qk->get_thread_type(), m_extra_qemu_args);
@@ -871,8 +840,6 @@ public:
 
         if (coroutines)
             sc_core::sc_spawn(std::bind(&QemuCpu::mainloop_thread_coroutine, this));
-        else
-            sc_core::sc_spawn(std::bind(&QemuCpu::mainloop_thread_tcg, this));
 
         static std::shared_ptr<sc_core::sc_event> ev = std::make_shared<sc_core::sc_event>();
         set_cross_cpu_exec_event(ev);
@@ -925,6 +892,33 @@ public:
             ss << gdb_port;
             MLOG(APP, INF) << "Starting gdb server on port " << ss.str() << "\n";
             m_lib->start_gdb_server("tcp::" + ss.str());
+        }
+
+        if (!coroutines) {
+            m_qk->start();
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                m_deadline_timer = m_lib->timer_new();
+            }
+
+            m_deadline_timer->set_callback([this]() {
+                m_deadline_timer->del();
+                m_qk->inc(m_run_budget);
+                m_lib->unlock_iothread();
+                m_qk->sync();
+                m_lib->lock_iothread();
+                m_run_budget = m_qk->time_to_sync();
+                int64_t budget = int64_t(m_run_budget.to_seconds() * 1e9);
+                m_last_vclock = m_lib->get_virtual_clock();
+                int64_t next_point = m_last_vclock + budget;
+                m_deadline_timer->mod(next_point);
+            });
+
+            m_run_budget = m_qk->time_to_sync();
+            int64_t budget = int64_t(m_run_budget.to_seconds() * 1e9);
+            m_last_vclock = m_lib->get_virtual_clock();
+            int64_t next_point = m_last_vclock + budget;
+            m_deadline_timer->mod(next_point);
         }
     }
 
