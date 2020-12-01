@@ -378,7 +378,7 @@ public:
 
     int64_t m_last_vclock;
 
-    gs::tlm_quantumkeeper_extended *m_qk;
+    std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
 
     void wait_for_work()
     {
@@ -902,18 +902,32 @@ public:
             }
 
             m_deadline_timer->set_callback([this]() {
+                // Unlock iothread when interacting with systemc
+                m_lib->unlock_iothread();
+
                 m_deadline_timer->del();
                 m_qk->inc(m_run_budget);
-                m_lib->unlock_iothread();
-                m_qk->sync();
-                m_lib->lock_iothread();
+                if (m_run_budget != sc_core::SC_ZERO_TIME) {
+                    GS_LOG("QEMU ran, now syncing");
+                    m_qk->sync();
+                }
                 m_run_budget = m_qk->time_to_sync();
+                while (m_run_budget == sc_core::SC_ZERO_TIME) {
+                    GS_LOG("QEMU run budget is 0, waiting");
+                    onSystemC.run_on_sysc([](){sc_core::wait(sc_core::SC_ZERO_TIME);}, true);
+                    m_run_budget = m_qk->time_to_sync();
+                }
+                GS_LOG("QEMU run budget is %s, running", m_run_budget.to_string().c_str());
+
+                m_lib->lock_iothread();
+
                 int64_t budget = int64_t(m_run_budget.to_seconds() * 1e9);
                 m_last_vclock = m_lib->get_virtual_clock();
                 int64_t next_point = m_last_vclock + budget;
                 m_deadline_timer->mod(next_point);
             });
 
+            // run one quantum initially
             m_run_budget = m_qk->time_to_sync();
             int64_t budget = int64_t(m_run_budget.to_seconds() * 1e9);
             m_last_vclock = m_lib->get_virtual_clock();
