@@ -805,7 +805,9 @@ public:
         socket.register_invalidate_direct_mem_ptr(this, &QemuCpu::invalidate_direct_mem_ptr);
     }
 
-    virtual ~QemuCpu() {}
+    virtual ~QemuCpu() {
+        m_cpu.halt(true);
+    }
 
     void before_end_of_elaboration()
     {
@@ -911,10 +913,18 @@ public:
                     GS_LOG("QEMU ran, now syncing");
                     m_qk->sync();
                 }
+                if (sc_core::sc_get_status() == sc_core::sc_status::SC_STOPPED) {
+                    m_lib->lock_iothread();
+                    return;
+                }
                 m_run_budget = m_qk->time_to_sync();
                 while (m_run_budget == sc_core::SC_ZERO_TIME) {
                     GS_LOG("QEMU run budget is 0, waiting");
                     onSystemC.run_on_sysc([](){sc_core::wait(sc_core::SC_ZERO_TIME);}, true);
+                    if (sc_core::sc_get_status() == sc_core::sc_status::SC_STOPPED) {
+                        m_lib->lock_iothread();
+                        return;
+                    }
                     m_run_budget = m_qk->time_to_sync();
                 }
                 GS_LOG("QEMU run budget is %s, running", m_run_budget.to_string().c_str());
