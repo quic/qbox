@@ -254,7 +254,7 @@ public:
                 r = s->id[(offset - 0xfe0) >> 2];
                 break;
             }
-            GS_LOG("pl011_read: Bad offset 0x%x\n", static_cast<uint64_t>(offset));
+            GS_LOG("pl011_read: Bad offset 0x%lx\n", static_cast<uint64_t>(offset));
             r = 0;
             break;
         }
@@ -343,7 +343,7 @@ public:
             }
             break;
         default:
-            GS_LOG("pl011_write: Bad offset 0x%x\n", static_cast<uint64_t>(offset));
+            GS_LOG("pl011_write: Bad offset 0x%lx\n", static_cast<uint64_t>(offset));
             break;
         }
     }
