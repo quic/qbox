@@ -54,6 +54,7 @@ target_link_libraries(qbox
     SystemC::SystemC
     gs
     qemu-cxx
+    dl
 )
 
 if (slirp_FOUND)
