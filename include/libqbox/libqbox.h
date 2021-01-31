@@ -834,11 +834,7 @@ public:
         }
 
         if (!m_lib) {
-            printf("create new qemu instance for cpu %s\n", name());
             qemu_init(m_arch, icount, singlestep, gdb_port, trace, semihosting,  m_qk->get_thread_type(), m_extra_qemu_args);
-        }
-        else {
-            printf("use existing qemu instance for cpu %s\n", name());
         }
 
         QemuComponent::before_end_of_elaboration();
