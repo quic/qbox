@@ -143,6 +143,14 @@ std::shared_ptr<Timer> LibQemu::timer_new()
     return std::make_shared<Timer>(*m_qemu_exports);
 }
 
+Chardev LibQemu::chardev_new(const char *label, const char *type)
+{
+    QemuChardev *qemu_char_dev = m_qemu_exports->char_dev_new(label, type);
+    Chardev ret(Object(reinterpret_cast<QemuObject *>(qemu_char_dev), *m_qemu_exports));
+
+    return ret;
+}
+
 void LibQemu::check_cast(Object &o, const char *type)
 {
     /* TODO */

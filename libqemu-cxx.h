@@ -55,6 +55,7 @@ class MemoryRegionOps;
 class Gpio;
 class Timer;
 class Bus;
+class Chardev;
 
 class LibQemu {
 private:
@@ -102,6 +103,8 @@ public:
     Gpio gpio_new();
 
     std::shared_ptr<Timer> timer_new();
+
+    Chardev chardev_new(const char *label, const char *type);
 
     void tb_invalidate_phys_range(uint64_t start, uint64_t end);
 };
@@ -361,6 +364,15 @@ public:
     Bus() = default;
     Bus(const Bus &o) = default;
     Bus(const Object &o) : Object(o) {}
+};
+
+class Chardev : public Object {
+public:
+    static constexpr const char * const TYPE = "chardev";
+
+    Chardev() = default;
+    Chardev(const Chardev &o) = default;
+    Chardev(const Object &o) : Object(o) {}
 };
 
 }; /* namespace qemu */
