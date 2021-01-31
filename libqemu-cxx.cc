@@ -229,7 +229,7 @@ void Object::set_prop_int(const char *name, int64_t val)
 void Object::set_prop_str(const char *name, const char *val)
 {
     QemuError *e = nullptr;
-    m_exports->object_property_set_str(m_obj, val, name, &e);
+    m_exports->object_property_set_str(m_obj, name, val, &e);
 
     if (e != nullptr) {
         throw SetPropertyException("str", name);
