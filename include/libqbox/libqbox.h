@@ -645,6 +645,8 @@ public:
         sc_core::sc_time local_drift, local_drift_before;
         tlm::tlm_generic_payload trans;
 
+        m_lib->unlock_iothread();
+
         trans.set_command(command);
         trans.set_address(addr);
         trans.set_data_ptr(reinterpret_cast<unsigned char*>(val));
@@ -655,25 +657,31 @@ public:
         trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
 
         if (attrs.debug) {
+            qemu::MemoryRegionOps::MemTxResult ret;
             std::function<void()> job=[this, &trans] {
                 socket->transport_dbg(trans);
             };
             onSystemC.run_on_sysc(job);
+
             switch (trans.get_response_status()) {
                 case tlm::TLM_OK_RESPONSE:
-                    return qemu::MemoryRegionOps::MemTxOK;
+                    ret = qemu::MemoryRegionOps::MemTxOK;
+                    break;
                 case tlm::TLM_ADDRESS_ERROR_RESPONSE:
-                    return qemu::MemoryRegionOps::MemTxDecodeError;
+                    ret = qemu::MemoryRegionOps::MemTxDecodeError;
+                    break;
                 default:
+                    ret = qemu::MemoryRegionOps::MemTxError;
                     break;
             }
-            return qemu::MemoryRegionOps::MemTxError;
+
+            m_lib->lock_iothread();
+            return ret;
         }
+
         sc_core::sc_time elapsed(before - m_last_vclock, sc_core::SC_NS);
 
         m_qk->inc(elapsed);
-
-        m_lib->unlock_iothread();
 
         std::function<void()> job = [this, &trans, &attrs] {
             sc_core::sc_time delay = m_qk->get_local_time();
@@ -696,7 +704,7 @@ public:
 
         after_b_transport(trans, attrs);
         check_dmi_hint(trans, as);
-  
+
         /*
          * NB it is unsafe to 'sync' from within an io access as potentially
          * Qemu will need to do exclusive work, and will deadlock
