@@ -26,8 +26,21 @@
 #include <libqemu-cxx/target/riscv.h>
 
 class QemuCpuRiscv64Virt : public QemuCpu {
+protected:
+    uint64_t m_hartid;
+
 public:
-    QemuCpuRiscv64Virt(sc_core::sc_module_name name)
-        : QemuCpu(name, "riscv64", "rv64-riscv") {
+    QemuCpuRiscv64Virt(sc_core::sc_module_name name, uint64_t hartid)
+        : QemuCpu(name, "riscv64", "rv64-riscv")
+        , m_hartid(hartid)
+    {}
+
+
+    void before_end_of_elaboration()
+    {
+        QemuCpu::before_end_of_elaboration();
+
+        qemu::CpuRiscv cpu = qemu::CpuRiscv(get_qemu_obj());
+        cpu.set_prop_int("hartid", m_hartid);
     }
 };
