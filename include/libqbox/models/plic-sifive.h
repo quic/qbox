@@ -1,6 +1,8 @@
 /*
  *  This file is part of libqbox
- *  Copyright (c) 2020 Clement Deschamps
+ *  Copyright (c) 2021 Greensocs
+ *
+ *  Author: Lukas Jünger
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -19,30 +21,25 @@
 
 #pragma once
 
-#include <queue>
-#include <mutex>
-
-#include "../net-backend.h"
-
-#include <libgs/sync/async_event.h>
-
-class NetworkBackendTap : public NetworkBackend, public sc_core::sc_module {
-private:
-    gs::async_event m_event;
-    std::queue<Payload *> m_queue;
-    std::mutex m_mutex;
-    int m_fd;
-
-    void open(std::string &tun);
-    void *rcv_thread();
-    void rcv();
-    void close();
-
+class QemuRiscvSifivePlic : public QemuComponent {
 public:
-    SC_HAS_PROCESS(NetworkBackendTap);
-    NetworkBackendTap(sc_core::sc_module_name name, std::string tun);
+    QemuRiscvSifivePlic(sc_core::sc_module_name nm, QemuCpu *cpu)
+    : QemuComponent(nm, "riscv.sifive.plic") {
+        cpu->add_to_qemu_instance(this);
+    }
 
-    virtual ~NetworkBackendTap();
+    void set_qemu_properties_callback() {
+        // FIXME: Need to know number of CPUs to set hart config
+        // FIXME: Why is this wrong way round?
+        m_obj.set_prop_str("MS", "hart-config");
+    }
 
-    void send(Payload &frame);
+    void set_qemu_instance_callback() {
+        QemuComponent::set_qemu_instance_callback();
+        set_qemu_properties_callback();
+    }
+
+    void end_of_elaboration() {
+        QemuComponent::end_of_elaboration();
+    }
 };

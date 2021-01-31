@@ -52,8 +52,9 @@ target_include_directories(qbox
 
 target_link_libraries(qbox
     SystemC::SystemC
-    ssync
+    gs
     qemu-cxx
+    dl
 )
 
 if (slirp_FOUND)

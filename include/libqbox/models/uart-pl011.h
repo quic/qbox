@@ -29,7 +29,7 @@
 
 #include "libqbox/backends/char-backend.h"
 
-#include <libssync/async-event.h>
+#include <libgs/sync/async_event.h>
 
 #define PL011_INT_TX 0x20
 #define PL011_INT_RX 0x10
@@ -54,7 +54,8 @@
 #define INT_E (INT_OE | INT_BE | INT_PE | INT_FE)
 #define INT_MS (INT_RI | INT_DSR | INT_DCD | INT_CTS)
 
-typedef struct PL011State {
+typedef struct PL011State
+{
     uint32_t readbuff;
     uint32_t flags;
     uint32_t lcr;
@@ -74,7 +75,8 @@ typedef struct PL011State {
     const unsigned char *id;
 } PL011State;
 
-static const uint32_t irqmask[] = {
+static const uint32_t irqmask[] =
+{
     INT_E | INT_MS | INT_RT | INT_TX | INT_RX, /* combined IRQ */
     INT_RX,
     INT_TX,
@@ -88,21 +90,19 @@ class Pl011;
 /* for legacy */
 typedef Pl011 Uart;
 
-class Pl011 : public sc_core::sc_module {
+class Pl011 : public sc_core::sc_module
+{
 public:
     PL011State *s;
-
     CharBackend *chr;
-
     tlm_utils::simple_target_socket<Pl011> socket;
-
     sc_core::sc_vector<sc_core::sc_signal<bool, sc_core::SC_MANY_WRITERS>> irq;
-
-    sc_core::sc_event update_event;
+    gs::async_event update_event;
 
     SC_HAS_PROCESS(Pl011);
-    Pl011(sc_core::sc_module_name name)
+    explicit Pl011(sc_core::sc_module_name nm)
         : irq("irq", 6)
+        , sc_module(nm)
     {
         chr = NULL;
 
@@ -123,6 +123,14 @@ public:
 
         SC_METHOD(pl011_update_sysc);
         sensitive << update_event;
+    }
+
+    Pl011() = delete;
+    Pl011(const Pl011&) = delete;
+
+    ~Pl011()
+    {
+        delete s;
     }
 
     void set_backend(CharBackend *backend)
@@ -203,9 +211,6 @@ public:
                 s->int_level &= ~ PL011_INT_RX;
             s->rsr = c >> 8;
             pl011_update();
-#if 0
-            qemu_chr_fe_accept_input(&s->chr);
-#endif
             r = c;
             break;
         case 1: /* UARTRSR */
@@ -249,10 +254,7 @@ public:
                 r = s->id[(offset - 0xfe0) >> 2];
                 break;
             }
-#if 0
-            qemu_log_mask(LOG_GUEST_ERROR,
-                    "pl011_read: Bad offset 0x%x\n", (int)offset);
-#endif
+            GS_LOG("pl011_read: Bad offset 0x%lx\n", static_cast<uint64_t>(offset));
             r = 0;
             break;
         }
@@ -287,13 +289,10 @@ public:
             ch = value;
             /* XXX this blocks entire thread. Rewrite to use
              * qemu_chr_fe_write and background I/O callbacks */
-#if 0
-            qemu_chr_fe_write_all(&s->chr, &ch, 1);
-#else
+            // qemu_chr_fe_write_all(&s->chr, &ch, 1);
             if (chr) {
                 chr->write(ch);
             }
-#endif
             s->int_level |= PL011_INT_TX;
             pl011_update();
             break;
@@ -340,16 +339,11 @@ public:
         case 18: /* UARTDMACR */
             s->dmacr = value;
             if (value & 3) {
-#if 0
-                qemu_log_mask(LOG_UNIMP, "pl011: DMA not implemented\n");
-#endif
+                GS_LOG("pl011: DMA not implemented\n");
             }
             break;
         default:
-#if 0
-            qemu_log_mask(LOG_GUEST_ERROR,
-                    "pl011_write: Bad offset 0x%x\n", (int)offset);
-#endif
+            GS_LOG("pl011_write: Bad offset 0x%lx\n", static_cast<uint64_t>(offset));
             break;
         }
     }
@@ -392,12 +386,4 @@ public:
         Pl011 *uart = (Pl011 *)opaque;
         uart->pl011_put_fifo(*buf);
     }
-
-#if 0
-    void pl011_event(int event)
-    {
-        if (event == CHR_EVENT_BREAK)
-            pl011_put_fifo(0x400);
-    }
-#endif
 };

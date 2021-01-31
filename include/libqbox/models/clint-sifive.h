@@ -1,6 +1,8 @@
 /*
  *  This file is part of libqbox
- *  Copyright (c) 2020 Clement Deschamps
+ *  Copyright (c) 2021 Greensocs
+ *
+ *  Author: Lukas Jünger
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -19,30 +21,14 @@
 
 #pragma once
 
-#include <queue>
-#include <mutex>
-
-#include "../net-backend.h"
-
-#include <libgs/sync/async_event.h>
-
-class NetworkBackendTap : public NetworkBackend, public sc_core::sc_module {
-private:
-    gs::async_event m_event;
-    std::queue<Payload *> m_queue;
-    std::mutex m_mutex;
-    int m_fd;
-
-    void open(std::string &tun);
-    void *rcv_thread();
-    void rcv();
-    void close();
-
+class QemuRiscvSifiveClint : public QemuComponent {
 public:
-    SC_HAS_PROCESS(NetworkBackendTap);
-    NetworkBackendTap(sc_core::sc_module_name name, std::string tun);
+    QemuRiscvSifiveClint(sc_core::sc_module_name nm, QemuCpu *cpu)
+            : QemuComponent(nm, "riscv.sifive.clint") {
+        cpu->add_to_qemu_instance(this);
+    }
 
-    virtual ~NetworkBackendTap();
-
-    void send(Payload &frame);
+    void end_of_elaboration() {
+        QemuComponent::end_of_elaboration();
+    }
 };

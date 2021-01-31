@@ -30,7 +30,7 @@
 
 #include "libqbox/backends/char-backend.h"
 
-#include <libssync/async-event.h>
+#include <libgs/sync/async_event.h>
 
 class IbexUart : public sc_core::sc_module {
 public:
