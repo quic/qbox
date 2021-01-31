@@ -610,8 +610,8 @@ public:
                 mr.init_alias(m_obj, "dmi-alias", r.mr, 0, size);
                 as.mr.add_subregion(mr, r.start);
 
-                struct dmi_region r(r.start, r.end, r.ptr, mr);
-                dmi_aliases.push_back(r); /* TODO: sort */
+                struct dmi_region r2(r.start, r.end, r.ptr, mr);
+                dmi_aliases.push_back(r2); /* TODO: sort */
             }
         }
 
