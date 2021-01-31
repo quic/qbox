@@ -81,4 +81,12 @@ void Device::set_parent_bus(Bus bus)
     m_exports->qdev_set_parent_bus(qemu_dev, qemu_bus);
 }
 
+void Device::set_prop_chardev(const char *name, Chardev chr)
+{
+    QemuDevice *qemu_dev = reinterpret_cast<QemuDevice *>(m_obj);
+    QemuChardev *char_dev = reinterpret_cast<QemuChardev *>(chr.get_qemu_obj());
+
+    m_exports->qdev_prop_set_chr(qemu_dev, name, char_dev);
+}
+
 }

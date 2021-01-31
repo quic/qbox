@@ -295,6 +295,8 @@ public:
 
     Bus get_child_bus(const char *name);
     void set_parent_bus(Bus bus);
+
+    void set_prop_chardev(const char *name, Chardev chr);
 };
 
 class SysBusDevice : public Device {
