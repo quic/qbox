@@ -808,7 +808,7 @@ public:
         , threadsafe_access("threadsafe_access", false, "Qemu calls b_transport from tcg thread")
         , m_last_vclock(0)
     {
-        m_max_access_size = 4;
+        m_max_access_size = 8;
         tlm_utils::tlm_quantumkeeper::set_global_quantum(sc_core::sc_time(quantum_ns,sc_core::SC_NS));
         socket.register_invalidate_direct_mem_ptr(this, &QemuCpu::invalidate_direct_mem_ptr);
     }
