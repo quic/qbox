@@ -2,15 +2,16 @@ cmake_minimum_required (VERSION 3.1)
 
 project(libqemu-cxx)
 
+include(GNUInstallDirs)
+
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(libqemu REQUIRED)
 
-if (NOT DEFINED LIBQEMU_TARGETS)
-    set(LIBQEMU_TARGETS arm)
-endif()
+set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/libqemu-cxx)
+set(LIBQEMU_CXX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqemu-cxx)
 
 set(srcs
     cpu.cc
@@ -48,8 +49,8 @@ endif()
 
 target_include_directories(qemu-cxx
     PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
-        $<INSTALL_INTERFACE:include/libqemu-cxx>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:${LIBQEMU_CXX_INCLUDE_DIR}>
 )
 
 target_link_libraries(qemu-cxx libqemu)
@@ -68,5 +69,5 @@ install(FILES
 if (WIN32)
     install(TARGETS qemu-cxx DESTINATION lib/$<IF:$<CONFIG:Debug>,debug,release>)
 else ()
-    install(TARGETS qemu-cxx DESTINATION lib)
+    install(TARGETS qemu-cxx)
 endif ()
