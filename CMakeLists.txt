@@ -20,11 +20,14 @@ set(srcs
     memory.cc
     sysbus.cc
     timer.cc
+    target/aarch64.cc
+    target/riscv32.cc
+    target/riscv64.cc
+    target/microblaze.cc
     ${CMAKE_CURRENT_BINARY_DIR}/target_info.cc
 )
 
 foreach(target ${LIBQEMU_TARGETS})
-    list(APPEND srcs target/${target}.cc)
     # This variable is used in target_info.cc.in
     get_property(LIBQEMU_TARGET_${target}_LIBRARY
         TARGET libqemu-${target}
@@ -49,16 +52,14 @@ target_include_directories(qemu-cxx
 target_link_libraries(qemu-cxx libqemu)
 
 install(FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/libqemu-cxx.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/target-info.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/exceptions.h"
-    DESTINATION include/libqemu-cxx)
-
-foreach(target ${LIBQEMU_TARGETS})
-    install(FILES
-        "${CMAKE_CURRENT_SOURCE_DIR}/target/${target}.h"
-        DESTINATION include/libqemu-cxx/target)
-endforeach()
+    "${CMAKE_CURRENT_SOURCE_DIR}/libqemu-cxx.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/target_info.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/target/aarch64.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/target/riscv32.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/target/riscv64.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/target/microblaze.h"
+    DESTINATION ${LIBQEMU_CXX_INCLUDE_DIR})
 
 if (WIN32)
     install(TARGETS qemu-cxx DESTINATION lib/$<IF:$<CONFIG:Debug>,debug,release>)
