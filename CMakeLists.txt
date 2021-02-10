@@ -20,11 +20,18 @@ set(srcs
     memory.cc
     sysbus.cc
     timer.cc
+    ${CMAKE_CURRENT_BINARY_DIR}/target_info.cc
 )
 
 foreach(target ${LIBQEMU_TARGETS})
     list(APPEND srcs target/${target}.cc)
+    # This variable is used in target_info.cc.in
+    get_property(LIBQEMU_TARGET_${target}_LIBRARY
+        TARGET libqemu-${target}
+        PROPERTY INTERFACE_LINK_LIBRARIES)
 endforeach()
+
+configure_file(target_info.cc.in target_info.cc)
 
 add_library(qemu-cxx SHARED ${srcs})
 
@@ -43,6 +50,7 @@ target_link_libraries(qemu-cxx libqemu)
 
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/libqemu-cxx.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/target-info.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/exceptions.h"
     DESTINATION include/libqemu-cxx)
 
