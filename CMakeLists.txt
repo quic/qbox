@@ -55,6 +55,10 @@ target_include_directories(qemu-cxx
 
 target_link_libraries(qemu-cxx libqemu)
 
+set_property(TARGET qemu-cxx
+    PROPERTY INSTALL_RPATH ${LIBQEMU_LIB_DIR})
+
+
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/exceptions.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/libqemu-cxx.h"
