@@ -33,8 +33,6 @@
 
 #include <libgs/libgs.h>
 
-#include "loader.h"
-
 #if 0
 #define MLOG(foo, bar) \
     std::cout << "[" << name() << "] "
@@ -107,11 +105,14 @@ public:
         }
     }
 
-    void qemu_init(const std::string &arch, int icount, bool singlestep, int gdb_port, std::string trace, std::string semihosting, gs::SyncPolicy::Type type, std::vector<std::string> &extra_qemu_args)
+    void qemu_init(qemu::Target arch, int icount, bool singlestep, int gdb_port, std::string trace,
+                   std::string semihosting, gs::SyncPolicy::Type type, std::vector<std::string> &extra_qemu_args)
     {
-        m_lib = new qemu::LibQemu(*new LibQemuLibraryLoader());
+        /* TODO Temp, will be removed after libqbox refactoring */
+        static qemu::LibraryLoaderIface *loader = qemu::get_default_lib_loader();
+        m_lib = new qemu::LibQemu(*loader, arch);
 
-        m_lib->push_qemu_arg("LIBQEMU");
+        m_lib->push_qemu_arg("libqbox");
         m_lib->push_qemu_arg({ "-M", "none" });
         m_lib->push_qemu_arg({ "-m", "2048" }); /* Used by QEMU to set the TB cache size */
         m_lib->push_qemu_arg({ "-monitor", "null" });
@@ -166,15 +167,7 @@ public:
             m_lib->push_qemu_arg(arg.c_str());
         }
 
-        {
-            std::stringstream ss;
-#ifdef _WIN32
-            ss << "libqemu-system-" << arch << ".dll";
-#else
-            ss << "libqemu-system-" << arch << ".so";
-#endif
-            m_lib->init(ss.str().c_str());
-        }
+        m_lib->init();
     }
 
     bool realized = false;
@@ -332,7 +325,7 @@ class QemuCpu : public QemuComponent {
     std::shared_ptr<qemu::Timer> m_deadline_timer;
     sc_core::sc_time m_run_budget;
 public:
-    const std::string m_arch;
+    qemu::Target m_arch;
     qemu::Cpu m_cpu;
 
     tlm_utils::simple_initiator_socket<QemuCpu> socket;
@@ -791,9 +784,9 @@ public:
 public:
     SC_HAS_PROCESS(QemuCpu);
 
-    QemuCpu(sc_core::sc_module_name name, const std::string arch_name, const std::string type_name)
+    QemuCpu(sc_core::sc_module_name name, qemu::Target arch, const std::string type_name)
         : QemuComponent(name, (type_name + "-cpu").c_str())
-        , m_arch(arch_name)
+        , m_arch(arch)
         , reset("reset")
         , icount("icount", 1, "Enable virtual instruction counter")
         , singlestep("singlestep", false, "Run the emulation in single step mode")

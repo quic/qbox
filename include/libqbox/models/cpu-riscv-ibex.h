@@ -30,7 +30,7 @@ public:
     QemuRiscvIbexPlic plic;
 
     CpuRiscvIbex(sc_core::sc_module_name name, uint32_t plic_num_irq = 80)
-        : QemuCpu(name, "riscv32", "lowrisc-ibex-riscv")
+        : QemuCpu(name, qemu::RISCV32, "lowrisc-ibex-riscv")
         , plic("plic", this, plic_num_irq)
     {
     }

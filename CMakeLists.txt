@@ -19,6 +19,8 @@ if (PkgConfig_FOUND)
     pkg_check_modules(slirp slirp)
 endif()
 
+find_package(libqemu-cxx CONFIG REQUIRED)
+
 add_library(qbox SHARED
     src/libqbox.cc
     src/mac.cc
