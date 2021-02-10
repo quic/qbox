@@ -39,10 +39,12 @@ configure_file(target_info.cc.in target_info.cc)
 
 add_library(qemu-cxx SHARED ${srcs})
 
-target_compile_options(qemu-cxx PRIVATE
-    -Wall
-    "$<$<CONFIG:Debug>:-O0;-g3;-ggdb>"
-)
+if(CMAKE_COMPILER_IS_GNUCC)
+    target_compile_options(qemu-cxx PRIVATE
+        -Wall -Wextra -Wno-unused-parameter
+        "$<$<CONFIG:Debug>:-O0;-g3;-ggdb>"
+        )
+endif()
 
 target_include_directories(qemu-cxx
     PUBLIC
