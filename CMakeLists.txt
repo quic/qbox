@@ -1,7 +1,5 @@
 cmake_minimum_required (VERSION 3.1)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
 project(libqemu-cxx)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
