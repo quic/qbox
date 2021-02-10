@@ -28,6 +28,7 @@
 
 #include "target_info.h"
 #include "exceptions.h"
+#include "loader.h"
 
 /* libqemu types forward declaration */
 struct LibQemuExports;
@@ -37,19 +38,6 @@ struct QemuMemoryRegionOps;
 struct QemuTimer;
 
 namespace qemu {
-
-class LibraryIface {
-public:
-    virtual bool symbol_exists(const char *symbol) = 0;
-    virtual void * get_symbol(const char *symbol) = 0;
-};
-
-class LibraryLoaderIface {
-public:
-    using LibraryIfacePtr = std::shared_ptr<LibraryIface>;
-
-    virtual LibraryIfacePtr load_library(const char *lib_name) = 0;
-};
 
 class Object;
 class MemoryRegionOps;

@@ -17,6 +17,7 @@ set(srcs
     device.cc
     gpio.cc
     libqemu-cxx.cc
+    loader.cc
     memory.cc
     sysbus.cc
     timer.cc
@@ -54,6 +55,7 @@ target_link_libraries(qemu-cxx libqemu)
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/exceptions.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/libqemu-cxx.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/loader.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/target_info.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/target/aarch64.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/target/riscv32.h"
