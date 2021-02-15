@@ -19,11 +19,29 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "riscv32.h"
+#pragma once
 
-#include <libqemu/libqemu.h>
+#include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
 
-}
+class CpuRiscv : public Cpu {
+public:
+    static constexpr const char * const TYPE = "riscv-cpu";
 
+    CpuRiscv() = default;
+    CpuRiscv(const CpuRiscv &) = default;
+    CpuRiscv(const Object &o) : Cpu(o) {}
+};
+
+class RiscvIbexPlic : public Device {
+public:
+    static constexpr const char * const TYPE = "ibex-plic";
+
+    RiscvIbexPlic() = default;
+    RiscvIbexPlic(const RiscvIbexPlic &) = default;
+    RiscvIbexPlic(const Object &o) : Device(o) {}
+
+};
+
+}

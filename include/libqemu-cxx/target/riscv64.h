@@ -1,8 +1,8 @@
 /*
  *  This file is part of libqemu-cxx
- *  Copyright (C) 2021 Greensocs
+ *  Copyright (c) 2021 Greensocs
  *
- *  Authors: Lukas Jünger
+ *  Author: Lukas Jünger
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -19,11 +19,27 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "riscv64.h"
+#pragma once
 
-#include <libqemu/libqemu.h>
+#include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
+    class CpuRiscv64 : public Cpu {
+    public:
+        static constexpr const char *const TYPE = "rv64-riscv-cpu";
 
+        CpuRiscv64() = default;
+        CpuRiscv64(const CpuRiscv64 &) = default;
+        CpuRiscv64(const Object &o) : Cpu(o) {}
+    };
+
+    class RiscvSifivePlic : public Device {
+    public:
+        static constexpr const char * const TYPE = "riscv.sifive.plic";
+
+        RiscvSifivePlic() = default;
+        RiscvSifivePlic(const RiscvSifivePlic &) = default;
+        RiscvSifivePlic(const Object &o) : Device(o) {}
+
+    };
 }
-

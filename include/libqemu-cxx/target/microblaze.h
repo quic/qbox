@@ -1,6 +1,8 @@
 /*
  *  This file is part of libqemu-cxx
- *  Copyright (C) 2015-2019  Clement Deschamps and Luc Michel
+ *  Copyright (C) 2020 Greensocs
+ *
+ *  Authors: Damien Hedde
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -17,36 +19,19 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "aarch64.h"
+#pragma once
 
-#include <libqemu/libqemu.h>
+#include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
 
-void CpuArm::set_cp15_cbar(uint64_t cbar)
-{
-    m_exports->cpu_arm_set_cp15_cbar(m_obj, cbar);
-}
+class CpuMicroblaze : public Cpu {
+public:
+    static constexpr const char * const TYPE = "microblaze-cpu";
 
-void CpuArm::add_nvic_link()
-{
-    m_exports->cpu_arm_add_nvic_link(m_obj);
-}
-
-uint64_t CpuArm::get_exclusive_val()
-{
-    return m_exports->cpu_arm_get_exclusive_val(m_obj);
-}
-
-void CpuAarch64::set_aarch64_mode(bool aarch64_mode)
-{
-    m_exports->cpu_aarch64_set_aarch64_mode(m_obj, aarch64_mode);
-}
-
-void ArmNvic::add_cpu_link()
-{
-    m_exports->arm_nvic_add_cpu_link(m_obj);
-}
+    CpuMicroblaze() = default;
+    CpuMicroblaze(const CpuMicroblaze &) = default;
+    CpuMicroblaze(const Object &o) : Cpu(o) {}
+};
 
 }
-

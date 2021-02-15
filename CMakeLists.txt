@@ -10,23 +10,24 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(libqemu CONFIG REQUIRED)
 
+set(LIBQEMU_CXX_SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/libqemu-cxx)
 set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/libqemu-cxx)
 set(LIBQEMU_CXX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqemu-cxx)
 
 set(srcs
-    cpu.cc
-    device.cc
-    gpio.cc
-    libqemu-cxx.cc
-    loader.cc
-    memory.cc
-    sysbus.cc
-    timer.cc
-    target/aarch64.cc
-    target/riscv32.cc
-    target/riscv64.cc
-    target/microblaze.cc
-    ${CMAKE_CURRENT_BINARY_DIR}/target_info.cc
+    src/cpu.cc
+    src/device.cc
+    src/gpio.cc
+    src/libqemu-cxx.cc
+    src/loader.cc
+    src/memory.cc
+    src/sysbus.cc
+    src/timer.cc
+    src/target/aarch64.cc
+    src/target/riscv32.cc
+    src/target/riscv64.cc
+    src/target/microblaze.cc
+    ${CMAKE_CURRENT_BINARY_DIR}/src/target_info.cc
 )
 
 foreach(target ${LIBQEMU_TARGETS})
@@ -36,7 +37,7 @@ foreach(target ${LIBQEMU_TARGETS})
         PROPERTY INTERFACE_LINK_LIBRARIES)
 endforeach()
 
-configure_file(target_info.cc.in target_info.cc)
+configure_file(src/target_info.cc.in src/target_info.cc)
 
 add_library(qemu-cxx SHARED ${srcs})
 
@@ -49,8 +50,8 @@ endif()
 
 target_include_directories(qemu-cxx
     PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:${LIBQEMU_CXX_INCLUDE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 target_link_libraries(qemu-cxx libqemu)
@@ -60,14 +61,14 @@ set_property(TARGET qemu-cxx
 
 
 install(FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/exceptions.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libqemu-cxx.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/loader.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/target_info.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/target/aarch64.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/target/riscv32.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/target/riscv64.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/target/microblaze.h"
+    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/exceptions.h"
+    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/libqemu-cxx.h"
+    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/loader.h"
+    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target_info.h"
+    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/aarch64.h"
+    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/riscv32.h"
+    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/riscv64.h"
+    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/microblaze.h"
     DESTINATION ${LIBQEMU_CXX_INCLUDE_DIR})
 
 if (WIN32)

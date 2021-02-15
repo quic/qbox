@@ -22,7 +22,7 @@
 #include <fstream>
 #include <cstring>
 
-#include "loader.h"
+#include "libqemu-cxx/loader.h"
 
 
 static void copy_file(const char* src_file, const char* dest_file)

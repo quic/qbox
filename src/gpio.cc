@@ -1,8 +1,6 @@
 /*
  *  This file is part of libqemu-cxx
- *  Copyright (C) 2020 Greensocs
- *
- *  Authors: Damien Hedde
+ *  Copyright (C) 2015-2019  Clement Deschamps and Luc Michel
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -19,19 +17,17 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#pragma once
+#include <libqemu/libqemu.h>
 
-#include "../libqemu-cxx.h"
+#include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
 
-class CpuMicroblaze : public Cpu {
-public:
-    static constexpr const char * const TYPE = "microblaze-cpu";
+void Gpio::set(bool lvl)
+{
+    QemuGpio *gpio = reinterpret_cast<QemuGpio *>(m_obj);
 
-    CpuMicroblaze() = default;
-    CpuMicroblaze(const CpuMicroblaze &) = default;
-    CpuMicroblaze(const Object &o) : Cpu(o) {}
-};
-
+    m_exports->gpio_set(gpio, lvl);
 }
+
+};
