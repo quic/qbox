@@ -23,7 +23,7 @@
 
 #include "libqbox/libqbox.h"
 
-#include <libqemu-cxx/target/riscv.h>
+#include <libqemu-cxx/target/riscv64.h>
 
 class QemuCpuRiscv64Virt : public QemuCpu {
 protected:
@@ -31,7 +31,7 @@ protected:
 
 public:
     QemuCpuRiscv64Virt(sc_core::sc_module_name name, uint64_t hartid)
-        : QemuCpu(name, "riscv64", "rv64-riscv")
+        : QemuCpu(name, qemu::RISCV64, "rv64-riscv")
         , m_hartid(hartid)
     {}
 
@@ -40,7 +40,7 @@ public:
     {
         QemuCpu::before_end_of_elaboration();
 
-        qemu::CpuRiscv cpu = qemu::CpuRiscv(get_qemu_obj());
+        qemu::CpuRiscv64 cpu(get_qemu_obj());
         cpu.set_prop_int("hartid", m_hartid);
     }
 };

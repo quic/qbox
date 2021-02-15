@@ -26,7 +26,7 @@
 class CpuMicroblaze : public QemuCpu {
 public:
     CpuMicroblaze(sc_core::sc_module_name name)
-        : QemuCpu(name, "microblazeel", "microblaze")
+        : QemuCpu(name, qemu::MICROBLAZEEL, "microblaze")
     {
     }
 };
