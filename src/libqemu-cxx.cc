@@ -69,9 +69,9 @@ void LibQemu::init()
         /* constructed with a Target */
         libname = get_target_lib(m_target);
 
-        if (!*libname) {
+        if (libname == nullptr) {
             /*
-             * Empty libname means libqemu hasn't been compiled with support
+             * Null libname means libqemu hasn't been compiled with support
              * for this target.
              */
             throw TargetNotSupportedException(m_target);

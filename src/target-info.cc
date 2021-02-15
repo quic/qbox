@@ -44,27 +44,43 @@ const char *get_target_name(Target t)
     }
 }
 
-/*
- * NB: If a lib name is empty, it means that libqemu hasn't been compiled with
- * support for the corresponding target.
- */
+#ifndef LIBQEMU_TARGET_aarch64_LIBRARY
+# define LIBQEMU_TARGET_aarch64_LIBRARY nullptr
+#endif
+
+#ifndef LIBQEMU_TARGET_riscv64_LIBRARY
+# define LIBQEMU_TARGET_riscv64_LIBRARY nullptr
+#endif
+
+#ifndef LIBQEMU_TARGET_riscv32_LIBRARY
+# define LIBQEMU_TARGET_riscv32_LIBRARY nullptr
+#endif
+
+#ifndef LIBQEMU_TARGET_microblaze_LIBRARY
+# define LIBQEMU_TARGET_microblaze_LIBRARY nullptr
+#endif
+
+#ifndef LIBQEMU_TARGET_microblazeel_LIBRARY
+# define LIBQEMU_TARGET_microblazeel_LIBRARY nullptr
+#endif
+
 const char *get_target_lib(Target t)
 {
     switch (t) {
     case AARCH64:
-        return "${LIBQEMU_TARGET_aarch64_LIBRARY}";
+        return LIBQEMU_TARGET_aarch64_LIBRARY;
 
     case RISCV64:
-        return "${LIBQEMU_TARGET_riscv64_LIBRARY}";
+        return LIBQEMU_TARGET_riscv64_LIBRARY;
 
     case RISCV32:
-        return "${LIBQEMU_TARGET_riscv32_LIBRARY}";
+        return LIBQEMU_TARGET_riscv32_LIBRARY;
 
     case MICROBLAZE:
-        return "${LIBQEMU_TARGET_microblaze_LIBRARY}";
+        return LIBQEMU_TARGET_microblaze_LIBRARY;
 
     case MICROBLAZEEL:
-        return "${LIBQEMU_TARGET_microblazeel_LIBRARY}";
+        return LIBQEMU_TARGET_microblazeel_LIBRARY;
 
     default:
         return "";
