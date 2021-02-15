@@ -1,8 +1,6 @@
 /*
  *  This file is part of libqemu-cxx
- *  Copyright (C) 2020 Greensocs
- *
- *  Authors: Damien Hedde
+ *  Copyright (C) 2021 Luc Michel
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -21,17 +19,13 @@
 
 #pragma once
 
-#include "../libqemu-cxx.h"
-
 namespace qemu {
 
-class CpuMicroblaze : public Cpu {
-public:
-    static constexpr const char * const TYPE = "microblaze-cpu";
-
-    CpuMicroblaze() = default;
-    CpuMicroblaze(const CpuMicroblaze &) = default;
-    CpuMicroblaze(const Object &o) : Cpu(o) {}
+enum Target {
+    AARCH64, RISCV64, RISCV32, MICROBLAZE, MICROBLAZEEL,
 };
+
+const char *get_target_name(Target t);
+const char *get_target_lib(Target t);
 
 }

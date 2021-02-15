@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(libqemu)
+
+if (NOT TARGET qemu-cxx)
+    include("${CMAKE_CURRENT_LIST_DIR}/libqemu-cxx-targets.cmake")
+endif()

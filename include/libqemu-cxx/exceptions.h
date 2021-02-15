@@ -21,6 +21,8 @@
 
 #include <stdexcept>
 
+#include "target_info.h"
+
 namespace qemu {
 
 class LibQemuException : public std::runtime_error
@@ -32,6 +34,17 @@ public:
         : std::runtime_error(what) {}
 
     virtual ~LibQemuException() throw() {}
+};
+
+class TargetNotSupportedException : public LibQemuException
+{
+public:
+    TargetNotSupportedException(Target t)
+        : LibQemuException(std::string("target `")
+                           + get_target_name(t)
+                           + "` disabled at compile time.") {}
+
+    virtual ~TargetNotSupportedException() throw() {}
 };
 
 class LibraryNotFoundException : public LibQemuException

@@ -17,36 +17,53 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "arm.h"
-
 #include <libqemu/libqemu.h>
+
+#include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
 
-void CpuArm::set_cp15_cbar(uint64_t cbar)
+Timer::Timer(LibQemuExports &exports)
+    : m_exports(exports)
 {
-    m_exports->cpu_arm_set_cp15_cbar(m_obj, cbar);
 }
 
-void CpuArm::add_nvic_link()
+Timer::~Timer()
 {
-    m_exports->cpu_arm_add_nvic_link(m_obj);
+    del();
+
+    if (m_timer != nullptr) {
+        m_exports.timer_free(m_timer);
+    }
 }
 
-uint64_t CpuArm::get_exclusive_val()
+static void timer_generic_callback(void *opaque)
 {
-    return m_exports->cpu_arm_get_exclusive_val(m_obj);
+    Timer::TimerCallbackFn *cb =
+        reinterpret_cast<Timer::TimerCallbackFn*>(opaque);
+
+    (*cb)();
 }
 
-void CpuAarch64::set_aarch64_mode(bool aarch64_mode)
+void Timer::set_callback(TimerCallbackFn cb)
 {
-    m_exports->cpu_aarch64_set_aarch64_mode(m_obj, aarch64_mode);
+    m_cb = cb;
+    m_timer = m_exports.timer_new_virtual_ns(timer_generic_callback,
+                                             reinterpret_cast<void*>(&m_cb));
 }
 
-void ArmNvic::add_cpu_link()
+void Timer::mod(int64_t deadline)
 {
-    m_exports->arm_nvic_add_cpu_link(m_obj);
+    if (m_timer != nullptr) {
+        m_exports.timer_mod_ns(m_timer, deadline);
+    }
+}
+
+void Timer::del()
+{
+    if (m_timer != nullptr) {
+        m_exports.timer_del(m_timer);
+    }
 }
 
 }
-

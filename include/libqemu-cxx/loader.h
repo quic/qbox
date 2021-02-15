@@ -1,8 +1,6 @@
 /*
  *  This file is part of libqemu-cxx
- *  Copyright (C) 2020 Greensocs
- *
- *  Authors: Damien Hedde
+ *  Copyright (c) 2021 Luc Michel
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -21,27 +19,23 @@
 
 #pragma once
 
-#include "../libqemu-cxx.h"
+#include <memory>
 
 namespace qemu {
-
-class CpuRiscv : public Cpu {
+class LibraryIface {
 public:
-    static constexpr const char * const TYPE = "riscv-cpu";
-
-    CpuRiscv() = default;
-    CpuRiscv(const CpuRiscv &) = default;
-    CpuRiscv(const Object &o) : Cpu(o) {}
+    virtual bool symbol_exists(const char *symbol) = 0;
+    virtual void * get_symbol(const char *symbol) = 0;
 };
 
-class RiscvIbexPlic : public Device {
+class LibraryLoaderIface {
 public:
-    static constexpr const char * const TYPE = "ibex-plic";
+    using LibraryIfacePtr = std::shared_ptr<LibraryIface>;
 
-    RiscvIbexPlic() = default;
-    RiscvIbexPlic(const RiscvIbexPlic &) = default;
-    RiscvIbexPlic(const Object &o) : Device(o) {}
-
+    virtual LibraryIfacePtr load_library(const char *lib_name) = 0;
+    virtual const char *get_lib_ext() = 0;
 };
+
+LibraryLoaderIface * get_default_lib_loader();
 
 }

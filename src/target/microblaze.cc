@@ -1,6 +1,8 @@
 /*
  *  This file is part of libqemu-cxx
- *  Copyright (C) 2015-2019  Clement Deschamps and Luc Michel
+ *  Copyright (C) 2020 Greensocs
+ *
+ *  Authors: Damien Hedde
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -19,15 +21,9 @@
 
 #include <libqemu/libqemu.h>
 
-#include "libqemu-cxx.h"
+#include "libqemu-cxx/target/microblaze.h"
 
 namespace qemu {
 
-void Gpio::set(bool lvl)
-{
-    QemuGpio *gpio = reinterpret_cast<QemuGpio *>(m_obj);
-
-    m_exports->gpio_set(gpio, lvl);
 }
 
-};

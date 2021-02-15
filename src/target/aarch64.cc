@@ -19,63 +19,34 @@
 
 #include <libqemu/libqemu.h>
 
-#include "libqemu-cxx.h"
+#include "libqemu-cxx/target/aarch64.h"
 
 namespace qemu {
 
-void Cpu::loop()
+void CpuArm::set_cp15_cbar(uint64_t cbar)
 {
-    m_exports->cpu_loop(m_obj);
+    m_exports->cpu_arm_set_cp15_cbar(m_obj, cbar);
 }
 
-bool Cpu::loop_is_busy()
+void CpuArm::add_nvic_link()
 {
-    return m_exports->cpu_loop_is_busy(m_obj);
+    m_exports->cpu_arm_add_nvic_link(m_obj);
 }
 
-bool Cpu::can_run()
+uint64_t CpuArm::get_exclusive_val()
 {
-    return m_exports->cpu_can_run(m_obj);
+    return m_exports->cpu_arm_get_exclusive_val(m_obj);
 }
 
-void Cpu::halt(bool halted)
+void CpuAarch64::set_aarch64_mode(bool aarch64_mode)
 {
-    m_exports->cpu_halt(m_obj, halted);
+    m_exports->cpu_aarch64_set_aarch64_mode(m_obj, aarch64_mode);
 }
 
-void Cpu::reset()
+void ArmNvic::add_cpu_link()
 {
-    m_exports->cpu_reset(m_obj);
+    m_exports->arm_nvic_add_cpu_link(m_obj);
 }
 
-void Cpu::register_thread()
-{
-    m_exports->cpu_register_thread(m_obj);
 }
-
-Cpu Cpu::set_as_current()
-{
-    Cpu ret(Object(m_exports->current_cpu_get(), *m_exports));
-
-    m_exports->current_cpu_set(m_obj);
-
-    return ret;
-}
-
-void Cpu::kick()
-{
-    m_exports->cpu_kick(m_obj);
-}
-
-void Cpu::request_exit()
-{
-    m_exports->cpu_request_exit(m_obj);
-}
-
-void Cpu::async_safe_run(void (*handler)(void *), void *arg)
-{
-    m_exports->async_safe_run_on_cpu(m_obj, handler, arg);
-}
-
-};
 

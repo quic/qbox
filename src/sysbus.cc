@@ -19,51 +19,36 @@
 
 #include <libqemu/libqemu.h>
 
-#include "libqemu-cxx.h"
+#include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
 
-Timer::Timer(LibQemuExports &exports)
-    : m_exports(exports)
+MemoryRegion SysBusDevice::mmio_get_region(int id)
 {
-}
+    QemuSysBusDevice *qemu_sbd;
+    QemuMemoryRegion *qemu_mr;
 
-Timer::~Timer()
-{
-    del();
+    qemu_sbd = reinterpret_cast<QemuSysBusDevice *>(m_obj);
+    qemu_mr = m_exports->sysbus_mmio_get_region(qemu_sbd, id);
 
-    if (m_timer != nullptr) {
-        m_exports.timer_free(m_timer);
+    if (qemu_mr == nullptr) {
+        throw LibQemuException("Error while getting MMIO region from SysBusDevice");
     }
+
+    Object o(reinterpret_cast<QemuObject *>(qemu_mr), *m_exports);
+
+    return MemoryRegion(o);
 }
 
-static void timer_generic_callback(void *opaque)
+void SysBusDevice::connect_gpio_out(int idx, Gpio gpio)
 {
-    Timer::TimerCallbackFn *cb =
-        reinterpret_cast<Timer::TimerCallbackFn*>(opaque);
+    QemuSysBusDevice *qemu_sbd;
+    QemuGpio *qemu_gpio;
 
-    (*cb)();
+    qemu_sbd = reinterpret_cast<QemuSysBusDevice *>(m_obj);
+    qemu_gpio = reinterpret_cast<QemuGpio *>(gpio.get_qemu_obj());
+
+    m_exports->sysbus_connect_gpio_out(qemu_sbd, idx, qemu_gpio);
 }
 
-void Timer::set_callback(TimerCallbackFn cb)
-{
-    m_cb = cb;
-    m_timer = m_exports.timer_new_virtual_ns(timer_generic_callback,
-                                             reinterpret_cast<void*>(&m_cb));
-}
-
-void Timer::mod(int64_t deadline)
-{
-    if (m_timer != nullptr) {
-        m_exports.timer_mod_ns(m_timer, deadline);
-    }
-}
-
-void Timer::del()
-{
-    if (m_timer != nullptr) {
-        m_exports.timer_del(m_timer);
-    }
-}
-
-}
+};

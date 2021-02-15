@@ -26,7 +26,9 @@
 #include <set>
 #include <vector>
 
+#include "target_info.h"
 #include "exceptions.h"
+#include "loader.h"
 
 /* libqemu types forward declaration */
 struct LibQemuExports;
@@ -36,19 +38,6 @@ struct QemuMemoryRegionOps;
 struct QemuTimer;
 
 namespace qemu {
-
-class LibraryIface {
-public:
-    virtual bool symbol_exists(const char *symbol) = 0;
-    virtual void * get_symbol(const char *symbol) = 0;
-};
-
-class LibraryLoaderIface {
-public:
-    using LibraryIfacePtr = std::shared_ptr<LibraryIface>;
-
-    virtual LibraryIfacePtr load_library(const char *lib_name) = 0;
-};
 
 class Object;
 class MemoryRegionOps;
@@ -60,6 +49,9 @@ class Chardev;
 class LibQemu {
 private:
     LibraryLoaderIface &m_library_loader;
+    const char *m_lib_path;
+    Target m_target;
+
     std::vector<char *> m_qemu_argv;
 
     LibQemuExports *m_qemu_exports = nullptr;
@@ -70,13 +62,14 @@ private:
     void check_cast(Object &o, const char *type);
 
 public:
-    LibQemu(LibraryLoaderIface &library_loader);
+    LibQemu(LibraryLoaderIface &library_loader, const char *lib_path);
+    LibQemu(LibraryLoaderIface &library_loader, Target t);
     ~LibQemu();
 
     void push_qemu_arg(const char *arg);
     void push_qemu_arg(std::initializer_list<const char *> args);
 
-    void init(const char *lib_path);
+    void init();
     bool is_inited() const { return m_lib != nullptr; }
 
     /* QEMU GDB stub

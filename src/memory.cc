@@ -19,7 +19,7 @@
 
 #include <libqemu/libqemu.h>
 
-#include "libqemu-cxx.h"
+#include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
 

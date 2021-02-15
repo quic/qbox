@@ -21,12 +21,20 @@
 
 #include <libqemu/libqemu.h>
 
-#include "libqemu-cxx.h"
+#include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
 
-LibQemu::LibQemu(LibraryLoaderIface &library_loader)
+LibQemu::LibQemu(LibraryLoaderIface &library_loader, const char *lib_path)
     : m_library_loader(library_loader)
+    , m_lib_path(lib_path)
+{
+}
+
+LibQemu::LibQemu(LibraryLoaderIface &library_loader, Target t)
+    : m_library_loader(library_loader)
+    , m_lib_path(nullptr)
+    , m_target(t)
 {
 }
 
@@ -52,9 +60,26 @@ void LibQemu::push_qemu_arg(std::initializer_list<const char *> args)
     }
 }
 
-void LibQemu::init(const char *libname)
+void LibQemu::init()
 {
+    const char *libname;
     LibQemuInitFct qemu_init = nullptr;
+
+    if (m_lib_path == nullptr) {
+        /* constructed with a Target */
+        libname = get_target_lib(m_target);
+
+        if (!*libname) {
+            /*
+             * Empty libname means libqemu hasn't been compiled with support
+             * for this target.
+             */
+            throw TargetNotSupportedException(m_target);
+        }
+    } else {
+        /* constructed with a lib path */
+        libname = m_lib_path;
+    }
 
     m_lib = m_library_loader.load_library(libname);
 

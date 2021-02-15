@@ -19,11 +19,19 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "microblaze.h"
+#pragma once
 
-#include <libqemu/libqemu.h>
+#include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
 
-}
+class CpuMicroblaze : public Cpu {
+public:
+    static constexpr const char * const TYPE = "microblaze-cpu";
 
+    CpuMicroblaze() = default;
+    CpuMicroblaze(const CpuMicroblaze &) = default;
+    CpuMicroblaze(const Object &o) : Cpu(o) {}
+};
+
+}
