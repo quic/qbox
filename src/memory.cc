@@ -20,6 +20,7 @@
 #include <libqemu/libqemu.h>
 
 #include "libqemu-cxx/libqemu-cxx.h"
+#include "internals.h"
 
 namespace qemu {
 
@@ -57,13 +58,14 @@ MemoryRegionOps::MemTxAttrs::MemTxAttrs(const ::MemTxAttrs &qemu_attrs)
     , debug(qemu_attrs.debug)
 {}
 
-MemoryRegionOps::MemoryRegionOps(QemuMemoryRegionOps *ops, LibQemuExports &exports)
-    : m_ops(ops), m_exports(exports)
+MemoryRegionOps::MemoryRegionOps(QemuMemoryRegionOps *ops,
+                                 std::shared_ptr<LibQemuInternals> internals)
+    : m_ops(ops), m_int(internals)
 {}
 
 MemoryRegionOps::~MemoryRegionOps()
 {
-    m_exports.mr_ops_free(m_ops);
+    m_int->exports().mr_ops_free(m_ops);
 }
 
 static ::MemTxResult generic_read_cb(void *opaque, hwaddr addr, uint64_t *data,
@@ -80,7 +82,7 @@ static ::MemTxResult generic_read_cb(void *opaque, hwaddr addr, uint64_t *data,
 void MemoryRegionOps::set_read_callback(ReadCallback cb)
 {
     m_read_cb = cb;
-    m_exports.mr_ops_set_read_cb(m_ops, generic_read_cb);
+    m_int->exports().mr_ops_set_read_cb(m_ops, generic_read_cb);
 }
 
 static ::MemTxResult generic_write_cb(void *opaque, hwaddr addr, uint64_t data,
@@ -97,12 +99,12 @@ static ::MemTxResult generic_write_cb(void *opaque, hwaddr addr, uint64_t data,
 void MemoryRegionOps::set_write_callback(WriteCallback cb)
 {
     m_write_cb = cb;
-    m_exports.mr_ops_set_write_cb(m_ops, generic_write_cb);
+    m_int->exports().mr_ops_set_write_cb(m_ops, generic_write_cb);
 }
 
 void MemoryRegionOps::set_max_access_size(unsigned size)
 {
-    m_exports.mr_ops_set_max_access_size(m_ops, size);
+    m_int->exports().mr_ops_set_max_access_size(m_ops, size);
 }
 
 /*
@@ -123,7 +125,7 @@ MemoryRegion::~MemoryRegion()
 uint64_t MemoryRegion::get_size()
 {
     QemuMemoryRegion *mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
-    return m_exports->memory_region_size(mr);
+    return m_int->exports().memory_region_size(mr);
 }
 
 void MemoryRegion::init_io(Object owner, const char *name, uint64_t size, MemoryRegionOpsPtr ops)
@@ -133,14 +135,14 @@ void MemoryRegion::init_io(Object owner, const char *name, uint64_t size, Memory
 
     m_ops = ops;
 
-    m_exports->memory_region_init_io(mr, owner.get_qemu_obj(), qemu_ops, m_ops.get(), name, size);
+    m_int->exports().memory_region_init_io(mr, owner.get_qemu_obj(), qemu_ops, m_ops.get(), name, size);
 }
 
 void MemoryRegion::init_ram_ptr(Object owner, const char *name, uint64_t size, void *ptr)
 {
     QemuMemoryRegion *mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
 
-    m_exports->memory_region_init_ram_ptr(mr, owner.get_qemu_obj(), name, size, ptr);
+    m_int->exports().memory_region_init_ram_ptr(mr, owner.get_qemu_obj(), name, size, ptr);
 }
 
 void MemoryRegion::init_alias(Object owner, const char *name, MemoryRegion &root,
@@ -149,7 +151,7 @@ void MemoryRegion::init_alias(Object owner, const char *name, MemoryRegion &root
     QemuMemoryRegion *mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegion *root_mr = reinterpret_cast<QemuMemoryRegion*>(root.m_obj);
 
-    m_exports->memory_region_init_alias(mr, owner.get_qemu_obj(), name, root_mr,
+    m_int->exports().memory_region_init_alias(mr, owner.get_qemu_obj(), name, root_mr,
                                         offset, size);
 }
 
@@ -158,7 +160,7 @@ void MemoryRegion::add_subregion(MemoryRegion &mr, uint64_t offset)
     QemuMemoryRegion *this_mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegion *sub_mr = reinterpret_cast<QemuMemoryRegion*>(mr.m_obj);
 
-    m_exports->memory_region_add_subregion(this_mr, offset, sub_mr);
+    m_int->exports().memory_region_add_subregion(this_mr, offset, sub_mr);
     m_subregions.insert(mr);
     mr.container = this;
 }
@@ -168,7 +170,7 @@ void MemoryRegion::internal_del_subregion(const MemoryRegion &mr)
     QemuMemoryRegion *this_mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegion *sub_mr = reinterpret_cast<QemuMemoryRegion*>(mr.m_obj);
 
-    m_exports->memory_region_del_subregion(this_mr, sub_mr);
+    m_int->exports().memory_region_del_subregion(this_mr, sub_mr);
 }
 
 void MemoryRegion::del_subregion(const MemoryRegion &mr)
@@ -187,7 +189,7 @@ MemoryRegion::dispatch_read(uint64_t addr, uint64_t *data,
 
     qemu_attrs.secure = attrs.secure;
 
-    qemu_res = m_exports->memory_region_dispatch_read(mr, addr, data,
+    qemu_res = m_int->exports().memory_region_dispatch_read(mr, addr, data,
                                                       size, qemu_attrs);
 
     return QEMU_TO_LIB_MEMTXRESULT_MAPPING(qemu_res);
@@ -203,7 +205,7 @@ MemoryRegion::dispatch_write(uint64_t addr, uint64_t data,
 
     qemu_attrs.secure = attrs.secure;
 
-    qemu_res = m_exports->memory_region_dispatch_write(mr, addr, data,
+    qemu_res = m_int->exports().memory_region_dispatch_write(mr, addr, data,
                                                        size, qemu_attrs);
 
     return QEMU_TO_LIB_MEMTXRESULT_MAPPING(qemu_res);

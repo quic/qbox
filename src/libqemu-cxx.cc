@@ -22,6 +22,7 @@
 #include <libqemu/libqemu.h>
 
 #include "libqemu-cxx/libqemu-cxx.h"
+#include "internals.h"
 
 namespace qemu {
 
@@ -64,6 +65,7 @@ void LibQemu::init()
 {
     const char *libname;
     LibQemuInitFct qemu_init = nullptr;
+    LibQemuExports *exports = nullptr;
 
     if (m_lib_path == nullptr) {
         /* constructed with a Target */
@@ -92,37 +94,38 @@ void LibQemu::init()
     }
 
     qemu_init = reinterpret_cast<LibQemuInitFct>(m_lib->get_symbol(LIBQEMU_INIT_SYM_STR));
+    exports = qemu_init(m_qemu_argv.size(), &m_qemu_argv[0]);
 
-    m_qemu_exports = qemu_init(m_qemu_argv.size(), &m_qemu_argv[0]);
+    m_int = std::make_shared<LibQemuInternals>(exports);
 }
 
 void LibQemu::resume_all_vcpus()
 {
-    m_qemu_exports->resume_all_vcpus();
+    m_int->exports().resume_all_vcpus();
 }
 
 void LibQemu::start_gdb_server(std::string port)
 {
-    m_qemu_exports->gdbserver_start(port.c_str());
+    m_int->exports().gdbserver_start(port.c_str());
 }
 
 int64_t LibQemu::get_virtual_clock()
 {
-    return m_qemu_exports->clock_virtual_get_ns();
+    return m_int->exports().clock_virtual_get_ns();
 }
 
 void LibQemu::tb_invalidate_phys_range(uint64_t start, uint64_t end)
 {
-    m_qemu_exports->tb_invalidate_phys_range(start, end);
+    m_int->exports().tb_invalidate_phys_range(start, end);
 }
 
 QemuObject* LibQemu::object_new_internal(const char *type_name)
 {
-    QemuObject *o = m_qemu_exports->object_new(type_name);
-    QemuObject *root = m_qemu_exports->object_get_root();
+    QemuObject *o = m_int->exports().object_new(type_name);
+    QemuObject *root = m_int->exports().object_get_root();
     QemuError *err = nullptr;
 
-    m_qemu_exports->object_property_add_child(root, "libqemu-obj[*]", o);
+    m_int->exports().object_property_add_child(root, "libqemu-obj[*]", o);
 
     if (err != nullptr) {
         throw LibQemuException("Error while parenting the new object");
@@ -133,15 +136,15 @@ QemuObject* LibQemu::object_new_internal(const char *type_name)
 
 Object LibQemu::object_new(const char *type_name)
 {
-    Object o(object_new_internal(type_name), *m_qemu_exports);
+    Object o(object_new_internal(type_name), m_int);
     return o;
 }
 
 std::shared_ptr<MemoryRegionOps> LibQemu::memory_region_ops_new()
 {
-    QemuMemoryRegionOps *ops = m_qemu_exports->mr_ops_new();
+    QemuMemoryRegionOps *ops = m_int->exports().mr_ops_new();
 
-    return std::make_shared<MemoryRegionOps>(ops, *m_qemu_exports);
+    return std::make_shared<MemoryRegionOps>(ops, m_int);
 }
 
 static void qemu_gpio_generic_handler(void * opaque, int n, int level)
@@ -155,9 +158,9 @@ Gpio LibQemu::gpio_new()
 {
     std::shared_ptr<Gpio::GpioProxy> proxy = std::make_shared<Gpio::GpioProxy>();
 
-    QemuGpio *qemu_gpio = m_qemu_exports->gpio_new(qemu_gpio_generic_handler, proxy.get());
+    QemuGpio *qemu_gpio = m_int->exports().gpio_new(qemu_gpio_generic_handler, proxy.get());
 
-    Gpio gpio(Object(reinterpret_cast<QemuObject*>(qemu_gpio), *m_qemu_exports));
+    Gpio gpio(Object(reinterpret_cast<QemuObject*>(qemu_gpio), m_int));
     gpio.set_proxy(proxy);
 
     return gpio;
@@ -165,13 +168,13 @@ Gpio LibQemu::gpio_new()
 
 std::shared_ptr<Timer> LibQemu::timer_new()
 {
-    return std::make_shared<Timer>(*m_qemu_exports);
+    return std::make_shared<Timer>(m_int);
 }
 
 Chardev LibQemu::chardev_new(const char *label, const char *type)
 {
-    QemuChardev *qemu_char_dev = m_qemu_exports->char_dev_new(label, type);
-    Chardev ret(Object(reinterpret_cast<QemuObject *>(qemu_char_dev), *m_qemu_exports));
+    QemuChardev *qemu_char_dev = m_int->exports().char_dev_new(label, type);
+    Chardev ret(Object(reinterpret_cast<QemuObject *>(qemu_char_dev), m_int));
 
     return ret;
 }
@@ -183,33 +186,33 @@ void LibQemu::check_cast(Object &o, const char *type)
 
 void LibQemu::lock_iothread()
 {
-    m_qemu_exports->qemu_mutex_lock_iothread();
+    m_int->exports().qemu_mutex_lock_iothread();
 }
 
 void LibQemu::unlock_iothread()
 {
-    m_qemu_exports->qemu_mutex_unlock_iothread();
+    m_int->exports().qemu_mutex_unlock_iothread();
 }
 
-Object::Object(QemuObject *obj, LibQemuExports &exports)
+Object::Object(QemuObject *obj, std::shared_ptr<LibQemuInternals> &internals)
         : m_obj(obj)
-        , m_exports(&exports)
+        , m_int(internals)
 {
-    m_exports->object_ref(obj);
+    m_int->exports().object_ref(obj);
 }
 
 Object::Object(const Object &o)
     : m_obj(o.m_obj)
-    , m_exports(o.m_exports)
+    , m_int(o.m_int)
 {
     if (valid()) {
-        m_exports->object_ref(m_obj);
+        m_int->exports().object_ref(m_obj);
     }
 }
 
 Object::Object(Object &&o)
     : m_obj(o.m_obj)
-    , m_exports(o.m_exports)
+    , m_int(o.m_int)
 {
     o.m_obj = nullptr;
 }
@@ -218,7 +221,7 @@ Object & Object::operator=(Object o)
 {
     if (this != &o) {
         std::swap(m_obj, o.m_obj);
-        std::swap(m_exports, o.m_exports);
+        std::swap(m_int, o.m_int);
     }
 
     return *this;
@@ -227,14 +230,14 @@ Object & Object::operator=(Object o)
 Object::~Object()
 {
     if (valid()) {
-        m_exports->object_unref(m_obj);
+        m_int->exports().object_unref(m_obj);
     }
 }
 
 void Object::set_prop_bool(const char *name, bool val)
 {
     QemuError *e = nullptr;
-    m_exports->object_property_set_bool(m_obj, name, val, &e);
+    m_int->exports().object_property_set_bool(m_obj, name, val, &e);
 
     if (e != nullptr) {
         throw SetPropertyException("bool", name);
@@ -244,7 +247,7 @@ void Object::set_prop_bool(const char *name, bool val)
 void Object::set_prop_int(const char *name, int64_t val)
 {
     QemuError *e = nullptr;
-    m_exports->object_property_set_int(m_obj, name, val, &e);
+    m_int->exports().object_property_set_int(m_obj, name, val, &e);
 
     if (e != nullptr) {
         throw SetPropertyException("int", name);
@@ -254,7 +257,7 @@ void Object::set_prop_int(const char *name, int64_t val)
 void Object::set_prop_str(const char *name, const char *val)
 {
     QemuError *e = nullptr;
-    m_exports->object_property_set_str(m_obj, name, val, &e);
+    m_int->exports().object_property_set_str(m_obj, name, val, &e);
 
     if (e != nullptr) {
         throw SetPropertyException("str", name);
@@ -264,7 +267,7 @@ void Object::set_prop_str(const char *name, const char *val)
 void Object::set_prop_link(const char *name, const Object &link)
 {
     QemuError *e = nullptr;
-    m_exports->object_property_set_link(m_obj, name, link.m_obj, &e);
+    m_int->exports().object_property_set_link(m_obj, name, link.m_obj, &e);
 
     if (e != nullptr) {
         throw SetPropertyException("link", name);

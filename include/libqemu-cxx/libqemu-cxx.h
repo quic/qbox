@@ -39,6 +39,7 @@ struct QemuTimer;
 
 namespace qemu {
 
+class LibQemuInternals;
 class Object;
 class MemoryRegionOps;
 class Gpio;
@@ -48,13 +49,13 @@ class Chardev;
 
 class LibQemu {
 private:
+    std::shared_ptr<LibQemuInternals> m_int;
     LibraryLoaderIface &m_library_loader;
     const char *m_lib_path;
     Target m_target;
 
     std::vector<char *> m_qemu_argv;
 
-    LibQemuExports *m_qemu_exports = nullptr;
     LibraryLoaderIface::LibraryIfacePtr m_lib;
 
     QemuObject* object_new_internal(const char *type_name);
@@ -83,7 +84,7 @@ public:
 
     template <class T>
     T object_new() {
-        T o(Object(object_new_internal(T::TYPE), *m_qemu_exports));
+        T o(Object(object_new_internal(T::TYPE), m_int));
         check_cast(o, T::TYPE);
 
         return o;
@@ -105,7 +106,7 @@ public:
 class Object {
 protected:
     QemuObject *m_obj = nullptr;
-    LibQemuExports *m_exports = nullptr;
+    std::shared_ptr<LibQemuInternals> m_int;
 
     bool check_cast_by_type(const char *type_name) const
     {
@@ -115,7 +116,7 @@ protected:
 
 public:
     Object() = default;
-    Object(QemuObject *obj, LibQemuExports &exports);
+    Object(QemuObject *obj, std::shared_ptr<LibQemuInternals> &internals);
     Object(const Object &o);
     Object(Object &&o);
 
@@ -132,7 +133,7 @@ public:
 
     QemuObject *get_qemu_obj() { return m_obj; }
 
-    uintptr_t get_inst_id() const { return reinterpret_cast<uintptr_t>(m_exports); }
+    uintptr_t get_inst_id() const { return reinterpret_cast<uintptr_t>(m_int.get()); }
 
     template <class T>
     bool check_cast() const { return check_cast_by_type(T::TYPE); }
@@ -210,13 +211,14 @@ public:
 
 private:
     QemuMemoryRegionOps *m_ops;
-    LibQemuExports &m_exports;
+    std::shared_ptr<LibQemuInternals> m_int;
 
     ReadCallback m_read_cb;
     WriteCallback m_write_cb;
 
 public:
-    MemoryRegionOps(QemuMemoryRegionOps *ops, LibQemuExports &exports);
+    MemoryRegionOps(QemuMemoryRegionOps *ops,
+                    std::shared_ptr<LibQemuInternals> internals);
     ~MemoryRegionOps();
 
     void set_read_callback(ReadCallback cb);
@@ -339,12 +341,12 @@ public:
     typedef std::function<void ()> TimerCallbackFn;
 
 private:
-    LibQemuExports &m_exports;
+    std::shared_ptr<LibQemuInternals> m_int;
     QemuTimer *m_timer = nullptr;
     TimerCallbackFn m_cb;
 
 public:
-    Timer(LibQemuExports &exports);
+    Timer(std::shared_ptr<LibQemuInternals> internals);
     ~Timer();
 
     void set_callback(TimerCallbackFn cb);

@@ -20,11 +20,12 @@
 #include <libqemu/libqemu.h>
 
 #include "libqemu-cxx/libqemu-cxx.h"
+#include "internals.h"
 
 namespace qemu {
 
-Timer::Timer(LibQemuExports &exports)
-    : m_exports(exports)
+Timer::Timer( std::shared_ptr<LibQemuInternals> internals)
+    : m_int(internals)
 {
 }
 
@@ -33,7 +34,7 @@ Timer::~Timer()
     del();
 
     if (m_timer != nullptr) {
-        m_exports.timer_free(m_timer);
+        m_int->exports().timer_free(m_timer);
     }
 }
 
@@ -48,21 +49,21 @@ static void timer_generic_callback(void *opaque)
 void Timer::set_callback(TimerCallbackFn cb)
 {
     m_cb = cb;
-    m_timer = m_exports.timer_new_virtual_ns(timer_generic_callback,
+    m_timer = m_int->exports().timer_new_virtual_ns(timer_generic_callback,
                                              reinterpret_cast<void*>(&m_cb));
 }
 
 void Timer::mod(int64_t deadline)
 {
     if (m_timer != nullptr) {
-        m_exports.timer_mod_ns(m_timer, deadline);
+        m_int->exports().timer_mod_ns(m_timer, deadline);
     }
 }
 
 void Timer::del()
 {
     if (m_timer != nullptr) {
-        m_exports.timer_del(m_timer);
+        m_int->exports().timer_del(m_timer);
     }
 }
 

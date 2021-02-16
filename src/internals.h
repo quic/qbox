@@ -1,6 +1,6 @@
 /*
  *  This file is part of libqemu-cxx
- *  Copyright (C) 2015-2019  Clement Deschamps and Luc Michel
+ *  Copyright (C) 2021 Luc Michel
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -17,18 +17,25 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include <libqemu/libqemu.h>
+#ifndef _LIBQEMU_CXX_INTERNALS_
+#define _LIBQEMU_CXX_INTERNALS_
 
-#include "libqemu-cxx/libqemu-cxx.h"
-#include "internals.h"
+#include "libqemu/libqemu.h"
 
 namespace qemu {
 
-void Gpio::set(bool lvl)
-{
-    QemuGpio *gpio = reinterpret_cast<QemuGpio *>(m_obj);
+class LibQemuInternals {
+private:
+    LibQemuExports *m_exports;
 
-    m_int->exports().gpio_set(gpio, lvl);
+public:
+    LibQemuInternals(LibQemuExports *exports)
+        : m_exports(exports)
+    {}
+
+    const LibQemuExports & exports() const { return *m_exports; };
+};
+
 }
 
-};
+#endif

@@ -20,6 +20,7 @@
 #include <libqemu/libqemu.h>
 
 #include "libqemu-cxx/libqemu-cxx.h"
+#include "internals.h"
 
 namespace qemu {
 
@@ -29,13 +30,13 @@ MemoryRegion SysBusDevice::mmio_get_region(int id)
     QemuMemoryRegion *qemu_mr;
 
     qemu_sbd = reinterpret_cast<QemuSysBusDevice *>(m_obj);
-    qemu_mr = m_exports->sysbus_mmio_get_region(qemu_sbd, id);
+    qemu_mr = m_int->exports().sysbus_mmio_get_region(qemu_sbd, id);
 
     if (qemu_mr == nullptr) {
         throw LibQemuException("Error while getting MMIO region from SysBusDevice");
     }
 
-    Object o(reinterpret_cast<QemuObject *>(qemu_mr), *m_exports);
+    Object o(reinterpret_cast<QemuObject *>(qemu_mr), m_int);
 
     return MemoryRegion(o);
 }
@@ -48,7 +49,7 @@ void SysBusDevice::connect_gpio_out(int idx, Gpio gpio)
     qemu_sbd = reinterpret_cast<QemuSysBusDevice *>(m_obj);
     qemu_gpio = reinterpret_cast<QemuGpio *>(gpio.get_qemu_obj());
 
-    m_exports->sysbus_connect_gpio_out(qemu_sbd, idx, qemu_gpio);
+    m_int->exports().sysbus_connect_gpio_out(qemu_sbd, idx, qemu_gpio);
 }
 
 };
