@@ -21,6 +21,8 @@
 
 #include "../char-backend.h"
 
+#include <libgs/libgs.h>
+
 #ifndef WIN32
 #include <unistd.h>
 #include <poll.h>
@@ -54,7 +56,7 @@
 
 class CharBackendSocket : public CharBackend, public sc_core::sc_module {
 private:
-    AsyncEvent m_event;
+    gs::async_event m_event;
     std::queue<unsigned char> m_queue;
     std::mutex m_mutex;
 
@@ -201,7 +203,7 @@ public:
             }
             else {
                 /* notify myself later, hopefully the queue drains */
-                m_event.notify(1, sc_core::SC_MS);
+                m_event.notify(sc_core::sc_time(1, sc_core::SC_MS));
                 return;
             }
         }
