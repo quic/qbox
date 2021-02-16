@@ -72,9 +72,9 @@ void Cpu::request_exit()
     m_exports->cpu_request_exit(m_obj);
 }
 
-void Cpu::async_safe_run(void (*handler)(void *), void *arg)
+void Cpu::async_safe_run(AsyncJobFn job, void *arg)
 {
-    m_exports->async_safe_run_on_cpu(m_obj, handler, arg);
+    m_exports->async_safe_run_on_cpu(m_obj, job, arg);
 }
 
 };

@@ -309,6 +309,8 @@ class Cpu : public Device {
 public:
     static constexpr const char * const TYPE = "cpu";
 
+    typedef void (*AsyncJobFn)(void *);
+
     Cpu() = default;
     Cpu(const Cpu &) = default;
     Cpu(const Object &o) : Device(o) {}
@@ -329,7 +331,7 @@ public:
 
     void request_exit();
 
-    void async_safe_run(void (*handler)(void *), void *arg);
+    void async_safe_run(AsyncJobFn job, void *arg);
 };
 
 class Timer {
