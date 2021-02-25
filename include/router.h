@@ -10,7 +10,7 @@
 #include <tlm_utils/simple_target_socket.h>
 #include <inttypes.h>
 
-#include "libgs/utils/report.h"
+#include "libgsutils.h"
 
 template<unsigned int BUSWIDTH = 32>
 class Router : sc_core::sc_module {
