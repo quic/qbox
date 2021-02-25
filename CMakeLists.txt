@@ -4,74 +4,57 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 project(libqbox)
 
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-if (WIN32)
-    find_package(SystemC REQUIRED)
-else ()
-    find_package(SystemC REQUIRED COMPONENTS CCI)
-endif ()
-
-find_package(PkgConfig REQUIRED)
-if (PkgConfig_FOUND)
-    pkg_check_modules(slirp slirp)
-endif()
-
+find_package(SystemC REQUIRED COMPONENTS CCI)
 find_package(libqemu-cxx CONFIG REQUIRED)
+find_package(libgs REQUIRED)
 
-add_library(qbox SHARED
-    src/libqbox.cc
-    src/mac.cc
-    src/async_stop.cc
-)
+set(LIBQBOX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqbox)
 
-if (NOT WIN32)
-    target_sources(qbox
-        PRIVATE
-        src/xgmac.cc
-        src/dwmac.cc
-        src/phy.cc
-        src/backends/tap.cc
-    )
-endif()
+add_library(qbox SHARED)
 
-if (WIN32)
-    target_compile_options(qbox PRIVATE -Wall -DSC_WIN_DLL -DSC_INCLUDE_DYNAMIC_PROCESSES /vmg)
-else ()
+if(MSVC)
+    target_compile_options(qbox PRIVATE /W4)
+else()
     target_compile_options(qbox PRIVATE
-        -Wall
-        "$<$<CONFIG:Debug>:-O0;-g3;-ggdb>"
-    )
-endif ()
+        -Wall -Wextra
+        "$<$<CONFIG:Debug>:-O0;-ggdb3>")
+endif()
 
 target_include_directories(qbox
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/include
-)
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PRIVATE
+        ${LIBGS_INCLUDE_DIR})
 
 target_link_libraries(qbox
     SystemC::SystemC
-    gs
     qemu-cxx
-    dl
-)
-
-if (slirp_FOUND)
-    target_sources(qbox PRIVATE src/backends/slirp.cc)
-    target_link_libraries(qbox slirp)
-endif()
-
-if (NOT WIN32)
-    target_link_libraries(qbox pthread SystemC::CCI)
-endif ()
+    ${LIBGS_LIBRARIES})
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox" DESTINATION include)
+install(TARGETS qbox DESTINATION lib EXPORT libqbox-targets)
+install(EXPORT libqbox-targets DESTINATION ${LIBQBOX_LIB_DIR}/cmake)
 
-if (WIN32)
-    install(TARGETS qbox DESTINATION lib/$<IF:$<CONFIG:Debug>,debug,release>)
-else ()
-    install(TARGETS qbox DESTINATION lib)
-endif ()
+export(EXPORT libqbox-targets)
+export(PACKAGE libqbox)
+
+configure_package_config_file(libqboxConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/libqboxConfig.cmake
+    INSTALL_DESTINATION ${LIBQBOX_LIB_DIR}/cmake)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/libqboxConfigVersion.cmake
+    VERSION 1.0.0
+    COMPATIBILITY AnyNewerVersion)
+
+install(
+    FILES ${CMAKE_BINARY_DIR}/libqboxConfig.cmake
+          ${CMAKE_BINARY_DIR}/libqboxConfigVersion.cmake
+    DESTINATION ${LIBQBOX_LIB_DIR}/cmake)
