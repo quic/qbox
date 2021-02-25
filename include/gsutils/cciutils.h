@@ -3,9 +3,11 @@
  *
  */
 
-#pragma once
+#ifdef CCIUTILS_H
+#define CCIUTILS_H
 
 #include <iostream>
+#include <list>
 
 #include <systemc>
 #include <tlm>
@@ -41,3 +43,4 @@ namespace gs
         return children;
     }
 }
+#endif CCIUTILS_H
