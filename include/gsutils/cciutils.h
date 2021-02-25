@@ -3,7 +3,7 @@
  *
  */
 
-#ifdef CCIUTILS_H
+#ifndef CCIUTILS_H
 #define CCIUTILS_H
 
 #include <iostream>
