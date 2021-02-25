@@ -43,4 +43,5 @@ namespace gs
         return children;
     }
 }
-#endif CCIUTILS_H
+
+#endif // CCIUTILS_H
