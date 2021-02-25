@@ -20,14 +20,14 @@
 namespace gs 
 {
     /* return the leaf name of the given module name */
-    std::string sc_cci_leaf_name(std::string name)
+    static std::string sc_cci_leaf_name(std::string name)
     {
         return name.substr(name.find_last_of(".")+1);
     }
 
     /* return a list of children from the given module name, can be used inside
      * or outside the heirarchy */
-    std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
+    static std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
     {
         cci::cci_broker_handle m_broker = (sc_core::sc_get_current_object())?cci::cci_get_broker():cci::cci_get_global_broker(cci::cci_originator("gs__sc_cci_children"));
         std::list<std::string> children;
