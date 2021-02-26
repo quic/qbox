@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(gssync  VERSION 1.0  LANGUAGES CXX)
+project(libgssync  VERSION 1.0  LANGUAGES CXX)
 
 ##############################################
 # ----- BOILERPLATE
@@ -55,7 +55,7 @@ CPMFindPackage(
 CPMAddPackage("https://git.bar.greensocs.com/greensocs/libgsutils.git#master")
 
 
-add_library(gssync SHARED
+add_library(${PROJECT_NAME} SHARED
    src/qkmultithread.cc
    src/qk_factory.cc
    src/pre_suspending_sc_support.cc
@@ -63,15 +63,22 @@ add_library(gssync SHARED
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-target_link_libraries(gssync PRIVATE Threads::Threads)
+target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
 
-target_compile_definitions(gssync PUBLIC SC_INCLUDE_DYNAMIC_PROCESSES)
-target_link_libraries(gssync PRIVATE systemc cci libgsutils base-components)
+target_compile_definitions(${PROJECT_NAME} PUBLIC SC_INCLUDE_DYNAMIC_PROCESSES)
+target_link_libraries(${PROJECT_NAME} PRIVATE systemc cci libgsutils base-components)
 
 target_include_directories(
-   gssync PUBLIC ${CMAKE_INSTALL_INCLUDEDIR}
+   ${PROJECT_NAME} PUBLIC 
    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+# hack for MSVC
+target_compile_options(
+   ${PROJECT_NAME}
+   PUBLIC
+   $<$<CXX_COMPILER_ID:MSVC>:/vmg /MP>
 )
 
 # ----- EXPORT PROJECT
