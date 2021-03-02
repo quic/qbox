@@ -32,25 +32,41 @@ mark_as_advanced (CMAKE_CXX_STANDARD_REQUIRED)
 include(GNUInstallDirs)
 
 ##############################################
-# ----- END BOILERPLATE
+
+
+
 ##############################################
-
-# dependencies
-
+# ----- SystemC and CCI Dependencies
+##############################################
 CPMFindPackage(
-   NAME systemc
-   GIT_REPOSITORY https://github.com/greensocs/systemc.git
+   NAME SystemCLanguage
+   GIT_REPOSITORY https://github.com/greensocs/systemc
    GIT_TAG async_suspendable
    GIT_SHALLOW True
    OPTIONS "ENABLE_SUSPEND_ALL"
    OPTIONS "ENABLE_PHASE_CALLBACKS"
 )
+# Prevent CCI attempting to re-find SystemC
+set(SystemCLanguage_FOUND TRUE)
+
+# needed by CCI
+CPMAddPackage(
+   NAME rapidjson
+   GIT_REPOSITORY https://github.com/Tencent/rapidjson
+   GIT_TAG master
+   GIT_SHALLOW TRUE
+   OPTIONS "RAPIDJSON_BUILD_TESTS OFF"
+)
 CPMFindPackage(
-   NAME cci
-   GIT_REPOSITORY git@git.bar.greensocs.com:mark/cci.git
+   NAME SystemCCCI
+   GIT_REPOSITORY git@git.bar.greensocs.com:mark/cci
    GIT_TAG accellera-automake-flow
    GIT_SHALLOW True
 )
+##############################################
+
+
+# Other Dependencies
 
 CPMAddPackage("https://git.bar.greensocs.com/greensocs/libgsutils.git#master")
 
