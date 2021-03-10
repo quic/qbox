@@ -28,6 +28,12 @@ add_library(${PROJECT_NAME} SHARED
    src/pre_suspending_sc_support.cc
 )
 
+target_include_directories(
+   ${PROJECT_NAME} PUBLIC
+   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
