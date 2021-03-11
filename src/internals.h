@@ -60,6 +60,7 @@ private:
     LibQemuExports *m_exports;
 
     LibQemuObjectCallback<Cpu::EndOfLoopCallbackFn> m_cpu_end_of_loop_cbs;
+    LibQemuObjectCallback<Cpu::CpuKickCallbackFn> m_cpu_kick_cbs;
 
 public:
     LibQemuInternals(LibQemu &inst, LibQemuExports *exports)
@@ -73,6 +74,11 @@ public:
     LibQemuObjectCallback<Cpu::EndOfLoopCallbackFn>& get_cpu_end_of_loop_cb()
     {
         return m_cpu_end_of_loop_cbs;
+    }
+
+    LibQemuObjectCallback<Cpu::CpuKickCallbackFn>& get_cpu_kick_cb()
+    {
+        return m_cpu_kick_cbs;
     }
 };
 

@@ -318,6 +318,7 @@ public:
     static constexpr const char * const TYPE = "cpu";
 
     using EndOfLoopCallbackFn = std::function<void ()>;
+    using CpuKickCallbackFn = std::function<void ()>;
     typedef void (*AsyncJobFn)(void *);
 
     Cpu() = default;
@@ -347,6 +348,7 @@ public:
     void async_safe_run(AsyncJobFn job, void *arg);
 
     void set_end_of_loop_callback(EndOfLoopCallbackFn cb);
+    void set_kick_callback(CpuKickCallbackFn cb);
 };
 
 class Timer {

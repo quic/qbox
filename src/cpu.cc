@@ -98,5 +98,9 @@ void Cpu::set_end_of_loop_callback(Cpu::EndOfLoopCallbackFn cb)
     m_int->get_cpu_end_of_loop_cb().register_cb(*this, cb);
 }
 
+void Cpu::set_kick_callback(Cpu::CpuKickCallbackFn cb)
+{
+    m_int->get_cpu_kick_cb().register_cb(*this, cb);
+}
 };
 
