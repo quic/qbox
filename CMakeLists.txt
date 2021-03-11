@@ -11,7 +11,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 find_package(libqemu CONFIG REQUIRED)
 
 set(LIBQEMU_CXX_SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/libqemu-cxx)
-set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/libqemu-cxx)
+set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 set(LIBQEMU_CXX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqemu-cxx)
 
 set(srcs
@@ -54,7 +54,7 @@ endif()
 target_include_directories(qemu-cxx
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<INSTALL_INTERFACE:${LIBQEMU_CXX_INCLUDE_DIR}>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 
@@ -66,15 +66,7 @@ set_property(TARGET qemu-cxx
     PROPERTY INSTALL_RPATH ${LIBQEMU_LIB_DIR})
 
 
-install(FILES
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/exceptions.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/libqemu-cxx.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/loader.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target_info.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/aarch64.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/riscv32.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/riscv64.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/microblaze.h"
+install(DIRECTORY ${LIBQEMU_CXX_SRC_INCLUDE_DIR}
     DESTINATION ${LIBQEMU_CXX_INCLUDE_DIR})
 
 if (WIN32)
