@@ -143,6 +143,8 @@ public:
 
     template <class T>
     bool check_cast() const { return check_cast_by_type(T::TYPE); }
+
+    void clear_callbacks();
 };
 
 class Gpio : public Object {

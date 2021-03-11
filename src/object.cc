@@ -107,4 +107,9 @@ void Object::set_prop_link(const char *name, const Object &link)
     }
 }
 
+void Object::clear_callbacks()
+{
+    m_int->clear_callbacks(*this);
+}
+
 }

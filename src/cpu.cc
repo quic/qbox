@@ -102,5 +102,6 @@ void Cpu::set_kick_callback(Cpu::CpuKickCallbackFn cb)
 {
     m_int->get_cpu_kick_cb().register_cb(*this, cb);
 }
+
 };
 
