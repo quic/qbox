@@ -62,6 +62,8 @@ private:
 
     void check_cast(Object &o, const char *type);
 
+    void init_callbacks();
+
 public:
     LibQemu(LibraryLoaderIface &library_loader, const char *lib_path);
     LibQemu(LibraryLoaderIface &library_loader, Target t);
@@ -315,6 +317,7 @@ class Cpu : public Device {
 public:
     static constexpr const char * const TYPE = "cpu";
 
+    using EndOfLoopCallbackFn = std::function<void ()>;
     typedef void (*AsyncJobFn)(void *);
 
     Cpu() = default;
@@ -342,6 +345,8 @@ public:
     void request_exit();
 
     void async_safe_run(AsyncJobFn job, void *arg);
+
+    void set_end_of_loop_callback(EndOfLoopCallbackFn cb);
 };
 
 class Timer {

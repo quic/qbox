@@ -97,6 +97,7 @@ void LibQemu::init()
     exports = qemu_init(m_qemu_argv.size(), &m_qemu_argv[0]);
 
     m_int = std::make_shared<LibQemuInternals>(*this, exports);
+    init_callbacks();
 }
 
 void LibQemu::resume_all_vcpus()

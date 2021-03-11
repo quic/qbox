@@ -93,5 +93,10 @@ void Cpu::async_safe_run(AsyncJobFn job, void *arg)
     m_int->exports().async_safe_run_on_cpu(m_obj, job, arg);
 }
 
+void Cpu::set_end_of_loop_callback(Cpu::EndOfLoopCallbackFn cb)
+{
+    m_int->get_cpu_end_of_loop_cb().register_cb(*this, cb);
+}
+
 };
 

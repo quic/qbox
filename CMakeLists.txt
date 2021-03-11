@@ -15,6 +15,7 @@ set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 set(LIBQEMU_CXX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqemu-cxx)
 
 set(srcs
+    src/callbacks.cc
     src/cpu.cc
     src/device.cc
     src/gpio.cc
