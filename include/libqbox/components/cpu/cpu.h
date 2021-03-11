@@ -157,6 +157,23 @@ protected:
     }
 
     /*
+     * Run the CPU loop. Only used in coroutine mode.
+     */
+    void run_cpu_loop()
+    {
+        m_cpu.loop();
+
+        /*
+         * Workaround in icount mode: sometimes, the CPU does not execute
+         * on the first call of run_loop(). Give it a second chance.
+         */
+        if ((m_inst.get().get_virtual_clock() == m_last_vclock)
+            && (m_cpu.can_run())) {
+            m_cpu.loop();
+        }
+    }
+
+    /*
      * Called after a CPU loop run. It synchronizes with the kernel.
      */
     void sync_with_kernel()
@@ -174,6 +191,43 @@ protected:
 
 
         m_qk->sync();
+    }
+
+    /*
+     * Callback called when the CPU exits its execution loop. In coroutine
+     * mode, we yield here to come back to run_cpu_loop(). In TCG thread mode,
+     * we use this hook to synchronize with the kernel.
+     */
+    void end_of_loop_cb()
+    {
+
+        if (sc_core::sc_get_status() < sc_core::SC_RUNNING) {
+            /* Simulation hasn't started yet. */
+            return;
+        }
+
+        if (m_coroutines) {
+            m_inst.get().coroutine_yield();
+        } else {
+            sync_with_kernel();
+            prepare_run_cpu();
+        }
+    }
+
+    /*
+     * SystemC thread entry when running in coroutine mode.
+     */
+    void mainloop_thread_coroutine()
+    {
+        if (m_coroutines) {
+            m_cpu.register_thread();
+        }
+
+        for (;;) {
+            prepare_run_cpu();
+            run_cpu_loop();
+            sync_with_kernel();
+        }
     }
 
 public:
@@ -196,6 +250,28 @@ public:
 
     virtual ~QemuCpu()
     {
+        if (!m_cpu.valid()) {
+            /* CPU hasn't been created yet */
+            return;
+        }
+
+        if (m_coroutines) {
+            /* No thread to join */
+            return;
+        }
+
+        m_inst.get().lock_iothread();
+        m_cpu.clear_callbacks();
+        m_inst.get().unlock_iothread();
+
+        /*
+         * We can't use m_cpu.remove_sync() here as it locks the BQL, and join
+         * the CPU thread. If the CPU thread is in an asynchronous SystemC job
+         * waiting to be cancelled (because we're at end of simulation), then
+         * we'll deadlock here. Instead, set set_unplug to true so that the CPU
+         * thread will eventually quit, but do not wait for it to do so.
+         */
+        m_cpu.set_unplug(true);
     }
 
     void before_end_of_elaboration() override
@@ -204,7 +280,13 @@ public:
 
         m_cpu = qemu::Cpu(m_dev);
 
+        if (m_coroutines) {
+            sc_core::sc_spawn(std::bind(&QemuCpu::mainloop_thread_coroutine, this));
+        }
+
         m_cpu.set_soft_stopped(true);
+
+        m_cpu.set_end_of_loop_callback(std::bind(&QemuCpu::end_of_loop_cb, this));
 
         m_deadline_timer = m_inst.get().timer_new();
         m_deadline_timer->set_callback(std::bind(&QemuCpu::deadline_timer_cb,
@@ -216,6 +298,18 @@ public:
         QemuDevice::end_of_elaboration();
 
         m_qk->start();
+    }
+
+    virtual void start_of_simulation() override
+    {
+        QemuDevice::start_of_simulation();
+
+        if (!m_coroutines) {
+            /* Prepare the CPU for its first run and release it */
+            m_cpu.set_soft_stopped(false);
+            rearm_deadline_timer();
+            m_cpu.kick();
+        }
     }
 };
 
