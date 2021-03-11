@@ -60,7 +60,7 @@ target_include_directories(qemu-cxx
 
 )
 
-target_link_libraries(qemu-cxx libqemu)
+target_link_libraries(qemu-cxx libqemu ${CMAKE_DL_LIBS})
 
 set_property(TARGET qemu-cxx
     PROPERTY INSTALL_RPATH ${LIBQEMU_LIB_DIR})
