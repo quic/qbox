@@ -24,6 +24,7 @@
 
 #include "libqemu/libqemu.h"
 #include "libqemu-cxx/libqemu-cxx.h"
+#include "libqemu-cxx/target/riscv.h"
 
 namespace qemu {
 
@@ -61,6 +62,7 @@ private:
 
     LibQemuObjectCallback<Cpu::EndOfLoopCallbackFn> m_cpu_end_of_loop_cbs;
     LibQemuObjectCallback<Cpu::CpuKickCallbackFn> m_cpu_kick_cbs;
+    LibQemuObjectCallback<CpuRiscv64::MipUpdateCallbackFn> m_riscv_mip_update_cbs;
 
 public:
     LibQemuInternals(LibQemu &inst, LibQemuExports *exports)
@@ -79,6 +81,11 @@ public:
     LibQemuObjectCallback<Cpu::CpuKickCallbackFn>& get_cpu_kick_cb()
     {
         return m_cpu_kick_cbs;
+    }
+
+    LibQemuObjectCallback<CpuRiscv64::MipUpdateCallbackFn>& get_cpu_riscv_mip_update_cb()
+    {
+        return m_riscv_mip_update_cbs;
     }
 };
 

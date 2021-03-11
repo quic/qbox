@@ -28,9 +28,13 @@ namespace qemu {
     public:
         static constexpr const char *const TYPE = "riscv-cpu";
 
+        using MipUpdateCallbackFn = std::function<void (uint32_t)>;
+
         CpuRiscv() = default;
         CpuRiscv(const CpuRiscv &) = default;
         CpuRiscv(const Object &o) : Cpu(o) {}
+
+        void set_mip_update_callback(MipUpdateCallbackFn cb);
     };
 
     class CpuRiscv32 : public CpuRiscv {
