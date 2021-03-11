@@ -136,6 +136,7 @@ public:
 
     QemuObject *get_qemu_obj() { return m_obj; }
 
+    LibQemu &get_inst();
     uintptr_t get_inst_id() const { return reinterpret_cast<uintptr_t>(m_int.get()); }
 
     template <class T>

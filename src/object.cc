@@ -62,6 +62,11 @@ Object::~Object()
     }
 }
 
+LibQemu & Object::get_inst()
+{
+    return m_int->get_inst();
+}
+
 void Object::set_prop_bool(const char *name, bool val)
 {
     QemuError *e = nullptr;

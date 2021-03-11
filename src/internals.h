@@ -21,19 +21,23 @@
 #define _LIBQEMU_CXX_INTERNALS_
 
 #include "libqemu/libqemu.h"
+#include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
 
 class LibQemuInternals {
 private:
+    LibQemu &m_inst;
     LibQemuExports *m_exports;
 
 public:
-    LibQemuInternals(LibQemuExports *exports)
-        : m_exports(exports)
+    LibQemuInternals(LibQemu &inst, LibQemuExports *exports)
+        : m_inst(inst)
+        , m_exports(exports)
     {}
 
     const LibQemuExports & exports() const { return *m_exports; };
+    LibQemu & get_inst() { return m_inst; }
 };
 
 }

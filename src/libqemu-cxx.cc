@@ -96,7 +96,7 @@ void LibQemu::init()
     qemu_init = reinterpret_cast<LibQemuInitFct>(m_lib->get_symbol(LIBQEMU_INIT_SYM_STR));
     exports = qemu_init(m_qemu_argv.size(), &m_qemu_argv[0]);
 
-    m_int = std::make_shared<LibQemuInternals>(exports);
+    m_int = std::make_shared<LibQemuInternals>(*this, exports);
 }
 
 void LibQemu::resume_all_vcpus()
