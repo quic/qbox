@@ -83,11 +83,6 @@ void Cpu::kick()
     m_int->exports().cpu_kick(m_obj);
 }
 
-void Cpu::request_exit()
-{
-    m_int->exports().cpu_request_exit(m_obj);
-}
-
 void Cpu::async_safe_run(AsyncJobFn job, void *arg)
 {
     m_int->exports().async_safe_run_on_cpu(m_obj, job, arg);

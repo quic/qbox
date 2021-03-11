@@ -80,8 +80,6 @@ public:
      * @port: port the gdb server will be listening on. (ex: "tcp::1234") */
     void start_gdb_server(std::string port);
 
-    void resume_all_vcpus();
-
     void lock_iothread();
     void unlock_iothread();
 
@@ -344,8 +342,6 @@ public:
     Cpu set_as_current();
 
     void kick();
-
-    void request_exit();
 
     void async_safe_run(AsyncJobFn job, void *arg);
 

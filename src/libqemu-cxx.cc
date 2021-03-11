@@ -100,11 +100,6 @@ void LibQemu::init()
     init_callbacks();
 }
 
-void LibQemu::resume_all_vcpus()
-{
-    m_int->exports().resume_all_vcpus();
-}
-
 void LibQemu::start_gdb_server(std::string port)
 {
     m_int->exports().gdbserver_start(port.c_str());
