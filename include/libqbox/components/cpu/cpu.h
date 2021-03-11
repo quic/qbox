@@ -33,9 +33,15 @@
 
 class QemuCpu : public QemuDevice {
 protected:
+    gs::RunOnSysC m_on_sysc;
+    std::shared_ptr<qemu::Timer> m_deadline_timer;
     bool m_coroutines;
 
     qemu::Cpu m_cpu;
+
+    sc_core::sc_event_or_list m_external_ev;
+
+    int64_t m_last_vclock;
 
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
 
@@ -83,6 +89,93 @@ protected:
         p_icount_mips.lock();
     }
 
+
+    /*
+     * ---- CPU loop related methods ----
+     */
+
+    /*
+     * Called by the QEMU iothread when the deadline timer expires. We kick the
+     * CPU out of its execution loop for it to call the end_of_loop_cb callback.
+     */
+    void deadline_timer_cb()
+    {
+        m_cpu.kick();
+    }
+
+    /*
+     * The CPU does not have work anymore. This method run a wait on the
+     * SystemC kernel, waiting for the m_external_ev list.
+     */
+    void wait_for_work()
+    {
+        m_qk->stop();
+        m_on_sysc.run_on_sysc([this] () { wait(m_external_ev); });
+        m_qk->start();
+    }
+
+    /*
+     * Set the deadline timer to trigger at the end of the time budget
+     */
+    void rearm_deadline_timer()
+    {
+        sc_core::sc_time run_budget;
+        int64_t budget_ns, next_dl_ns;
+
+        run_budget = m_qk->time_to_sync();
+
+        budget_ns = int64_t(run_budget.to_seconds() * 1e9);
+
+        m_last_vclock = m_inst.get().get_virtual_clock();
+        next_dl_ns = m_last_vclock + budget_ns;
+
+        m_deadline_timer->mod(next_dl_ns);
+    }
+
+    /*
+     * Called before running the CPU. Lock the BQL and set the deadline timer
+     * to not run beyond the time budget.
+     */
+    void prepare_run_cpu()
+    {
+        /*
+         * The QEMU CPU loop expect us to enter it with the iothread mutex locked.
+         * It is then unlocked when we come back from the CPU loop, in
+         * sync_with_kernel().
+         */
+        m_inst.get().lock_iothread();
+
+        while (!m_cpu.can_run()) {
+            m_inst.get().unlock_iothread();
+            wait_for_work();
+            m_inst.get().lock_iothread();
+        }
+
+        m_cpu.set_soft_stopped(false);
+
+        rearm_deadline_timer();
+    }
+
+    /*
+     * Called after a CPU loop run. It synchronizes with the kernel.
+     */
+    void sync_with_kernel()
+    {
+        sc_core::sc_time elapsed;
+        int64_t now = m_inst.get().get_virtual_clock();
+
+        m_deadline_timer->del();
+        m_cpu.set_soft_stopped(true);
+
+        m_inst.get().unlock_iothread();
+
+        elapsed = sc_core::sc_time(now - m_last_vclock, sc_core::SC_NS);
+        m_qk->inc(elapsed);
+
+
+        m_qk->sync();
+    }
+
 public:
     cci::cci_param<bool> p_icount;
     cci::cci_param<int> p_icount_mips;
@@ -112,6 +205,10 @@ public:
         m_cpu = qemu::Cpu(m_dev);
 
         m_cpu.set_soft_stopped(true);
+
+        m_deadline_timer = m_inst.get().timer_new();
+        m_deadline_timer->set_callback(std::bind(&QemuCpu::deadline_timer_cb,
+                                                 this));
     }
 
     virtual void end_of_elaboration() override
