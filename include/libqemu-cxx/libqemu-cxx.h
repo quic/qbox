@@ -69,6 +69,7 @@ public:
 
     void push_qemu_arg(const char *arg);
     void push_qemu_arg(std::initializer_list<const char *> args);
+    const std::vector<char *> &get_qemu_args() const { return m_qemu_argv; }
 
     void init();
     bool is_inited() const { return m_lib != nullptr; }
@@ -322,8 +323,12 @@ public:
 
     bool can_run();
 
+    void set_soft_stopped(bool stopped);
     void halt(bool halted);
     void reset();
+
+    void set_unplug(bool unplug);
+    void remove_sync();
 
     void register_thread();
 

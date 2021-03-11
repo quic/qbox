@@ -39,6 +39,11 @@ bool Cpu::can_run()
     return m_int->exports().cpu_can_run(m_obj);
 }
 
+void Cpu::set_soft_stopped(bool stopped)
+{
+    m_int->exports().cpu_set_soft_stopped(m_obj, stopped);
+}
+
 void Cpu::halt(bool halted)
 {
     m_int->exports().cpu_halt(m_obj, halted);
@@ -47,6 +52,16 @@ void Cpu::halt(bool halted)
 void Cpu::reset()
 {
     m_int->exports().cpu_reset(m_obj);
+}
+
+void Cpu::set_unplug(bool unplug)
+{
+    m_int->exports().cpu_set_unplug(m_obj, unplug);
+}
+
+void Cpu::remove_sync()
+{
+    m_int->exports().cpu_remove_sync(m_obj);
 }
 
 void Cpu::register_thread()
