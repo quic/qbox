@@ -24,8 +24,7 @@ set(srcs
     src/sysbus.cc
     src/timer.cc
     src/target/aarch64.cc
-    src/target/riscv32.cc
-    src/target/riscv64.cc
+    src/target/riscv.cc
     src/target/microblaze.cc
     src/target-info.cc
 )

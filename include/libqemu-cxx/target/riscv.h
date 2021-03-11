@@ -1,8 +1,8 @@
 /*
  *  This file is part of libqemu-cxx
- *  Copyright (C) 2020 Greensocs
+ *  Copyright (c) 2021 Greensocs
  *
- *  Authors: Damien Hedde
+ *  Author: Lukas Jünger
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -19,11 +19,31 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include <libqemu/libqemu.h>
+#pragma once
 
-#include "libqemu-cxx/target/riscv32.h"
+#include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
+    class CpuRiscv : public Cpu {
+    public:
+        static constexpr const char *const TYPE = "riscv-cpu";
 
+        CpuRiscv() = default;
+        CpuRiscv(const CpuRiscv &) = default;
+        CpuRiscv(const Object &o) : Cpu(o) {}
+    };
+
+    class CpuRiscv32 : public CpuRiscv {
+    public:
+        CpuRiscv32() = default;
+        CpuRiscv32(const CpuRiscv32 &) = default;
+        CpuRiscv32(const Object &o) : CpuRiscv(o) {}
+    };
+
+    class CpuRiscv64 : public CpuRiscv {
+    public:
+        CpuRiscv64() = default;
+        CpuRiscv64(const CpuRiscv64 &) = default;
+        CpuRiscv64(const Object &o) : CpuRiscv(o) {}
+    };
 }
-

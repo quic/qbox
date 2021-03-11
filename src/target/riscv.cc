@@ -21,7 +21,7 @@
 
 #include <libqemu/libqemu.h>
 
-#include "libqemu-cxx/target/riscv64.h"
+#include "libqemu-cxx/target/riscv.h"
 
 namespace qemu {
 
