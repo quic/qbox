@@ -194,5 +194,9 @@ void LibQemu::unlock_iothread()
     m_int->exports().qemu_mutex_unlock_iothread();
 }
 
+void LibQemu::coroutine_yield()
+{
+    m_int->exports().coroutine_yield();
+}
 
 }

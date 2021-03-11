@@ -83,6 +83,8 @@ public:
     void lock_iothread();
     void unlock_iothread();
 
+    void coroutine_yield();
+
     template <class T>
     T object_new() {
         T o(Object(object_new_internal(T::TYPE), m_int));
