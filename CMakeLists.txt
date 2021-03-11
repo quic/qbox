@@ -21,6 +21,7 @@ set(srcs
     src/libqemu-cxx.cc
     src/loader.cc
     src/memory.cc
+    src/object.cc
     src/sysbus.cc
     src/timer.cc
     src/target/aarch64.cc
