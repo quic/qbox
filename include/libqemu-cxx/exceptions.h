@@ -47,13 +47,14 @@ public:
     virtual ~TargetNotSupportedException() throw() {}
 };
 
-class LibraryNotFoundException : public LibQemuException
+class LibraryLoadErrorException : public LibQemuException
 {
 public:
-    LibraryNotFoundException(const char *lib_name)
-        : LibQemuException(std::string("libqemu library `") + lib_name + "` not found.") {}
+    LibraryLoadErrorException(const char *lib_name, const char *error)
+        : LibQemuException(std::string("error while loading libqemu library `")
+                           + lib_name + "`: " + error) {}
 
-    virtual ~LibraryNotFoundException() throw() {}
+    virtual ~LibraryLoadErrorException() throw() {}
 };
 
 class InvalidLibraryException : public LibQemuException

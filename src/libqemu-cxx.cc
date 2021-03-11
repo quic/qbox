@@ -86,7 +86,7 @@ void LibQemu::init()
     m_lib = m_library_loader.load_library(libname);
 
     if (m_lib == nullptr) {
-        throw LibraryNotFoundException(libname);
+        throw LibraryLoadErrorException(libname, m_library_loader.get_last_error());
     }
 
     if (!m_lib->symbol_exists(LIBQEMU_INIT_SYM_STR)) {
