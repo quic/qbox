@@ -31,6 +31,7 @@
 #include <greensocs/libgssync.h>
 
 #include "libqbox/qemu-instance.h"
+#include "libqbox/tlm-extensions/qemu-mr-hint.h"
 
 class QemuInitiatorIface {
 public:
@@ -151,6 +152,31 @@ protected:
         add_dmi_mr_alias(info);
     }
 
+    void check_qemu_mr_hint(TlmPayload &trans)
+    {
+        QemuMrHintTlmExtension *ext = nullptr;
+        uint64_t mapping_addr;
+
+        trans.get_extension(ext);
+
+        if (ext == nullptr) {
+            return;
+        }
+
+        qemu::MemoryRegion target_mr(ext->get_mr());
+
+        if (target_mr.get_inst_id() != m_dev.get_inst_id()) {
+            return;
+        }
+
+        mapping_addr = trans.get_address() - ext->get_offset();
+
+        qemu::MemoryRegion mr(m_inst.get().object_new<qemu::MemoryRegion>());
+
+        mr.init_alias(m_dev, "mr-alias", target_mr, 0, target_mr.get_size());
+        m_root.add_subregion(mr, mapping_addr);
+    }
+
     void do_regular_access(TlmPayload &trans)
     {
         using sc_core::sc_time;
@@ -168,6 +194,7 @@ protected:
          */
         trans.set_address(addr);
 
+        check_qemu_mr_hint(trans);
         check_dmi_hint(trans);
 
         m_initiator.initiator_set_local_time(now);
