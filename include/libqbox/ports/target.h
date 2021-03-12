@@ -22,6 +22,7 @@
 
 #include <tlm>
 
+#include "libqbox/tlm-extensions/qemu-cpu-hint.h"
 #include "libqbox/tlm-extensions/qemu-mr-hint.h"
 
 class TlmTargetToQemuBridge : public tlm::tlm_fw_transport_if<> {
@@ -32,6 +33,39 @@ public:
 
 protected:
     qemu::MemoryRegion m_mr;
+
+    qemu::Cpu push_current_cpu(TlmPayload &trans)
+    {
+        qemu::Cpu ret;
+        QemuCpuHintTlmExtension *ext = nullptr;
+
+        trans.get_extension(ext);
+
+        if (ext == nullptr) {
+            /* return an invalid object */
+            return ret;
+        }
+
+        qemu::Cpu initiator(ext->get_cpu());
+
+        if (initiator.get_inst_id() != m_mr.get_inst_id()) {
+            /* return an invalid object */
+            return ret;
+        }
+
+        ret = initiator.set_as_current();
+
+        return ret;
+    }
+
+    void pop_current_cpu(qemu::Cpu cpu)
+    {
+        if (!cpu.valid()) {
+            return;
+        }
+
+        cpu.set_as_current();
+    }
 
 public:
     void init(qemu::SysBusDevice sbd, int mmio_idx)
@@ -47,11 +81,14 @@ public:
         unsigned int size = trans.get_data_length();
         MemTxAttrs attrs;
         MemTxResult res;
+        qemu::Cpu current_cpu_save;
 
         if (trans.get_command() == tlm::TLM_IGNORE_COMMAND) {
             trans.set_response_status(tlm::TLM_OK_RESPONSE);
             return;
         }
+
+        current_cpu_save = push_current_cpu(trans);
 
         switch (trans.get_command()) {
         case tlm::TLM_READ_COMMAND:
@@ -83,6 +120,8 @@ public:
             trans.set_response_status(tlm::TLM_GENERIC_ERROR_RESPONSE);
             break;
         }
+
+        pop_current_cpu(current_cpu_save);
     }
 
     virtual tlm::tlm_sync_enum nb_transport_fw(TlmPayload& trans,
