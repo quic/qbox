@@ -22,6 +22,8 @@
 
 #include <tlm>
 
+#include "libqbox/tlm-extensions/qemu-mr-hint.h"
+
 class TlmTargetToQemuBridge : public tlm::tlm_fw_transport_if<> {
 public:
     using MemTxAttrs = qemu::MemoryRegion::MemTxAttrs;
@@ -65,6 +67,8 @@ public:
             assert(false);
             return;
         }
+
+        trans.set_extension(new QemuMrHintTlmExtension(m_mr, addr));
 
         switch (res) {
         case qemu::MemoryRegionOps::MemTxOK:
