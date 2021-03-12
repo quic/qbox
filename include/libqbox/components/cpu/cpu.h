@@ -30,8 +30,10 @@
 #include <greensocs/libgssync.h>
 
 #include "libqbox/components/device.h"
+#include "libqbox/ports/initiator.h"
+#include "libqbox/tlm-extensions/qemu-cpu-hint.h"
 
-class QemuCpu : public QemuDevice {
+class QemuCpu : public QemuDevice, public QemuInitiatorIface {
 protected:
     gs::RunOnSysC m_on_sysc;
     std::shared_ptr<qemu::Timer> m_deadline_timer;
@@ -250,6 +252,9 @@ public:
     cci::cci_param<int> p_icount_mips;
     cci::cci_param<std::string> p_sync_policy;
 
+    /* The default memory socket. Mapped to the default CPU address space in QEMU */
+    QemuInitiatorSocket<> socket;
+
     SC_HAS_PROCESS(QemuCpu);
 
     QemuCpu(const sc_core::sc_module_name &name, QemuInstance &inst,
@@ -259,6 +264,7 @@ public:
         , p_icount("icount", false, "Enable virtual instruction counter")
         , p_icount_mips("icount-mips", 0, "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
         , p_sync_policy("sync-policy", "multithread-quantum", "Synchronization Policy to use")
+        , socket("mem", *this, inst)
     {
         m_external_ev |= m_qemu_kick_ev;
 
@@ -302,6 +308,8 @@ public:
             sc_core::sc_spawn(std::bind(&QemuCpu::mainloop_thread_coroutine, this));
         }
 
+        socket.init(m_dev, "memory");
+
         m_cpu.set_soft_stopped(true);
 
         m_cpu.set_end_of_loop_callback(std::bind(&QemuCpu::end_of_loop_cb, this));
@@ -330,6 +338,69 @@ public:
             m_cpu.kick();
         }
     }
+
+    /* QemuInitiatorIface  */
+    virtual void initiator_customize_tlm_payload(TlmPayload &payload) override
+    {
+        /* Signal the other end we are a CPU */
+        payload.set_extension(new QemuCpuHintTlmExtension(m_cpu));
+    }
+
+    /*
+     * Called by the initiator socket just before a memory transaction.
+     * We update our current view of the local time and return it.
+     */
+    virtual sc_core::sc_time initiator_get_local_time() override
+    {
+        using sc_core::sc_time;
+        using sc_core::SC_NS;
+
+        int64_t vclock_now;
+        sc_time vclock_delta;
+
+        vclock_now = m_inst.get().get_virtual_clock();
+        vclock_delta = sc_time(vclock_now - m_last_vclock, SC_NS);
+
+        m_qk->inc(vclock_delta);
+        return m_qk->get_local_time();
+    }
+
+    /*
+     * Called after the transaction. We must update our local time view to
+     * match t.
+     */
+    virtual void initiator_set_local_time(const sc_core::sc_time &t) override
+    {
+        m_qk->set(t);
+
+        if (m_qk->need_sync()) {
+            /*
+             * Kick the CPU out of its execution loop so that we can sync with
+             * the kernel.
+             */
+            m_last_vclock = m_inst.get().get_virtual_clock();
+            m_cpu.kick();
+        } else {
+            /*
+             * FIXME: We should in theory update the deadline timer here to
+             * account for time that has passed during the memory transaction.
+             * Unfortunatly this is quite costly in icount mode and makes the
+             * simulation somewhat unresponsive in certain conditions. It could
+             * be worth investigate to know where this performance penalty is
+             * comming from and see if it is fixable. For now we just ignore
+             * the time that passed in the transaction w.r.t. the last deadline
+             * we setup in QEMU.
+             */
+#if 0
+            /* Update the deadline timer with this new local time */
+            rearm_deadline_timer();
+#else
+            m_last_vclock = m_inst.get().get_virtual_clock();
+#endif
+        }
+    }
+
 };
+
 
 #endif
