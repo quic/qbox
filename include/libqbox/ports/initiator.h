@@ -73,13 +73,84 @@ protected:
     QemuToTlmInitiatorBridge m_bridge;
     QemuInstance &m_inst;
     qemu::Device m_dev;
+    gs::RunOnSysC m_on_sysc;
 
     qemu::MemoryRegion m_root;
+
+    void init_payload(TlmPayload &trans, tlm::tlm_command command, uint64_t addr,
+                      uint64_t *val, unsigned int size)
+    {
+        trans.set_command(command);
+        trans.set_address(addr);
+        trans.set_data_ptr(reinterpret_cast<unsigned char*>(val));
+        trans.set_data_length(size);
+        trans.set_streaming_width(size);
+        trans.set_byte_enable_length(0);
+        trans.set_dmi_allowed(false);
+        trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+    }
+
+    void do_regular_access(TlmPayload &trans)
+    {
+        m_on_sysc.run_on_sysc([this, &trans] {
+            (*this)->b_transport(trans, sc_core::SC_ZERO_TIME);
+        });
+    }
+
+    void do_debug_access(TlmPayload &trans)
+    {
+        m_on_sysc.run_on_sysc([this, &trans] {
+            (*this)->transport_dbg(trans);
+        });
+    }
+
+    MemTxResult qemu_io_access(tlm::tlm_command command,
+                               uint64_t addr, uint64_t* val,
+                               unsigned int size, MemTxAttrs attrs)
+    {
+        TlmPayload trans;
+
+        m_inst.get().unlock_iothread();
+
+        init_payload(trans, command, addr, val, size);
+
+        if (attrs.debug) {
+            do_debug_access(trans);
+        } else {
+            do_regular_access(trans);
+        }
+
+        m_inst.get().lock_iothread();
+
+        switch (trans.get_response_status()) {
+        case tlm::TLM_OK_RESPONSE:
+            return qemu::MemoryRegionOps::MemTxOK;
+
+        case tlm::TLM_ADDRESS_ERROR_RESPONSE:
+            return qemu::MemoryRegionOps::MemTxDecodeError;
+
+        default:
+            return qemu::MemoryRegionOps::MemTxError;
+        }
+    }
+
+    MemTxResult qemu_io_read(uint64_t addr, uint64_t *val,
+                             unsigned int size, MemTxAttrs attrs)
+    {
+        return qemu_io_access(tlm::TLM_READ_COMMAND, addr, val, size, attrs);
+    }
+
+    MemTxResult qemu_io_write(uint64_t addr, uint64_t val,
+                              unsigned int size, MemTxAttrs attrs)
+    {
+        return qemu_io_access(tlm::TLM_WRITE_COMMAND, addr, &val, size, attrs);
+    }
 
 public:
     QemuInitiatorSocket(const char *name, QemuInstance &inst)
         : TlmInitiatorSocket(name)
         , m_inst(inst)
+        , m_on_sysc(sc_core::sc_gen_unique_name("initiator-run-on-sysc"))
     {
         TlmInitiatorSocket::bind(m_bridge);
     }
@@ -94,6 +165,10 @@ public:
         m_root = inst.object_new<qemu::MemoryRegion>();
         ops = inst.memory_region_ops_new();
 
+        ops->set_read_callback(std::bind(&QemuInitiatorSocket::qemu_io_read,
+                                         this, _1, _2, _3, _4));
+        ops->set_write_callback(std::bind(&QemuInitiatorSocket::qemu_io_write,
+                                          this, _1, _2, _3, _4));
         ops->set_max_access_size(8);
 
         m_root.init_io(dev, TlmInitiatorSocket::name(),
