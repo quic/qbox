@@ -39,6 +39,7 @@ protected:
 
     qemu::Cpu m_cpu;
 
+    gs::async_event m_qemu_kick_ev;
     sc_core::sc_event_or_list m_external_ev;
 
     int64_t m_last_vclock;
@@ -194,6 +195,20 @@ protected:
     }
 
     /*
+     * Called when the CPU is kicked. We notify the corresponding async event
+     * to wake the CPU up if it was sleeping waiting for work.
+     *
+     * FIXME: There is a possible race condition where the CPU goes to sleep in
+     * wait_for_work while being notified by this callback. The notify can be
+     * lost if it happens just before the call to wait in wait_for_work (the
+     * iothread mutex gets unlocked just before the call to wait_for_work).
+     */
+    void kick_cb()
+    {
+        m_qemu_kick_ev.async_notify();
+    }
+
+    /*
      * Callback called when the CPU exits its execution loop. In coroutine
      * mode, we yield here to come back to run_cpu_loop(). In TCG thread mode,
      * we use this hook to synchronize with the kernel.
@@ -240,10 +255,13 @@ public:
     QemuCpu(const sc_core::sc_module_name &name, QemuInstance &inst,
             const std::string &type_name)
         : QemuDevice(name, inst, (type_name + "-cpu").c_str())
+        , m_qemu_kick_ev(false)
         , p_icount("icount", false, "Enable virtual instruction counter")
         , p_icount_mips("icount-mips", 0, "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
         , p_sync_policy("sync-policy", "multithread-quantum", "Synchronization Policy to use")
     {
+        m_external_ev |= m_qemu_kick_ev;
+
         create_quantum_keeper();
         set_qemu_instance_options();
     }
@@ -287,6 +305,7 @@ public:
         m_cpu.set_soft_stopped(true);
 
         m_cpu.set_end_of_loop_callback(std::bind(&QemuCpu::end_of_loop_cb, this));
+        m_cpu.set_kick_callback(std::bind(&QemuCpu::kick_cb, this));
 
         m_deadline_timer = m_inst.get().timer_new();
         m_deadline_timer->set_callback(std::bind(&QemuCpu::deadline_timer_cb,
