@@ -250,6 +250,7 @@ protected:
 public:
     cci::cci_param<bool> p_icount;
     cci::cci_param<int> p_icount_mips;
+    cci::cci_param<unsigned int> p_gdb_port;
     cci::cci_param<std::string> p_sync_policy;
 
     /* The default memory socket. Mapped to the default CPU address space in QEMU */
@@ -263,6 +264,7 @@ public:
         , m_qemu_kick_ev(false)
         , p_icount("icount", false, "Enable virtual instruction counter")
         , p_icount_mips("icount-mips", 0, "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
+        , p_gdb_port("gdb-port", 0, "Wait for gdb connection on TCP port <gdb_port>")
         , p_sync_policy("sync-policy", "multithread-quantum", "Synchronization Policy to use")
         , socket("mem", *this, inst)
     {
@@ -323,6 +325,13 @@ public:
     virtual void end_of_elaboration() override
     {
         QemuDevice::end_of_elaboration();
+
+        if (!p_gdb_port.is_default_value()) {
+            std::stringstream ss;
+            std::cout << "Starting gdb server on TCP port " << p_gdb_port << "\n";
+            ss << "tcp::" << p_gdb_port;
+            m_inst.get().start_gdb_server(ss.str());
+        }
 
         m_qk->start();
     }
