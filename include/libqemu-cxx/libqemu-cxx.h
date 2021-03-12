@@ -138,6 +138,7 @@ public:
 
     LibQemu &get_inst();
     uintptr_t get_inst_id() const { return reinterpret_cast<uintptr_t>(m_int.get()); }
+    bool same_inst_as(const Object &o) const { return get_inst_id() == o.get_inst_id(); }
 
     template <class T>
     bool check_cast() const { return check_cast_by_type(T::TYPE); }
