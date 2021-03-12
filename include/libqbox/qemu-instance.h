@@ -29,6 +29,7 @@
 #include <libqemu-cxx/libqemu-cxx.h>
 
 #include "libqbox/exceptions.h"
+#include "libqbox/dmi-manager.h"
 
 class QemuInstanceTcgModeMismatchException : public QboxException {
 public:
@@ -72,6 +73,7 @@ public:
 
 protected:
     qemu::LibQemu m_inst;
+    QemuInstanceDmiManager m_dmi_mgr;
 
     TcgMode m_tcg_mode = TCG_UNSPECIFIED;
     IcountMode m_icount_mode = ICOUNT_UNSPECIFIED;
@@ -131,6 +133,7 @@ protected:
 public:
     QemuInstance(LibLoader &loader, Target t)
         : m_inst(loader, t)
+        , m_dmi_mgr(m_inst)
     {
         push_default_args();
     }
@@ -229,6 +232,7 @@ public:
         }
 
         m_inst.init();
+        m_dmi_mgr.init();
     }
 
     /**
@@ -253,6 +257,18 @@ public:
         }
 
         return m_inst;
+    }
+
+    /**
+     * @brief Returns the locked QemuInstanceDmiManager instance
+     *
+     * Note: we rely on RVO here so no copy happen on return (this is enforced
+     * by the fact that the LockedQemuInstanceDmiManager copy constructor is
+     * deleted).
+     */
+    LockedQemuInstanceDmiManager get_dmi_manager()
+    {
+        return LockedQemuInstanceDmiManager(m_dmi_mgr);
     }
 };
 
