@@ -32,6 +32,15 @@
 
 #include "libqbox/qemu-instance.h"
 
+class QemuInitiatorIface {
+public:
+    using TlmPayload = tlm::tlm_generic_payload;
+
+    virtual void initiator_customize_tlm_payload(TlmPayload &payload) = 0;
+    virtual sc_core::sc_time initiator_get_local_time() = 0;
+    virtual void initiator_set_local_time(const sc_core::sc_time &) = 0;
+};
+
 class QemuToTlmInitiatorBridge : public tlm::tlm_bw_transport_if<> {
 public:
     virtual tlm::tlm_sync_enum nb_transport_bw(tlm::tlm_generic_payload& trans,
@@ -72,6 +81,7 @@ public:
 protected:
     QemuToTlmInitiatorBridge m_bridge;
     QemuInstance &m_inst;
+    QemuInitiatorIface &m_initiator;
     qemu::Device m_dev;
     gs::RunOnSysC m_on_sysc;
 
@@ -88,13 +98,21 @@ protected:
         trans.set_byte_enable_length(0);
         trans.set_dmi_allowed(false);
         trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+
+        m_initiator.initiator_customize_tlm_payload(trans);
     }
 
     void do_regular_access(TlmPayload &trans)
     {
-        m_on_sysc.run_on_sysc([this, &trans] {
-            (*this)->b_transport(trans, sc_core::SC_ZERO_TIME);
+        using sc_core::sc_time;
+
+        sc_time now = m_initiator.initiator_get_local_time();
+
+        m_on_sysc.run_on_sysc([this, &trans, &now] {
+            (*this)->b_transport(trans, now);
         });
+
+        m_initiator.initiator_set_local_time(now);
     }
 
     void do_debug_access(TlmPayload &trans)
@@ -147,10 +165,11 @@ protected:
     }
 
 public:
-    QemuInitiatorSocket(const char *name, QemuInstance &inst)
+    QemuInitiatorSocket(const char *name, QemuInitiatorIface &initiator, QemuInstance &inst)
         : TlmInitiatorSocket(name)
         , m_inst(inst)
         , m_on_sysc(sc_core::sc_gen_unique_name("initiator-run-on-sysc"))
+        , m_initiator(initiator)
     {
         TlmInitiatorSocket::bind(m_bridge);
     }
