@@ -102,15 +102,73 @@ protected:
         m_initiator.initiator_customize_tlm_payload(trans);
     }
 
+    /*
+     * Create a memory region as an alias to the global memory region contained
+     * in info. Map the newly created region onto our root MR.
+     */
+    void add_dmi_mr_alias(DmiInfo &info)
+    {
+        qemu::MemoryRegion alias = m_inst.get().object_new<qemu::MemoryRegion>();
+
+        alias.init_alias(m_dev, "dmi-alias", info.mr, 0, info.get_size());
+        m_root.add_subregion(alias, info.start);
+    }
+
+    /*
+     * Check for the presence of the DMI hint in the transaction. If found,
+     * request a DMI region, ask the QEMU instance DMI manager for a global MR
+     * for it and create the corresponding alias.
+     *
+     * @see QemuInstanceDmiManager for more information on why we need a global
+     * MR per DMI region.
+     */
+    void check_dmi_hint(TlmPayload &trans)
+    {
+        bool valid;
+
+        tlm::tlm_dmi dmi_data;
+
+        if (!trans.is_dmi_allowed()) {
+            return;
+        }
+
+        m_on_sysc.run_on_sysc([this, &trans, &dmi_data, &valid] {
+            valid = (*this)->get_direct_mem_ptr(trans, dmi_data);
+        });
+
+        if (!valid) {
+            /* This is probably a bug in the target */
+            return;
+        }
+
+        DmiInfo info(dmi_data);
+
+        {
+            LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
+            dmi_mgr.get_global_mr(info);
+        }
+
+        add_dmi_mr_alias(info);
+    }
+
     void do_regular_access(TlmPayload &trans)
     {
         using sc_core::sc_time;
 
+        uint64_t addr = trans.get_address();
         sc_time now = m_initiator.initiator_get_local_time();
 
         m_on_sysc.run_on_sysc([this, &trans, &now] {
             (*this)->b_transport(trans, now);
         });
+
+        /*
+         * Reset transaction address before dmi check (could be altered by
+         * b_transport).
+         */
+        trans.set_address(addr);
+
+        check_dmi_hint(trans);
 
         m_initiator.initiator_set_local_time(now);
     }
