@@ -7,13 +7,15 @@ image: greensocs/ci-bionic
 before_script:
   - mkdir -p BUILD/DEBUG/BUILD
   - mkdir -p BUILD/RELEASE/BUILD
+  - wget https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz
+  - tar -zxf cmake-3.20.0-rc4-linux-x86_64.tar.gz
+
 
 build_debug:
   stage: build
   script:
-    - cd BUILD/DEBUG/BUILD
-    - cmake -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=../ -DBUILD_TESTING=ON -DCPM_DOWNLOAD_ALL=1 ../../../
-    - make -j
+    - ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake -B BUILD/DEBUG/BUILD -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=../ -DBUILD_TESTING=ON -DCPM_DOWNLOAD_ALL=1 ../../../
+    - cd BUILD/RELEASE/BUILD;make -j
   artifacts:
     paths:
       - BUILD/DEBUG/BUILD/tests
@@ -21,14 +23,13 @@ build_debug:
 build_release:
   stage: build
   script:
-    - cd BUILD/RELEASE/BUILD
-    - cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=../ -DCPM_DOWNLOAD_ALL=1 ../../../
-    - make -j
+    - ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake -B BUILD/RELEASE/BUILD -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=../ -DCPM_DOWNLOAD_ALL=1 ../../../
+    - cd BUILD/RELEASE/BUILD;make -j
   artifacts:
     paths:
-    - BUILD/DEBUG/BUILD/tests
+    - BUILD/RELEASE/BUILD/tests
 
 test:
   stage: test
   script:
-    - cd BUILD/DEBUG/BUILD/tests && ctest
+    - cd BUILD/DEBUG/BUILD/tests && ../../../cmake-3.20.0-rc4-linux-x86_64/bin/ctest
