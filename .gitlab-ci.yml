@@ -15,13 +15,7 @@ build_debug:
   stage: build
   script:
     - ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake -B BUILD/DEBUG/BUILD -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=../ -DBUILD_TESTING=ON -DCPM_DOWNLOAD_ALL=1
-    - pwd
-    - find .
-    - cd BUILD/RELEASE/BUILD
-    - pwd
-    - find .
-    - ls
-    - make -j
+    - cd BUILD/DEBUG/BUILD; make -j
   artifacts:
     paths:
       - BUILD/DEBUG/BUILD/tests
@@ -33,7 +27,6 @@ build_release:
     - cd BUILD/RELEASE/BUILD;make -j
   artifacts:
     paths:
-    - BUILD/RELEASE/BUILD/tests
 
 test:
   stage: test
