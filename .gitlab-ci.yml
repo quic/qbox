@@ -16,19 +16,14 @@ build_debug:
   script:
     - ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake -B BUILD/DEBUG/BUILD -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=../ -DBUILD_TESTING=ON -DCPM_DOWNLOAD_ALL=1
     - cd BUILD/DEBUG/BUILD; make -j
-  artifacts:
-    paths:
-      - BUILD/DEBUG/BUILD/tests
 
 build_release:
   stage: build
   script:
     - ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake -B BUILD/RELEASE/BUILD -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=../ -DCPM_DOWNLOAD_ALL=1
     - cd BUILD/RELEASE/BUILD;make -j
-  artifacts:
-    paths:
 
 test:
   stage: test
   script:
-    - cd BUILD/DEBUG/BUILD/tests && ../../../cmake-3.20.0-rc4-linux-x86_64/bin/ctest
+    - cd BUILD/DEBUG/BUILD/tests && ../../../../cmake-3.20.0-rc4-linux-x86_64/bin/ctest
