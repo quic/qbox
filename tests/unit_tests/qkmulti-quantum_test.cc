@@ -7,6 +7,7 @@ using testing::Eq;
 
 gs::tlm_quantumkeeper_extended *qk = nullptr;
 
+bool done;
 void unfinished_quantum() {
     // budget should be quantum
     sc_core::sc_time quantum(1, sc_core::SC_MS);
@@ -26,6 +27,7 @@ void unfinished_quantum() {
     budget = qk->time_to_sync();
     // Same as above
     EXPECT_THAT(budget, AnyOf(Eq(quantum - inc), Eq(quantum - 2 * inc)));
+    done=true;
     qk->stop();
 }
 
@@ -46,6 +48,7 @@ void finished_quantum() {
     qk->sync();
     budget = qk->time_to_sync();
     EXPECT_LE(budget, quantum);
+    done=true;
     qk->stop();
 }
 
@@ -59,24 +62,30 @@ int sc_main(int argc, char **argv) {
 }
 
 TEST(qkmulti_quantum, unfinished_quantum) {
+    done=false;
     qk->start();
     qk->reset();
     std::thread t1(unfinished_quantum);
-    while (sc_core::sc_pending_activity()) {
-        sc_core::sc_time t = sc_core::sc_time_to_pending_activity();
-        sc_start(t);
+    while (sc_core::sc_pending_activity() || !done) {
+        if (sc_core::sc_pending_activity()) {
+            sc_core::sc_time t = sc_core::sc_time_to_pending_activity();
+            sc_start(t);
+        }
     }
     t1.join();
     qk->stop();
 }
 
 TEST(qkmulti_quantum, finished_quantum) {
+    done=false;
     qk->start();
     qk->reset();
     std::thread t1(finished_quantum);
-    while (sc_core::sc_pending_activity()) {
-        sc_core::sc_time t = sc_core::sc_time_to_pending_activity();
-        sc_start(t);
+    while (sc_core::sc_pending_activity() || !done) {
+        if (sc_core::sc_pending_activity()) {
+            sc_core::sc_time t = sc_core::sc_time_to_pending_activity();
+            sc_start(t);
+        }
     }
     t1.join();
 }
