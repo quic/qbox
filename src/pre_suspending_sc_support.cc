@@ -2,6 +2,11 @@
  * Copyright (C) 2020 GreenSocs
  */
 
+#ifndef SC_INCLUDE_DYNAMIC_PROCESSES
+#define SC_INCLUDE_DYNAMIC_PROCESSES
+#endif
+#include <systemc>
+
 #include "pre_suspending_sc_support.h"
 #include <libgsutils.h>
 

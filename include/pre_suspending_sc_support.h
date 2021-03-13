@@ -8,7 +8,7 @@
 #define PRE_SUSPENDING_SC_SUPPORT_H
 
 #ifndef SC_INCLUDE_DYNAMIC_PROCESSES
-#error  SC_INCLUDE_DYNAMIC_PROCESSES must be defined when using this library
+#define SC_INCLUDE_DYNAMIC_PROCESSES
 #endif
 #include <systemc>
 

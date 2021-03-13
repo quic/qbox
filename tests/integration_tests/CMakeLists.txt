@@ -9,8 +9,8 @@ add_test(
 )
 target_link_libraries(checker
    PRIVATE
-      systemc
-      cci
+      SystemC::systemc
+      SystemC::cci
       libgsutils
       base-components
       libgssync

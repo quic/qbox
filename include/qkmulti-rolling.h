@@ -1,5 +1,15 @@
+
+/*
+ * Copyright (C) 2020 GreenSocs
+ */
+
 #ifndef QKMULTI_ROLLING_H
 #define QKMULTI_ROLLING_H
+
+#ifndef SC_INCLUDE_DYNAMIC_PROCESSES
+#define SC_INCLUDE_DYNAMIC_PROCESSES
+#endif
+#include <systemc>
 
 #include "qkmulti-quantum.h"
 #include "semaphore.h"

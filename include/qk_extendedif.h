@@ -6,6 +6,9 @@
 #ifndef QK_EXTENDEDIF_H
 #define QK_EXTENDEDIF_H
 
+#ifndef SC_INCLUDE_DYNAMIC_PROCESSES
+#define SC_INCLUDE_DYNAMIC_PROCESSES
+#endif
 #include <systemc>
 #include <tlm>
 #include <tlm_utils/tlm_quantumkeeper.h>

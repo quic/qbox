@@ -39,7 +39,7 @@ find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE libgsutils)
-target_link_libraries(${PROJECT_NAME} PRIVATE systemc cci)
+target_link_libraries(${PROJECT_NAME} PRIVATE SystemC::systemc SystemC::cci)
 
 gs_enable_testing()
 gs_export()
