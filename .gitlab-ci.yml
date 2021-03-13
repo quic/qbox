@@ -1,0 +1,34 @@
+stages:
+  - build
+  - test
+
+image: greensocs/ci-bionic
+
+before_script:
+  - mkdir -p BUILD/DEBUG/BUILD
+  - mkdir -p BUILD/RELEASE/BUILD
+
+build_debug:
+  stage: build
+  script:
+    - cd BUILD/DEBUG/BUILD
+    - cmake -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=../ -DBUILD_TESTING=ON -DCPM_DOWNLOAD_ALL=1 ../../../
+    - make -j
+  artifacts:
+    paths:
+      - BUILD/DEBUG/BUILD/tests
+
+build_release:
+  stage: build
+  script:
+    - cd BUILD/RELEASE/BUILD
+    - cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=../ -DCPM_DOWNLOAD_ALL=1 ../../../
+    - make -j
+  artifacts:
+    paths:
+    - BUILD/DEBUG/BUILD/tests
+
+test:
+  stage: test
+  script:
+    - cd BUILD/DEBUG/BUILD/tests && ctest
