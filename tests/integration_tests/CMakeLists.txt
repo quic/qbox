@@ -13,7 +13,7 @@ target_link_libraries(checker
       SystemC::cci
       libgsutils
       base-components
-      libgssync
+      gssync
 )
 target_include_directories(checker
    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../include

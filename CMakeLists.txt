@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(libgssync  VERSION 1.0  LANGUAGES CXX)
+project(gssync  VERSION 1.0  LANGUAGES CXX)
 
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
@@ -10,7 +10,8 @@ FetchContent_Declare(gs-cmake
    GIT_TAG master
 )
 FetchContent_MakeAvailable(gs-cmake)
-include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
+#include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
+include(/Users/mark/work/cmake-boilerplate/cmake/gs-boilerplate.cmake)
 ##############################################
 
 
@@ -38,7 +39,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE libgsutils)
+target_link_libraries(${PROJECT_NAME} PRIVATE GreenSocs::gsutils)
 target_link_libraries(${PROJECT_NAME} PRIVATE SystemC::systemc SystemC::cci)
 
 gs_enable_testing()
