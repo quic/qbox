@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(libgsutils VERSION 1.0 LANGUAGES CXX C)
+project(gsutils VERSION 1.0 LANGUAGES CXX C)
 
 
 ##############################################
@@ -11,10 +11,11 @@ FetchContent_Declare(gs-cmake
    GIT_TAG master
 )
 FetchContent_MakeAvailable(gs-cmake)
-include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
+#include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
+include(/Users/mark/work/cmake-boilerplate/cmake/gs-boilerplate.cmake)
 ##############################################
 
-add_library(libgsutils INTERFACE)
+add_library(${PROJECT_NAME} INTERFACE)
 
 gs_systemc()
 
@@ -27,8 +28,8 @@ if (lua_ADDED)
   list(REMOVE_ITEM lua_sources "${lua_SOURCE_DIR}/lua.c" "${lua_SOURCE_DIR}/luac.c")
   add_library(lua STATIC ${lua_sources})
   target_include_directories(lua PUBLIC $<BUILD_INTERFACE:${lua_SOURCE_DIR}>)
-  target_compile_definitions(libgsutils INTERFACE HAS_LUA)
-  target_link_libraries(libgsutils INTERFACE lua)
+  target_compile_definitions(${PROJECT_NAME} INTERFACE HAS_LUA)
+  target_link_libraries(${PROJECT_NAME} INTERFACE lua)
   install(TARGETS lua EXPORT ${PROJECT_NAME}Targets)
 endif()
 
@@ -39,7 +40,7 @@ endif (APPLE)
 # using master branch as it has fixes for cmake
 CPMAddPackage("gh:google/googletest#master")
 if (googletest_ADDED)
-  target_link_libraries(libgsutils INTERFACE gtest gmock)
+  target_link_libraries(${PROJECT_NAME} INTERFACE gtest gmock)
 endif()
 
 target_include_directories(
