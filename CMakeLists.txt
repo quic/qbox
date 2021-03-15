@@ -11,8 +11,7 @@ FetchContent_Declare(gs-cmake
    GIT_TAG master
 )
 FetchContent_MakeAvailable(gs-cmake)
-#include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
-include(/Users/mark/work/cmake-boilerplate/cmake/gs-boilerplate.cmake)
+include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 ##############################################
 
 add_library(${PROJECT_NAME} INTERFACE)
