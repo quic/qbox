@@ -11,7 +11,7 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <inttypes.h>
 
-#include "libgsutils.h"
+#include "greensocs/libgsutils.h"
 
 template<unsigned int BUSWIDTH = 32>
 class Router : sc_core::sc_module {
