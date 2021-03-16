@@ -5,12 +5,14 @@ project(gsutils VERSION 1.0 LANGUAGES CXX C)
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
-include(FetchContent)
-FetchContent_Declare(gs-cmake
-   GIT_REPOSITORY https://git.bar.greensocs.com/greensocs/cmake-boilerplate.git
-   GIT_TAG master
-)
-FetchContent_MakeAvailable(gs-cmake)
+if (NOT gs-cmake_SOURCE_DIR)
+   include(FetchContent)
+   FetchContent_Declare(gs-cmake
+      GIT_REPOSITORY https://git.bar.greensocs.com/greensocs/cmake-boilerplate.git
+      GIT_TAG master
+   )
+   FetchContent_MakeAvailable(gs-cmake)
+endif()
 include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 ##############################################
 
@@ -26,6 +28,7 @@ if (lua_ADDED)
   FILE(GLOB lua_sources ${lua_SOURCE_DIR}/*.c)
   list(REMOVE_ITEM lua_sources "${lua_SOURCE_DIR}/lua.c" "${lua_SOURCE_DIR}/luac.c" "${lua_SOURCE_DIR}/ltests.c" "${lua_SOURCE_DIR}/onelua.c")
   add_library(lua STATIC ${lua_sources})
+  target_compile_definitions(lua PRIVATE LUA_USE_POSIX)
   target_include_directories(lua PUBLIC $<BUILD_INTERFACE:${lua_SOURCE_DIR}>)
   target_compile_definitions(${PROJECT_NAME} INTERFACE HAS_LUA)
   target_link_libraries(${PROJECT_NAME} INTERFACE lua)
