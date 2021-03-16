@@ -68,9 +68,10 @@ namespace gs {
         }
         
     public:
-        RunOnSysC() : sc_module(sc_core::sc_module_name("RunOnSysC"))
-                    , m_thread_id(std::this_thread::get_id())
-                    , jobsHandlerEvent(false) // starve if no more jobs provided
+        RunOnSysC(const sc_core::sc_module_name &n = sc_core::sc_module_name("run-on-sysc"))
+            : sc_module(n)
+            , m_thread_id(std::this_thread::get_id())
+            , jobsHandlerEvent(false) // starve if no more jobs provided
         {
             SC_HAS_PROCESS(RunOnSysC);
             SC_THREAD(jobsHandler);
