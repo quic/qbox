@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <fstream>
+
 #include <systemc>
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
