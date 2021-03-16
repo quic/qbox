@@ -20,12 +20,12 @@ gs_systemc()
 
 # Other Dependencies
 
-CPMAddPackage("gh:lua/lua#v5.3.5")
+CPMAddPackage("gh:lua/lua#v5.4.2")
 if (lua_ADDED)
   # lua has no CMake support, so we create our own target
-  FILE(GLOB lua_sources ${lua_SOURCE_DIR}/*.c)
-  list(REMOVE_ITEM lua_sources "${lua_SOURCE_DIR}/lua.c" "${lua_SOURCE_DIR}/luac.c")
-  add_library(lua STATIC ${lua_sources})
+  #FILE(GLOB lua_sources ${lua_SOURCE_DIR}/*.c)
+  #list(REMOVE_ITEM lua_sources "${lua_SOURCE_DIR}/lua.c" "${lua_SOURCE_DIR}/luac.c")
+  add_library(lua STATIC ${lua_SOURCE_DIR}/onelua.c)
   target_include_directories(lua PUBLIC $<BUILD_INTERFACE:${lua_SOURCE_DIR}>)
   target_compile_definitions(${PROJECT_NAME} INTERFACE HAS_LUA)
   target_link_libraries(${PROJECT_NAME} INTERFACE lua)
