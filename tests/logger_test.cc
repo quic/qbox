@@ -1,5 +1,5 @@
 #include <systemc>
-#include <libgsutils.h>
+#include <greensocs/libgsutils.h>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
