@@ -230,7 +230,7 @@ private:
                     if (running && qk->need_sync())
                         qk->sync();
                                              
-/*                                         
+#if 0
                                          
                      if (local_drift > local_drift_before) {
                         /* Account for time passed during the transaction 
@@ -240,14 +240,14 @@ private:
                         * wait(local_drift) then add an offset greater that
                         * local_drift_before - which we would wrongly interpret.
                         * Perhaps we could assert that the local_drift is either
-                        * GT, or zero. But thats not what TLM seems to say...
+                        * GT, or zero. But thats not what TLM seems to say...*/
 
                         qk->inc(local_drift - local_drift_before);
                         if (qk->need_sync()) {
                             qk->sync();
                         }
                     }
-*/                    
+#endif
                 }
             }
 
@@ -575,7 +575,7 @@ public:
             
     cci::cci_param<bool> use;
     RealTimeClockLimiter(sc_module_name _name, Checker &_checker)
-            : Model(_name, checker)
+            : Model(_name, _checker)
             , use("use", true)
         {
         }
