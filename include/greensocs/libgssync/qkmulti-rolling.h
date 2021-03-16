@@ -11,9 +11,9 @@
 #endif
 #include <systemc>
 
-#include "qkmulti-quantum.h"
-#include "semaphore.h"
-#include <libgsutils.h>
+#include "greensocs/libgssync/qkmulti-quantum.h"
+#include "greensocs/libgssync/semaphore.h"
+#include <greensocs/libgsutils.h>
 
 namespace gs {
     class tlm_quantumkeeper_multi_rolling : public tlm_quantumkeeper_multi_quantum {

@@ -13,7 +13,7 @@
 #include <thread>
 #include <mutex>
 
-#include "pre_suspending_sc_support.h"
+#include "greensocs/libgssync/pre_suspending_sc_support.h"
 
 namespace gs {
     class async_event : public sc_core::sc_prim_channel, public sc_core::sc_event {

@@ -11,8 +11,8 @@ target_link_libraries(checker
    PRIVATE
       SystemC::systemc
       SystemC::cci
-      libgsutils
-      base-components
+      GreenSocs::libgsutils
+      GreenSocs::base-components
       gssync
 )
 target_include_directories(checker

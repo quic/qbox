@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "qkmultithread.h"
+#include "greensocs/libgssync/qkmultithread.h"
 
 using testing::AnyOf;
 using testing::Eq;

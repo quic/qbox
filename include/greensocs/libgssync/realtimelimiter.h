@@ -12,7 +12,7 @@
 #include <future>
 
 #include <systemc>
-#include "async_event.h"
+#include "greensocs/libgssync/async_event.h"
 
 
 namespace gs 

@@ -7,7 +7,7 @@
 #define QK_FACTORY_H
 
 #include <iostream>
-#include "libgssync.h"
+#include <greensocs/libgssync.h>
 
 namespace gs
 {

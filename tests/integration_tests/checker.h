@@ -10,7 +10,7 @@
 #include <condition_variable>
 #include <fstream>
 #include <queue>
-#include "libgssync.h"
+#include "greensocs/libgssync.h"
 
 class Checker
 {

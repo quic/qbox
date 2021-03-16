@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "qkmultithread.h"
+#include "greensocs/libgssync/qkmultithread.h"
 
 namespace gs {
     class tlm_quantumkeeper_multi_quantum : public tlm_quantumkeeper_multithread {

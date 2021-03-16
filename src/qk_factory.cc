@@ -2,7 +2,7 @@
  * Copyright (C) 2020 GreenSocs
  */
 
-#include "qk_factory.h"
+#include "greensocs/libgssync/qk_factory.h"
 
 namespace gs {
     std::shared_ptr<gs::tlm_quantumkeeper_extended> tlm_quantumkeeper_factory(std::string name) {

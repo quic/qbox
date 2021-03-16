@@ -7,8 +7,8 @@
 #endif
 #include <systemc>
 
-#include "pre_suspending_sc_support.h"
-#include <libgsutils.h>
+#include "greensocs/libgssync/pre_suspending_sc_support.h"
+#include <greensocs/libgsutils.h>
 
 #ifndef SC_HAS_SUSPENDING
 

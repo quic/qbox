@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "qkmulti-quantum.h"
+#include "greensocs/libgssync/qkmulti-quantum.h"
 
 using testing::AnyOf;
 using testing::Eq;

@@ -10,13 +10,13 @@
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #endif
 #include <systemc>
-#include "pre_suspending_sc_support.h"
+#include "greensocs/libgssync/pre_suspending_sc_support.h"
 #include <tlm>
 #include <tlm_utils/tlm_quantumkeeper.h>
-#include "async_event.h"
-#include "qk_extendedif.h"
-#include "qkmultithread.h"
-#include <libgsutils.h>
+#include "greensocs/libgssync/async_event.h"
+#include "greensocs/libgssync/qk_extendedif.h"
+#include "greensocs/libgssync/qkmultithread.h"
+#include <greensocs/libgsutils.h>
 
 namespace gs 
 {

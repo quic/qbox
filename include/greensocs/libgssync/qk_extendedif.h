@@ -13,7 +13,7 @@
 #include <tlm>
 #include <tlm_utils/tlm_quantumkeeper.h>
 
-#include <libgsutils.h>
+#include <greensocs/libgsutils.h>
 
 namespace gs {
 

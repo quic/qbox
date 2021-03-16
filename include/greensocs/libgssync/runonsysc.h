@@ -12,7 +12,7 @@
 #include <queue>
 #include <future>
 
-#include "async_event.h"
+#include "greensocs/libgssync/async_event.h"
 
 namespace gs {
     class RunOnSysC : public sc_core::sc_module {

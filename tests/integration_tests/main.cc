@@ -24,14 +24,9 @@
 #include <tlm_utils/tlm_quantumkeeper.h>
 #include <cci/utils/broker.h>
 
-//#include "libgs.h"
-#include <router.h>
-#include <libgsutils.h>
+#include <greensocs/base-components/router.h>
+#include <greensocs/libgsutils.h>
 #include "checker.h"
-
-//#include "libssync/libssync.h"
-//#include "libssync/adapt.h"
-
 
 using namespace sc_core;
 
