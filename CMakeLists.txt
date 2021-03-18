@@ -1,60 +1,44 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.14)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+project(qbox VERSION 1.0)
 
-project(libqbox)
-
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
+##############################################
+# ----- fetch GreenSocs cmake BOILERPLATE
+##############################################
+include(FetchContent)
+#FetchContent_Declare(gs-cmake
+   #GIT_REPOSITORY https://git.bar.greensocs.com/greensocs/cmake-boilerplate.git
+   #GIT_TAG master
+#)
+#FetchContent_MakeAvailable(gs-cmake)
+include(/home/sekoia/work/greensocs/cmake-boilerplate/cmake/gs-boilerplate.cmake)
+##############################################
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-find_package(SystemC REQUIRED COMPONENTS CCI)
-find_package(libqemu-cxx CONFIG REQUIRED)
-find_package(libgs REQUIRED)
+gs_systemc()
+
+CPMAddPackage("https://git.bar.greensocs.com/greensocs/libgsutils.git#master")
+CPMAddPackage("https://git.bar.greensocs.com/greensocs/libgssync.git#master")
+CPMAddPackage("https://git.bar.greensocs.com/qemu/libqemu-cxx.git#master")
+CPMAddPackage("https://git.bar.greensocs.com/greensocs/components/base-components.git#master")
 
 set(LIBQBOX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqbox)
 
-add_library(qbox SHARED)
+add_library(${PROJECT_NAME} INTERFACE)
 
-if(MSVC)
-    target_compile_options(qbox PRIVATE /W4)
-else()
-    target_compile_options(qbox PRIVATE
-        -Wall -Wextra
-        "$<$<CONFIG:Debug>:-O0;-ggdb3>")
-endif()
-
-target_include_directories(qbox
-    PUBLIC
+target_include_directories(${PROJECT_NAME}
+    INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    PRIVATE
-        ${LIBGS_INCLUDE_DIR})
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-target_link_libraries(qbox
-    SystemC::SystemC
+target_link_libraries(${PROJECT_NAME} INTERFACE
+    SystemC::systemc SystemC::cci
     qemu-cxx
-    ${LIBGS_LIBRARIES})
+    GreenSocs::libgsutils GreenSocs::libgssync
+    GreenSocs::base-components)
 
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox" DESTINATION include)
-install(TARGETS qbox DESTINATION lib EXPORT libqbox-targets)
-install(EXPORT libqbox-targets DESTINATION ${LIBQBOX_LIB_DIR}/cmake)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-export(EXPORT libqbox-targets)
-export(PACKAGE libqbox)
-
-configure_package_config_file(libqboxConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/libqboxConfig.cmake
-    INSTALL_DESTINATION ${LIBQBOX_LIB_DIR}/cmake)
-
-write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/libqboxConfigVersion.cmake
-    VERSION 1.0.0
-    COMPATIBILITY AnyNewerVersion)
-
-install(
-    FILES ${CMAKE_BINARY_DIR}/libqboxConfig.cmake
-          ${CMAKE_BINARY_DIR}/libqboxConfigVersion.cmake
-    DESTINATION ${LIBQBOX_LIB_DIR}/cmake)
+gs_export()
