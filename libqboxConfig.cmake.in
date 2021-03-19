@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(libqemu-cxx)
+
+if (NOT TARGET qbox)
+    include("${CMAKE_CURRENT_LIST_DIR}/libqbox-targets.cmake")
+endif()
+

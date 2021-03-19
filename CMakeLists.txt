@@ -1,77 +1,44 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.14)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+project(qbox VERSION 1.0)
 
-project(libqbox)
+##############################################
+# ----- fetch GreenSocs cmake BOILERPLATE
+##############################################
+include(FetchContent)
+#FetchContent_Declare(gs-cmake
+   #GIT_REPOSITORY https://git.bar.greensocs.com/greensocs/cmake-boilerplate.git
+   #GIT_TAG master
+#)
+#FetchContent_MakeAvailable(gs-cmake)
+include(/home/sekoia/work/greensocs/cmake-boilerplate/cmake/gs-boilerplate.cmake)
+##############################################
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-if (WIN32)
-    find_package(SystemC REQUIRED)
-else ()
-    find_package(SystemC REQUIRED COMPONENTS CCI)
-endif ()
+gs_systemc()
 
-find_package(PkgConfig REQUIRED)
-if (PkgConfig_FOUND)
-    pkg_check_modules(slirp slirp)
-endif()
+CPMAddPackage("https://git.bar.greensocs.com/greensocs/libgsutils.git#master")
+CPMAddPackage("https://git.bar.greensocs.com/greensocs/libgssync.git#master")
+CPMAddPackage("https://git.bar.greensocs.com/qemu/libqemu-cxx.git#master")
+CPMAddPackage("https://git.bar.greensocs.com/greensocs/components/base-components.git#master")
 
-find_package(libqemu-cxx CONFIG REQUIRED)
+set(LIBQBOX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqbox)
 
-add_library(qbox SHARED
-    src/libqbox.cc
-    src/mac.cc
-    src/async_stop.cc
-)
+add_library(${PROJECT_NAME} INTERFACE)
 
-if (NOT WIN32)
-    target_sources(qbox
-        PRIVATE
-        src/xgmac.cc
-        src/dwmac.cc
-        src/phy.cc
-        src/backends/tap.cc
-    )
-endif()
+target_include_directories(${PROJECT_NAME}
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-if (WIN32)
-    target_compile_options(qbox PRIVATE -Wall -DSC_WIN_DLL -DSC_INCLUDE_DYNAMIC_PROCESSES /vmg)
-else ()
-    target_compile_options(qbox PRIVATE
-        -Wall
-        "$<$<CONFIG:Debug>:-O0;-g3;-ggdb>"
-    )
-endif ()
-
-target_include_directories(qbox
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/include
-)
-
-target_link_libraries(qbox
-    SystemC::SystemC
-    gs
+target_link_libraries(${PROJECT_NAME} INTERFACE
+    SystemC::systemc SystemC::cci
     qemu-cxx
-    dl
-)
+    GreenSocs::libgsutils GreenSocs::libgssync
+    GreenSocs::base-components)
 
-if (slirp_FOUND)
-    target_sources(qbox PRIVATE src/backends/slirp.cc)
-    target_link_libraries(qbox slirp)
-endif()
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-if (NOT WIN32)
-    target_link_libraries(qbox pthread SystemC::CCI)
-endif ()
-
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox" DESTINATION include)
-
-if (WIN32)
-    install(TARGETS qbox DESTINATION lib/$<IF:$<CONFIG:Debug>,debug,release>)
-else ()
-    install(TARGETS qbox DESTINATION lib)
-endif ()
+gs_export()
