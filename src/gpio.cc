@@ -20,6 +20,7 @@
 #include <libqemu/libqemu.h>
 
 #include "libqemu-cxx/libqemu-cxx.h"
+#include "internals.h"
 
 namespace qemu {
 
@@ -27,7 +28,7 @@ void Gpio::set(bool lvl)
 {
     QemuGpio *gpio = reinterpret_cast<QemuGpio *>(m_obj);
 
-    m_exports->gpio_set(gpio, lvl);
+    m_int->exports().gpio_set(gpio, lvl);
 }
 
 };

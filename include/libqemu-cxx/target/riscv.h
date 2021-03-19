@@ -24,22 +24,30 @@
 #include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
-    class CpuRiscv64 : public Cpu {
+    class CpuRiscv : public Cpu {
     public:
-        static constexpr const char *const TYPE = "rv64-riscv-cpu";
+        static constexpr const char *const TYPE = "riscv-cpu";
 
-        CpuRiscv64() = default;
-        CpuRiscv64(const CpuRiscv64 &) = default;
-        CpuRiscv64(const Object &o) : Cpu(o) {}
+        using MipUpdateCallbackFn = std::function<void (uint32_t)>;
+
+        CpuRiscv() = default;
+        CpuRiscv(const CpuRiscv &) = default;
+        CpuRiscv(const Object &o) : Cpu(o) {}
+
+        void set_mip_update_callback(MipUpdateCallbackFn cb);
     };
 
-    class RiscvSifivePlic : public Device {
+    class CpuRiscv32 : public CpuRiscv {
     public:
-        static constexpr const char * const TYPE = "riscv.sifive.plic";
+        CpuRiscv32() = default;
+        CpuRiscv32(const CpuRiscv32 &) = default;
+        CpuRiscv32(const Object &o) : CpuRiscv(o) {}
+    };
 
-        RiscvSifivePlic() = default;
-        RiscvSifivePlic(const RiscvSifivePlic &) = default;
-        RiscvSifivePlic(const Object &o) : Device(o) {}
-
+    class CpuRiscv64 : public CpuRiscv {
+    public:
+        CpuRiscv64() = default;
+        CpuRiscv64(const CpuRiscv64 &) = default;
+        CpuRiscv64(const Object &o) : CpuRiscv(o) {}
     };
 }

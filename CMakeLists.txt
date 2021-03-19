@@ -11,35 +11,39 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 find_package(libqemu CONFIG REQUIRED)
 
 set(LIBQEMU_CXX_SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/libqemu-cxx)
-set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/libqemu-cxx)
+set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 set(LIBQEMU_CXX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqemu-cxx)
 
 set(srcs
+    src/callbacks.cc
     src/cpu.cc
     src/device.cc
     src/gpio.cc
     src/libqemu-cxx.cc
     src/loader.cc
     src/memory.cc
+    src/object.cc
     src/sysbus.cc
     src/timer.cc
     src/target/aarch64.cc
-    src/target/riscv32.cc
-    src/target/riscv64.cc
+    src/target/riscv.cc
     src/target/microblaze.cc
-    ${CMAKE_CURRENT_BINARY_DIR}/src/target_info.cc
+    src/target-info.cc
 )
 
-foreach(target ${LIBQEMU_TARGETS})
-    # This variable is used in target_info.cc.in
-    get_property(LIBQEMU_TARGET_${target}_LIBRARY
-        TARGET libqemu-${target}
-        PROPERTY INTERFACE_LINK_LIBRARIES)
-endforeach()
-
-configure_file(src/target_info.cc.in src/target_info.cc)
 
 add_library(qemu-cxx SHARED ${srcs})
+
+foreach(target ${LIBQEMU_TARGETS})
+    # The quite complex generator expressions does the followings:
+    #   - fetch the library name through the INTERFACE_LINK_LIBRARIES property
+    #   - evaluate it as a generator expression since it can contains
+    #     $<BUILD_INTERFACE> and $<INSTALL_INTERFACE> in a list
+    #   - join the result to remove empty elements in the final list
+    target_compile_definitions(qemu-cxx
+        PRIVATE
+            LIBQEMU_TARGET_${target}_LIBRARY="$<JOIN:$<GENEX_EVAL:$<TARGET_PROPERTY:libqemu-${target},INTERFACE_LINK_LIBRARIES>>,>")
+endforeach()
 
 if(CMAKE_COMPILER_IS_GNUCC)
     target_compile_options(qemu-cxx PRIVATE
@@ -51,24 +55,19 @@ endif()
 target_include_directories(qemu-cxx
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<INSTALL_INTERFACE:${LIBQEMU_CXX_INCLUDE_DIR}>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+
 )
 
-target_link_libraries(qemu-cxx libqemu)
+target_link_libraries(qemu-cxx libqemu ${CMAKE_DL_LIBS})
 
 set_property(TARGET qemu-cxx
     PROPERTY INSTALL_RPATH ${LIBQEMU_LIB_DIR})
 
 
-install(FILES
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/exceptions.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/libqemu-cxx.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/loader.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target_info.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/aarch64.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/riscv32.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/riscv64.h"
-    "${LIBQEMU_CXX_SRC_INCLUDE_DIR}/target/microblaze.h"
+install(DIRECTORY ${LIBQEMU_CXX_SRC_INCLUDE_DIR}
     DESTINATION ${LIBQEMU_CXX_INCLUDE_DIR})
 
 if (WIN32)

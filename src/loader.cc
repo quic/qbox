@@ -58,9 +58,9 @@ public:
 class DefaultLibraryLoader : public qemu::LibraryLoaderIface {
 private:
     const char *m_base;
+    std::string m_last_error;
 
-public:
-    std::string GetLastErrorAsString()
+    std::string get_last_error_as_str()
     {
         // Get the error message, if any.
         DWORD errorMessageID = ::GetLastError();
@@ -83,13 +83,13 @@ public:
         return message;
     }
 
+public:
     qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name)
     {
         if (!m_base) {
             HMODULE handle = LoadLibraryExA(lib_name, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
             if (handle == nullptr) {
-                std::string str = GetLastErrorAsString();
-                fprintf(stderr, "error: %s\n", str.c_str());
+                m_last_error = get_last_error_as_str();
                 return nullptr;
             }
 
@@ -130,6 +130,9 @@ public:
     const char * get_lib_ext() {
         return "dll";
     }
+
+    const char * get_last_error() {
+    }
 };
 
 #else /* _WIN32 */
@@ -161,6 +164,7 @@ public:
 class DefaultLibraryLoader : public qemu::LibraryLoaderIface {
 private:
     const char *m_base = nullptr;
+    std::string m_last_error;
 
 public:
     qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name)
@@ -168,6 +172,7 @@ public:
         if (!m_base) {
             void *handle = dlopen(lib_name, RTLD_NOW);
             if (handle == nullptr) {
+                m_last_error = dlerror();
                 return nullptr;
             }
 
@@ -208,6 +213,10 @@ public:
 
     const char * get_lib_ext() {
         return "so";
+    }
+
+    const char * get_last_error() {
+        return m_last_error.c_str();
     }
 };
 #endif
