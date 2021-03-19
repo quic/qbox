@@ -4,12 +4,14 @@ project(gssync  VERSION 1.0  LANGUAGES CXX)
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
-include(FetchContent)
-FetchContent_Declare(gs-cmake
-   GIT_REPOSITORY https://git.bar.greensocs.com/greensocs/cmake-boilerplate.git
-   GIT_TAG master
-)
-FetchContent_MakeAvailable(gs-cmake)
+if (NOT gs-cmake_SOURCE_DIR)
+   include(FetchContent)
+   FetchContent_Declare(gs-cmake
+      GIT_REPOSITORY https://git.bar.greensocs.com/greensocs/cmake-boilerplate.git
+      GIT_TAG master
+   )
+   FetchContent_MakeAvailable(gs-cmake)
+endif()
 include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 ##############################################
 
