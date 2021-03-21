@@ -5,12 +5,14 @@ project(libqemu-cxx)
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
-include(FetchContent)
-FetchContent_Declare(gs-cmake
-   GIT_REPOSITORY https://git.bar.greensocs.com/greensocs/cmake-boilerplate.git
-   GIT_TAG master
-)
-FetchContent_MakeAvailable(gs-cmake)
+if (NOT gs-cmake_SOURCE_DIR)
+   include(FetchContent)
+   FetchContent_Declare(gs-cmake
+      GIT_REPOSITORY https://git.greensocs.com/greensocs/cmake-boilerplate.git
+      GIT_TAG master
+   )
+   FetchContent_MakeAvailable(gs-cmake)
+endif()
 include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 ##############################################
 
@@ -18,10 +20,7 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-CPMAddPackage(NAME libqemu
-    GIT_REPOSITORY "git@git.bar.greensocs.com:qemu/libqemu.git"
-    GIT_TAG master
-    GIT_SHALLOW on)
+gs_addpackage(qemu/libqemu)
 
 set(LIBQEMU_CXX_SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/libqemu-cxx)
 set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
