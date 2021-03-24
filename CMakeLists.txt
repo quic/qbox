@@ -7,7 +7,7 @@ project(gssync  VERSION 1.0  LANGUAGES CXX)
 if (NOT gs-cmake_SOURCE_DIR)
    include(FetchContent)
    FetchContent_Declare(gs-cmake
-      GIT_REPOSITORY https://git.bar.greensocs.com/greensocs/cmake-boilerplate.git
+      GIT_REPOSITORY https://git.greensocs.com/greensocs/cmake-boilerplate.git
       GIT_TAG master
    )
    FetchContent_MakeAvailable(gs-cmake)
@@ -21,8 +21,7 @@ gs_systemc()
 
 # Other Dependencies
 
-CPMAddPackage("https://git.bar.greensocs.com/greensocs/libgsutils.git#master")
-
+gs_addpackage(greensocs/libgsutils)
 
 add_library(${PROJECT_NAME} SHARED
    src/qkmultithread.cc
