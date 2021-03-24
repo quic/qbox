@@ -1,6 +1,6 @@
 
 
-CPMAddPackage("https://git.bar.greensocs.com/greensocs/components/base-components.git#master")
+gs_addpackage(greensocs/components/base-components)
 
 add_executable(checker main.cc)
 add_test(
