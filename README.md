@@ -1,9 +1,84 @@
 
 
-[//]: # (SECTION 0)
+[//]: # (SECTION 1)
+
+
+[//]: # (SECTION 1 AUTOADDED)
+
+
+
+# GreenSocs Build and make system
+
+# How to build
+> 
+> This project may be built using cmake
+> ```bash
+> cmake -B build;pushd build; make -j; popd
+> ./build/vp --gs_luafile= conf.lua
+> ```
+> 
+You may log into the buildroot with username 'root' and no password.
+
+## cmake version
+cmake version 3.14 or newer is required. This can be downloaded and used as follows
+```bash
+ curl -L https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
+ ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake
+```
+ 
+
+
+## details
+
+This project uses CPM https://github.com/cpm-cmake/CPM.cmake in order to find, and/or download missing components. In order to find locally installed SystemC, you may use the standards SystemC environment variables: `SYSTEMC_HOME` and `CCI_HOME`.
+CPM will use the standard CMAKE `find_package` mechanism to find installed packages https://cmake.org/cmake/help/latest/command/find_package.html
+To specify a specific package location use `<package>_ROOT`
+CPM will also search along the CMAKE_MODULE_PATH
+
+Sometimes it is convenient to have your own sources used, in this case, use the `CPM_<package>_SOURCE_DIR`.
+Hence you may wish to use your own copy of SystemC CCI 
+```bash
+cmake -B build -DCPM_SystemCCCI_SOURCE=/path/to/your/cci/source`
+```
+
+It may also be convenient to have all the source files downloaded, you may do this by running 
+```bash
+cmake -B build -DCPM_SOURCE_CACHE=`pwd`/Packages
+```
+This will populate the directory `Packages` Note that the cmake file system will automatically use the directory called `Packages` as source, if it exists.
+
+NB, CMake holds a cache of compiled modules in ~/.cmake/ Sometimes this can confuse builds. If you seem to be picking up the wrong version of a module, then it may be in this cache. It is perfectly safe to delete it.
+
+### Common CMake options
+`CMAKE_INSTALL_PREFIX` : Install directory for the package and binaries.
+`CMAKE_BUILD_TYPE`     : DEBUG or RELEASE
+
+
+The library assumes the use of C++14, and is compatible with SystemC versions from SystemC 2.3.1a.
+
+
+For a reference docker please use the following script from the top level of the Virtual Platform:
+```bash
+curl -L https://git.greensocs.com/greensocs/cmake-boilerplate/-/raw/master/docker_vp.sh --output docker_vp.sh
+./docker_vp.sh
+> cmake -B build;cd build; make -j
+```
+
+### passwords for git.greensocs.com
+To avoid using passwords for git.greensocs.com please add a ssh key to your git account. You may also use a key-chain manager. As a last resort, the following script will populate ~/.git-credentials  with your username and password (in plain text)
+```bash
+git config --global credential.helper store
+```
+
+## More documentation
+
+More documentation, including doxygen generated API documentation can be found in the `/docs` directory.
+
+
+[//]: # (SECTION 10)
 ## GreenSocs Basic SystemC utility library
 
-This is the GreenSocs basic utilities library. It contains utility functions for CCI and simple logging functions.
+The GreenSocs basic utilities library contains utility functions for CCI and simple logging functions.
 
 The GreenSocs CCI libraries allows two options for setting configuration parameters
 
@@ -19,66 +94,7 @@ This library includes a Configurable Broker (gs::ConfigurableBroker) which provi
 
 Note that a string parameter must be quoted.
 
-The lua file read by the ConfigurableBroker has relative paths - this means that in the example above the `path.to.module` portion of the absolute path should not appear in the (local) configuration file. (Hence changes in the hierarchy will not need changes to the configuration file).
-
-[//]: # (SECTION 0 AUTOADDED)
-
-
-[//]: # (SECTION 1)
-
-
-[//]: # (SECTION 1 AUTOADDED)
-
-
-# GreenSocs Build and make system
-
-# How to build
-> 
-> This project may be built using cmake
-> ```
-> cmake -B BUILD;cd BUILD; make -j
-> ```
-> 
-> cmake version 3.14 or newer is required. This can be downloaded and used as follows
-> ```
-> curl -L https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
-> ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake
-> ```
-> 
->
-
-## details
-
-This project uses CPM https://github.com/cpm-cmake/CPM.cmake in order to find, and/or download missing components. In order to find locally installed SystemC, you may use the standards SystemC environment variables: `SYSTEMC_HOME` and `CCI_HOME`.
-CPM will use the standard CMAKE `find_package` mechanism to find installed packages https://cmake.org/cmake/help/latest/command/find_package.html
-To specify a specific package location use `<package>_ROOT`
-CPM will also search along the CMAKE_MODULE_PATH
-
-Sometimes it is convenient to have your own sources used, in this case, use the `CPM_<package>_SOURCE_DIR`.
-Hence you may wish to use your own copy of SystemC CCI 
-```
-cmake -B BUILD -DCPM_SystemCCCI_SOURCE=/path/to/your/cci/source`
-```
-
-
-NB, CMake holds a cache of compiled modules in ~/.cmake/ Sometimes this can confuse builds. If you seem to be picking up the wrong version of a module, then it may be in this cache. It is perfectly safe to delete it.
-
-### Common CMake options
-`CMAKE_INSTALL_PREFIX` : Install directory for the package and binaries.
-`CMAKE_BUILD_TYPE`     : DEBUG or RELEASE
-
-
-The library assumes the use of C++14, and is compatible with SystemC versions from SystemC 2.3.1a.
-
-
-## More documentation
-
-More documentation, including doxygen generated API documentation can be found in the `/docs` directory.
-
-
-
-[//]: # (SECTION 10)
-## Using yaml for configuration
+The lua file read by the ConfigurableBroker has relative paths - this means that in the example above the `path.to.module` portion of the absolute path should not appear in the (local) configuration file. (Hence changes in the hierarchy will not need changes to the configuration file).## Using yaml for configuration
 If you would prefer to use yaml as a configuration language, `lyaml` provides a link. This can be downloaded from https://github.com/gvvaughan/lyaml
 
 The following lua code will load "conf.yaml".
@@ -107,7 +123,7 @@ ytab=nil
 
 
 [//]: # (SECTION 50)
-## Using gs::ConfigurableBroker
+## Using the ConfigurableBroker
 
 The broker will self register in the SystemC CCI hierarchy. All brokers have a parameter `lua_file` which will be read and used to configure parameters held within the broker. This file is read at the *local* level, and paths are *relative* to the location where the ConfigurableBroker is instanced.
 

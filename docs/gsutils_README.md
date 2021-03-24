@@ -25,11 +25,11 @@ class ConfigurableBroker
 --------------------------------|---------------------------------------------
 `public std::set< std::string > expose` | 
 `public cci_param< std::string > conf_file` | 
+`public inline  ConfigurableBroker(const std::string & name,bool load_conf_file)` | 
 `public inline  ConfigurableBroker(bool load_conf_file)` | 
 `public inline  ConfigurableBroker(std::initializer_list< cci_name_value_pair > list,bool load_conf_file)` | 
 `public inline  ConfigurableBroker(const int argc,const char *const * argv,std::initializer_list< cci_name_value_pair > list,bool load_conf_file)` | 
 `public inline std::string relname(const std::string & n) const` | 
-`public inline std::string relname(const char * n) const` | 
 `public inline  ~ConfigurableBroker()` | 
 `public inline cci_originator get_value_origin(const std::string & parname) const` | 
 `public inline bool has_preset_value(const std::string & parname) const` | 
@@ -57,7 +57,13 @@ class ConfigurableBroker
 
 
 
-### `public inline  ConfigurableBroker(bool load_conf_file)` {#classgs_1_1_configurable_broker_1a1d6c33577b1c796f3483eaa7bcf8c9a6}
+### `public inline  ConfigurableBroker(const std::string & name,bool load_conf_file)` {#classgs_1_1_configurable_broker_1aaf4d1550f05194e1a457e3e3ce862bee}
+
+
+
+
+
+### `public inline  ConfigurableBroker(bool load_conf_file)` {#classgs_1_1_configurable_broker_1a1e4af7ca42c30cd8835044935ed1ad63}
 
 
 
@@ -69,19 +75,13 @@ class ConfigurableBroker
 
 
 
-### `public inline  ConfigurableBroker(const int argc,const char *const * argv,std::initializer_list< cci_name_value_pair > list,bool load_conf_file)` {#classgs_1_1_configurable_broker_1a8f78844d52e50c773a759849e2046162}
+### `public inline  ConfigurableBroker(const int argc,const char *const * argv,std::initializer_list< cci_name_value_pair > list,bool load_conf_file)` {#classgs_1_1_configurable_broker_1a512c3c92bdf62b17373b215755f09447}
 
 
 
 
 
 ### `public inline std::string relname(const std::string & n) const` {#classgs_1_1_configurable_broker_1a43b04dd8f2b564255577a8023477b4d9}
-
-
-
-
-
-### `public inline std::string relname(const char * n) const` {#classgs_1_1_configurable_broker_1a98f9b79db5cae5f6a2bf723bf6d52fc2}
 
 
 
@@ -266,5 +266,300 @@ Throws a CommandLineException.
 
 
 * `argv` The argv of main(...).
+
+
+# class `TargetSignalSocket` {#class_target_signal_socket}
+
+```
+class TargetSignalSocket
+  : public sc_core::sc_export< sc_core::sc_signal_inout_if< T > >
+```  
+
+
+
+
+
+## Summary
+
+ Members                        | Descriptions                                
+--------------------------------|---------------------------------------------
+`public inline  TargetSignalSocket(const char * name)` | 
+`public inline void register_value_changed_cb(const ValueChangedCallback & cb)` | 
+`public inline const T & read() const` | 
+`protected `[`TargetSignalSocketProxy`](#class_target_signal_socket_proxy)`< T > m_proxy` | 
+
+## Members
+
+### `public inline  TargetSignalSocket(const char * name)` {#class_target_signal_socket_1a59a76ce35efe3dd1380daa346f92bf78}
+
+
+
+
+
+### `public inline void register_value_changed_cb(const ValueChangedCallback & cb)` {#class_target_signal_socket_1ade4ddae4ad08e6f652864a4d758b2735}
+
+
+
+
+
+### `public inline const T & read() const` {#class_target_signal_socket_1ac0c213c8e85754d27fce8e426bcbc5ad}
+
+
+
+
+
+### `protected `[`TargetSignalSocketProxy`](#class_target_signal_socket_proxy)`< T > m_proxy` {#class_target_signal_socket_1a4c31775bdf62925527a5f039384edcf4}
+
+
+
+
+
+
+# class `TargetSignalSocketProxy` {#class_target_signal_socket_proxy}
+
+```
+class TargetSignalSocketProxy
+  : public sc_core::sc_signal_inout_if< T >
+```  
+
+
+
+
+
+## Summary
+
+ Members                        | Descriptions                                
+--------------------------------|---------------------------------------------
+`public inline  TargetSignalSocketProxy(`[`TargetSignalSocket`](#class_target_signal_socket)`< T > & parent)` | 
+`public inline void register_value_changed_cb(const ValueChangedCallback & cb)` | 
+`public inline `[`TargetSignalSocket`](#class_target_signal_socket)`< T > & get_parent()` | 
+`public inline virtual const sc_core::sc_event & value_changed_event() const` | 
+`public inline virtual const T & read() const` | 
+`public inline virtual const T & get_data_ref() const` | 
+`public inline virtual bool event() const` | 
+`public inline virtual void write(const T & val)` | 
+`protected `[`TargetSignalSocket`](#class_target_signal_socket)`< T > & m_parent` | 
+`protected T m_val` | 
+`protected ValueChangedCallback m_cb` | 
+`protected sc_core::sc_event m_ev` | 
+
+## Members
+
+### `public inline  TargetSignalSocketProxy(`[`TargetSignalSocket`](#class_target_signal_socket)`< T > & parent)` {#class_target_signal_socket_proxy_1a26112bfc896bd815a313d2e8a1684120}
+
+
+
+
+
+### `public inline void register_value_changed_cb(const ValueChangedCallback & cb)` {#class_target_signal_socket_proxy_1a8f335f310bc84f145773df1b7570a8fa}
+
+
+
+
+
+### `public inline `[`TargetSignalSocket`](#class_target_signal_socket)`< T > & get_parent()` {#class_target_signal_socket_proxy_1a64d9055e1e0d3cbd55c1c28adadd104f}
+
+
+
+
+
+### `public inline virtual const sc_core::sc_event & value_changed_event() const` {#class_target_signal_socket_proxy_1a348aff27d5e4b8198034f61d186afbd5}
+
+
+
+
+
+### `public inline virtual const T & read() const` {#class_target_signal_socket_proxy_1a0a4eb499d986bc28d7e9b9a1f519c965}
+
+
+
+
+
+### `public inline virtual const T & get_data_ref() const` {#class_target_signal_socket_proxy_1af5f41fa626bf66ce54e102c4418ca62d}
+
+
+
+
+
+### `public inline virtual bool event() const` {#class_target_signal_socket_proxy_1a36989c04c07521363770efddcbac1845}
+
+
+
+
+
+### `public inline virtual void write(const T & val)` {#class_target_signal_socket_proxy_1a0879f42e84061aa22d6af08fe78e6a20}
+
+
+
+
+
+### `protected `[`TargetSignalSocket`](#class_target_signal_socket)`< T > & m_parent` {#class_target_signal_socket_proxy_1af2db3d97adaf6a23434ea43443d22fe4}
+
+
+
+
+
+### `protected T m_val` {#class_target_signal_socket_proxy_1a783fa8f426d21e764d6fa2a0aec8e23f}
+
+
+
+
+
+### `protected ValueChangedCallback m_cb` {#class_target_signal_socket_proxy_1ac00e1a51df8097d85a04c77ac3ec5815}
+
+
+
+
+
+### `protected sc_core::sc_event m_ev` {#class_target_signal_socket_proxy_1a151c72fe71e76ae57480305900aa00f3}
+
+
+
+
+
+
+# class `TargetSignalSocketProxy< bool >` {#class_target_signal_socket_proxy_3_01bool_01_4}
+
+```
+class TargetSignalSocketProxy< bool >
+  : public sc_core::sc_signal_inout_if< bool >
+```  
+
+
+
+
+
+## Summary
+
+ Members                        | Descriptions                                
+--------------------------------|---------------------------------------------
+`public inline  TargetSignalSocketProxy(`[`TargetSignalSocket`](#class_target_signal_socket)`< bool > & parent)` | 
+`public inline void register_value_changed_cb(const ValueChangedCallback & cb)` | 
+`public inline `[`TargetSignalSocket`](#class_target_signal_socket)`< bool > & get_parent()` | 
+`public inline virtual const sc_core::sc_event & value_changed_event() const` | 
+`public inline virtual const sc_core::sc_event & posedge_event() const` | 
+`public inline virtual const sc_core::sc_event & negedge_event() const` | 
+`public inline virtual const bool & read() const` | 
+`public inline virtual const bool & get_data_ref() const` | 
+`public inline virtual bool event() const` | 
+`public inline virtual bool posedge() const` | 
+`public inline virtual bool negedge() const` | 
+`public inline virtual void write(const bool & val)` | 
+`protected `[`TargetSignalSocket`](#class_target_signal_socket)`< bool > & m_parent` | 
+`protected bool m_val` | 
+`protected ValueChangedCallback m_cb` | 
+`protected sc_core::sc_event m_ev` | 
+`protected sc_core::sc_event m_posedge_ev` | 
+`protected sc_core::sc_event m_negedge_ev` | 
+
+## Members
+
+### `public inline  TargetSignalSocketProxy(`[`TargetSignalSocket`](#class_target_signal_socket)`< bool > & parent)` {#class_target_signal_socket_proxy_3_01bool_01_4_1abf19cbee1f578b9a9b68c29ef06f2829}
+
+
+
+
+
+### `public inline void register_value_changed_cb(const ValueChangedCallback & cb)` {#class_target_signal_socket_proxy_3_01bool_01_4_1a003c42cc6237bc8c75312f215a1f0513}
+
+
+
+
+
+### `public inline `[`TargetSignalSocket`](#class_target_signal_socket)`< bool > & get_parent()` {#class_target_signal_socket_proxy_3_01bool_01_4_1a83b15c8522721ba18f58dc2f32fbb326}
+
+
+
+
+
+### `public inline virtual const sc_core::sc_event & value_changed_event() const` {#class_target_signal_socket_proxy_3_01bool_01_4_1aac6ca6b0103cbfde5bbcf6ed66ce2365}
+
+
+
+
+
+### `public inline virtual const sc_core::sc_event & posedge_event() const` {#class_target_signal_socket_proxy_3_01bool_01_4_1acbc0d6ab668362a09eb0e74f70de5dc4}
+
+
+
+
+
+### `public inline virtual const sc_core::sc_event & negedge_event() const` {#class_target_signal_socket_proxy_3_01bool_01_4_1a227c333441d40f48f0f1be83d1334aac}
+
+
+
+
+
+### `public inline virtual const bool & read() const` {#class_target_signal_socket_proxy_3_01bool_01_4_1a9130110eac809a68f42fbe7e25f92284}
+
+
+
+
+
+### `public inline virtual const bool & get_data_ref() const` {#class_target_signal_socket_proxy_3_01bool_01_4_1ac9d4cada16410a421b1bb52f29f26361}
+
+
+
+
+
+### `public inline virtual bool event() const` {#class_target_signal_socket_proxy_3_01bool_01_4_1a1da976d3d821cb426c8b2938e85ac17f}
+
+
+
+
+
+### `public inline virtual bool posedge() const` {#class_target_signal_socket_proxy_3_01bool_01_4_1aef6264912c525b5e42d64f92957fe973}
+
+
+
+
+
+### `public inline virtual bool negedge() const` {#class_target_signal_socket_proxy_3_01bool_01_4_1aa9597386c2926fb209038fed97bbf0d7}
+
+
+
+
+
+### `public inline virtual void write(const bool & val)` {#class_target_signal_socket_proxy_3_01bool_01_4_1a570969d42d6fdac05a44257d0ac0b09d}
+
+
+
+
+
+### `protected `[`TargetSignalSocket`](#class_target_signal_socket)`< bool > & m_parent` {#class_target_signal_socket_proxy_3_01bool_01_4_1a39bc8ccdb6115a77a59a2ace3ceec488}
+
+
+
+
+
+### `protected bool m_val` {#class_target_signal_socket_proxy_3_01bool_01_4_1ad38be1e02819020bc16da54035b769f0}
+
+
+
+
+
+### `protected ValueChangedCallback m_cb` {#class_target_signal_socket_proxy_3_01bool_01_4_1a05e8ee504bc86dab1af5c591cc6684e1}
+
+
+
+
+
+### `protected sc_core::sc_event m_ev` {#class_target_signal_socket_proxy_3_01bool_01_4_1aa3d68f5956864b59a6bb02c10c21dc08}
+
+
+
+
+
+### `protected sc_core::sc_event m_posedge_ev` {#class_target_signal_socket_proxy_3_01bool_01_4_1a0b6c3df6d680bc3937f77d921d662b50}
+
+
+
+
+
+### `protected sc_core::sc_event m_negedge_ev` {#class_target_signal_socket_proxy_3_01bool_01_4_1ab60826103a37c833e874ce14d8c47976}
+
+
+
+
 
 

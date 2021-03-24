@@ -255,7 +255,7 @@ protected:
     char **argv_cp = new char *[argc];
     for (int i = 0; i < argc; i++) {
       size_t len = strlen(argv[i]) + 1; // count \0
-      strncpy(buffer_p, argv[i], len);
+      strcpy(buffer_p, argv[i]);
       argv_cp[i] = buffer_p;
       buffer_p += len;
     }
