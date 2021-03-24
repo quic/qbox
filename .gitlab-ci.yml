@@ -1,0 +1,2 @@
+include:
+  - remote: 'https://git.bar.greensocs.com/greensocs/cmake-boilerplate/-/raw/master/gitlab-ci-template.yml'
