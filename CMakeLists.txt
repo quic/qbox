@@ -5,13 +5,15 @@ project(qbox VERSION 1.0)
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
-include(FetchContent)
-#FetchContent_Declare(gs-cmake
-   #GIT_REPOSITORY https://git.bar.greensocs.com/greensocs/cmake-boilerplate.git
-   #GIT_TAG master
-#)
-#FetchContent_MakeAvailable(gs-cmake)
-include(/home/sekoia/work/greensocs/cmake-boilerplate/cmake/gs-boilerplate.cmake)
+if (NOT gs-cmake_SOURCE_DIR)
+   include(FetchContent)
+   FetchContent_Declare(gs-cmake
+      GIT_REPOSITORY https://git.greensocs.com/greensocs/cmake-boilerplate.git
+      GIT_TAG master
+   )
+   FetchContent_MakeAvailable(gs-cmake)
+endif()
+include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 ##############################################
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -19,10 +21,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 gs_systemc()
 
-CPMAddPackage("https://git.bar.greensocs.com/greensocs/libgsutils.git#master")
-CPMAddPackage("https://git.bar.greensocs.com/greensocs/libgssync.git#master")
-CPMAddPackage("https://git.bar.greensocs.com/qemu/libqemu-cxx.git#master")
-CPMAddPackage("https://git.bar.greensocs.com/greensocs/components/base-components.git#master")
+gs_addpackage(greensocs/libgsutils)
+gs_addpackage(greensocs/libgssync)
+gs_addpackage(qemu/libqemu-cxx)
+gs_addpackage(greensocs/components/base-components)
+
 
 set(LIBQBOX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqbox)
 
