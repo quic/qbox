@@ -138,6 +138,7 @@ public:
     void set_prop_int(const char *name, int64_t val);
     void set_prop_str(const char *name, const char *val);
     void set_prop_link(const char *name, const Object &link);
+    void set_prop_parse(const char *name, const char *value);
 
     QemuObject *get_qemu_obj() { return m_obj; }
 
