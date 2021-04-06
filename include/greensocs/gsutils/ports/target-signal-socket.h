@@ -64,6 +64,11 @@ public:
     /* SystemC interfaces */
 
     /* sc_core::sc_signal_in_if<T> */
+    virtual const sc_core::sc_event& default_event() const
+    {
+        return m_ev;
+    }
+
     virtual const sc_core::sc_event& value_changed_event() const
     {
         return m_ev;
@@ -141,6 +146,11 @@ public:
     /* SystemC interfaces */
 
     /* sc_core::sc_signal_in_if<bool> */
+    virtual const sc_core::sc_event& default_event() const
+    {
+        return m_ev;
+    }
+
     virtual const sc_core::sc_event& value_changed_event() const
     {
         return m_ev;
