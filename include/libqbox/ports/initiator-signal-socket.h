@@ -30,6 +30,8 @@
 
 #include <greensocs/libgssync.h>
 
+#include "libqbox/ports/target-signal-socket.h"
+
 /**
  * @class QemuInitiatorSignalSocket
  *
