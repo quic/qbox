@@ -56,6 +56,11 @@ public:
         return m_parent;
     }
 
+    void notify()
+    {
+        m_ev.notify();
+    }
+
     /* SystemC interfaces */
 
     /* sc_core::sc_signal_in_if<T> */
@@ -126,6 +131,11 @@ public:
     TargetSignalSocket<bool> & get_parent()
     {
         return m_parent;
+    }
+
+    void notify()
+    {
+        m_ev.notify();
     }
 
     /* SystemC interfaces */
