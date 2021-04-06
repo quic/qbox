@@ -23,7 +23,8 @@
 #include <systemc>
 
 template <class T>
-using InitiatorSignalSocket = sc_core::sc_out<T>;
+using InitiatorSignalSocket = sc_core::sc_port<sc_core::sc_signal_inout_if<T>,
+                                               1, sc_core::SC_ZERO_OR_MORE_BOUND>;
 
 #endif
 
