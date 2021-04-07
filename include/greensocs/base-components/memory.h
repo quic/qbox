@@ -25,6 +25,12 @@
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
 
+#ifdef _POSIX_MAPPED_FILES
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif
+
 class Memory : public sc_core::sc_module {
 private:
     /** Size of the memory in bytes */
@@ -32,6 +38,9 @@ private:
 
     /** Host memory where the data will be stored */
     uint8_t *m_ptr;
+
+    /** Wether the current ptr has been mapped to a file */
+    bool m_mapped;
 
     void b_transport(tlm::tlm_generic_payload &txn, sc_core::sc_time &delay) {
         unsigned int len = txn.get_data_length();
@@ -113,7 +122,8 @@ public:
     tlm_utils::simple_target_socket<Memory> socket;
 
     Memory(sc_core::sc_module_name name, uint64_t size)
-            : socket("socket") {
+        : socket("socket"), m_mapped(false)
+    {
         m_size = size;
 
         m_ptr = new uint8_t[m_size]();
@@ -127,13 +137,33 @@ public:
     Memory(const Memory&) = delete;
 
     ~Memory() {
-        delete[] m_ptr;
+        if (!m_mapped)
+            delete[] m_ptr;
     }
 
     uint64_t size() {
         return m_size;
     }
 
+    void map(const char *filename) {
+#ifdef _POSIX_MAPPED_FILES
+        int fd = open(filename, O_RDWR);
+        if (fd < 0) {
+            SC_REPORT_ERROR("Memory", "Unable to find backing file\n");
+        }
+        if (m_ptr && !m_mapped) {
+            delete[] m_ptr;
+        }
+        m_mapped = true;
+        m_ptr = (uint8_t *)mmap(m_ptr, m_size, PROT_READ | PROT_WRITE,
+                                    MAP_SHARED, fd, 0);
+        if (m_ptr == MAP_FAILED) {
+            SC_REPORT_ERROR("Memory", "Unable to map backing file\n");
+        }
+#else
+        SC_REPORT_ERROR("Memory", "Backing files only supported on UNIX platforms\n");
+#endif
+    }
     size_t load(std::string filename, uint64_t addr) {
         std::ifstream fin(filename, std::ios::in | std::ios::binary);
         if (!fin.good()) {
