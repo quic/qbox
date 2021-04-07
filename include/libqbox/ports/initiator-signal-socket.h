@@ -69,6 +69,11 @@ protected:
             m_qemu_remote->get_gpio().set(val);
 
             m_on_sysc.run_on_sysc([this] { m_qemu_remote->notify(); }, false);
+
+            return;
+        }
+
+        if (!get_interface()) {
             return;
         }
 
