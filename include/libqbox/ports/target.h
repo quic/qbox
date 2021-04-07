@@ -147,9 +147,13 @@ public:
 };
 
 template <unsigned int BUSWIDTH = 32>
-class QemuTargetSocket : public tlm::tlm_target_socket<BUSWIDTH> {
+class QemuTargetSocket : public tlm::tlm_target_socket<BUSWIDTH,
+                                                       tlm::tlm_base_protocol_types,
+                                                       1, sc_core::SC_ZERO_OR_MORE_BOUND> {
 public:
-    using TlmTargetSocket = tlm::tlm_target_socket<BUSWIDTH>;
+    using TlmTargetSocket = tlm::tlm_target_socket<BUSWIDTH,
+                                                   tlm::tlm_base_protocol_types,
+                                                   1, sc_core::SC_ZERO_OR_MORE_BOUND>;
     using TlmPayload = tlm::tlm_generic_payload;
 
 protected:

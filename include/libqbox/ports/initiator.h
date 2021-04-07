@@ -71,9 +71,13 @@ public:
  *          forwards them as standard TLM-2.0 transactions.
  */
 template <unsigned int BUSWIDTH = 32>
-class QemuInitiatorSocket : public tlm::tlm_initiator_socket<BUSWIDTH> {
+class QemuInitiatorSocket : public tlm::tlm_initiator_socket<BUSWIDTH,
+                                                             tlm::tlm_base_protocol_types,
+                                                             1, sc_core::SC_ZERO_OR_MORE_BOUND> {
 public:
-    using TlmInitiatorSocket = tlm::tlm_initiator_socket<BUSWIDTH>;
+    using TlmInitiatorSocket = tlm::tlm_initiator_socket<BUSWIDTH,
+                                                         tlm::tlm_base_protocol_types,
+                                                         1, sc_core::SC_ZERO_OR_MORE_BOUND>;
     using TlmPayload = tlm::tlm_generic_payload;
     using MemTxResult = qemu::MemoryRegionOps::MemTxResult;
     using MemTxAttrs = qemu::MemoryRegionOps::MemTxAttrs;
