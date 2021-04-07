@@ -337,17 +337,20 @@ public:
         }
 
         m_inst.get().lock_iothread();
-        m_cpu.clear_callbacks();
-        m_inst.get().unlock_iothread();
 
-        /*
-         * We can't use m_cpu.remove_sync() here as it locks the BQL, and join
-         * the CPU thread. If the CPU thread is in an asynchronous SystemC job
-         * waiting to be cancelled (because we're at end of simulation), then
-         * we'll deadlock here. Instead, set set_unplug to true so that the CPU
-         * thread will eventually quit, but do not wait for it to do so.
-         */
-        m_cpu.set_unplug(true);
+        /* Make sure QEMU won't call us anymore */
+        m_cpu.clear_callbacks();
+
+        /* Unblock the CPU thread if it's sleeping */
+        set_signaled();
+
+        /* Unblock it if it's waiting for run budget */
+        m_qk->stop();
+
+        /* Wait for QEMU to terminate the CPU thread */
+        m_cpu.remove_sync();
+
+        m_inst.get().unlock_iothread();
     }
 
     void before_end_of_elaboration() override
