@@ -103,6 +103,14 @@ public:
     {
         return m_gpio_in;
     }
+
+    /**
+     * @brief Force a notification on the default event
+     */
+    void notify()
+    {
+        m_proxy.notify();
+    }
 };
 
 #endif
