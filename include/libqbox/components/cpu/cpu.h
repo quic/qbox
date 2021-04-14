@@ -131,6 +131,13 @@ protected:
         for (;;) {
             wait(m_external_ev);
             set_signaled();
+
+            /*
+             * Early restart the QK here so that the SystemC kernel does not
+             * starve while the CPU thread is waking up. This is kind of a hack
+             * but is way simpler than waiting for the CPU thread.
+             */
+            m_qk->start();
         }
     }
 
