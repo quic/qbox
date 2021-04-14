@@ -42,24 +42,6 @@ public:
     virtual void initiator_set_local_time(const sc_core::sc_time &) = 0;
 };
 
-class QemuToTlmInitiatorBridge : public tlm::tlm_bw_transport_if<> {
-public:
-    virtual tlm::tlm_sync_enum nb_transport_bw(tlm::tlm_generic_payload& trans,
-                                               tlm::tlm_phase& phase,
-                                               sc_core::sc_time& t)
-    {
-        /* Should not be reached */
-        assert(false);
-        return tlm::TLM_COMPLETED;
-    }
-
-    virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start_range,
-                                           sc_dt::uint64 end_range)
-    {
-        /* TODO */
-    }
-};
-
 /**
  * @class QemuInitiatorSocket<>
  *
@@ -73,7 +55,8 @@ public:
 template <unsigned int BUSWIDTH = 32>
 class QemuInitiatorSocket : public tlm::tlm_initiator_socket<BUSWIDTH,
                                                              tlm::tlm_base_protocol_types,
-                                                             1, sc_core::SC_ZERO_OR_MORE_BOUND> {
+                                                             1, sc_core::SC_ZERO_OR_MORE_BOUND>
+                          , public tlm::tlm_bw_transport_if<> {
 public:
     using TlmInitiatorSocket = tlm::tlm_initiator_socket<BUSWIDTH,
                                                          tlm::tlm_base_protocol_types,
@@ -84,7 +67,6 @@ public:
     using DmiInfo = QemuInstanceDmiManager::DmiInfo;
 
 protected:
-    QemuToTlmInitiatorBridge m_bridge;
     QemuInstance &m_inst;
     QemuInitiatorIface &m_initiator;
     qemu::Device m_dev;
@@ -260,7 +242,7 @@ public:
         , m_on_sysc(sc_core::sc_gen_unique_name("initiator-run-on-sysc"))
         , m_initiator(initiator)
     {
-        TlmInitiatorSocket::bind(m_bridge);
+        TlmInitiatorSocket::bind(*static_cast<tlm::tlm_bw_transport_if<>*>(this));
     }
 
     void init(qemu::Device &dev, const char *prop)
@@ -285,6 +267,24 @@ public:
         dev.set_prop_link(prop, m_root);
 
         m_dev = dev;
+    }
+    /* tlm::tlm_bw_transport_if<> */
+    virtual tlm::tlm_sync_enum nb_transport_bw(tlm::tlm_generic_payload& trans,
+                                               tlm::tlm_phase& phase,
+                                               sc_core::sc_time& t)
+    {
+        /* Should not be reached */
+        assert(false);
+        return tlm::TLM_COMPLETED;
+    }
+
+    virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start_range,
+                                           sc_dt::uint64 end_range)
+    {
+        GS_LOG("DMI invalidate: [%08" PRIx64 ", %08" PRIx64 "]",
+               uint64_t(start_range), uint64_t(end_range));
+
+        /* TODO */
     }
 };
 
