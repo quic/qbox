@@ -30,6 +30,9 @@
 #include "libqbox/ports/target-signal-socket.h"
 
 class QemuCpuArmCortexA53 : public QemuCpu {
+public:
+    static constexpr qemu::Target ARCH = qemu::Target::AARCH64;
+
 protected:
     int get_psci_conduit_val() const
     {
