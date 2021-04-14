@@ -42,7 +42,7 @@ LibQemu::LibQemu(LibraryLoaderIface &library_loader, Target t)
 LibQemu::~LibQemu()
 {
     for (auto s: m_qemu_argv) {
-        delete s;
+        delete [] s;
     }
 }
 
