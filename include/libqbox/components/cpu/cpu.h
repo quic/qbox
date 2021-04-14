@@ -354,6 +354,9 @@ public:
         /* Unblock it if it's waiting for run budget */
         m_qk->stop();
 
+        /* Unblock it if it's waiting for some I/O to complete */
+        socket.cancel_all();
+
         /* Wait for QEMU to terminate the CPU thread */
         m_cpu.remove_sync();
 
