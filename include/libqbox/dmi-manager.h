@@ -24,10 +24,13 @@
 #include <mutex>
 #include <limits>
 #include <cassert>
+#include <memory>
 
 #include <tlm>
 
 #include <libqemu-cxx/libqemu-cxx.h>
+
+#include <greensocs/libgsutils.h>
 
 /**
  * @class QemuInstanceDmiManager
@@ -48,45 +51,6 @@
 class QemuInstanceDmiManager
 {
 public:
-    /*
-     * Used to store the necessary information about a DMI region.
-     *
-     * Note: The get_key method is used to index the map in which the regions
-     * are stored. Currently, we use the host memory address itself to index
-     * the map. This makes a strong assumption on the fact that two consecutive
-     * DMI region requests for the same region will return the same host
-     * address.  This is not clearly stated in the TLM-2.0 standard but is
-     * quite reasonable to assume.
-     */
-    struct DmiInfo {
-        using Key = uintptr_t;
-
-        uint64_t start;
-        uint64_t end;
-        void *ptr;
-        qemu::MemoryRegion mr;
-
-        DmiInfo() = default;
-
-        explicit DmiInfo(const tlm::tlm_dmi &info)
-            : start(info.get_start_address())
-            , end(info.get_end_address())
-            , ptr(info.get_dmi_ptr())
-        {}
-
-        uint64_t get_size() const
-        {
-            /* FIXME: possible overflow */
-            assert((start != 0) || (end != std::numeric_limits<uint64_t>::max()));
-            return end - start + 1;
-        }
-
-        Key get_key() const
-        {
-            return reinterpret_cast<Key>(ptr);
-        }
-    };
-
     /* Simple container object used to parent the memory regions we create */
     class QemuContainer : public qemu::Object {
     public:
@@ -97,21 +61,234 @@ public:
         QemuContainer(const Object &o) : Object(o) {}
     };
 
+    /**
+     * @brief a DMI region
+     *
+     * @detail Represent a DMI region with a size and an host pointer. It also
+     * embeds the QEMU memory region mapping to this host pointer. Note that it
+     * does not have start and end addresses as it is totally address space
+     * agnostic. Two initiators with two different views of the address space
+     * can map the same DMI region.
+     *
+     * Note: The get_key method is used to index the map in which the regions
+     * are stored. Currently, we use the host memory address itself to index
+     * the map. This makes a strong assumption on the fact that two consecutive
+     * DMI region requests for the same region will return the same host
+     * address.  This is not clearly stated in the TLM-2.0 standard but is
+     * quite reasonable to assume.
+     */
+    class DmiRegion {
+    public:
+        using Key = uintptr_t;
+        using Ptr = std::shared_ptr<DmiRegion>;
+
+    private:
+        void *m_ptr;
+
+        bool m_valid;
+        QemuContainer m_container;
+        qemu::MemoryRegion m_mr;
+        uint64_t m_size;
+
+        void set_size(const tlm::tlm_dmi &info)
+        {
+            uint64_t start, end;
+
+            start = info.get_start_address();
+            end = info.get_end_address();
+
+            if ((start == 0) && (end == std::numeric_limits<uint64_t>::max())) {
+                /* TODO if needed */
+                assert(false);
+            } else {
+                m_size = info.get_end_address() - info.get_start_address() + 1;
+            }
+        }
+
+    public:
+        DmiRegion() = default;
+
+        DmiRegion(const tlm::tlm_dmi &info, qemu::LibQemu &inst)
+            : m_ptr(info.get_dmi_ptr())
+            , m_valid(true)
+            , m_container(inst.object_new<QemuContainer>())
+            , m_mr(inst.object_new<qemu::MemoryRegion>())
+        {
+            set_size(info);
+            m_mr.init_ram_ptr(m_container, "dmi", get_size(), m_ptr);
+        }
+
+        virtual ~DmiRegion()
+        {
+            GS_LOG("Destroying DMI region for host ptr %p", m_ptr);
+        }
+
+        uint64_t get_size() const
+        {
+            return m_size;
+        }
+
+        qemu::MemoryRegion get_mr()
+        {
+            return m_mr;
+        }
+
+        Key get_key() const
+        {
+            return reinterpret_cast<Key>(m_ptr);
+        }
+
+        static Key key_from_tlm_dmi(const tlm::tlm_dmi &info)
+        {
+            return reinterpret_cast<Key>(info.get_dmi_ptr());
+        }
+
+        bool is_valid() const
+        {
+            return m_valid;
+        }
+
+        void invalidate()
+        {
+            m_valid = false;
+        }
+    };
+
+    /**
+     * @brief An alias to a DMI region
+     *
+     * @detail An object of this class represents an alias to a DMI region a
+     * CPU can map on its own address space. Contrary to a DmiRegion, it has a
+     * start and an end address as it it requested from the point of view of an
+     * initiator's address map.
+     *
+     * It embeds a shared pointer of the underlying DMI region. The DMI region
+     * get destroyed once all aliases referencing it have been destroyed.
+     */
+    class DmiRegionAlias {
+    private:
+        DmiRegion::Ptr m_region;
+
+        uint64_t m_start;
+        uint64_t m_end;
+
+        QemuContainer m_container;
+        qemu::MemoryRegion m_alias;
+
+        bool m_installed = false;
+
+    public:
+        /* Construct an invalid alias */
+        DmiRegionAlias()
+        {}
+
+        DmiRegionAlias(DmiRegion::Ptr region, const tlm::tlm_dmi &info, qemu::LibQemu &inst)
+            : m_region(region)
+            , m_start(info.get_start_address())
+            , m_end(info.get_end_address())
+            , m_container(inst.object_new<QemuContainer>())
+            , m_alias(inst.object_new<qemu::MemoryRegion>())
+        {
+            m_alias.init_alias(m_container, "dmi-alias",
+                               m_region->get_mr(), 0,
+                               m_region->get_size());
+        }
+
+        uint64_t get_start() const
+        {
+            return m_start;
+        }
+
+        uint64_t get_end() const
+        {
+            return m_end;
+        }
+
+        uint64_t get_size() const
+        {
+            return m_region->get_size();
+        }
+
+        qemu::MemoryRegion get_alias_mr() const
+        {
+            return m_alias;
+        }
+
+        /**
+         * @brief Return true if the alias and its underlying DMI region are valid
+         *
+         * @note Must be called with the DMI manager lock held
+         */
+        bool is_valid() const
+        {
+            return m_region && m_region->is_valid();
+        }
+
+        /**
+         * @brief Invalidate the underlying DMI region
+         *
+         * @note Must be called with the DMI manager lock held
+         */
+        void invalidate_region()
+        {
+            m_region->invalidate();
+        }
+
+        /**
+         * @brief Mark the alias as mapped onto QEMU root MR
+         *
+         * @note Must be called with the DMI manager lock held
+         */
+        void set_installed()
+        {
+            m_installed = true;
+        }
+
+        /**
+         * @brief Return true if the alias is mapped onto QEMU root MR
+         *
+         * @note Must be called with the DMI manager lock held
+         */
+        bool is_installed() const
+        {
+            return m_installed;
+        }
+    };
+
 protected:
     qemu::LibQemu &m_inst;
-    QemuContainer m_mr_container; /* Used for MR ref counting in QEMU */
     std::mutex m_mutex;
 
-    std::map<DmiInfo::Key, DmiInfo> m_dmis;
+    /*
+     * Keep a weak pointer on the DMI region so that they get destroyed once no
+     * alias reference it anymore.
+     */
+    std::map< DmiRegion::Key, std::weak_ptr<DmiRegion> > m_regions;
 
-    void create_global_mr(DmiInfo &info)
+    DmiRegion::Ptr create_region(const tlm::tlm_dmi &info)
     {
-        assert(!info.mr.valid());
+        DmiRegion::Ptr ret = std::make_shared<DmiRegion>(info, m_inst);
 
-        info.mr = m_inst.object_new<qemu::MemoryRegion>();
-        info.mr.init_ram_ptr(m_mr_container, "dmi", info.get_size(), info.ptr);
+        return ret;
+    }
 
-        m_dmis[info.get_key()] = info;
+    DmiRegion::Ptr get_region(const tlm::tlm_dmi &info)
+    {
+        DmiRegion::Key key = DmiRegion::key_from_tlm_dmi(info);
+        DmiRegion::Ptr ret;
+
+        ret = m_regions[key].lock();
+
+        if (!ret) {
+            /*
+             * The corresponding region either does not exist or has been
+             * destroyed. Create a new one.
+             */
+            ret = create_region(info);
+            m_regions[key] = ret;
+        }
+
+        return ret;
     }
 
 public:
@@ -128,32 +305,17 @@ public:
      */
     QemuInstanceDmiManager(QemuInstanceDmiManager &&a)
         : m_inst(a.m_inst)
-        , m_mr_container(std::move(a.m_mr_container))
-        , m_dmis(std::move(a.m_dmis))
+        , m_regions(std::move(a.m_regions))
     {}
 
-    void init()
-    {
-        m_mr_container = m_inst.object_new<QemuContainer>();
-    }
-
     /**
-     * @brief Fill DMI info with the corresponding global memory region
-     *
-     * @details Fill the DMI info `info' with the global memory region matching
-     * the rest of `info'. If the global MR does not exist yet, it is created.
-     * Otherwise the already existing one is returned.
-     *
-     * @param[in,out] info The DMI info to use and to fill with the global MR
+     * @brief Create a new alias for the DMI region designated by `info`
      */
-    void get_global_mr(DmiInfo &info)
+    DmiRegionAlias get_new_region_alias(const tlm::tlm_dmi& info)
     {
-        if (m_dmis.find(info.get_key()) == m_dmis.end()) {
-            create_global_mr(info);
-        }
+        DmiRegion::Ptr region(get_region(info));
 
-        info = m_dmis.at(info.get_key());
-        assert(info.mr.valid());
+        return DmiRegionAlias(region, info, m_inst);
     }
 
     friend class LockedQemuInstanceDmiManager;
@@ -172,7 +334,7 @@ public:
 class LockedQemuInstanceDmiManager
 {
 public:
-    using DmiInfo = QemuInstanceDmiManager::DmiInfo;
+    using DmiRegion = QemuInstanceDmiManager::DmiRegion;
 
 protected:
     QemuInstanceDmiManager &m_inst;
@@ -188,11 +350,11 @@ public:
     LockedQemuInstanceDmiManager(LockedQemuInstanceDmiManager &&) = default;
 
     /**
-     * @see QemuInstanceDmiManager::get_global_mr
+     * @see QemuInstanceDmiManager::get_new_region_alias
      */
-    void get_global_mr(DmiInfo &info)
+    QemuInstanceDmiManager::DmiRegionAlias get_new_region_alias(const tlm::tlm_dmi &info)
     {
-        m_inst.get_global_mr(info);
+        return m_inst.get_new_region_alias(info);
     }
 };
 

@@ -64,7 +64,10 @@ public:
     using TlmPayload = tlm::tlm_generic_payload;
     using MemTxResult = qemu::MemoryRegionOps::MemTxResult;
     using MemTxAttrs = qemu::MemoryRegionOps::MemTxAttrs;
-    using DmiInfo = QemuInstanceDmiManager::DmiInfo;
+    using DmiRegion = QemuInstanceDmiManager::DmiRegion;
+    using DmiRegionAlias = QemuInstanceDmiManager::DmiRegionAlias;
+
+    using DmiRegionAliasKey = uint64_t;
 
 protected:
     QemuInstance &m_inst;
@@ -73,6 +76,8 @@ protected:
     gs::RunOnSysC m_on_sysc;
 
     qemu::MemoryRegion m_root;
+
+    std::map<DmiRegionAliasKey, DmiRegionAlias> m_dmi_aliases;
 
     void init_payload(TlmPayload &trans, tlm::tlm_command command, uint64_t addr,
                       uint64_t *val, unsigned int size)
@@ -89,53 +94,133 @@ protected:
         m_initiator.initiator_customize_tlm_payload(trans);
     }
 
-    /*
-     * Create a memory region as an alias to the global memory region contained
-     * in info. Map the newly created region onto our root MR.
-     */
-    void add_dmi_mr_alias(DmiInfo &info)
+    DmiRegionAliasKey get_dmi_region_alias_key(const tlm::tlm_dmi &info)
     {
-        qemu::MemoryRegion alias = m_inst.get().object_new<qemu::MemoryRegion>();
+        return info.get_start_address();
+    }
 
-        alias.init_alias(m_dev, "dmi-alias", info.mr, 0, info.get_size());
-        m_root.add_subregion(alias, info.start);
+    DmiRegionAliasKey get_dmi_region_alias_key(const DmiRegionAlias &alias)
+    {
+        return alias.get_start();
+    }
+
+    void add_dmi_mr_alias(DmiRegionAlias &alias)
+    {
+        qemu::MemoryRegion alias_mr = alias.get_alias_mr();
+
+        GS_LOG("Adding DMI alias for region [%08" PRIx64 ", %08" PRIx64"]",
+               alias.get_start(), alias.get_end());
+
+        m_inst.get().lock_iothread();
+        m_root.add_subregion(alias_mr, alias.get_start());
+        m_inst.get().unlock_iothread();
+
+        alias.set_installed();
+    }
+
+    void del_dmi_mr_alias(const DmiRegionAlias &alias)
+    {
+        qemu::MemoryRegion alias_mr = alias.get_alias_mr();
+
+        if (!alias.is_installed()) {
+            return;
+        }
+
+        GS_LOG("Removing DMI alias for region [%08" PRIx64 ", %08" PRIx64"]",
+               alias.get_start(), alias.get_end());
+
+        m_inst.get().lock_iothread();
+        m_root.del_subregion(alias_mr);
+        m_inst.get().unlock_iothread();
+    }
+
+    /*
+     * Called on the SystemC thread. Returns a DMI region alias covering the
+     * payload address.
+     */
+    DmiRegionAlias* request_dmi_region(TlmPayload &trans)
+    {
+        bool valid;
+        tlm::tlm_dmi dmi_data;
+        DmiRegionAliasKey key;
+
+        valid = (*this)->get_direct_mem_ptr(trans, dmi_data);
+
+        if (!valid) {
+            /* This is probably a bug in the target. Return an invalid alias. */
+            return nullptr;
+        }
+
+        GS_LOG("Got DMI for range [%08" PRIx64 ", %08" PRIx64 "]",
+               dmi_data.get_start_address(),
+               dmi_data.get_end_address());
+
+        key = get_dmi_region_alias_key(dmi_data);
+
+        assert(m_dmi_aliases.find(key) == m_dmi_aliases.end());
+
+        LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
+        DmiRegionAlias alias(dmi_mgr.get_new_region_alias(dmi_data));
+
+        m_dmi_aliases[key] = alias;
+        return &m_dmi_aliases[key];
     }
 
     /*
      * Check for the presence of the DMI hint in the transaction. If found,
-     * request a DMI region, ask the QEMU instance DMI manager for a global MR
-     * for it and create the corresponding alias.
+     * request a DMI region, ask the QEMU instance DMI manager for a DMI region
+     * alias for it and map it on the CPU address space.
+     *
+     * Ideal, the whole operation could be done on the SystemC thread for
+     * simplicity. Unfortunately, QEMU misbehaves if the memory region alias
+     * subregion is mapped on the root MR by another thread than the CPU
+     * thread. This is related to some internal QEMU code taking different
+     * paths depending on the current thread. Basically if the subregion add is
+     * not done on the CPU thread, the modification won't be visible
+     * immediately by the CPU so the next memory access may go through the I/O
+     * path again.
+     *
+     * On the other hand we must do a bunch on the SystemC thread to ensure
+     * validity of the DMI region and thus the alias until the point where we
+     * effectively map the alias onto the root MR. This is why we first create
+     * the alias on the SystemC thread and return it to the CPU thread. Once
+     * we're back to the CPU thread, we lock the DMI manager again and check
+     * for the alias validity flag. If an invalidation happened in between,
+     * this flag will be false and we know we can throw the entire DMI request.
+     *
+     * If the alias is valid after we took the lock, we can map it. If an
+     * invalidation must occur, it will be done after we release the lock.
      *
      * @see QemuInstanceDmiManager for more information on why we need a global
      * MR per DMI region.
      */
     void check_dmi_hint(TlmPayload &trans)
     {
-        bool valid;
-
-        tlm::tlm_dmi dmi_data;
+        DmiRegionAliasKey key;
+        DmiRegionAlias *alias;
 
         if (!trans.is_dmi_allowed()) {
             return;
         }
 
-        m_on_sysc.run_on_sysc([this, &trans, &dmi_data, &valid] {
-            valid = (*this)->get_direct_mem_ptr(trans, dmi_data);
-        });
+        GS_LOG("DMI request for address %08" PRIx64, trans.get_address());
+        m_on_sysc.run_on_sysc([this, &trans, &alias] { alias = request_dmi_region(trans); });
 
-        if (!valid) {
-            /* This is probably a bug in the target */
+        if (alias == nullptr) {
             return;
         }
 
-        DmiInfo info(dmi_data);
+        LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
 
-        {
-            LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
-            dmi_mgr.get_global_mr(info);
+        key = get_dmi_region_alias_key(*alias);
+
+        if (!alias->is_valid()) {
+            /* This DMI region has been invalidated since we requested it */
+            m_dmi_aliases.erase(key);
+            return;
         }
 
-        add_dmi_mr_alias(info);
+        add_dmi_mr_alias(*alias);
     }
 
     void check_qemu_mr_hint(TlmPayload &trans)

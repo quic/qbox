@@ -232,7 +232,6 @@ public:
         }
 
         m_inst.init();
-        m_dmi_mgr.init();
     }
 
     /**
