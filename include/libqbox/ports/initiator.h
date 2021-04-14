@@ -369,7 +369,76 @@ public:
         GS_LOG("DMI invalidate: [%08" PRIx64 ", %08" PRIx64 "]",
                uint64_t(start_range), uint64_t(end_range));
 
-        /* TODO */
+        LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
+
+        auto it = m_dmi_aliases.lower_bound(start_range);
+
+        if (it != m_dmi_aliases.begin()) {
+            /*
+             * Start with the preceding region, as it may already cross the
+             * range we must invalidate.
+             */
+            it--;
+        }
+
+        while (it != m_dmi_aliases.end()) {
+            DmiRegionAlias &r = it->second;
+
+            if (r.get_start() > end_range) {
+                /* We've got out of the invalidation range */
+                break;
+            }
+
+            if (r.get_end() < start_range) {
+                /* We are not in yet */
+                it++;
+                continue;
+            }
+
+            /*
+             * Invalidate this region. Do not bother with partial invalidation
+             * as it's really not worth it. Better let the target model returns
+             * sub-DMI regions during future accesses.
+             */
+
+            /*
+             * Mark the whole region this alias maps to as invalid. This has
+             * the effect of marking all the other aliases mapping to the same
+             * region as invalid too. If a DMI request for the same region is
+             * already in progress, it will have a chance to detect it is now
+             * invalid before mapping it on the QEMU root MR (see
+             * check_dmi_hint comment).
+             */
+            r.invalidate_region();
+
+            if (!r.is_installed()) {
+                /*
+                 * The alias is not mapped onto the QEMU root MR yet. Simply
+                 * skip it. It will be removed from m_dmi_aliases by
+                 * check_dmi_hint.
+                 */
+                it++;
+                continue;
+            }
+
+            /*
+             * Remove the alias from the root MR. This is enough to perform
+             * required invalidations on QEMU's side in a thread-safe manner.
+             */
+            del_dmi_mr_alias(r);
+
+            /*
+             * Remove the alias from the collection. The DmiRegionAlias object
+             * is then destructed, leading to the destruction of the DmiRegion
+             * shared pointer it contains. When no more alias reference this
+             * region, it is in turn destructed, effectively destroying the
+             * corresponding memory region in QEMU.
+             */
+            it = m_dmi_aliases.erase(it);
+
+            GS_LOG("Invalidated region [%08" PRIx64 ", %08" PRIx64 "]",
+                   uint64_t(r.get_start()), uint64_t(r.get_end()));
+        }
     }
 };
 
