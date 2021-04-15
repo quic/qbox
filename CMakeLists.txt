@@ -45,3 +45,5 @@ target_link_libraries(${PROJECT_NAME} INTERFACE
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 gs_export()
+
+gs_enable_testing()
