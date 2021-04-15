@@ -2,7 +2,7 @@
 #define BASIC_PLATFORM_REPORT_H
 
 #include <systemc>
-
+#include <cinttypes>
 
 namespace gs {
 
