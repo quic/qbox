@@ -23,6 +23,7 @@
 #include <functional>
 #include <limits>
 #include <cassert>
+#include <cinttypes>
 
 #include <tlm>
 
