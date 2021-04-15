@@ -59,7 +59,11 @@ namespace gs {
 
             void cancel()
             {
-                m_cancelled = true;
+// A (hung) job can be cancelled by re-running the job in a cancelled state, the
+// tasks that wraps the job will then terminate (and any future.wait will terminate).
+// Note - if the 'hung' job were to ever re-start, it's side effects would be seen.
+                m_cancelled = true;  
+
                 run_job();
             }
 
