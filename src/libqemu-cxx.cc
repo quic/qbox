@@ -18,6 +18,7 @@
  */
 
 #include <cstring>
+#include <cassert>
 
 #include <libqemu/libqemu.h>
 
@@ -51,6 +52,7 @@ void LibQemu::push_qemu_arg(const char *arg)
     char * dst = new char[std::strlen(arg)+1];
     std::strcpy(dst, arg);
 
+    assert(!is_inited());
     m_qemu_argv.push_back(dst);
 }
 
