@@ -118,6 +118,90 @@ private:
         }
     }
 
+  void alias_params(const std::initializer_list<std::pair<std::string, std::string>> &list) {
+        // handle aliases
+    for (auto &p : list) {
+        std::string aliasname = relname(p.second);
+        set_preset_cci_value(relname(p.first), get_preset_cci_value(aliasname), m_originator);
+        alias_param(relname(p.first), aliasname);
+    }
+  }
+/**
+   *  @fn     void typed_post_write_callback(const cci::cci_param_write_event<int> & ev)
+   *  @brief  Post Callback function to sync ongoing written parameter value with synced_handle value
+   *  @return void
+   */
+  void untyped_post_write_callback(const cci::cci_param_write_event<> & ev ,
+                                   cci::cci_param_handle synced_handle) {
+     synced_handle.set_cci_value(ev.new_value);
+  }
+ /**
+   *  @fn     void sync_values(cci::cci_param_handle _param_handle_1, cci::cci_param_handle _param_handle_2)
+   *  @brief  Function for synchronizing the values of cci_parameter of OWNER
+   *          modules via the PARAM_VALUE_SYNC
+   *  @param  _param_handle_1 The first parameter to be synced
+   *  @param  _param_handle_2 The second parameter to be synced
+   *  @return void
+   */
+  void sync_values(cci::cci_param_handle _param_handle_1,
+                   cci::cci_param_handle _param_handle_2) {
+    // In order to synchronize even the default values of the owner modules,
+    // use cci_base_param of one parameter as reference, write the same value
+    // to the other pararmeter's cci_base_param using JSON
+    _param_handle_1.set_cci_value(_param_handle_2.get_cci_value());
+
+    post_write_cb_vec.push_back(_param_handle_1.register_post_write_callback(
+            sc_bind(&ConfigurableBroker::untyped_post_write_callback,
+                    this, sc_unnamed::_1, _param_handle_2)));
+
+    post_write_cb_vec.push_back(_param_handle_2.register_post_write_callback(
+            sc_bind(&ConfigurableBroker::untyped_post_write_callback,
+                    this, sc_unnamed::_1, _param_handle_1)));
+  }
+
+   std::vector<cci::cci_callback_untyped_handle> post_write_cb_vec; ///< Callback Adaptor Objects
+
+   cci_param_create_callback_handle register_cb;
+   std::vector<std::pair<std::string, std::string>> alias_list;
+
+   void alias_param(std::string a, std::string b) {
+       alias_list.push_back(std::make_pair(a, b));
+       if (register_cb==cci_param_create_callback_handle()) {
+          register_cb = register_create_callback(sc_bind(&ConfigurableBroker::alias_param_callback, this , sc_unnamed::_1), m_originator);
+       }
+       alias_param_callback(cci::cci_param_handle());
+   }
+
+  void alias_param_callback(const cci_param_untyped_handle &ph)
+  {
+    alias_list.erase(
+    std::remove_if(alias_list.begin(), alias_list.end(),
+      [&](auto a) { 
+
+            cci_param_untyped_handle h_a =
+                get_param_handle(a.first, m_originator);
+            if (h_a.is_valid() && h_a.get_mutable_type()==cci::CCI_IMMUTABLE_PARAM) {
+              return true;
+            }
+            cci_param_untyped_handle h_b =
+                    get_param_handle(a.second, m_originator);
+            if (h_b.is_valid() && !h_a.is_valid()) {
+                set_preset_cci_value(a.first, h_b.get_cci_value(), m_originator);
+                return false; // maybe it'll be mutable when it arrives?
+            }
+            if (h_a.is_valid() && h_b.is_valid()) {
+                sync_values(h_a, h_b);
+                return true;
+            }
+            return false;
+      } ),
+    alias_list.end());
+
+  if (alias_list.size()==0) {
+      unregister_create_callback(register_cb, m_originator);
+  }  
+}
+
 public:
     /*
  * public interface functions
@@ -194,17 +278,17 @@ public:
    * will be exported to the parent broker
    */
     ConfigurableBroker(std::initializer_list<cci_name_value_pair> list,
+        std::initializer_list<std::pair<std::string, std::string>> alias_list = {},
         bool load_conf_file = true)
         : ConfigurableBroker(false)
     {
         initialize_params(list);
-
+        alias_params(alias_list);
         if (load_conf_file && !(std::string(conf_file).empty())) {
             LuaFile_Tool lua("lua", m_orig_name);
             lua.config(std::string(conf_file).c_str());
         }
     }
-
     /*
    * in this case, the expectation is that this is being used at (or near) the
    * top level of the design, and this broker will act as a global broker. A

@@ -21,4 +21,10 @@ set_tests_properties(lua_test PROPERTIES TIMEOUT 10)
 add_executable(cci_test cci_test.cc)
 target_link_libraries(cci_test SystemC::systemc SystemC::cci libgsutils)
 add_test(NAME cci_test COMMAND cci_test --param MyTopThree.lua_conf=\"${CMAKE_CURRENT_SOURCE_DIR}/lua_test.lua\")
-set_tests_properties(lua_test PROPERTIES TIMEOUT 10)
+set_tests_properties(cci_test PROPERTIES TIMEOUT 10)
+
+
+add_executable(cci_alias_test cci_alias_test.cc)
+target_link_libraries(cci_alias_test SystemC::systemc SystemC::cci libgsutils)
+add_test(NAME cci_alias_test COMMAND cci_alias_test --param MyTopThree.lua_conf=\"${CMAKE_CURRENT_SOURCE_DIR}/lua_test.lua\")
+set_tests_properties(cci_test PROPERTIES TIMEOUT 10)
