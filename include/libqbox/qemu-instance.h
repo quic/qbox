@@ -143,6 +143,15 @@ public:
     virtual ~QemuInstance() {}
 
     /**
+     * @brief Add a command line argument to the qemu instance.
+     *
+     * This method may only be called before the instance is initialized.
+     */
+    void add_arg(const char *arg) {
+        m_inst.push_qemu_arg(arg);
+    }
+
+    /**
      * @brief Set the desired TCG mode for this instance
      *
      * @details This method is called by CPU instances to specify the desired
