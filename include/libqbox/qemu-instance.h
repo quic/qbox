@@ -142,6 +142,14 @@ public:
     QemuInstance(QemuInstance &&) = default;
     virtual ~QemuInstance() {}
 
+    bool operator ==(const QemuInstance &b) const {
+        return this == &b;
+    }
+
+    bool operator !=(const QemuInstance &b) const {
+        return this != &b;
+    }
+
     /**
      * @brief Add a command line argument to the qemu instance.
      *
