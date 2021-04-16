@@ -345,6 +345,17 @@ public:
     void connect_gpio_out(int idx, Gpio gpio);
 };
 
+class GpexHost : public SysBusDevice {
+public:
+    static constexpr const char * const TYPE = "gpex-pcihost";
+
+    GpexHost() = default;
+    GpexHost(const GpexHost &) = default;
+    GpexHost(const Object &o) : SysBusDevice(o) { }
+
+    void set_irq_num(int idx, int gic_irq);
+};
+
 class Cpu : public Device {
 public:
     static constexpr const char * const TYPE = "cpu";
