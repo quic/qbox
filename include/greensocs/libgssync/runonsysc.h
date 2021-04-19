@@ -81,6 +81,7 @@ namespace gs {
 
         /* Async job queue */
         std::queue< AsyncJob::Ptr > m_async_jobs;
+        AsyncJob::Ptr m_running_job;
         std::mutex m_async_jobs_mutex;
 
         async_event m_jobs_handler_event;
@@ -90,19 +91,29 @@ namespace gs {
             std::unique_lock<std::mutex> lock(m_async_jobs_mutex);
             for (;;) {
                 while (!m_async_jobs.empty()) {
-                    AsyncJob::Ptr job = m_async_jobs.front();
+                    m_running_job = m_async_jobs.front();
                     m_async_jobs.pop();
 
                     lock.unlock();
                     sc_core::sc_unsuspendable(); // a wait in the job will cause systemc time to advance
-                    (*job)();
+                    (*m_running_job)();
                     sc_core::sc_suspendable();
                     lock.lock();
+
+                    m_running_job.reset();
                 }
 
                 lock.unlock();
                 wait(m_jobs_handler_event);
                 lock.lock();
+            }
+        }
+
+        void cancel_pendings_locked()
+        {
+            while (!m_async_jobs.empty()) {
+                m_async_jobs.front()->cancel();
+                m_async_jobs.pop();
             }
         }
 
@@ -122,13 +133,31 @@ namespace gs {
          * @detail Cancel all the pending jobs. The callers will be unblocked
          *         if they are waiting for the job.
          */
+        void cancel_pendings()
+        {
+            std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
+
+            cancel_pendings_locked();
+        }
+
+        /**
+         * @brief Cancel all pending and running jobs
+         *
+         * @detail Cancel all the pending jobs and the currently running job.
+         *         The callers will be unblocked if they are waiting for the
+         *         job. Note that if the currently running job is resumed, the
+         *         behaviour is undefined. This method is meant to be called
+         *         after simulation has ended.
+         */
         void cancel_all()
         {
             std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
 
-            while (!m_async_jobs.empty()) {
-                m_async_jobs.front()->cancel();
-                m_async_jobs.pop();
+            cancel_pendings_locked();
+
+            if (m_running_job) {
+                m_running_job->cancel();
+                m_running_job.reset();
             }
         }
 
