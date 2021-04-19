@@ -263,10 +263,6 @@ protected:
      */
     void end_of_loop_cb()
     {
-        if (sc_core::sc_get_status() < sc_core::SC_RUNNING) {
-            /* Simulation hasn't started yet. */
-            return;
-        }
 
         if (m_coroutines) {
             m_inst.get().coroutine_yield();
@@ -387,6 +383,10 @@ public:
             std::cout << "Starting gdb server on TCP port " << p_gdb_port << "\n";
             ss << "tcp::" << p_gdb_port;
             m_inst.get().start_gdb_server(ss.str());
+
+            m_inst.get().lock_iothread();
+            m_inst.get().vm_stop_paused();
+            m_inst.get().unlock_iothread();
         }
 
         m_qk->start();
