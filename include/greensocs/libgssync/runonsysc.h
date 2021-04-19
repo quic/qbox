@@ -22,19 +22,9 @@ namespace gs {
             using Ptr = std::shared_ptr<AsyncJob>;
 
         private:
-            std::function<void ()> m_job;
             std::packaged_task<void ()> m_task;
 
             bool m_cancelled = false;
-
-            void job_entry()
-            {
-                if (m_cancelled) {
-                    return;
-                }
-
-                m_job();
-            }
 
             void run_job()
             {
@@ -43,13 +33,11 @@ namespace gs {
 
         public:
             AsyncJob(std::function<void()> &&job)
-                : m_job(std::move(job))
-                , m_task(std::bind(&AsyncJob::job_entry, this))
+                : m_task(job)
             {}
 
             AsyncJob(std::function<void()> &job)
-                : m_job(job)
-                , m_task(std::bind(&AsyncJob::job_entry, this))
+                : m_task(job)
             {}
 
             AsyncJob() = delete;
@@ -57,17 +45,19 @@ namespace gs {
 
             void operator()()
             {
-                m_task();
+                run_job();
             }
 
+            /**
+             * @brief Cancel a job
+             *
+             * @details Cancel a job by setting m_cancelled to true and by
+             * resetting the task. Any waiter will then be unblocked immediately.
+             */
             void cancel()
             {
-// A (hung) job can be cancelled by re-running the job in a cancelled state, the
-// tasks that wraps the job will then terminate (and any future.wait will terminate).
-// Note - if the 'hung' job were to ever re-start, it's side effects would be seen.
                 m_cancelled = true;  
-
-                run_job();
+                m_task.reset();
             }
 
             void wait()
@@ -75,7 +65,10 @@ namespace gs {
                 auto future = m_task.get_future();
 
                 future.wait();
-                future.get();
+
+                if (!m_cancelled) {
+                    future.get();
+                }
             }
 
             bool is_cancelled() const
