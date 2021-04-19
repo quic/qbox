@@ -18,20 +18,13 @@ namespace gs {
     class RunOnSysC : public sc_core::sc_module {
     protected:
         class AsyncJob {
+        public:
+            using Ptr = std::shared_ptr<AsyncJob>;
+
         private:
-            std::function<void ()> m_job;
             std::packaged_task<void ()> m_task;
 
             bool m_cancelled = false;
-
-            void job_entry()
-            {
-                if (m_cancelled) {
-                    return;
-                }
-
-                m_job();
-            }
 
             void run_job()
             {
@@ -40,13 +33,11 @@ namespace gs {
 
         public:
             AsyncJob(std::function<void()> &&job)
-                : m_job(std::move(job))
-                , m_task(std::bind(&AsyncJob::job_entry, this))
+                : m_task(job)
             {}
 
             AsyncJob(std::function<void()> &job)
-                : m_job(job)
-                , m_task(std::bind(&AsyncJob::job_entry, this))
+                : m_task(job)
             {}
 
             AsyncJob() = delete;
@@ -54,17 +45,19 @@ namespace gs {
 
             void operator()()
             {
-                m_task();
+                run_job();
             }
 
+            /**
+             * @brief Cancel a job
+             *
+             * @details Cancel a job by setting m_cancelled to true and by
+             * resetting the task. Any waiter will then be unblocked immediately.
+             */
             void cancel()
             {
-// A (hung) job can be cancelled by re-running the job in a cancelled state, the
-// tasks that wraps the job will then terminate (and any future.wait will terminate).
-// Note - if the 'hung' job were to ever re-start, it's side effects would be seen.
                 m_cancelled = true;  
-
-                run_job();
+                m_task.reset();
             }
 
             void wait()
@@ -72,7 +65,10 @@ namespace gs {
                 auto future = m_task.get_future();
 
                 future.wait();
-                future.get();
+
+                if (!m_cancelled) {
+                    future.get();
+                }
             }
 
             bool is_cancelled() const
@@ -84,7 +80,8 @@ namespace gs {
         std::thread::id m_thread_id;
 
         /* Async job queue */
-        std::queue< std::shared_ptr<AsyncJob> > m_async_jobs;
+        std::queue< AsyncJob::Ptr > m_async_jobs;
+        AsyncJob::Ptr m_running_job;
         std::mutex m_async_jobs_mutex;
 
         async_event m_jobs_handler_event;
@@ -94,19 +91,29 @@ namespace gs {
             std::unique_lock<std::mutex> lock(m_async_jobs_mutex);
             for (;;) {
                 while (!m_async_jobs.empty()) {
-                    std::shared_ptr<AsyncJob> job = m_async_jobs.front();
+                    m_running_job = m_async_jobs.front();
                     m_async_jobs.pop();
 
                     lock.unlock();
                     sc_core::sc_unsuspendable(); // a wait in the job will cause systemc time to advance
-                    (*job)();
+                    (*m_running_job)();
                     sc_core::sc_suspendable();
                     lock.lock();
+
+                    m_running_job.reset();
                 }
 
                 lock.unlock();
                 wait(m_jobs_handler_event);
                 lock.lock();
+            }
+        }
+
+        void cancel_pendings_locked()
+        {
+            while (!m_async_jobs.empty()) {
+                m_async_jobs.front()->cancel();
+                m_async_jobs.pop();
             }
         }
 
@@ -126,13 +133,31 @@ namespace gs {
          * @detail Cancel all the pending jobs. The callers will be unblocked
          *         if they are waiting for the job.
          */
+        void cancel_pendings()
+        {
+            std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
+
+            cancel_pendings_locked();
+        }
+
+        /**
+         * @brief Cancel all pending and running jobs
+         *
+         * @detail Cancel all the pending jobs and the currently running job.
+         *         The callers will be unblocked if they are waiting for the
+         *         job. Note that if the currently running job is resumed, the
+         *         behaviour is undefined. This method is meant to be called
+         *         after simulation has ended.
+         */
         void cancel_all()
         {
             std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
 
-            while (!m_async_jobs.empty()) {
-                m_async_jobs.front()->cancel();
-                m_async_jobs.pop();
+            cancel_pendings_locked();
+
+            if (m_running_job) {
+                m_running_job->cancel();
+                m_running_job.reset();
             }
         }
 
@@ -162,7 +187,7 @@ namespace gs {
                 job_entry();
                 return true;
             } else {
-                std::shared_ptr<AsyncJob> job(new AsyncJob(job_entry));
+                AsyncJob::Ptr job(new AsyncJob(job_entry));
 
                 {
                     std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
