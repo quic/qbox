@@ -18,6 +18,9 @@ namespace gs {
     class RunOnSysC : public sc_core::sc_module {
     protected:
         class AsyncJob {
+        public:
+            using Ptr = std::shared_ptr<AsyncJob>;
+
         private:
             std::function<void ()> m_job;
             std::packaged_task<void ()> m_task;
@@ -84,7 +87,7 @@ namespace gs {
         std::thread::id m_thread_id;
 
         /* Async job queue */
-        std::queue< std::shared_ptr<AsyncJob> > m_async_jobs;
+        std::queue< AsyncJob::Ptr > m_async_jobs;
         std::mutex m_async_jobs_mutex;
 
         async_event m_jobs_handler_event;
@@ -94,7 +97,7 @@ namespace gs {
             std::unique_lock<std::mutex> lock(m_async_jobs_mutex);
             for (;;) {
                 while (!m_async_jobs.empty()) {
-                    std::shared_ptr<AsyncJob> job = m_async_jobs.front();
+                    AsyncJob::Ptr job = m_async_jobs.front();
                     m_async_jobs.pop();
 
                     lock.unlock();
@@ -162,7 +165,7 @@ namespace gs {
                 job_entry();
                 return true;
             } else {
-                std::shared_ptr<AsyncJob> job(new AsyncJob(job_entry));
+                AsyncJob::Ptr job(new AsyncJob(job_entry));
 
                 {
                     std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
