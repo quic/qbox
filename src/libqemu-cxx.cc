@@ -105,6 +105,16 @@ void LibQemu::start_gdb_server(std::string port)
     m_int->exports().gdbserver_start(port.c_str());
 }
 
+void LibQemu::vm_start()
+{
+    m_int->exports().vm_start();
+}
+
+void LibQemu::vm_stop_paused()
+{
+    m_int->exports().vm_stop_paused();
+}
+
 int64_t LibQemu::get_virtual_clock()
 {
     return m_int->exports().clock_virtual_get_ns();

@@ -79,6 +79,8 @@ public:
     /* QEMU GDB stub
      * @port: port the gdb server will be listening on. (ex: "tcp::1234") */
     void start_gdb_server(std::string port);
+    void vm_start();
+    void vm_stop_paused();
 
     void lock_iothread();
     void unlock_iothread();
