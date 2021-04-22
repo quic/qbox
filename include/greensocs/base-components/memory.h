@@ -146,7 +146,7 @@ public:
     }
 
     void map(const char *filename) {
-#ifdef _WIN32
+#ifndef _WIN32
         int fd = open(filename, O_RDWR);
         if (fd < 0) {
             SC_REPORT_ERROR("Memory", "Unable to find backing file\n");
