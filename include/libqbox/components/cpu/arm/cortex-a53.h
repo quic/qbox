@@ -54,6 +54,7 @@ public:
     cci::cci_param<bool> p_has_el3;
     cci::cci_param<bool> p_start_powered_off;
     cci::cci_param<std::string> p_psci_conduit;
+    cci::cci_param<uint64_t> p_rvbar;
 
     QemuTargetSignalSocket irq_in;
     QemuTargetSignalSocket fiq_in;
@@ -76,6 +77,8 @@ public:
                                                      "disabled->no conduit, "
                                                      "hvc->through hvc call, "
                                                      "smc->through smc call")
+        , p_rvbar("rvbar", 0ull, "Reset vector base address register value")
+
         , irq_in("irq-in")
         , fiq_in("fiq-in")
         , virq_in("virq-in")
@@ -106,6 +109,8 @@ public:
 
         cpu.set_prop_bool("start-powered-off", p_start_powered_off);
         cpu.set_prop_int("psci-conduit", get_psci_conduit_val());
+
+        cpu.set_prop_int("rvbar", p_rvbar);
     }
 
     void end_of_elaboration()
