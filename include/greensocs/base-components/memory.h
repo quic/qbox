@@ -25,7 +25,7 @@
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
 
-#ifdef _POSIX_MAPPED_FILES
+#ifndef _WIN32
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -146,7 +146,7 @@ public:
     }
 
     void map(const char *filename) {
-#ifdef _POSIX_MAPPED_FILES
+#ifndef _WIN32
         int fd = open(filename, O_RDWR);
         if (fd < 0) {
             SC_REPORT_ERROR("Memory", "Unable to find backing file\n");
