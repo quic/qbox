@@ -29,6 +29,7 @@
 #include <tlm_utils/simple_initiator_socket.h>
 
 #include <greensocs/libgsutils.h>
+#include <greensocs/gsutils/tlm-extensions/exclusive-access.h>
 
 template <unsigned int BUSWIDTH = 32>
 class Router : public sc_core::sc_module {
@@ -60,6 +61,19 @@ private:
     std::vector<TargetInfo> m_targets;
     std::vector<InitiatorInfo> m_initiators;
 
+    void check_exclusive_extension(int id, tlm::tlm_generic_payload &trans)
+    {
+        ExclusiveAccessTlmExtension *ext;
+
+        trans.get_extension(ext);
+
+        if (ext == nullptr) {
+            return;
+        }
+
+        ext->add_hop(id);
+    }
+
     void b_transport(int id, tlm::tlm_generic_payload &trans, sc_core::sc_time &delay)
     {
         sc_dt::uint64 addr = trans.get_address();
@@ -88,6 +102,7 @@ private:
         }
 
         trans.set_address(target_addr);
+        check_exclusive_extension(id, trans);
 
         (*m_initiator_sockets[target_nr])->b_transport(trans, delay);
     }
