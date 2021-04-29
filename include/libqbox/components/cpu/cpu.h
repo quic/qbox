@@ -36,6 +36,15 @@
 
 class QemuCpu : public QemuDevice, public QemuInitiatorIface {
 protected:
+    /*
+     * We have a unique copy per CPU of this extension, which is not dynamically allocated.
+     * We really don't want the default implementation to call delete on it...
+     */
+    class QemuCpuHintTlmExtension : public ::QemuCpuHintTlmExtension {
+    public:
+        void free() override { /* leave my extension alone, TLM */ }
+    };
+
     gs::RunOnSysC m_on_sysc;
     std::shared_ptr<qemu::Timer> m_deadline_timer;
     bool m_coroutines;
@@ -52,6 +61,8 @@ protected:
     int64_t m_last_vclock;
 
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
+
+    QemuCpuHintTlmExtension m_cpu_hint_ext;
 
     /*
      * Create the quantum keeper according to the p_sync_policy parameter, and
@@ -372,6 +383,8 @@ public:
         m_deadline_timer = m_inst.get().timer_new();
         m_deadline_timer->set_callback(std::bind(&QemuCpu::deadline_timer_cb,
                                                  this));
+
+        m_cpu_hint_ext.set_cpu(m_cpu);
     }
 
     virtual void end_of_elaboration() override
@@ -408,7 +421,12 @@ public:
     virtual void initiator_customize_tlm_payload(TlmPayload &payload) override
     {
         /* Signal the other end we are a CPU */
-        payload.set_extension(new QemuCpuHintTlmExtension(m_cpu));
+        payload.set_extension(&m_cpu_hint_ext);
+    }
+
+    virtual void initiator_tidy_tlm_payload(TlmPayload &payload) override
+    {
+        payload.clear_extension(&m_cpu_hint_ext);
     }
 
     /*

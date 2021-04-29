@@ -39,6 +39,7 @@ public:
     using TlmPayload = tlm::tlm_generic_payload;
 
     virtual void initiator_customize_tlm_payload(TlmPayload &payload) = 0;
+    virtual void initiator_tidy_tlm_payload(TlmPayload &payload) = 0;
     virtual sc_core::sc_time initiator_get_local_time() = 0;
     virtual void initiator_set_local_time(const sc_core::sc_time &) = 0;
 };
@@ -294,6 +295,8 @@ protected:
         } else {
             do_regular_access(trans);
         }
+
+        m_initiator.initiator_tidy_tlm_payload(trans);
 
         m_inst.get().lock_iothread();
 

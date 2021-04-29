@@ -25,6 +25,8 @@
 
 #include <libqemu-cxx/target/aarch64.h>
 
+#include <greensocs/gsutils/tlm-extensions/exclusive-access.h>
+
 #include "libqbox/components/cpu/cpu.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
@@ -48,6 +50,28 @@ protected:
         }
     }
 
+    void add_exclusive_ext(TlmPayload &pl)
+    {
+        ExclusiveAccessTlmExtension *ext = new ExclusiveAccessTlmExtension;
+        ext->add_hop(m_cpu.get_index());
+        pl.set_extension(ext);
+    }
+
+    static uint64_t extract_data_from_payload(const TlmPayload &pl)
+    {
+        uint8_t *ptr = pl.get_data_ptr() + pl.get_data_length() - 1;
+        uint64_t ret = 0;
+
+        /* QEMU never accesses more than 64 bits at the same time */
+        assert(pl.get_data_length() <= 8);
+
+        while (ptr >= pl.get_data_ptr()) {
+            ret = (ret << 8) | *(ptr--);
+        }
+
+        return ret;
+    }
+
 public:
     cci::cci_param<unsigned int> p_mp_affinity;
     cci::cci_param<bool> p_has_el2;
@@ -66,8 +90,8 @@ public:
     QemuInitiatorSignalSocket irq_timer_hyp_out;
     QemuInitiatorSignalSocket irq_timer_sec_out;
 
-	QemuCpuArmCortexA53(sc_core::sc_module_name name, QemuInstance &inst)
-		: QemuCpu(name, inst, "cortex-a53-arm")
+    QemuCpuArmCortexA53(sc_core::sc_module_name name, QemuInstance &inst)
+        : QemuCpu(name, inst, "cortex-a53-arm")
         , p_mp_affinity("mp-affinity", 0, "Multi-processor affinity value")
         , p_has_el2("has_el2", true, "ARM virtualization extensions")
         , p_has_el3("has_el3", true, "ARM secure-mode extensions")
@@ -87,18 +111,18 @@ public:
         , irq_timer_virt_out("irq-timer-virt-out")
         , irq_timer_hyp_out("irq-timer-hyp-out")
         , irq_timer_sec_out("irq-timer-sec-out")
-	{
+    {
         m_external_ev |= irq_in->default_event();
         m_external_ev |= fiq_in->default_event();
         m_external_ev |= virq_in->default_event();
         m_external_ev |= vfiq_in->default_event();
     }
 
-    void before_end_of_elaboration()
+    void before_end_of_elaboration() override
     {
         QemuCpu::before_end_of_elaboration();
 
-        qemu::CpuAarch64 cpu = qemu::CpuAarch64(get_qemu_dev());
+        qemu::CpuAarch64 cpu(m_cpu);
         cpu.set_aarch64_mode(true);
 
         if (!p_mp_affinity.is_default_value()) {
@@ -113,7 +137,7 @@ public:
         cpu.set_prop_int("rvbar", p_rvbar);
     }
 
-    void end_of_elaboration()
+    void end_of_elaboration() override
     {
         QemuCpu::end_of_elaboration();
 
@@ -126,5 +150,101 @@ public:
         irq_timer_virt_out.init(m_dev, 1);
         irq_timer_hyp_out.init(m_dev, 2);
         irq_timer_sec_out.init(m_dev, 3);
+    }
+
+    void initiator_customize_tlm_payload(TlmPayload &payload) override
+    {
+        uint64_t addr;
+        qemu::CpuAarch64 arm_cpu(m_cpu);
+
+        QemuCpu::initiator_customize_tlm_payload(payload);
+
+        addr = payload.get_address();
+
+        if (!arm_cpu.is_in_exclusive_context()) {
+            return;
+        }
+
+        if (addr != arm_cpu.get_exclusive_addr()) {
+            return;
+        }
+
+        /*
+         * We are in the load/store pair of the cmpxchg of the exclusive store
+         * implementation. Add the exclusive access extension to lock the
+         * memory and check for exclusive store success in
+         * initiator_tidy_tlm_payload.
+         */
+        add_exclusive_ext(payload);
+    }
+
+    void initiator_tidy_tlm_payload(TlmPayload &payload) override
+    {
+        using namespace tlm;
+
+        ExclusiveAccessTlmExtension *ext;
+        qemu::CpuAarch64 arm_cpu(m_cpu);
+
+        QemuCpu::initiator_tidy_tlm_payload(payload);
+
+        payload.get_extension(ext);
+        bool exit_tb = false;
+
+        if (ext == nullptr) {
+            return;
+        }
+
+        if (payload.get_command() == TLM_WRITE_COMMAND) {
+            auto sta = ext->get_exclusive_store_status();
+
+            /* We just executed an exclusive store. Check its status */
+            if (sta == ExclusiveAccessTlmExtension::EXCLUSIVE_STORE_FAILURE) {
+                /*
+                 * To actually make the exclusive store fails, we need to trick
+                 * QEMU into thinking that the value at the store address has
+                 * changed compared to when it did the corresponding ldrex (due
+                 * to the way exclusive loads/stores are implemented in QEMU).
+                 * For this, we simply smash the exclusive_val field of the ARM
+                 * CPU state in case it currently matches with the value in
+                 * memory.
+                 */
+                uint64_t exclusive_val = arm_cpu.get_exclusive_val();
+                uint64_t mem_val = extract_data_from_payload(payload);
+                uint64_t mask = (payload.get_data_length() == 8)
+                    ? -1
+                    : (1 << (8 * payload.get_data_length())) - 1;
+
+                if ((exclusive_val & mask) == mem_val) {
+                    arm_cpu.set_exclusive_val(~exclusive_val);
+
+                    /*
+                     * Exit the execution loop to force QEMU to re-do the
+                     * store. This is necessary because we modify exclusive_val
+                     * in the CPU env. This field is also mapped on a TCG
+                     * global. Even though the qemu_st_ixx TCG opcs are marked
+                     * TCG_OPF_CALL_CLOBBER, TCG does not reload the global
+                     * after the store as I thought it would do. To force this,
+                     * we exit the TB here so that the new exclusive_val value
+                     * will be taken into account on the next execution.
+                     */
+                    exit_tb = true;
+                }
+
+                payload.set_response_status(TLM_OK_RESPONSE);
+            }
+        }
+
+        payload.clear_extension(ext);
+        delete ext;
+
+        if (exit_tb) {
+            /*
+             * FIXME: exiting the CPU loop from here is a bit violent. The
+             * caller won't have a chance to destruct its stack objects. The
+             * object model should be reworked to allow exiting the loop
+             * cleanly.
+             */
+            m_cpu.exit_loop_from_io();
+        }
     }
 };
