@@ -48,6 +48,7 @@ public:
         m_cpu = static_cast<const QemuCpuHintTlmExtension&>(ext).m_cpu;
     }
 
+    void set_cpu(qemu::Cpu cpu) { m_cpu = cpu; }
     qemu::Cpu get_cpu() const { return m_cpu; }
 };
 
