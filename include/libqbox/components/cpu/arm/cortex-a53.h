@@ -66,8 +66,8 @@ public:
     QemuInitiatorSignalSocket irq_timer_hyp_out;
     QemuInitiatorSignalSocket irq_timer_sec_out;
 
-	QemuCpuArmCortexA53(sc_core::sc_module_name name, QemuInstance &inst)
-		: QemuCpu(name, inst, "cortex-a53-arm")
+    QemuCpuArmCortexA53(sc_core::sc_module_name name, QemuInstance &inst)
+        : QemuCpu(name, inst, "cortex-a53-arm")
         , p_mp_affinity("mp-affinity", 0, "Multi-processor affinity value")
         , p_has_el2("has_el2", true, "ARM virtualization extensions")
         , p_has_el3("has_el3", true, "ARM secure-mode extensions")
@@ -87,7 +87,7 @@ public:
         , irq_timer_virt_out("irq-timer-virt-out")
         , irq_timer_hyp_out("irq-timer-hyp-out")
         , irq_timer_sec_out("irq-timer-sec-out")
-	{
+    {
         m_external_ev |= irq_in->default_event();
         m_external_ev |= fiq_in->default_event();
         m_external_ev |= virq_in->default_event();
