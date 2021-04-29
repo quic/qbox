@@ -411,6 +411,10 @@ public:
         payload.set_extension(new QemuCpuHintTlmExtension(m_cpu));
     }
 
+    virtual void initiator_tidy_tlm_payload(TlmPayload &payload) override
+    {
+    }
+
     /*
      * Called by the initiator socket just before a memory transaction.
      * We update our current view of the local time and return it.
