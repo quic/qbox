@@ -34,9 +34,19 @@ void CpuArm::add_nvic_link()
     m_int->exports().cpu_arm_add_nvic_link(m_obj);
 }
 
-uint64_t CpuArm::get_exclusive_val()
+uint64_t CpuArm::get_exclusive_addr() const
+{
+    return m_int->exports().cpu_arm_get_exclusive_addr(m_obj);
+}
+
+uint64_t CpuArm::get_exclusive_val() const
 {
     return m_int->exports().cpu_arm_get_exclusive_val(m_obj);
+}
+
+void CpuArm::set_exclusive_val(uint64_t val)
+{
+    m_int->exports().cpu_arm_set_exclusive_val(m_obj, val);
 }
 
 void CpuAarch64::set_aarch64_mode(bool aarch64_mode)

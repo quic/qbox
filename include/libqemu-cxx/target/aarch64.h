@@ -33,7 +33,10 @@ public:
 
     void set_cp15_cbar(uint64_t cbar);
     void add_nvic_link();
-    uint64_t get_exclusive_val();
+
+    uint64_t get_exclusive_addr() const;
+    uint64_t get_exclusive_val() const;
+    void set_exclusive_val(uint64_t val);
 };
 
 class CpuAarch64 : public CpuArm {

@@ -322,11 +322,13 @@ public:
 
     using EndOfLoopCallbackFn = std::function<void ()>;
     using CpuKickCallbackFn = std::function<void ()>;
-    typedef void (*AsyncJobFn)(void *);
+    using AsyncJobFn = std::function<void ()>;
 
     Cpu() = default;
     Cpu(const Cpu &) = default;
     Cpu(const Object &o) : Device(o) {}
+
+    int get_index() const;
 
     void loop();
     bool loop_is_busy();
@@ -346,10 +348,15 @@ public:
 
     void kick();
 
-    void async_safe_run(AsyncJobFn job, void *arg);
+    [[ noreturn ]] void exit_loop_from_io();
+
+    void async_run(AsyncJobFn job);
+    void async_safe_run(AsyncJobFn job);
 
     void set_end_of_loop_callback(EndOfLoopCallbackFn cb);
     void set_kick_callback(CpuKickCallbackFn cb);
+
+    bool is_in_exclusive_context() const;
 };
 
 class Timer {
