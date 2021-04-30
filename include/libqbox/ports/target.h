@@ -33,6 +33,13 @@ public:
 
 protected:
     qemu::MemoryRegion m_mr;
+    std::shared_ptr<qemu::AddressSpace> m_as;
+
+    void init_as()
+    {
+        m_as = m_mr.get_inst().address_space_new();
+        m_as->init(m_mr, "qemu-target-socket");
+    }
 
     qemu::Cpu push_current_cpu(TlmPayload &trans)
     {
@@ -71,6 +78,7 @@ public:
     void init(qemu::SysBusDevice sbd, int mmio_idx)
     {
         m_mr = sbd.mmio_get_region(mmio_idx);
+        init_as();
     }
 
     virtual void b_transport(TlmPayload& trans,
@@ -92,11 +100,11 @@ public:
 
         switch (trans.get_command()) {
         case tlm::TLM_READ_COMMAND:
-            res = m_mr.dispatch_read(addr, data, size, attrs);
+            res = m_as->read(addr, data, size, attrs);
             break;
 
         case tlm::TLM_WRITE_COMMAND:
-            res = m_mr.dispatch_write(addr, *data, size, attrs);
+            res = m_as->write(addr, data, size, attrs);
             break;
 
         default:
