@@ -81,6 +81,12 @@ public:
         init_as();
     }
 
+    void init_with_mr(qemu::MemoryRegion mr)
+    {
+        m_mr = mr;
+        init_as();
+    }
+
     virtual void b_transport(TlmPayload& trans,
                              sc_core::sc_time& t)
     {
@@ -180,6 +186,11 @@ public:
     void init(qemu::SysBusDevice sbd, int mmio_idx)
     {
         m_bridge.init(sbd, mmio_idx);
+    }
+
+    void init_with_mr(qemu::MemoryRegion mr)
+    {
+        m_bridge.init_with_mr(mr);
     }
 };
 
