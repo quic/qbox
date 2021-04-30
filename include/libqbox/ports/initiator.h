@@ -159,7 +159,10 @@ protected:
 
         key = get_dmi_region_alias_key(dmi_data);
 
-        assert(m_dmi_aliases.find(key) == m_dmi_aliases.end());
+        if (m_dmi_aliases.find(key) != m_dmi_aliases.end()) {
+            GS_LOG("DMI region already exists, skipping");
+            return nullptr;
+        }
 
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
         DmiRegionAlias alias(dmi_mgr.get_new_region_alias(dmi_data));
