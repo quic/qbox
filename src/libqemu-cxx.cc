@@ -153,6 +153,13 @@ std::shared_ptr<MemoryRegionOps> LibQemu::memory_region_ops_new()
     return std::make_shared<MemoryRegionOps>(ops, m_int);
 }
 
+std::shared_ptr<AddressSpace> LibQemu::address_space_new()
+{
+    QemuAddressSpace *as = m_int->exports().address_space_new();
+
+    return std::make_shared<AddressSpace>(as, m_int);
+}
+
 static void qemu_gpio_generic_handler(void * opaque, int n, int level)
 {
     Gpio::GpioProxy *proxy = reinterpret_cast<Gpio::GpioProxy*>(opaque);

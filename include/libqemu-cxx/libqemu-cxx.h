@@ -35,6 +35,7 @@ struct LibQemuExports;
 struct QemuObject;
 struct MemTxAttrs;
 struct QemuMemoryRegionOps;
+struct QemuAddressSpace;
 struct QemuTimer;
 
 namespace qemu {
@@ -42,6 +43,7 @@ namespace qemu {
 class LibQemuInternals;
 class Object;
 class MemoryRegionOps;
+class AddressSpace;
 class Gpio;
 class Timer;
 class Bus;
@@ -99,6 +101,7 @@ public:
 
     Object object_new(const char *type_name);
     std::shared_ptr<MemoryRegionOps> memory_region_ops_new();
+    std::shared_ptr<AddressSpace> address_space_new();
     Gpio gpio_new();
 
     std::shared_ptr<Timer> timer_new();
@@ -281,6 +284,31 @@ public:
                                uint64_t size, MemTxAttrs attrs);
 
     bool operator< (const MemoryRegion &mr) const { return m_obj < mr.m_obj; }
+};
+
+class AddressSpace {
+private:
+    QemuAddressSpace *m_as;
+    std::shared_ptr<LibQemuInternals> m_int;
+
+    bool m_inited = false;
+
+public:
+    using MemTxResult = MemoryRegionOps::MemTxResult;
+    using MemTxAttrs = MemoryRegionOps::MemTxAttrs;
+
+    AddressSpace(QemuAddressSpace *as, 
+                 std::shared_ptr<LibQemuInternals> internals);
+    AddressSpace(const AddressSpace &) = delete;
+
+    ~AddressSpace();
+
+    void init(MemoryRegion mr, const char *name);
+
+    MemTxResult read(uint64_t addr, void *data,
+                     size_t size, MemTxAttrs attrs);
+    MemTxResult write(uint64_t addr, const void *data,
+                      size_t size, MemTxAttrs attrs);
 };
 
 class Device : public Object {
