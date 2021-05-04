@@ -37,14 +37,15 @@ private:
     uint64_t m_size;
 
     /** Host memory where the data will be stored */
-    uint8_t *m_ptr;
+    uint8_t* m_ptr;
 
     /** Wether the current ptr has been mapped to a file */
     bool m_mapped;
 
-    void b_transport(tlm::tlm_generic_payload &txn, sc_core::sc_time &delay) {
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         unsigned int len = txn.get_data_length();
-        unsigned char *ptr = txn.get_data_ptr();
+        unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
 
         if (txn.get_byte_enable_ptr() != 0 || txn.get_streaming_width() < len) {
@@ -57,15 +58,15 @@ private:
         }
 
         switch (txn.get_command()) {
-            case tlm::TLM_READ_COMMAND:
-                memcpy(ptr, &m_ptr[addr], len);
-                break;
-            case tlm::TLM_WRITE_COMMAND:
-                memcpy(&m_ptr[addr], ptr, len);
-                break;
-            default:
-                SC_REPORT_ERROR("Memory", "TLM command not supported\n");
-                break;
+        case tlm::TLM_READ_COMMAND:
+            memcpy(ptr, &m_ptr[addr], len);
+            break;
+        case tlm::TLM_WRITE_COMMAND:
+            memcpy(&m_ptr[addr], ptr, len);
+            break;
+        default:
+            SC_REPORT_ERROR("Memory", "TLM command not supported\n");
+            break;
         }
 
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
@@ -73,9 +74,10 @@ private:
         txn.set_dmi_allowed(true);
     }
 
-    unsigned int transport_dbg(tlm::tlm_generic_payload &txn) {
+    unsigned int transport_dbg(tlm::tlm_generic_payload& txn)
+    {
         unsigned int len = txn.get_data_length();
-        unsigned char *ptr = txn.get_data_ptr();
+        unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
 
         if (txn.get_byte_enable_ptr() != 0 || txn.get_streaming_width() < len) {
@@ -88,16 +90,16 @@ private:
         }
 
         switch (txn.get_command()) {
-            case tlm::TLM_READ_COMMAND:
-                memcpy(ptr, &m_ptr[addr], len);
-                break;
-            case tlm::TLM_WRITE_COMMAND:
-                memcpy(&m_ptr[addr], ptr, len);
-                break;
-            default:
-                len = 0;
-                SC_REPORT_ERROR("Memory", "TLM command not supported\n");
-                break;
+        case tlm::TLM_READ_COMMAND:
+            memcpy(ptr, &m_ptr[addr], len);
+            break;
+        case tlm::TLM_WRITE_COMMAND:
+            memcpy(&m_ptr[addr], ptr, len);
+            break;
+        default:
+            len = 0;
+            SC_REPORT_ERROR("Memory", "TLM command not supported\n");
+            break;
         }
 
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
@@ -105,11 +107,12 @@ private:
         return len;
     }
 
-    bool get_direct_mem_ptr(tlm::tlm_generic_payload &txn, tlm::tlm_dmi &dmi_data) {
+    bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
+    {
         static const sc_core::sc_time LATENCY(10, sc_core::SC_NS);
 
         dmi_data.allow_read_write();
-        dmi_data.set_dmi_ptr(reinterpret_cast<unsigned char *>(&m_ptr[0]));
+        dmi_data.set_dmi_ptr(reinterpret_cast<unsigned char*>(&m_ptr[0]));
         dmi_data.set_start_address(0);
         dmi_data.set_end_address(m_size - 1);
         dmi_data.set_read_latency(LATENCY);
@@ -136,12 +139,15 @@ public:
     Memory() = delete;
     Memory(const Memory&) = delete;
 
-    ~Memory() {
-        if (!m_mapped)
+    ~Memory()
+    {
+        if (!m_mapped) {
             delete[] m_ptr;
+        }
     }
 
-    uint64_t size() {
+    uint64_t size()
+    {
         return m_size;
     }
 
@@ -164,16 +170,19 @@ public:
         SC_REPORT_ERROR("Memory", "Backing files only supported on UNIX platforms\n");
 #endif
     }
-    size_t load(std::string filename, uint64_t addr) {
+    
+    size_t load(std::string filename, uint64_t addr)
+    {
         std::ifstream fin(filename, std::ios::in | std::ios::binary);
         if (!fin.good()) {
             printf("Memory::load(): error file not found (%s)\n", filename.c_str());
             exit(1);
         }
-        return fin.readsome((char *) &m_ptr[addr], m_size);
+        return fin.readsome((char*)&m_ptr[addr], m_size);
     }
 
-    void load(const uint8_t *ptr, uint64_t len, uint64_t addr) {
+    void load(const uint8_t* ptr, uint64_t len, uint64_t addr)
+    {
         memcpy(&m_ptr[addr], ptr, len);
     }
 };
