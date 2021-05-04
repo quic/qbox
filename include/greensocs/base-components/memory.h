@@ -111,14 +111,17 @@ private:
     {
         static const sc_core::sc_time LATENCY(10, sc_core::SC_NS);
 
-        dmi_data.allow_read_write();
-        dmi_data.set_dmi_ptr(reinterpret_cast<unsigned char*>(&m_ptr[0]));
-        dmi_data.set_start_address(0);
-        dmi_data.set_end_address(m_size - 1);
-        dmi_data.set_read_latency(LATENCY);
-        dmi_data.set_write_latency(LATENCY);
-
-        return true;
+        if (txn.get_address() < m_size) {
+            dmi_data.allow_read_write();
+            dmi_data.set_dmi_ptr(reinterpret_cast<unsigned char*>(&m_ptr[0]));
+            dmi_data.set_start_address(0);
+            dmi_data.set_end_address(m_size - 1);
+            dmi_data.set_read_latency(LATENCY);
+            dmi_data.set_write_latency(LATENCY);
+            return true;
+        } else {
+            return false;
+        }
     }
 
 public:
