@@ -338,6 +338,10 @@ public:
             return;
         }
 
+        if (!m_realized) {
+            return;
+        }
+
         if (m_coroutines) {
             /* No thread to join */
             return;
