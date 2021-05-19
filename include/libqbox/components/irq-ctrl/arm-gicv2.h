@@ -28,6 +28,63 @@
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
 
+class QemuArmGicv2m : public QemuDevice {
+protected:
+    cci::cci_param<unsigned int> p_base_spi;
+    cci::cci_param<unsigned int> p_num_spis;
+
+public:
+    /*
+     * Output interrupt lines. Vector are sized with the number of SPIs
+     * These cannot be plugged anywhere on the gic: it depends on the
+     * base-spi/num-spis parameter.
+     */
+    sc_core::sc_vector<QemuInitiatorSignalSocket> spi_out;
+
+    QemuTargetSocket<> iface;
+
+    QemuArmGicv2m(const sc_core::sc_module_name &name, QemuInstance &inst)
+        : QemuDevice(name, inst, "arm-gicv2m")
+        , p_base_spi("base-spi", 0, "Start index of gic's spis")
+        , p_num_spis("num-spis", 0, "Number of gic's spis")
+        , spi_out("spi_out", p_num_spis)
+        , iface("iface", inst)
+    {
+    }
+
+    unsigned int get_base_spi()
+    {
+        return p_base_spi;
+    }
+
+    unsigned int get_num_spis()
+    {
+        return p_num_spis;
+    }
+
+    void before_end_of_elaboration()
+    {
+        QemuDevice::before_end_of_elaboration();
+
+        m_dev.set_prop_int("base-spi", p_base_spi);
+        m_dev.set_prop_int("num-spi", p_num_spis);
+    }
+
+    void end_of_elaboration()
+    {
+        QemuDevice::end_of_elaboration();
+
+        qemu::SysBusDevice sbd(m_dev);
+
+        iface.init(sbd, 0);
+
+        /* IRQs out */
+        for (int i = 0; i < p_num_spis; i++) {
+            spi_out[i].init_sbd(sbd, i);
+        }
+    }
+};
+
 class QemuArmGicv2 : public QemuDevice {
 public:
     static const uint32_t NUM_PPI = 32;
@@ -39,12 +96,16 @@ protected:
     cci::cci_param<bool> p_has_virt_extensions;
     cci::cci_param<bool> p_has_security_extensions;
     cci::cci_param<unsigned int> p_num_prio_bits;
+    cci::cci_param<bool> p_has_msi_support;
 
 public:
+    QemuArmGicv2m *m_gicv2m;
+
     QemuTargetSocket<> dist_iface;
     QemuTargetSocket<> cpu_iface;
     QemuTargetSocket<> virt_iface;
     QemuTargetSocket<> vcpu_iface;
+    QemuTargetSocket<>::TlmTargetSocket v2m_iface;
 
     /* Shared peripheral interrupts: sized with the p_num_spi parameter */
     sc_core::sc_vector<QemuTargetSignalSocket> spi_in;
@@ -72,10 +133,13 @@ public:
         , p_has_security_extensions("has-security-extensions", false, "Enable security extensions "
                                                                       "(v1 and v2 only)")
         , p_num_prio_bits("num-prio-bits", 8, "Number of priority bits implemented by this GIC")
+        , p_has_msi_support("has-msi-support", false, "Enable gicv2m extension to support MSI")
+        , m_gicv2m(NULL)
         , dist_iface("dist-iface", inst)
         , cpu_iface("cpu-iface", inst)
         , virt_iface("virt-iface", inst)
         , vcpu_iface("vcpu-iface", inst)
+        , v2m_iface("v2m-iface")
         , spi_in("spi-in", p_num_spi)
         , ppi_in("ppi-in-cpu", p_num_cpu, [] (const char *n, size_t i) {
                      return new sc_core::sc_vector<QemuTargetSignalSocket>(n, NUM_PPI);
@@ -86,6 +150,29 @@ public:
         , vfiq_out("vfiq-out", p_num_cpu)
         , maintenance_out("maintenance-out", p_num_cpu)
     {
+        if (p_has_msi_support) {
+            m_gicv2m = new QemuArmGicv2m("v2m", inst);
+
+            // Hierarchical bind our v2m_iface to our child interface
+            v2m_iface.bind(m_gicv2m->iface);
+
+            // Connect spis
+            unsigned int v2m_num_spis = m_gicv2m->get_num_spis();
+            unsigned int v2m_base_spi = m_gicv2m->get_base_spi();
+            if (v2m_num_spis + v2m_base_spi > p_num_spi) {
+                SC_REPORT_FATAL("qbox", "Gicv2 does not have enough spis for v2m config");
+            }
+            for (unsigned int i = 0; i < v2m_num_spis; i++) {
+                m_gicv2m->spi_out[i].bind(spi_in[i + v2m_base_spi]);
+            }
+        }
+    }
+
+    ~QemuArmGicv2()
+    {
+        if (m_gicv2m) {
+            delete m_gicv2m;
+        }
     }
 
     void before_end_of_elaboration()

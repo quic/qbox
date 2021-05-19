@@ -142,6 +142,23 @@ public:
     QemuInstance(QemuInstance &&) = default;
     virtual ~QemuInstance() {}
 
+    bool operator ==(const QemuInstance &b) const {
+        return this == &b;
+    }
+
+    bool operator !=(const QemuInstance &b) const {
+        return this != &b;
+    }
+
+    /**
+     * @brief Add a command line argument to the qemu instance.
+     *
+     * This method may only be called before the instance is initialized.
+     */
+    void add_arg(const char *arg) {
+        m_inst.push_qemu_arg(arg);
+    }
+
     /**
      * @brief Set the desired TCG mode for this instance
      *
