@@ -33,6 +33,7 @@ set(srcs
     src/callbacks.cc
     src/cpu.cc
     src/device.cc
+    src/gpex.cc
     src/gpio.cc
     src/libqemu-cxx.cc
     src/loader.cc

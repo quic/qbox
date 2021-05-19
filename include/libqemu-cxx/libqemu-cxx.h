@@ -138,6 +138,7 @@ public:
     void set_prop_int(const char *name, int64_t val);
     void set_prop_str(const char *name, const char *val);
     void set_prop_link(const char *name, const Object &link);
+    void set_prop_parse(const char *name, const char *value);
 
     QemuObject *get_qemu_obj() { return m_obj; }
 
@@ -342,6 +343,17 @@ public:
     MemoryRegion mmio_get_region(int id);
 
     void connect_gpio_out(int idx, Gpio gpio);
+};
+
+class GpexHost : public SysBusDevice {
+public:
+    static constexpr const char * const TYPE = "gpex-pcihost";
+
+    GpexHost() = default;
+    GpexHost(const GpexHost &) = default;
+    GpexHost(const Object &o) : SysBusDevice(o) { }
+
+    void set_irq_num(int idx, int gic_irq);
 };
 
 class Cpu : public Device {
