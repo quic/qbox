@@ -1,5 +1,14 @@
 
 
+[//]: # (SECTION 0)
+## LIBGSUTILS
+
+The GreenSocs basic utilities library contains utility functions for CCI, simple logging and test functions.
+It also includes some basic tlm port types
+
+[//]: # (SECTION 0 AUTOADDED)
+
+
 [//]: # (SECTION 1)
 
 
@@ -14,10 +23,9 @@
 > This project may be built using cmake
 > ```bash
 > cmake -B build;pushd build; make -j; popd
-> ./build/vp --gs_luafile= conf.lua
 > ```
 > 
-You may log into the buildroot with username 'root' and no password.
+cmake may ask for your git.greensocs.com credentials (see below for advice about passwords)
 
 ## cmake version
 cmake version 3.14 or newer is required. This can be downloaded and used as follows
@@ -59,7 +67,8 @@ The library assumes the use of C++14, and is compatible with SystemC versions fr
 
 For a reference docker please use the following script from the top level of the Virtual Platform:
 ```bash
-curl -L https://git.greensocs.com/greensocs/cmake-boilerplate/-/raw/master/docker_vp.sh --output docker_vp.sh
+curl --header 'PRIVATE-TOKEN: W1Z9U8S_5BUEX1_Y29iS' 'https://git.greensocs.com/api/v4/projects/65/repository/files/docker_vp.sh/raw?ref=master' -o docker_vp.sh
+chmod +x ./docker_vp.sh
 ./docker_vp.sh
 > cmake -B build;cd build; make -j
 ```
@@ -74,11 +83,11 @@ git config --global credential.helper store
 
 More documentation, including doxygen generated API documentation can be found in the `/docs` directory.
 
-
 [//]: # (SECTION 10)
-## GreenSocs Basic SystemC utility library
+Information about building and using the libgsutils library
+-----------------------------------------------------------
 
-The GreenSocs basic utilities library contains utility functions for CCI and simple logging functions.
+The libgsutils library depends on the libraries : SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
 
 The GreenSocs CCI libraries allows two options for setting configuration parameters
 
@@ -94,7 +103,9 @@ This library includes a Configurable Broker (gs::ConfigurableBroker) which provi
 
 Note that a string parameter must be quoted.
 
-The lua file read by the ConfigurableBroker has relative paths - this means that in the example above the `path.to.module` portion of the absolute path should not appear in the (local) configuration file. (Hence changes in the hierarchy will not need changes to the configuration file).## Using yaml for configuration
+The lua file read by the ConfigurableBroker has relative paths - this means that in the example above the `path.to.module` portion of the absolute path should not appear in the (local) configuration file. (Hence changes in the hierarchy will not need changes to the configuration file).
+
+## Using yaml for configuration
 If you would prefer to use yaml as a configuration language, `lyaml` provides a link. This can be downloaded from https://github.com/gvvaughan/lyaml
 
 The following lua code will load "conf.yaml".
@@ -151,13 +162,19 @@ The `gs::ConfigurableBroker` can be instanced in 3 ways:
 
     A ``{{key,value}}`` list can also be provided, otherwise it is assumed to be empty. Such a list will set parameter values within this broker. These values will be read and used **BEFORE** the command line is read.
 
-    Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either. 
-    
+    Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either.
 
 [//]: # (SECTION 50 AUTOADDED)
 
 
 [//]: # (SECTION 100)
+## The GreenSocs utils Tests
 
+Tests are available for you to check that the library is working properly.
+
+To do this, you must run the following command in the build directoty `build/`:
+```bash
+make test
+```
 
 [//]: # (PROCESSED BY doc_merge.pl)
