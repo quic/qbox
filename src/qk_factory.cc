@@ -14,6 +14,8 @@ namespace gs {
             return std::make_shared<gs::tlm_quantumkeeper_multi_quantum>();
         if (name == "multithread-rolling")
             return std::make_shared<gs::tlm_quantumkeeper_multi_rolling>();
+        if (name == "multithread-unconstrained")
+            return std::make_shared<gs::tlm_quantumkeeper_unconstrained>();
         return nullptr;
     }
 }
