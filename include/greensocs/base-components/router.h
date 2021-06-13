@@ -25,45 +25,57 @@
 
 #include <systemc>
 #include <tlm>
-#include <tlm_utils/simple_target_socket.h>
 #include <tlm_utils/simple_initiator_socket.h>
+#include <tlm_utils/simple_target_socket.h>
 
-#include <greensocs/libgsutils.h>
 #include <greensocs/gsutils/tlm-extensions/exclusive-access.h>
+#include <greensocs/libgsutils.h>
+
+/**
+ * @class Router
+ *
+ * @brief A Router component that can add router to a virtual platform project to manage the various transactions
+ *
+ * @details This component models a router. It has a single multi-target socket so any other component with an initiator socket can connect to this component. It behaves as follows:
+ *    - Manages exclusive accesses, adding this router as a 'hop' in the exclusive access extension (see GreenSocs/libgsutils).
+ *    - Manages connections to multiple initiators and targets with the method `add_initiator` and `add_target`.
+ *    - Allows to manage read and write transactions with `b_transport` and `transport_dbg` methods.
+ *    - Supports passing through DMI requests with the method `get_direct_mem_ptr`.
+ *    - Handles invalidation of multiple DMI pointers with the method `invalidate_direct_mem_ptr` which passes the invalidate back to *all* initiators.
+ *    - It checks for each transaction if the address is valid or not and returns an error if the address is invalid with the method `decode_address`.
+ */
 
 template <unsigned int BUSWIDTH = 32>
 class Router : public sc_core::sc_module {
 private:
-    using TargetSocket =
-        tlm::tlm_base_target_socket_b<BUSWIDTH,
-                                      tlm::tlm_fw_transport_if<>,
-                                      tlm::tlm_bw_transport_if<> >;
+    using TargetSocket = tlm::tlm_base_target_socket_b<BUSWIDTH,
+        tlm::tlm_fw_transport_if<>,
+        tlm::tlm_bw_transport_if<>>;
 
-    using InitiatorSocket =
-        tlm::tlm_base_initiator_socket_b<BUSWIDTH,
-                                         tlm::tlm_fw_transport_if<>,
-                                         tlm::tlm_bw_transport_if<> >;
+    using InitiatorSocket = tlm::tlm_base_initiator_socket_b<BUSWIDTH,
+        tlm::tlm_fw_transport_if<>,
+        tlm::tlm_bw_transport_if<>>;
 
     struct TargetInfo {
         size_t index;
-        TargetSocket *t;
+        TargetSocket* t;
         sc_dt::uint64 address;
         sc_dt::uint64 size;
     };
 
     struct InitiatorInfo {
         size_t index;
-        InitiatorSocket *i;
+        InitiatorSocket* i;
     };
 
-    std::vector<tlm_utils::simple_target_socket_tagged<Router> *> m_target_sockets;
-    std::vector<tlm_utils::simple_initiator_socket_tagged<Router> *> m_initiator_sockets;
+    std::vector<tlm_utils::simple_target_socket_tagged<Router>*> m_target_sockets;
+    std::vector<tlm_utils::simple_initiator_socket_tagged<Router>*> m_initiator_sockets;
     std::vector<TargetInfo> m_targets;
     std::vector<InitiatorInfo> m_initiators;
 
-    void check_exclusive_extension(int id, tlm::tlm_generic_payload &trans)
+    void check_exclusive_extension(int id, tlm::tlm_generic_payload& trans)
     {
-        ExclusiveAccessTlmExtension *ext;
+        ExclusiveAccessTlmExtension* ext;
 
         trans.get_extension(ext);
 
@@ -74,7 +86,7 @@ private:
         ext->add_hop(id);
     }
 
-    void b_transport(int id, tlm::tlm_generic_payload &trans, sc_core::sc_time &delay)
+    void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
     {
         sc_dt::uint64 addr = trans.get_address();
         sc_dt::uint64 target_addr;
@@ -82,21 +94,21 @@ private:
 
         bool success = decode_address(addr, target_addr, target_nr);
         if (!success) {
-            const char *cmd = "unknown";
+            const char* cmd = "unknown";
             switch (trans.get_command()) {
-                case tlm::TLM_IGNORE_COMMAND:
-                    cmd = "ignore";
-                    break;
-                case tlm::TLM_WRITE_COMMAND:
-                    cmd = "write";
-                    break;
-                case tlm::TLM_READ_COMMAND:
-                    cmd = "read";
-                    break;
+            case tlm::TLM_IGNORE_COMMAND:
+                cmd = "ignore";
+                break;
+            case tlm::TLM_WRITE_COMMAND:
+                cmd = "write";
+                break;
+            case tlm::TLM_READ_COMMAND:
+                cmd = "read";
+                break;
             }
 
             GS_LOG("Warning: '%s' access to unmapped address 0x%" PRIx64 " in '%s' module\n",
-                   cmd, static_cast<uint64_t>(trans.get_address()), name());
+                cmd, static_cast<uint64_t>(trans.get_address()), name());
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return;
         }
@@ -107,7 +119,7 @@ private:
         (*m_initiator_sockets[target_nr])->b_transport(trans, delay);
     }
 
-    unsigned int transport_dbg(int id, tlm::tlm_generic_payload &trans)
+    unsigned int transport_dbg(int id, tlm::tlm_generic_payload& trans)
     {
         sc_dt::uint64 addr = trans.get_address();
         sc_dt::uint64 target_addr;
@@ -125,7 +137,7 @@ private:
         return (*m_initiator_sockets[target_nr])->transport_dbg(trans);
     }
 
-    bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload &trans, tlm::tlm_dmi &dmi_data)
+    bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
         sc_dt::uint64 target_addr;
         unsigned int target_nr;
@@ -148,15 +160,15 @@ private:
         sc_dt::uint64 bw_start_range = compose_address(id, start);
         sc_dt::uint64 bw_end_range = compose_address(id, end);
 
-        for (auto *socket : m_target_sockets) {
+        for (auto* socket : m_target_sockets) {
             (*socket)->invalidate_direct_mem_ptr(bw_start_range, bw_end_range);
         }
     }
 
-    bool decode_address(sc_dt::uint64 addr, sc_dt::uint64 &addr_out, unsigned int &index_out)
+    bool decode_address(sc_dt::uint64 addr, sc_dt::uint64& addr_out, unsigned int& index_out)
     {
         for (unsigned int i = 0; i < m_targets.size(); i++) {
-            struct TargetInfo &ti = m_targets.at(i);
+            struct TargetInfo& ti = m_targets.at(i);
             if (addr >= ti.address && addr < (ti.address + ti.size)) {
                 addr_out = addr - ti.address;
                 index_out = i;
@@ -175,8 +187,7 @@ protected:
     virtual void before_end_of_elaboration()
     {
         for (size_t i = 0; i < m_initiators.size(); i++) {
-            tlm_utils::simple_target_socket_tagged<Router> *socket =
-                    new tlm_utils::simple_target_socket_tagged<Router>(sc_core::sc_gen_unique_name("target"));
+            tlm_utils::simple_target_socket_tagged<Router>* socket = new tlm_utils::simple_target_socket_tagged<Router>(sc_core::sc_gen_unique_name("target"));
             socket->register_b_transport(this, &Router::b_transport, i);
             socket->register_transport_dbg(this, &Router::transport_dbg, i);
             socket->register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr, i);
@@ -185,8 +196,7 @@ protected:
         }
 
         for (size_t i = 0; i < m_targets.size(); i++) {
-            tlm_utils::simple_initiator_socket_tagged<Router> *socket =
-                    new tlm_utils::simple_initiator_socket_tagged<Router>(sc_core::sc_gen_unique_name("initiator"));
+            tlm_utils::simple_initiator_socket_tagged<Router>* socket = new tlm_utils::simple_initiator_socket_tagged<Router>(sc_core::sc_gen_unique_name("initiator"));
             socket->register_invalidate_direct_mem_ptr(this, &Router::invalidate_direct_mem_ptr, i);
             socket->bind(*m_targets.at(i).t);
             m_initiator_sockets.push_back(socket);
@@ -194,25 +204,34 @@ protected:
     }
 
 public:
-    explicit Router(const sc_core::sc_module_name &nm)
-            : sc_core::sc_module(nm)
-    {}
+    explicit Router(const sc_core::sc_module_name& nm)
+        : sc_core::sc_module(nm)
+    {
+    }
 
     Router() = delete;
 
-    Router(const Router &) = delete;
+    Router(const Router&) = delete;
 
     virtual ~Router()
     {
-        for (const auto &i: m_initiator_sockets) {
+        for (const auto& i : m_initiator_sockets) {
             delete i;
         }
-        for (const auto &t: m_target_sockets) {
+        for (const auto& t : m_target_sockets) {
             delete t;
         }
     }
 
-    void add_target(TargetSocket &t, uint64_t address, uint64_t size)
+    /**
+     * @brief This method will bind a target to the router. 
+     * The router will register its address and size according to the parameters we have given it.
+     * 
+     * @param t target socket which will allow to bind the router with the target (ex: memory)
+     * @param address Address of the target
+     * @param size Size of the target
+     */
+    void add_target(TargetSocket& t, uint64_t address, uint64_t size)
     {
         struct TargetInfo ti;
         ti.index = m_targets.size();
@@ -222,7 +241,12 @@ public:
         m_targets.push_back(ti);
     }
 
-    void add_initiator(InitiatorSocket &i)
+    /**
+     * @brief This method will bind a Initiator to the router. 
+     * 
+     * @param i initiator socket which will allow to bind the router with the initiator
+     */
+    void add_initiator(InitiatorSocket& i)
     {
         struct InitiatorInfo ii;
         ii.index = m_initiators.size();

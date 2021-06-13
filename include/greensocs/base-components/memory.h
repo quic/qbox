@@ -26,10 +26,26 @@
 #include <tlm_utils/simple_target_socket.h>
 
 #ifndef _WIN32
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #endif
+
+/**
+ * @class Memory
+ *
+ * @brief A memory component that can add memory to a virtual platform project
+ *
+ * @details This component models a memory. It has a simple target socket so any other component with an initiator socket can connect to this component. It behaves as follows:
+ *    - The memory does not manage time in any way
+ *    - It is only an LT model, and does not handle AT transactions
+ *    - It does not manage exclusive accesses
+ *    - You can manage the size of the memory during the initialization of the component
+ *    - Memory does not allocate individual "pages" but a single large 
+ *      block
+ *    - It supports DMI requests with the method `get_direct_mem_ptr`
+ *    - DMI invalidates are not issued.
+ */
 
 class Memory : public sc_core::sc_module {
 private:
@@ -128,7 +144,8 @@ public:
     tlm_utils::simple_target_socket<Memory> socket;
 
     Memory(sc_core::sc_module_name name, uint64_t size)
-        : socket("socket"), m_mapped(false)
+        : socket("socket")
+        , m_mapped(false)
     {
         m_size = size;
 
@@ -149,12 +166,23 @@ public:
         }
     }
 
+    /**
+     * @brief this function returns the size of the memory
+     * 
+     * @return the size of the memory of type uint64_t 
+     */
     uint64_t size()
     {
         return m_size;
     }
 
-    void map(const char *filename) {
+    /**
+     * @brief This function maps a host file system file into the memory, such that the results of the memory will be maintained between runs. This can be useful for emulating a flash ram for instance
+     * 
+     * @param filename Name of the file
+     */
+    void map(const char* filename)
+    {
 #ifndef _WIN32
         int fd = open(filename, O_RDWR);
         if (fd < 0) {
@@ -164,8 +192,8 @@ public:
             delete[] m_ptr;
         }
         m_mapped = true;
-        m_ptr = (uint8_t *)mmap(m_ptr, m_size, PROT_READ | PROT_WRITE,
-                                    MAP_SHARED, fd, 0);
+        m_ptr = (uint8_t*)mmap(m_ptr, m_size, PROT_READ | PROT_WRITE,
+            MAP_SHARED, fd, 0);
         if (m_ptr == MAP_FAILED) {
             SC_REPORT_ERROR("Memory", "Unable to map backing file\n");
         }
@@ -173,7 +201,14 @@ public:
         SC_REPORT_ERROR("Memory", "Backing files only supported on UNIX platforms\n");
 #endif
     }
-    
+
+    /**
+     * @brief This function reads a file into memory and can be used to load an image.
+     * 
+     * @param filename Name of the file
+     * @param addr the address where the memory file is to be read
+     * @return size_t 
+     */
     size_t load(std::string filename, uint64_t addr)
     {
         std::ifstream fin(filename, std::ios::in | std::ios::binary);
@@ -184,6 +219,13 @@ public:
         return fin.readsome((char*)&m_ptr[addr], m_size);
     }
 
+    /**
+     * @brief copy an existing image in host memory into the modelled memory
+     * 
+     * @param ptr Pointer to the memory
+     * @param len Length of the read
+     * @param addr Address of the read
+     */
     void load(const uint8_t* ptr, uint64_t len, uint64_t addr)
     {
         memcpy(&m_ptr[addr], ptr, len);
