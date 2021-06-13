@@ -17,13 +17,12 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include <string>
-#include <sstream>
-#include <fstream>
 #include <cstring>
+#include <fstream>
+#include <sstream>
+#include <string>
 
 #include "libqemu-cxx/loader.h"
-
 
 static void copy_file(const char* src_file, const char* dest_file)
 {
@@ -33,15 +32,18 @@ static void copy_file(const char* src_file, const char* dest_file)
 }
 
 #ifdef _WIN32
-#include <windows.h>
 #include <Lmcons.h>
+#include <windows.h>
 
 class Library : public qemu::LibraryIface {
 private:
     HMODULE m_lib;
 
 public:
-    Library(HMODULE lib) : m_lib(lib) {}
+    Library(HMODULE lib)
+        : m_lib(lib)
+    {
+    }
 
     bool symbol_exists(const char* name)
     {
@@ -57,7 +59,7 @@ public:
 
 class DefaultLibraryLoader : public qemu::LibraryLoaderIface {
 private:
-    const char *m_base;
+    const char* m_base;
     std::string m_last_error;
 
     std::string get_last_error_as_str()
@@ -69,11 +71,11 @@ private:
 
         LPSTR messageBuffer = nullptr;
         size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER
-                                     | FORMAT_MESSAGE_FROM_SYSTEM
-                                     | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                     NULL, errorMessageID,
-                                     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                                     (LPSTR)&messageBuffer, 0, NULL);
+                | FORMAT_MESSAGE_FROM_SYSTEM
+                | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, errorMessageID,
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            (LPSTR)&messageBuffer, 0, NULL);
 
         std::string message(messageBuffer, size);
 
@@ -127,28 +129,33 @@ public:
         return std::make_shared<Library>(handle);
     }
 
-    const char * get_lib_ext() {
+    const char* get_lib_ext()
+    {
         return "dll";
     }
 
-    const char * get_last_error() {
+    const char* get_last_error()
+    {
     }
 };
 
 #else /* _WIN32 */
 
 #include <dlfcn.h>
+#include <iostream>
 #include <link.h>
-#include <unistd.h>
 #include <sys/stat.h>
-
+#include <unistd.h>
 
 class Library : public qemu::LibraryIface {
 private:
-    void *m_lib;
+    void* m_lib;
 
 public:
-    Library(void *lib) : m_lib(lib) {}
+    Library(void* lib)
+        : m_lib(lib)
+    {
+    }
 
     bool symbol_exists(const char* name)
     {
@@ -163,20 +170,20 @@ public:
 
 class DefaultLibraryLoader : public qemu::LibraryLoaderIface {
 private:
-    const char *m_base = nullptr;
+    const char* m_base = nullptr;
     std::string m_last_error;
 
 public:
     qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name)
     {
         if (!m_base) {
-            void *handle = dlopen(lib_name, RTLD_NOW);
+            void* handle = dlopen(lib_name, RTLD_NOW);
             if (handle == nullptr) {
                 m_last_error = dlerror();
                 return nullptr;
             }
 
-            struct link_map *map;
+            struct link_map* map;
             dlinfo(handle, RTLD_DI_LINKMAP, &map);
 
             if (map) {
@@ -186,42 +193,43 @@ public:
             return std::make_shared<Library>(handle);
         }
 
-        static int counter = 0;
-        std::stringstream ss1;
-        ss1 << counter++;
-        std::string str = ss1.str();
-
-        const char *login = getlogin();
-        if (!login) {
-            login = "none";
-        }
-
-        std::stringstream ss;
-        ss << "/tmp/libqemu_" << login;
-        std::string dir = ss.str();
-        mkdir(dir.c_str(), S_IRWXU);
-
-        std::string lib = dir + "/" + std::string(lib_name) + "." + str;
-        copy_file(m_base, lib.c_str());
-
-        void *handle = dlopen(lib.c_str(), RTLD_NOW);
-        if (handle == nullptr) {
+        char tmp[] = "/tmp/qbox_lib.XXXXXX";
+        if (mkstemp(tmp) < 0) {
+            m_last_error = "Unable to create temp file";
             return nullptr;
         }
+        copy_file(lib_name, tmp);
+
+        void* handle = dlopen(tmp, RTLD_NOW);
+        if (handle == nullptr) {
+            m_last_error = dlerror();
+            return nullptr;
+        }
+
+        struct link_map* map;
+        dlinfo(handle, RTLD_DI_LINKMAP, &map);
+
+#ifndef DEBUG_TMP_LIBRARIES
+        remove(tmp);
+#else
+        std::cout << "WARNING : leaving " << tmp << "in place\n";
+#endif
         return std::make_shared<Library>(handle);
     }
 
-    const char * get_lib_ext() {
+    const char* get_lib_ext()
+    {
         return "so";
     }
 
-    const char * get_last_error() {
+    const char* get_last_error()
+    {
         return m_last_error.c_str();
     }
 };
 #endif
 
-qemu::LibraryLoaderIface * qemu::get_default_lib_loader()
+qemu::LibraryLoaderIface* qemu::get_default_lib_loader()
 {
     return new DefaultLibraryLoader;
 }
