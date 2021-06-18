@@ -5,8 +5,7 @@
 
 ## 1. Overview
 
-This release contains an example of a virtual platform based on an ARM Cortex-A53.
-
+This release contains an example of a virtual platform based on an ARM Neoverse-N1.
 ## 2. Requirements
 
 You can build this release natively on Ubuntu 18.04.
@@ -22,21 +21,21 @@ apt install -y make cmake g++ wget flex bison unzip python pkg-config libpixman-
 If you have an SSH key:
 ```bash
 cd $HOME
-git clone git@git.greensocs.com:thomas/greensocs-armA53-vp.git
+git clone git@git.greensocs.com:neureality/greensocs-neoverse-n1.git
 ```
 
 otherwise:
 ```bash
 cd $HOME
-git clone https://git.greensocs.com/thomas/greensocs-armA53-vp.git
+git clone https://git.greensocs.com/neureality/greensocs-neoverse-n1.git
 ```
 
-this will extract the platform in $HOME/greensocs-armA53-vp
+this will extract the platform in $HOME/greensocs-neoverse-n1
 
 ## 4. Build the platform
 
 ```bash
-cd $HOME/greensocs-armA53-vp
+cd $HOME/greensocs-neoverse-n1
 mkdir build && cd build
 cmake .. [OPTIONS]
 ```
@@ -322,7 +321,7 @@ The `gs::ConfigurableBroker` can be instanced in 3 ways:
     A ``{{key,value}}`` list can also be provided, otherwise it is assumed to be empty. Such a list will set parameter values within this broker. These values will be read and used **BEFORE** the command line is read.
 
     Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either.
-    
+
 ## Instanciate Qemu
 A QemuManager is required in order to instantiate a Qemu instance. A QemuManager will hold, and maintain the instance until the end of execution. The QemuInstance can contain one or many CPU's and other devices.
 To create a new instance you can do this:
