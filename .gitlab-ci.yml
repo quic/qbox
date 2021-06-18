@@ -1,2 +1,3 @@
 include:
-  - remote: 'https://git.greensocs.com/greensocs/cmake-boilerplate/-/raw/master/gitlab-ci-template.yml'
+  - project: 'GreenSocs/cmake-boilerplate'
+    file: 'gitlab-ci-template.yml'
