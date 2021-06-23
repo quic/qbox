@@ -22,9 +22,9 @@
 #include "../char-backend.h"
 
 #ifndef WIN32
-#include <termios.h>
 #include <signal.h>
 #include <sys/epoll.h>
+#include <termios.h>
 #endif
 
 class CharBackendStdio : public CharBackend, public sc_core::sc_module {
@@ -94,7 +94,7 @@ public:
         new std::thread(&CharBackendStdio::rcv_thread, this);
     }
 
-    void *rcv_thread()
+    void* rcv_thread()
     {
 #ifndef _WIN32
         int epollfd;
@@ -149,8 +149,7 @@ public:
                 c = m_queue.front();
                 m_queue.pop();
                 m_receive(m_opaque, &c, 1);
-            }
-            else {
+            } else {
                 /* notify myself later, hopefully the queue drains */
                 m_event.notify(1, sc_core::SC_MS);
                 return;
