@@ -22,6 +22,8 @@
 #include "../char-backend.h"
 
 #ifndef WIN32
+#include <greensocs/libgssync/async_event.h>
+#include <queue>
 #include <signal.h>
 #include <sys/epoll.h>
 #include <termios.h>
@@ -29,7 +31,7 @@
 
 class CharBackendStdio : public CharBackend, public sc_core::sc_module {
 private:
-    AsyncEvent m_event;
+    gs::async_event m_event;
     std::queue<unsigned char> m_queue;
     std::mutex m_mutex;
 
@@ -96,42 +98,19 @@ public:
 
     void* rcv_thread()
     {
-#ifndef _WIN32
-        int epollfd;
-        struct epoll_event ev, events[1];
-
-        epollfd = epoll_create1(0);
-        if (epollfd == -1) {
-            perror("epoll_fd");
-            return NULL;
-        }
-
-        ev.events = EPOLLIN;
-        ev.data.fd = STDIN_FILENO;
-        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev) == -1) {
-            perror("epoll_ctl");
-            return NULL;
-        }
-#endif
 
         for (;;) {
-#ifndef _WIN32
-            int nfds = epoll_wait(epollfd, events, 1, -1);
-            if (nfds == -1) {
-                perror("epoll_wait");
-                break;
-            }
-#endif
 
             int c = getchar();
+            {
+                std::lock_guard<std::mutex> lock(m_mutex);
 
-            std::lock_guard<std::mutex> lock(m_mutex);
-
-            if (c >= 0) {
-                m_queue.push(c);
-            }
-            if (!m_queue.empty()) {
-                m_event.async_notify();
+                if (c >= 0) {
+                    m_queue.push(c);
+                }
+                if (!m_queue.empty()) {
+                    m_event.async_notify();
+                }
             }
         }
 
@@ -151,7 +130,7 @@ public:
                 m_receive(m_opaque, &c, 1);
             } else {
                 /* notify myself later, hopefully the queue drains */
-                m_event.notify(1, sc_core::SC_MS);
+                m_event.notify(sc_core::sc_time(1, sc_core::SC_MS));
                 return;
             }
         }
