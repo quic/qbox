@@ -19,12 +19,12 @@
 
 #pragma once
 
-#include <queue>
 #include <mutex>
+#include <queue>
 
-#include <systemc>
 #include "tlm.h"
 #include "tlm_utils/simple_target_socket.h"
+#include <systemc>
 
 #include "backends/char-backend.h"
 
@@ -70,7 +70,7 @@ typedef struct PL011State {
     int read_pos;
     int read_count;
     int read_trigger;
-    const unsigned char *id;
+    const unsigned char* id;
 } PL011State;
 
 static const uint32_t irqmask[] = {
@@ -89,9 +89,9 @@ typedef Pl011 Uart;
 
 class Pl011 : public sc_core::sc_module {
 public:
-    PL011State *s;
+    PL011State* s;
 
-    CharBackend *chr;
+    CharBackend* chr;
 
     tlm_utils::simple_target_socket<Pl011> socket;
 
@@ -124,7 +124,7 @@ public:
         sensitive << update_event;
     }
 
-    void set_backend(CharBackend *backend)
+    void set_backend(CharBackend* backend)
     {
         chr = backend;
         chr->register_receive(this, pl011_receive, pl011_can_receive);
@@ -147,7 +147,7 @@ public:
 
     void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
     {
-        unsigned char *ptr = trans.get_data_ptr();
+        unsigned char* ptr = trans.get_data_ptr();
         uint64_t addr = trans.get_address();
 
         trans.set_dmi_allowed(false);
@@ -155,10 +155,10 @@ public:
 
         switch (trans.get_command()) {
         case tlm::TLM_WRITE_COMMAND:
-            pl011_write(addr, *(uint32_t *)ptr);
+            pl011_write(addr, *(uint32_t*)ptr);
             break;
         case tlm::TLM_READ_COMMAND:
-            *(uint32_t *)ptr = pl011_read(addr);
+            *(uint32_t*)ptr = pl011_read(addr);
             break;
         default:
             break;
@@ -199,7 +199,7 @@ public:
                 s->flags |= PL011_FLAG_RXFE;
             }
             if (s->read_count == s->read_trigger - 1)
-                s->int_level &= ~ PL011_INT_RX;
+                s->int_level &= ~PL011_INT_RX;
             s->rsr = c >> 8;
             pl011_update();
             r = c;
@@ -263,7 +263,7 @@ public:
             s->read_trigger = (s->ifl >> 1) & 0x1c;
         else
 #endif
-            s->read_trigger = 1;
+        s->read_trigger = 1;
 
         /* fixes an issue in QBox when characters are typed before linux boots */
         s->read_count = 0;
@@ -333,9 +333,9 @@ public:
         }
     }
 
-    static int pl011_can_receive(void *opaque)
+    static int pl011_can_receive(void* opaque)
     {
-        PL011State *s = ((Pl011 *)opaque)->s;
+        PL011State* s = ((Pl011*)opaque)->s;
 
         int r;
 
@@ -366,10 +366,9 @@ public:
         }
     }
 
-    static void pl011_receive(void *opaque, const uint8_t *buf, int size)
+    static void pl011_receive(void* opaque, const uint8_t* buf, int size)
     {
-        Pl011 *uart = (Pl011 *)opaque;
+        Pl011* uart = (Pl011*)opaque;
         uart->pl011_put_fifo(*buf);
     }
-
 };
