@@ -28,6 +28,7 @@
 
 #include "backends/char-backend.h"
 
+#include <greensocs/gsutils/ports/initiator-signal-socket.h>
 #include <greensocs/libgssync/async_event.h>
 
 #define PL011_INT_TX 0x20
@@ -95,13 +96,13 @@ public:
 
     tlm_utils::simple_target_socket<Pl011> socket;
 
-    sc_core::sc_vector<sc_core::sc_signal<bool, sc_core::SC_MANY_WRITERS>> irq;
+    InitiatorSignalSocket<bool> irq;
 
     sc_core::sc_event update_event;
 
     SC_HAS_PROCESS(Pl011);
     Pl011(sc_core::sc_module_name name)
-        : irq("irq", 6)
+        : irq("irq")
     {
         chr = NULL;
 
@@ -176,8 +177,8 @@ public:
         size_t i;
 
         flags = s->int_level & s->int_enabled;
-        for (i = 0; i < irq.size(); i++) {
-            irq[i] = (flags & irqmask[i]) != 0;
+        if (irqmask[0] & s->int_enabled) {
+            irq->write((flags & irqmask[0]) != 0);
         }
     }
 
