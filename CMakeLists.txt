@@ -35,5 +35,3 @@ target_link_libraries(${PROJECT_NAME} INTERFACE qbox)
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox-extra" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 gs_export()
-
-gs_enable_testing()
