@@ -1,6 +1,7 @@
 
 
 [//]: # (SECTION 0)
+
 ## LIBQEMU-CXX 
 
 Libqemu-cxx encapsulates QEMU as a C++ object, such that it can be instanced (for instance) within a SystemC simulation framework.
@@ -14,22 +15,26 @@ Libqemu-cxx encapsulates QEMU as a C++ object, such that it can be instanced (fo
 [//]: # (SECTION 1 AUTOADDED)
 
 
+
 # GreenSocs Build and make system
 
 # How to build
 > 
 > This project may be built using cmake
-> ```
-> cmake -B BUILD;cd BUILD; make -j
-> ```
-> 
-> cmake version 3.14 or newer is required. This can be downloaded and used as follows
-> ```
-> curl -L https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
-> ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake
+> ```bash
+> cmake -B build;pushd build; make -j; popd
 > ```
 > 
->
+cmake may ask for your git.greensocs.com credentials (see below for advice about passwords)
+
+## cmake version
+cmake version 3.14 or newer is required. This can be downloaded and used as follows
+```bash
+ curl -L https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
+ ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake
+```
+ 
+
 
 ## details
 
@@ -40,10 +45,15 @@ CPM will also search along the CMAKE_MODULE_PATH
 
 Sometimes it is convenient to have your own sources used, in this case, use the `CPM_<package>_SOURCE_DIR`.
 Hence you may wish to use your own copy of SystemC CCI 
-```
-cmake -B BUILD -DCPM_SystemCCCI_SOURCE=/path/to/your/cci/source`
+```bash
+cmake -B build -DCPM_SystemCCCI_SOURCE=/path/to/your/cci/source`
 ```
 
+It may also be convenient to have all the source files downloaded, you may do this by running 
+```bash
+cmake -B build -DCPM_SOURCE_CACHE=`pwd`/Packages
+```
+This will populate the directory `Packages` Note that the cmake file system will automatically use the directory called `Packages` as source, if it exists.
 
 NB, CMake holds a cache of compiled modules in ~/.cmake/ Sometimes this can confuse builds. If you seem to be picking up the wrong version of a module, then it may be in this cache. It is perfectly safe to delete it.
 
@@ -55,10 +65,31 @@ NB, CMake holds a cache of compiled modules in ~/.cmake/ Sometimes this can conf
 The library assumes the use of C++14, and is compatible with SystemC versions from SystemC 2.3.1a.
 
 
+For a reference docker please use the following script from the top level of the Virtual Platform:
+```bash
+curl --header 'PRIVATE-TOKEN: W1Z9U8S_5BUEX1_Y29iS' 'https://git.greensocs.com/api/v4/projects/65/repository/files/docker_vp.sh/raw?ref=master' -o docker_vp.sh
+chmod +x ./docker_vp.sh
+./docker_vp.sh
+> cmake -B build;cd build; make -j
+```
+
+### passwords for git.greensocs.com
+To avoid using passwords for git.greensocs.com please add a ssh key to your git account. You may also use a key-chain manager. As a last resort, the following script will populate ~/.git-credentials  with your username and password (in plain text)
+```bash
+git config --global credential.helper store
+```
+
 ## More documentation
 
 More documentation, including doxygen generated API documentation can be found in the `/docs` directory.
 
+
+[//]: # (SECTION 10)
+## Information about building and using the libqemu-cxx library
+
+The libgsutils library does not depend on any library.
+
+[//]: # (SECTION 10 AUTOADDED)
 
 
 [//]: # (SECTION 100)
