@@ -3,7 +3,8 @@
  *
  */
 
-#pragma once
+#ifndef QKMULTI_MULTI_QUANTUM_H
+#define QKMULTI_MULTI_QUANTUM_H
 
 #include "greensocs/libgssync/qkmultithread.h"
 
@@ -31,3 +32,4 @@ namespace gs {
         }
     };
 }
+#endif

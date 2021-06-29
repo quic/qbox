@@ -1,14 +1,19 @@
 
 
+[//]: # (SECTION 0)
+## LIBGSSYNC
+
+The GreenSocs Synchronization library provides a number of different policies for synchronizing between an external simulator (typically QEMU) and SystemC.
+
+These are based on a proposed standard means to handle the SystemC simulator. This library provides a backwards compatibility layer, but the patched version of SystemC will perform better.
+
+[//]: # (SECTION 0 AUTOADDED)
+
+
 [//]: # (SECTION 1)
 
 
 [//]: # (SECTION 1 AUTOADDED)
-
-## The GreenSocs SystemC simple components library.
-
-This includes simple models such as routers and memories. The components are "Loosely timed" only. They support DMI where appropriate, and make use of CCI for configuration.
-
 
 # GreenSocs Build and make system
 
@@ -17,10 +22,9 @@ This includes simple models such as routers and memories. The components are "Lo
 > This project may be built using cmake
 > ```bash
 > cmake -B build;pushd build; make -j; popd
-> ./build/vp --gs_luafile= conf.lua
 > ```
 > 
-You may log into the buildroot with username 'root' and no password.
+cmake may ask for your git.greensocs.com credentials (see below for advice about passwords)
 
 ## cmake version
 cmake version 3.14 or newer is required. This can be downloaded and used as follows
@@ -62,7 +66,8 @@ The library assumes the use of C++14, and is compatible with SystemC versions fr
 
 For a reference docker please use the following script from the top level of the Virtual Platform:
 ```bash
-curl -L https://git.greensocs.com/greensocs/cmake-boilerplate/-/raw/master/docker_vp.sh --output docker_vp.sh
+curl --header 'PRIVATE-TOKEN: W1Z9U8S_5BUEX1_Y29iS' 'https://git.greensocs.com/api/v4/projects/65/repository/files/docker_vp.sh/raw?ref=master' -o docker_vp.sh
+chmod +x ./docker_vp.sh
 ./docker_vp.sh
 > cmake -B build;cd build; make -j
 ```
@@ -77,15 +82,30 @@ git config --global credential.helper store
 
 More documentation, including doxygen generated API documentation can be found in the `/docs` directory.
 
+## The GreenSocs SystemC simple components library.
+
+This includes simple models such as routers, memories and exclusive monitor. The components are "Loosely timed" only. They support DMI where appropriate, and make use of CCI for configuration.
+
+It also has several unit tests for memory, router and exclusive monitor.
+
+## LIBGSUTILS
+
+The GreenSocs basic utilities library contains utility functions for CCI, simple logging and test functions.
+It also includes some basic tlm port types
 
 [//]: # (SECTION 10)
-
+## Information about building and using the libgssync library
+The libgssync library depends on the libraries : base-components, libgsutils, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
 
 [//]: # (SECTION 10 AUTOADDED)
 
-## GreenSocs Basic SystemC utility library
+## Information about building and using the base-components library
+The base-components library depends on the libraries : Libgsutls, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
 
-The GreenSocs basic utilities library contains utility functions for CCI and simple logging functions.
+Information about building and using the libgsutils library
+-----------------------------------------------------------
+
+The libgsutils library depends on the libraries : SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
 
 The GreenSocs CCI libraries allows two options for setting configuration parameters
 
@@ -101,7 +121,9 @@ This library includes a Configurable Broker (gs::ConfigurableBroker) which provi
 
 Note that a string parameter must be quoted.
 
-The lua file read by the ConfigurableBroker has relative paths - this means that in the example above the `path.to.module` portion of the absolute path should not appear in the (local) configuration file. (Hence changes in the hierarchy will not need changes to the configuration file).## Using yaml for configuration
+The lua file read by the ConfigurableBroker has relative paths - this means that in the example above the `path.to.module` portion of the absolute path should not appear in the (local) configuration file. (Hence changes in the hierarchy will not need changes to the configuration file).
+
+## Using yaml for configuration
 If you would prefer to use yaml as a configuration language, `lyaml` provides a link. This can be downloaded from https://github.com/gvvaughan/lyaml
 
 The following lua code will load "conf.yaml".
@@ -127,50 +149,9 @@ ytab=nil
 ```
 
 [//]: # (SECTION 50)
-## GreenSocs Synchronization Library
-
-The GreenSocs Synchronization library provides a number of different policies for synchronizing between an external simulator (typically QEMU) and SystemC.
-
-These are based on a proposed standard means to handle the SystemC simulator. This library provides  a backwards compatibility layer, but the patched version of SystemC will perform better.
-
+## Functionality of the synchronization library
 In addition the library contains utilities such as an thread safe event (async_event) and a real time speed limited for SystemC.
 
-[//]: # (SECTION 50 AUTOADDED)
-
-### The GreenSocs component library router
-The router offers `add_target(socker, base_address, size)` as an API to add components into the address map for routing. (It is recommended that the addresses and size are CCI parameters).
-## Using the ConfigurableBroker
-
-The broker will self register in the SystemC CCI hierarchy. All brokers have a parameter `lua_file` which will be read and used to configure parameters held within the broker. This file is read at the *local* level, and paths are *relative* to the location where the ConfigurableBroker is instanced.
-
-These brokers can be used as global brokers.
-
-The `gs::ConfigurableBroker` can be instanced in 3 ways:
-1. `ConfigurableBroker()`
-    This will instance a 'Private broker' and will hide **ALL** parameters held within this broker. 
-    
-    A local `lua_file` can be read and will set parameters in the private broker. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(false)`).
-
-2.  `ConfigurableBroker({{"key1","value1"},{"key2","value2")...})`
-    This will instance a broker that sets and hides the listed keys. All other keys are passed through (exported). Hence the broker is 'invisible' for parameters that are not listed. This is specifically useful for structural parameters.
-    
-    It is also possible to instance a 'pass through' broker using `ConfigurationBroker({})`. This is useful to provide a *local* configuration broker than can, for instance, read a local configuration file.
-
-    A local `lua_file` can be read and will set parameters in the private broker (exported or not). This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(false)`). The `lua_file` will be read **AFTER** the construction key-value list and hence can be used to over-right default values in the code.
-
-3.  `ConfigurableBroker(argc, argv)`
-    This will instance a broker that is typically a global broker. The argc/argv values should come from the command line. The command line will be parsed to find:
-
-    > `-p, --param path.to.param=<value>` this option will allow individual parameters to be set.
-    
-    > `-l, --gs_luafile <FILE.lua>` this option will read the lua file to set parameters. Similar functionality can be achieved using --param lua_file=\"<FILE.lua>\".
-
-    A ``{{key,value}}`` list can also be provided, otherwise it is assumed to be empty. Such a list will set parameter values within this broker. These values will be read and used **BEFORE** the command line is read.
-
-    Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either. 
-    
-
-[//]: # (SECTION 55)
 ### Suspend/Unsuspend interface
 
 This patch adds four new basic functions to SystemC:
@@ -205,10 +186,60 @@ _2 : External sync_
 When an external model injects events into a SystemC model (for instance, using an ‘async_request_update()’), time can drift between the two simulators. In order to maintain time, SystemC can be prevented from advancing by calling suspend_all(). If there are process in an unsuspendable state (for instance, processing on behalf of the external model), then the simulation will be allowed to continue. 
 NOTE, an event injected into the kernel by an async_request_update will cause the kernel to execute the associated update() function (leaving the suspended state). The update function should arrange to mark any processes that it requires as unsuspendable before the end of the current delta cycle, to ensure that they are scheduled.
 
-[//]: # (SECTION 55 AUTOADDED)
+[//]: # (SECTION 50 AUTOADDED)
 
+## The GreenSocs component library memory
+The memory component allows you to add memory when creating an object of type `Memory("name",size)`.
+
+The memory component consists of a simple target socket :`tlm_utils::simple_target_socket<Memory> socket`
+
+## The GreenSocs component library router
+The router offers `add_target(socket, base_address, size)` as an API to add components into the address map for routing. (It is recommended that the addresses and size are CCI parameters).
+
+It also allows to bind multiple initiators with `add_initiator(socket)` to send multiple transactions.
+So there is no need for the bind() method offered by sockets because the add_initiator method already takes care of that.
+
+## Using the ConfigurableBroker
+
+The broker will self register in the SystemC CCI hierarchy. All brokers have a parameter `lua_file` which will be read and used to configure parameters held within the broker. This file is read at the *local* level, and paths are *relative* to the location where the ConfigurableBroker is instanced.
+
+These brokers can be used as global brokers.
+
+The `gs::ConfigurableBroker` can be instanced in 3 ways:
+1. `ConfigurableBroker()`
+    This will instance a 'Private broker' and will hide **ALL** parameters held within this broker. 
+    
+    A local `lua_file` can be read and will set parameters in the private broker. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(false)`).
+
+2.  `ConfigurableBroker({{"key1","value1"},{"key2","value2")...})`
+    This will instance a broker that sets and hides the listed keys. All other keys are passed through (exported). Hence the broker is 'invisible' for parameters that are not listed. This is specifically useful for structural parameters.
+    
+    It is also possible to instance a 'pass through' broker using `ConfigurationBroker({})`. This is useful to provide a *local* configuration broker than can, for instance, read a local configuration file.
+
+    A local `lua_file` can be read and will set parameters in the private broker (exported or not). This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(false)`). The `lua_file` will be read **AFTER** the construction key-value list and hence can be used to over-right default values in the code.
+
+3.  `ConfigurableBroker(argc, argv)`
+    This will instance a broker that is typically a global broker. The argc/argv values should come from the command line. The command line will be parsed to find:
+
+    > `-p, --param path.to.param=<value>` this option will allow individual parameters to be set.
+    
+    > `-l, --gs_luafile <FILE.lua>` this option will read the lua file to set parameters. Similar functionality can be achieved using --param lua_file=\"<FILE.lua>\".
+
+    A ``{{key,value}}`` list can also be provided, otherwise it is assumed to be empty. Such a list will set parameter values within this broker. These values will be read and used **BEFORE** the command line is read.
+
+    Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either.
 
 [//]: # (SECTION 100)
+## The GreenSocs Synchronization Tests
 
+It is possible to test the correct functioning of the different components with the tests that are proposed.
+
+Once you have compiled your library, you will have a integration_tests folder in your construction directory.
+
+In this test folder you will find several executable which each correspond to a test.
+You can run the executable with :
+```bash
+./build/tests/integration_tests/<name_of_component>_test
+```
 
 [//]: # (PROCESSED BY doc_merge.pl)
