@@ -1,6 +1,3 @@
-find_package(PkgConfig)
-pkg_check_modules(keystone IMPORTED_TARGET keystone)
-
 list(APPEND QBOX_CPU_TEST_SYNC_POLICY_COMBINATION
     tlm2
     tlm2-icount
@@ -16,11 +13,9 @@ function(qbox_add_cpu_test target timeout_s)
 
     add_executable(${target} ${ARGN})
 
-    target_include_directories(${target}
-        PRIVATE $<TARGET_PROPERTY:qbox,INCLUDE_DIRECTORIES>
-        PRIVATE ${CMAKE_SOURCE_DIR}/tests/include)
+    target_include_directories(${target} PRIVATE ${CMAKE_SOURCE_DIR}/tests/include ${keystone_SOURCE_DIR}/include)
 
-    target_link_libraries(${target} qbox PkgConfig::keystone)
+    target_link_libraries(${target} PRIVATE qbox keystone)
 
     foreach(sync_pol ${QBOX_CPU_TEST_SYNC_POLICY_COMBINATION})
         if("${sync_pol}" STREQUAL "tlm2-icount")
