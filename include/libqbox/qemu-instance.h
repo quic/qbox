@@ -20,31 +20,35 @@
 #ifndef LIBQBOX_QEMU_INSTANCE_H_
 #define LIBQBOX_QEMU_INSTANCE_H_
 
-#include <vector>
 #include <cassert>
 #include <sstream>
+#include <vector>
 
 #include <greensocs/gsutils/report.h>
 
 #include <libqemu-cxx/libqemu-cxx.h>
 
-#include "libqbox/exceptions.h"
 #include "libqbox/dmi-manager.h"
+#include "libqbox/exceptions.h"
 
 class QemuInstanceTcgModeMismatchException : public QboxException {
 public:
     QemuInstanceTcgModeMismatchException()
-        : QboxException("Mismatch in requested TCG mode") {}
+        : QboxException("Mismatch in requested TCG mode")
+    {
+    }
 
-    virtual ~QemuInstanceTcgModeMismatchException() throw() {}
+    virtual ~QemuInstanceTcgModeMismatchException() throw() { }
 };
 
 class QemuInstanceIcountModeMismatchException : public QboxException {
 public:
     QemuInstanceIcountModeMismatchException()
-        : QboxException("Mismatch in requested icount mode") {}
+        : QboxException("Mismatch in requested icount mode")
+    {
+    }
 
-    virtual ~QemuInstanceIcountModeMismatchException() throw() {}
+    virtual ~QemuInstanceIcountModeMismatchException() throw() { }
 };
 
 /**
@@ -84,12 +88,12 @@ protected:
     {
         m_inst.push_qemu_arg("libqbox"); /* argv[0] */
         m_inst.push_qemu_arg({
-            "-M", "none",          /* no machine */
-            "-m", "2048",          /* used by QEMU to set some interal buffer sizes */
-            "-monitor", "null",    /* no monitor */
-            "-serial", "null",     /* no serial backend */
-            "-display", "none",    /* no GUI */
-       });
+            "-M", "none", /* no machine */
+            "-m", "2048", /* used by QEMU to set some interal buffer sizes */
+            "-monitor", "null", /* no monitor */
+            "-serial", "null", /* no serial backend */
+            "-display", "none", /* no GUI */
+        });
     }
 
     void push_icount_mode_args()
@@ -131,16 +135,36 @@ protected:
     }
 
 public:
-    QemuInstance(LibLoader &loader, Target t)
+    QemuInstance(LibLoader& loader, Target t)
         : m_inst(loader, t)
         , m_dmi_mgr(m_inst)
     {
         push_default_args();
     }
 
-    QemuInstance(const QemuInstance &) = delete;
-    QemuInstance(QemuInstance &&) = default;
-    virtual ~QemuInstance() {}
+    QemuInstance(const QemuInstance&) = delete;
+    QemuInstance(QemuInstance&&) = delete;
+    virtual ~QemuInstance() { }
+
+    bool operator==(const QemuInstance& b) const
+    {
+        return this == &b;
+    }
+
+    bool operator!=(const QemuInstance& b) const
+    {
+        return this != &b;
+    }
+
+    /**
+     * @brief Add a command line argument to the qemu instance.
+     *
+     * This method may only be called before the instance is initialized.
+     */
+    void add_arg(const char* arg)
+    {
+        m_inst.push_qemu_arg(arg);
+    }
 
     /**
      * @brief Set the desired TCG mode for this instance
@@ -227,12 +251,11 @@ public:
 
         GS_LOG("Initializing QEMU instance with args:");
 
-        for (const char *arg: m_inst.get_qemu_args()) {
+        for (const char* arg : m_inst.get_qemu_args()) {
             GS_LOG("%s", arg);
         }
 
         m_inst.init();
-        m_dmi_mgr.init();
     }
 
     /**
@@ -250,7 +273,7 @@ public:
      * hasn't been initialized, init is called just before returning the
      * instance.
      */
-    qemu::LibQemu &get()
+    qemu::LibQemu& get()
     {
         if (!is_inited()) {
             init();
@@ -287,33 +310,47 @@ public:
     using LibLoader = qemu::LibraryLoaderIface;
 
 protected:
-    LibLoader *m_loader;
-    std::vector<QemuInstance> m_insts;
+    LibLoader* m_loader;
+    std::vector<std::reference_wrapper<QemuInstance>> m_insts;
 
 public:
     /**
      * @brief Construct a QemuInstanceManager. The manager will use the default
      * library loader provided by libqemu-cxx.
      */
-    QemuInstanceManager() : m_loader(qemu::get_default_lib_loader()) {}
+    QemuInstanceManager()
+        : m_loader(qemu::get_default_lib_loader())
+    {
+    }
 
     /**
      * @brief Construct a QemuInstanceManager by providing a custom library loader
      *
      * @param[in] loader The custom loader
      */
-    QemuInstanceManager(LibLoader *loader) : m_loader(loader) {}
+    QemuInstanceManager(LibLoader* loader)
+        : m_loader(loader)
+    {
+    }
 
     /**
      * @brief Returns a new QEMU instance for target t
      */
-    QemuInstance &new_instance(Target t)
+    QemuInstance& new_instance(Target t)
     {
-        m_insts.emplace_back(*m_loader, t);
+        QemuInstance* n = new QemuInstance(*m_loader, t);
+        m_insts.push_back(*n);
 
-        return m_insts.back();
+        return *n;
     }
-
-    virtual ~QemuInstanceManager() {}
+/* Destructor should only be called at the end of the program, if it is called before, then all Qemu instances
+ * that it manages will, of course, be destroyed too
+ */
+    virtual ~QemuInstanceManager() {
+        while (m_insts.size()) {
+          delete &m_insts.back().get();
+          m_insts.pop_back();
+        }
+    }
 };
 #endif

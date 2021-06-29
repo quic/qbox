@@ -33,6 +33,13 @@ public:
 
 protected:
     qemu::MemoryRegion m_mr;
+    std::shared_ptr<qemu::AddressSpace> m_as;
+
+    void init_as()
+    {
+        m_as = m_mr.get_inst().address_space_new();
+        m_as->init(m_mr, "qemu-target-socket");
+    }
 
     qemu::Cpu push_current_cpu(TlmPayload &trans)
     {
@@ -71,6 +78,13 @@ public:
     void init(qemu::SysBusDevice sbd, int mmio_idx)
     {
         m_mr = sbd.mmio_get_region(mmio_idx);
+        init_as();
+    }
+
+    void init_with_mr(qemu::MemoryRegion mr)
+    {
+        m_mr = mr;
+        init_as();
     }
 
     virtual void b_transport(TlmPayload& trans,
@@ -92,11 +106,11 @@ public:
 
         switch (trans.get_command()) {
         case tlm::TLM_READ_COMMAND:
-            res = m_mr.dispatch_read(addr, data, size, attrs);
+            res = m_as->read(addr, data, size, attrs);
             break;
 
         case tlm::TLM_WRITE_COMMAND:
-            res = m_mr.dispatch_write(addr, *data, size, attrs);
+            res = m_as->write(addr, data, size, attrs);
             break;
 
         default:
@@ -147,9 +161,13 @@ public:
 };
 
 template <unsigned int BUSWIDTH = 32>
-class QemuTargetSocket : public tlm::tlm_target_socket<BUSWIDTH> {
+class QemuTargetSocket : public tlm::tlm_target_socket<BUSWIDTH,
+                                                       tlm::tlm_base_protocol_types,
+                                                       1, sc_core::SC_ZERO_OR_MORE_BOUND> {
 public:
-    using TlmTargetSocket = tlm::tlm_target_socket<BUSWIDTH>;
+    using TlmTargetSocket = tlm::tlm_target_socket<BUSWIDTH,
+                                                   tlm::tlm_base_protocol_types,
+                                                   1, sc_core::SC_ZERO_OR_MORE_BOUND>;
     using TlmPayload = tlm::tlm_generic_payload;
 
 protected:
@@ -168,6 +186,11 @@ public:
     void init(qemu::SysBusDevice sbd, int mmio_idx)
     {
         m_bridge.init(sbd, mmio_idx);
+    }
+
+    void init_with_mr(qemu::MemoryRegion mr)
+    {
+        m_bridge.init_with_mr(mr);
     }
 };
 

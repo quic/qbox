@@ -12,26 +12,26 @@ Libqbox encapsulates QEMU in SystemC such that it can be instanced as a SystemC 
 
 
 [//]: # (SECTION 1 AUTOADDED)
-## The GreenSocs SystemC simple components library.
-
-This includes simple models such as routers and memories. The components are "Loosely timed" only. They support DMI where appropriate, and make use of CCI for configuration.
 
 # GreenSocs Build and make system
 
 # How to build
 > 
 > This project may be built using cmake
-> ```
-> cmake -B BUILD;cd BUILD; make -j
-> ```
-> 
-> cmake version 3.14 or newer is required. This can be downloaded and used as follows
-> ```
-> curl -L https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
-> ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake
+> ```bash
+> cmake -B build;pushd build; make -j; popd
 > ```
 > 
->
+cmake may ask for your git.greensocs.com credentials (see below for advice about passwords)
+
+## cmake version
+cmake version 3.14 or newer is required. This can be downloaded and used as follows
+```bash
+ curl -L https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
+ ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake
+```
+ 
+
 
 ## details
 
@@ -42,10 +42,15 @@ CPM will also search along the CMAKE_MODULE_PATH
 
 Sometimes it is convenient to have your own sources used, in this case, use the `CPM_<package>_SOURCE_DIR`.
 Hence you may wish to use your own copy of SystemC CCI 
-```
-cmake -B BUILD -DCPM_SystemCCCI_SOURCE=/path/to/your/cci/source`
+```bash
+cmake -B build -DCPM_SystemCCCI_SOURCE=/path/to/your/cci/source`
 ```
 
+It may also be convenient to have all the source files downloaded, you may do this by running 
+```bash
+cmake -B build -DCPM_SOURCE_CACHE=`pwd`/Packages
+```
+This will populate the directory `Packages` Note that the cmake file system will automatically use the directory called `Packages` as source, if it exists.
 
 NB, CMake holds a cache of compiled modules in ~/.cmake/ Sometimes this can confuse builds. If you seem to be picking up the wrong version of a module, then it may be in this cache. It is perfectly safe to delete it.
 
@@ -57,19 +62,59 @@ NB, CMake holds a cache of compiled modules in ~/.cmake/ Sometimes this can conf
 The library assumes the use of C++14, and is compatible with SystemC versions from SystemC 2.3.1a.
 
 
+For a reference docker please use the following script from the top level of the Virtual Platform:
+```bash
+curl --header 'PRIVATE-TOKEN: W1Z9U8S_5BUEX1_Y29iS' 'https://git.greensocs.com/api/v4/projects/65/repository/files/docker_vp.sh/raw?ref=master' -o docker_vp.sh
+chmod +x ./docker_vp.sh
+./docker_vp.sh
+> cmake -B build;cd build; make -j
+```
+
+### passwords for git.greensocs.com
+To avoid using passwords for git.greensocs.com please add a ssh key to your git account. You may also use a key-chain manager. As a last resort, the following script will populate ~/.git-credentials  with your username and password (in plain text)
+```bash
+git config --global credential.helper store
+```
+
 ## More documentation
 
 More documentation, including doxygen generated API documentation can be found in the `/docs` directory.
-
-## GreenSocs Synchronization Library
+## LIBGSSYNC
 
 The GreenSocs Synchronization library provides a number of different policies for synchronizing between an external simulator (typically QEMU) and SystemC.
 
-These are based on a proposed standard means to handle the SystemC simulator. This library provides  a backwards compatibility layer, but the patched version of SystemC will perform better.
+These are based on a proposed standard means to handle the SystemC simulator. This library provides a backwards compatibility layer, but the patched version of SystemC will perform better.
 
-In addition the library contains utilities such as an thread safe event (async_event) and a real time speed limited for SystemC.## GreenSocs Basic SystemC utility library
+## The GreenSocs SystemC simple components library.
 
-This is the GreenSocs basic utilities library. It contains utility functions for CCI and simple logging functions.
+This includes simple models such as routers, memories and exclusive monitor. The components are "Loosely timed" only. They support DMI where appropriate, and make use of CCI for configuration.
+
+It also has several unit tests for memory, router and exclusive monitor.
+
+## LIBGSUTILS
+
+The GreenSocs basic utilities library contains utility functions for CCI, simple logging and test functions.
+It also includes some basic tlm port types
+## LIBQEMU-CXX 
+
+Libqemu-cxx encapsulates QEMU as a C++ object, such that it can be instanced (for instance) within a SystemC simulation framework.
+
+[//]: # (SECTION 10)
+## Information about building and using the greensocs Qbox library
+The greensocs Qbox library depends on the libraries : base-components, libgssync, libqemu-cxx, libgsutils, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
+
+[//]: # (SECTION 10 AUTOADDED)
+## Information about building and using the libqemu-cxx library
+The libqemu-cxx library depends only on the libqemu library
+
+## Information about building and using the base-components library
+The base-components library depends on the libraries : Libgsutls, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
+## Information about building and using the libgssync library
+The libgssync library depends on the libraries : base-components, libgsutils, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
+Information about building and using the libgsutils library
+-----------------------------------------------------------
+
+The libgsutils library depends on the libraries : SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
 
 The GreenSocs CCI libraries allows two options for setting configuration parameters
 
@@ -85,14 +130,100 @@ This library includes a Configurable Broker (gs::ConfigurableBroker) which provi
 
 Note that a string parameter must be quoted.
 
-The lua file read by the ConfigurableBroker has relative paths - this means that in the example above the `path.to.module` portion of the absolute path should not appear in the (local) configuration file. (Hence changes in the hierarchy will not need changes to the configuration file).## LIBQEMU-CXX 
+The lua file read by the ConfigurableBroker has relative paths - this means that in the example above the `path.to.module` portion of the absolute path should not appear in the (local) configuration file. (Hence changes in the hierarchy will not need changes to the configuration file).
 
-Libqemu-cxx encapsulates QEMU as a C++ object, such that it can be instanced (for instance) within a SystemC simulation framework.
+## Using yaml for configuration
+If you would prefer to use yaml as a configuration language, `lyaml` provides a link. This can be downloaded from https://github.com/gvvaughan/lyaml
 
-[//]: # (SECTION 10)
+The following lua code will load "conf.yaml".
 
+```
+local lyaml   = require "lyaml"
 
-[//]: # (SECTION 10 AUTOADDED)
+function readAll(file)
+    local f = assert(io.open(file, "rb"))
+    local content = f:read("*all")
+    f:close()
+    return content
+end
+
+print "Loading conf.yaml"
+yamldata=readAll("conf.yaml")
+ytab=lyaml.load(yamldata)
+for k,v in pairs(ytab) do
+    _G[k]=v
+end
+yamldata=nil
+ytab=nil
+```
+
+[//]: # (SECTION 50)
+## Instanciate Qemu
+A QemuManager is required in order to instantiate a Qemu instance. A QemuManager will hold, and maintain the instance until the end of execution. The QemuInstance can contain one or many CPU's and other devices.
+To create a new instance you can do this:
+```c++
+    QemuInstanceManager m_inst_mgr;
+```
+
+then you can initialize it by providing the QemuInstance object with the QemuInstanceManager object which will call the `new_instance` method to create a new instance.
+```c++
+    QemuInstance m_qemu_inst(m_inst_mgr.new_instance(QemuInstance::Target::AARCH64))
+```
+
+In order to add a CPU device to an instance they can be constructed as follows:
+```c++
+    sc_core::sc_vector<QemuCpuArmCortexA53> m_cpus
+
+    m_cpus("cpu", 32, [this] (const char *n, size_t i) { return new QemuCpuArmCortexA53(n, m_qemu_inst); })
+```
+You can change the CPUs to those listed below in the "CPU" section
+
+Interrupt Controllers and others devices also need a QEMU instance and can be set up as follows:
+```c++
+    QemuArmGicv3 m_gic("gic", m_qemu_inst);
+    QemuUartPl011 m_uart("uart", m_qemu_inst)
+```
+
+## The components of libqbox
+### CPU
+The libqbox library supports several CPU architectures such as ARM and RISCV.
+- In ARM architectures the library supports the cortex-a53 and the Neoverse-N1 which is based on the cortex-a76 architecture which itself derives from the cortex-a75/73/72.
+- In RISCV architecture, the library manages only the riscv64.
+
+### IRQ-CTRL
+The library also manages interrupts by providing :
+- ARM GICv2
+- ARM GICv3 
+which are Arm Generic Interrupt Controller.
+
+Then :
+- SiFive CLINT
+- SiFive PLIC 
+which are also Interrupt controller but for SiFive.
+
+### UART
+Finally, it has 2 uarts: 
+- pl011 for ARM 
+- 16550 for more general use
+
+### PORTS
+The library also provides socket initiators and targets for Qemu
+
+[//]: # (SECTION 50 AUTOADDED)
+
+## The GreenSocs component library memory
+The memory component allows you to add memory when creating an object of type `Memory("name",size)`.
+
+The memory component consists of a simple target socket :`tlm_utils::simple_target_socket<Memory> socket`
+
+## The GreenSocs component library router
+The router offers `add_target(socket, base_address, size)` as an API to add components into the address map for routing. (It is recommended that the addresses and size are CCI parameters).
+
+It also allows to bind multiple initiators with `add_initiator(socket)` to send multiple transactions.
+So there is no need for the bind() method offered by sockets because the add_initiator method already takes care of that.
+## Functionality of the synchronization library
+In addition the library contains utilities such as an thread safe event (async_event) and a real time speed limited for SystemC.
+
 ### Suspend/Unsuspend interface
 
 This patch adds four new basic functions to SystemC:
@@ -125,37 +256,8 @@ For Save and Restore, the expectation is that when a save is requested, ‘suspe
 
 _2 : External sync_
 When an external model injects events into a SystemC model (for instance, using an ‘async_request_update()’), time can drift between the two simulators. In order to maintain time, SystemC can be prevented from advancing by calling suspend_all(). If there are process in an unsuspendable state (for instance, processing on behalf of the external model), then the simulation will be allowed to continue. 
-NOTE, an event injected into the kernel by an async_request_update will cause the kernel to execute the associated update() function (leaving the suspended state). The update function should arrange to mark any processes that it requires as unsuspendable before the end of the current delta cycle, to ensure that they are scheduled.## Using yaml for configuration
-If you would prefer to use yaml as a configuration language, `lyaml` provides a link. This can be downloaded from https://github.com/gvvaughan/lyaml
-
-The following lua code will load "conf.yaml".
-
-```
-local lyaml   = require "lyaml"
-
-function readAll(file)
-    local f = assert(io.open(file, "rb"))
-    local content = f:read("*all")
-    f:close()
-    return content
-end
-
-print "Loading conf.yaml"
-yamldata=readAll("conf.yaml")
-ytab=lyaml.load(yamldata)
-for k,v in pairs(ytab) do
-    _G[k]=v
-end
-yamldata=nil
-ytab=nil
-```
-
-[//]: # (SECTION 50)
-
-
-[//]: # (SECTION 50 AUTOADDED)
-### The GreenSocs component library router
-The router offers `add_target(socker, base_address, size)` as an API to add components into the address map for routing. (It is recommended that the addresses and size are CCI parameters).## Using gs::ConfigurableBroker
+NOTE, an event injected into the kernel by an async_request_update will cause the kernel to execute the associated update() function (leaving the suspended state). The update function should arrange to mark any processes that it requires as unsuspendable before the end of the current delta cycle, to ensure that they are scheduled.
+## Using the ConfigurableBroker
 
 The broker will self register in the SystemC CCI hierarchy. All brokers have a parameter `lua_file` which will be read and used to configure parameters held within the broker. This file is read at the *local* level, and paths are *relative* to the location where the ConfigurableBroker is instanced.
 
@@ -183,8 +285,7 @@ The `gs::ConfigurableBroker` can be instanced in 3 ways:
 
     A ``{{key,value}}`` list can also be provided, otherwise it is assumed to be empty. Such a list will set parameter values within this broker. These values will be read and used **BEFORE** the command line is read.
 
-    Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either. 
-    
+    Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either.
 
 [//]: # (SECTION 100)
 

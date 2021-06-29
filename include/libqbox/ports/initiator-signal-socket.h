@@ -30,6 +30,8 @@
 
 #include <greensocs/libgssync.h>
 
+#include "libqbox/ports/target-signal-socket.h"
+
 /**
  * @class QemuInitiatorSignalSocket
  *
@@ -65,6 +67,13 @@ protected:
              * synchronization point in this case.
              */
             m_qemu_remote->get_gpio().set(val);
+
+            m_on_sysc.run_on_sysc([this] { m_qemu_remote->notify(); }, false);
+
+            return;
+        }
+
+        if (!get_interface()) {
             return;
         }
 

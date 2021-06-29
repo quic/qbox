@@ -22,6 +22,7 @@
 
 #include <sstream>
 #include <mutex>
+#include <condition_variable>
 
 #include <tlm>
 #include <tlm_utils/simple_initiator_socket.h>
@@ -35,6 +36,15 @@
 
 class QemuCpu : public QemuDevice, public QemuInitiatorIface {
 protected:
+    /*
+     * We have a unique copy per CPU of this extension, which is not dynamically allocated.
+     * We really don't want the default implementation to call delete on it...
+     */
+    class QemuCpuHintTlmExtension : public ::QemuCpuHintTlmExtension {
+    public:
+        void free() override { /* leave my extension alone, TLM */ }
+    };
+
     gs::RunOnSysC m_on_sysc;
     std::shared_ptr<qemu::Timer> m_deadline_timer;
     bool m_coroutines;
@@ -44,9 +54,15 @@ protected:
     gs::async_event m_qemu_kick_ev;
     sc_core::sc_event_or_list m_external_ev;
 
+    bool m_signaled;
+    std::mutex m_signaled_lock;
+    std::condition_variable m_signaled_cond;
+
     int64_t m_last_vclock;
 
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
+
+    QemuCpuHintTlmExtension m_cpu_hint_ext;
 
     /*
      * Create the quantum keeper according to the p_sync_policy parameter, and
@@ -98,6 +114,51 @@ protected:
      */
 
     /*
+     * Called by watch_external_ev and kick_cb in MTTCG mode. This keeps track
+     * of an external event in case the CPU thread just released the iothread
+     * and is going to call wait_for_work. This is needed to avoid missing an
+     * event and going to sleep while we should effectively wake-up.
+     *
+     * The coroutine mode does not use this method and use the SystemC kernel
+     * as a mean of synchronization. If an asynchronous event is triggered
+     * while the CPU thread go to sleep, the fact that the CPU thread is also
+     * the SystemC thread will ensure correct ordering of the events.
+     */
+    void set_signaled()
+    {
+        assert(!m_coroutines);
+
+        std::lock_guard<std::mutex> lock(m_signaled_lock);
+        m_signaled = true;
+        m_signaled_cond.notify_all();
+    }
+
+    /*
+     * SystemC thread watching the m_external_ev event list. Only used in MTTCG
+     * mode.
+     */
+    void watch_external_ev()
+    {
+        for (;;) {
+            wait(m_external_ev);
+            set_signaled();
+        }
+    }
+
+    /*
+     * Called when the CPU is kicked. We notify the corresponding async event
+     * to wake the CPU up if it was sleeping waiting for work.
+     */
+    void kick_cb()
+    {
+        if (m_coroutines) {
+            m_qemu_kick_ev.async_notify();
+        } else {
+            set_signaled();
+        }
+    }
+
+    /*
      * Called by the QEMU iothread when the deadline timer expires. We kick the
      * CPU out of its execution loop for it to call the end_of_loop_cb callback.
      */
@@ -107,13 +168,24 @@ protected:
     }
 
     /*
-     * The CPU does not have work anymore. This method run a wait on the
-     * SystemC kernel, waiting for the m_external_ev list.
+     * The CPU does not have work anymore. Pause the CPU thread until we have
+     * some work to do.
+     *
+     * - In coroutine mode, this method runs a wait on the SystemC kernel,
+     *   waiting for the m_external_ev list.
+     * - In MTTCG mode, we wait on the m_signaled_cond condition, signaled when
+     *   set_signaled is called.
      */
     void wait_for_work()
     {
         m_qk->stop();
-        m_on_sysc.run_on_sysc([this] () { wait(m_external_ev); });
+        if (m_coroutines) {
+            m_on_sysc.run_on_sysc([this] () { wait(m_external_ev); });
+        } else {
+            std::unique_lock<std::mutex> lock(m_signaled_lock);
+            m_signaled_cond.wait(lock, [this] { return m_signaled; });
+            m_signaled = false;
+        }
         m_qk->start();
     }
 
@@ -192,22 +264,7 @@ protected:
         elapsed = sc_core::sc_time(now - m_last_vclock, sc_core::SC_NS);
         m_qk->inc(elapsed);
 
-
         m_qk->sync();
-    }
-
-    /*
-     * Called when the CPU is kicked. We notify the corresponding async event
-     * to wake the CPU up if it was sleeping waiting for work.
-     *
-     * FIXME: There is a possible race condition where the CPU goes to sleep in
-     * wait_for_work while being notified by this callback. The notify can be
-     * lost if it happens just before the call to wait in wait_for_work (the
-     * iothread mutex gets unlocked just before the call to wait_for_work).
-     */
-    void kick_cb()
-    {
-        m_qemu_kick_ev.async_notify();
     }
 
     /*
@@ -217,11 +274,6 @@ protected:
      */
     void end_of_loop_cb()
     {
-
-        if (sc_core::sc_get_status() < sc_core::SC_RUNNING) {
-            /* Simulation hasn't started yet. */
-            return;
-        }
 
         if (m_coroutines) {
             m_inst.get().coroutine_yield();
@@ -262,6 +314,7 @@ public:
             const std::string &type_name)
         : QemuDevice(name, inst, (type_name + "-cpu").c_str())
         , m_qemu_kick_ev(false)
+        , m_signaled(false)
         , p_icount("icount", false, "Enable virtual instruction counter")
         , p_icount_mips("icount-mips", 0, "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
         , p_gdb_port("gdb-port", 0, "Wait for gdb connection on TCP port <gdb_port>")
@@ -272,6 +325,10 @@ public:
 
         create_quantum_keeper();
         set_qemu_instance_options();
+
+        if (!m_coroutines) {
+            SC_THREAD(watch_external_ev);
+        }
     }
 
     virtual ~QemuCpu()
@@ -281,23 +338,33 @@ public:
             return;
         }
 
+        if (!m_realized) {
+            return;
+        }
+
         if (m_coroutines) {
             /* No thread to join */
             return;
         }
 
         m_inst.get().lock_iothread();
-        m_cpu.clear_callbacks();
-        m_inst.get().unlock_iothread();
 
-        /*
-         * We can't use m_cpu.remove_sync() here as it locks the BQL, and join
-         * the CPU thread. If the CPU thread is in an asynchronous SystemC job
-         * waiting to be cancelled (because we're at end of simulation), then
-         * we'll deadlock here. Instead, set set_unplug to true so that the CPU
-         * thread will eventually quit, but do not wait for it to do so.
-         */
-        m_cpu.set_unplug(true);
+        /* Make sure QEMU won't call us anymore */
+        m_cpu.clear_callbacks();
+
+        /* Unblock the CPU thread if it's sleeping */
+        set_signaled();
+
+        /* Unblock it if it's waiting for run budget */
+        m_qk->stop();
+
+        /* Unblock it if it's waiting for some I/O to complete */
+        socket.cancel_all();
+
+        /* Wait for QEMU to terminate the CPU thread */
+        m_cpu.remove_sync();
+
+        m_inst.get().unlock_iothread();
     }
 
     void before_end_of_elaboration() override
@@ -320,6 +387,8 @@ public:
         m_deadline_timer = m_inst.get().timer_new();
         m_deadline_timer->set_callback(std::bind(&QemuCpu::deadline_timer_cb,
                                                  this));
+
+        m_cpu_hint_ext.set_cpu(m_cpu);
     }
 
     virtual void end_of_elaboration() override
@@ -331,6 +400,10 @@ public:
             std::cout << "Starting gdb server on TCP port " << p_gdb_port << "\n";
             ss << "tcp::" << p_gdb_port;
             m_inst.get().start_gdb_server(ss.str());
+
+            m_inst.get().lock_iothread();
+            m_inst.get().vm_stop_paused();
+            m_inst.get().unlock_iothread();
         }
 
         m_qk->start();
@@ -352,7 +425,12 @@ public:
     virtual void initiator_customize_tlm_payload(TlmPayload &payload) override
     {
         /* Signal the other end we are a CPU */
-        payload.set_extension(new QemuCpuHintTlmExtension(m_cpu));
+        payload.set_extension(&m_cpu_hint_ext);
+    }
+
+    virtual void initiator_tidy_tlm_payload(TlmPayload &payload) override
+    {
+        payload.clear_extension(&m_cpu_hint_ext);
     }
 
     /*
