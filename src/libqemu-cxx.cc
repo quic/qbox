@@ -18,6 +18,7 @@
  */
 
 #include <cstring>
+#include <cassert>
 
 #include <libqemu/libqemu.h>
 
@@ -42,7 +43,7 @@ LibQemu::LibQemu(LibraryLoaderIface &library_loader, Target t)
 LibQemu::~LibQemu()
 {
     for (auto s: m_qemu_argv) {
-        delete s;
+        delete [] s;
     }
 }
 
@@ -51,6 +52,7 @@ void LibQemu::push_qemu_arg(const char *arg)
     char * dst = new char[std::strlen(arg)+1];
     std::strcpy(dst, arg);
 
+    assert(!is_inited());
     m_qemu_argv.push_back(dst);
 }
 
@@ -105,6 +107,16 @@ void LibQemu::start_gdb_server(std::string port)
     m_int->exports().gdbserver_start(port.c_str());
 }
 
+void LibQemu::vm_start()
+{
+    m_int->exports().vm_start();
+}
+
+void LibQemu::vm_stop_paused()
+{
+    m_int->exports().vm_stop_paused();
+}
+
 int64_t LibQemu::get_virtual_clock()
 {
     return m_int->exports().clock_virtual_get_ns();
@@ -141,6 +153,13 @@ std::shared_ptr<MemoryRegionOps> LibQemu::memory_region_ops_new()
     QemuMemoryRegionOps *ops = m_int->exports().mr_ops_new();
 
     return std::make_shared<MemoryRegionOps>(ops, m_int);
+}
+
+std::shared_ptr<AddressSpace> LibQemu::address_space_new()
+{
+    QemuAddressSpace *as = m_int->exports().address_space_new();
+
+    return std::make_shared<AddressSpace>(as, m_int);
 }
 
 static void qemu_gpio_generic_handler(void * opaque, int n, int level)

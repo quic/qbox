@@ -33,6 +33,7 @@ set(srcs
     src/callbacks.cc
     src/cpu.cc
     src/device.cc
+    src/gpex.cc
     src/gpio.cc
     src/libqemu-cxx.cc
     src/loader.cc
@@ -108,6 +109,6 @@ write_basic_package_version_file(
     COMPATIBILITY AnyNewerVersion)
 
 install(
-    FILES ${CMAKE_BINARY_DIR}/libqemu-cxxConfig.cmake
-          ${CMAKE_BINARY_DIR}/libqemu-cxxConfigVersion.cmake
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/libqemu-cxxConfig.cmake
+          ${CMAKE_CURRENT_BINARY_DIR}/libqemu-cxxConfigVersion.cmake
           DESTINATION ${LIBQEMU_CXX_LIB_DIR}/cmake)

@@ -35,6 +35,7 @@ struct LibQemuExports;
 struct QemuObject;
 struct MemTxAttrs;
 struct QemuMemoryRegionOps;
+struct QemuAddressSpace;
 struct QemuTimer;
 
 namespace qemu {
@@ -42,6 +43,7 @@ namespace qemu {
 class LibQemuInternals;
 class Object;
 class MemoryRegionOps;
+class AddressSpace;
 class Gpio;
 class Timer;
 class Bus;
@@ -79,6 +81,8 @@ public:
     /* QEMU GDB stub
      * @port: port the gdb server will be listening on. (ex: "tcp::1234") */
     void start_gdb_server(std::string port);
+    void vm_start();
+    void vm_stop_paused();
 
     void lock_iothread();
     void unlock_iothread();
@@ -97,6 +101,7 @@ public:
 
     Object object_new(const char *type_name);
     std::shared_ptr<MemoryRegionOps> memory_region_ops_new();
+    std::shared_ptr<AddressSpace> address_space_new();
     Gpio gpio_new();
 
     std::shared_ptr<Timer> timer_new();
@@ -133,6 +138,7 @@ public:
     void set_prop_int(const char *name, int64_t val);
     void set_prop_str(const char *name, const char *val);
     void set_prop_link(const char *name, const Object &link);
+    void set_prop_parse(const char *name, const char *value);
 
     QemuObject *get_qemu_obj() { return m_obj; }
 
@@ -266,7 +272,7 @@ public:
 
     void init_io(Object owner, const char *name, uint64_t size, MemoryRegionOpsPtr ops);
     void init_ram_ptr(Object owner, const char *name, uint64_t size, void *ptr);
-    void init_alias(Object owner, const char *name, MemoryRegion &root,
+    void init_alias(Object owner, const char *name, const MemoryRegion &root,
                     uint64_t offset, uint64_t size);
 
     void add_subregion(MemoryRegion &mr, uint64_t offset);
@@ -279,6 +285,31 @@ public:
                                uint64_t size, MemTxAttrs attrs);
 
     bool operator< (const MemoryRegion &mr) const { return m_obj < mr.m_obj; }
+};
+
+class AddressSpace {
+private:
+    QemuAddressSpace *m_as;
+    std::shared_ptr<LibQemuInternals> m_int;
+
+    bool m_inited = false;
+
+public:
+    using MemTxResult = MemoryRegionOps::MemTxResult;
+    using MemTxAttrs = MemoryRegionOps::MemTxAttrs;
+
+    AddressSpace(QemuAddressSpace *as, 
+                 std::shared_ptr<LibQemuInternals> internals);
+    AddressSpace(const AddressSpace &) = delete;
+
+    ~AddressSpace();
+
+    void init(MemoryRegion mr, const char *name);
+
+    MemTxResult read(uint64_t addr, void *data,
+                     size_t size, MemTxAttrs attrs);
+    MemTxResult write(uint64_t addr, const void *data,
+                      size_t size, MemTxAttrs attrs);
 };
 
 class Device : public Object {
@@ -314,17 +345,30 @@ public:
     void connect_gpio_out(int idx, Gpio gpio);
 };
 
+class GpexHost : public SysBusDevice {
+public:
+    static constexpr const char * const TYPE = "gpex-pcihost";
+
+    GpexHost() = default;
+    GpexHost(const GpexHost &) = default;
+    GpexHost(const Object &o) : SysBusDevice(o) { }
+
+    void set_irq_num(int idx, int gic_irq);
+};
+
 class Cpu : public Device {
 public:
     static constexpr const char * const TYPE = "cpu";
 
     using EndOfLoopCallbackFn = std::function<void ()>;
     using CpuKickCallbackFn = std::function<void ()>;
-    typedef void (*AsyncJobFn)(void *);
+    using AsyncJobFn = std::function<void ()>;
 
     Cpu() = default;
     Cpu(const Cpu &) = default;
     Cpu(const Object &o) : Device(o) {}
+
+    int get_index() const;
 
     void loop();
     bool loop_is_busy();
@@ -344,10 +388,15 @@ public:
 
     void kick();
 
-    void async_safe_run(AsyncJobFn job, void *arg);
+    [[ noreturn ]] void exit_loop_from_io();
+
+    void async_run(AsyncJobFn job);
+    void async_safe_run(AsyncJobFn job);
 
     void set_end_of_loop_callback(EndOfLoopCallbackFn cb);
     void set_kick_callback(CpuKickCallbackFn cb);
+
+    bool is_in_exclusive_context() const;
 };
 
 class Timer {
