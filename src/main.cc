@@ -25,7 +25,7 @@
 #include <greensocs/gsutils/luafile_tool.h>
 #include <greensocs/gsutils/cciutils.h>
 
-#include <libqbox/components/cpu/arm/neoverse-n1.h>
+#include <libqbox/components/cpu/arm/cortex-a53.h>
 #include <libqbox/components/irq-ctrl/arm-gicv3.h>
 #include <libqbox/components/uart/pl011.h>
 
@@ -109,7 +109,7 @@ protected:
     QemuInstanceManager m_inst_mgr;
     QemuInstance &m_qemu_inst;
 
-    sc_core::sc_vector<QemuCpuArmNeoverseN1> m_cpus;
+    sc_core::sc_vector<QemuCpuArmCortexA53> m_cpus;
     QemuArmGicv3 m_gic;
     Router<> m_router;
     Memory m_ram;
@@ -216,7 +216,7 @@ public:
         , m_addr_map_uart("addr_map_uart", 0xc0000000, "")
 
         , m_qemu_inst(m_inst_mgr.new_instance(QemuInstance::Target::AARCH64))
-        , m_cpus("cpu", 4, [this] (const char *n, size_t i) { return new QemuCpuArmNeoverseN1(n, m_qemu_inst); })
+        , m_cpus("cpu", 4, [this] (const char *n, size_t i) { return new QemuCpuArmCortexA53(n, m_qemu_inst); })
         , m_gic("gic", m_qemu_inst)
         , m_router("router")
         , m_ram("ram", m_ram_size)
