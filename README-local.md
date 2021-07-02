@@ -1,90 +1,10 @@
 
 
-[//]: # DONT EDIT THIS FILE
-
-
 [//]: # (SECTION 0)
 ## LIBGSUTILS
 
 The GreenSocs basic utilities library contains utility functions for CCI, simple logging and test functions.
 It also includes some basic tlm port types
-
-[//]: # (SECTION 0 AUTOADDED)
-
-
-[//]: # (SECTION 1)
-
-
-[//]: # (SECTION 1 AUTOADDED)
-
-
-
-# GreenSocs Build and make system
-
-# How to build
-> 
-> This project may be built using cmake
-> ```bash
-> cmake -B build;pushd build; make -j; popd
-> ```
-> 
-cmake may ask for your git.greensocs.com credentials (see below for advice about passwords)
-
-## cmake version
-cmake version 3.14 or newer is required. This can be downloaded and used as follows
-```bash
- curl -L https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
- ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake
-```
- 
-
-
-## details
-
-This project uses CPM https://github.com/cpm-cmake/CPM.cmake in order to find, and/or download missing components. In order to find locally installed SystemC, you may use the standards SystemC environment variables: `SYSTEMC_HOME` and `CCI_HOME`.
-CPM will use the standard CMAKE `find_package` mechanism to find installed packages https://cmake.org/cmake/help/latest/command/find_package.html
-To specify a specific package location use `<package>_ROOT`
-CPM will also search along the CMAKE_MODULE_PATH
-
-Sometimes it is convenient to have your own sources used, in this case, use the `CPM_<package>_SOURCE_DIR`.
-Hence you may wish to use your own copy of SystemC CCI 
-```bash
-cmake -B build -DCPM_SystemCCCI_SOURCE=/path/to/your/cci/source`
-```
-
-It may also be convenient to have all the source files downloaded, you may do this by running 
-```bash
-cmake -B build -DCPM_SOURCE_CACHE=`pwd`/Packages
-```
-This will populate the directory `Packages` Note that the cmake file system will automatically use the directory called `Packages` as source, if it exists.
-
-NB, CMake holds a cache of compiled modules in ~/.cmake/ Sometimes this can confuse builds. If you seem to be picking up the wrong version of a module, then it may be in this cache. It is perfectly safe to delete it.
-
-### Common CMake options
-`CMAKE_INSTALL_PREFIX` : Install directory for the package and binaries.
-`CMAKE_BUILD_TYPE`     : DEBUG or RELEASE
-
-
-The library assumes the use of C++14, and is compatible with SystemC versions from SystemC 2.3.1a.
-
-
-For a reference docker please use the following script from the top level of the Virtual Platform:
-```bash
-curl --header 'PRIVATE-TOKEN: W1Z9U8S_5BUEX1_Y29iS' 'https://git.greensocs.com/api/v4/projects/65/repository/files/docker_vp.sh/raw?ref=master' -o docker_vp.sh
-chmod +x ./docker_vp.sh
-./docker_vp.sh
-> cmake -B build;cd build; make -j
-```
-
-### passwords for git.greensocs.com
-To avoid using passwords for git.greensocs.com please add a ssh key to your git account. You may also use a key-chain manager. As a last resort, the following script will populate ~/.git-credentials  with your username and password (in plain text)
-```bash
-git config --global credential.helper store
-```
-
-## More documentation
-
-More documentation, including doxygen generated API documentation can be found in the `/docs` directory.
 
 [//]: # (SECTION 10)
 Information about building and using the libgsutils library
@@ -133,9 +53,6 @@ yamldata=nil
 ytab=nil
 ```
 
-[//]: # (SECTION 10 AUTOADDED)
-
-
 [//]: # (SECTION 50)
 ## Using the ConfigurableBroker
 
@@ -167,9 +84,6 @@ The `gs::ConfigurableBroker` can be instanced in 3 ways:
 
     Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either.
 
-[//]: # (SECTION 50 AUTOADDED)
-
-
 [//]: # (SECTION 100)
 ## The GreenSocs utils Tests
 
@@ -179,5 +93,3 @@ To do this, you must run the following command in the build directoty `build/`:
 ```bash
 make test
 ```
-
-[//]: # (PROCESSED BY doc_merge.pl)
