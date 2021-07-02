@@ -6,6 +6,19 @@ list(APPEND QBOX_CPU_TEST_SYNC_POLICY_COMBINATION
 
 list(APPEND QBOX_CPU_TEST_NUM_CPU_COMBINATION 1 2 4 8 16 32 64 128)
 
+cpmfindpackage(
+    NAME
+    keystone
+    GIT_REPOSITORY
+    https://github.com/keystone-engine/keystone.git
+    GIT_TAG
+    0.9.2
+    GIT_SHALLOW
+    TRUE
+    OPTIONS
+    "BUILD_LIBS_ONLY"
+)
+
 function(qbox_add_cpu_test target timeout_s)
     if(NOT ${keystone_FOUND})
         return()
