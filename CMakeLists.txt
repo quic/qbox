@@ -26,19 +26,6 @@ gs_addpackage(greensocs/libgssync)
 gs_addpackage(qemu/libqemu-cxx)
 gs_addpackage(greensocs/components/base-components)
 
-cpmfindpackage(
-    NAME
-    keystone
-    GIT_REPOSITORY
-    https://github.com/keystone-engine/keystone.git
-    GIT_TAG
-    0.9.2
-    GIT_SHALLOW
-    TRUE
-    OPTIONS
-    "BUILD_LIBS_ONLY"
-)
-
 set(LIBQBOX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqbox)
 
 add_library(${PROJECT_NAME} INTERFACE)
