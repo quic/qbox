@@ -1,5 +1,8 @@
 
 
+[//]: # DONT EDIT THIS FILE
+
+
 [//]: # (SECTION 0)
 ## The GreenSocs SystemC simple components library.
 
