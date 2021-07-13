@@ -37,10 +37,7 @@ static std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
         : cci_get_global_broker(cci_originator("gs__sc_cci_children"));
     std::list<std::string> children;
     int l = strlen(name) + 1;
-    auto uncon = m_broker.get_unconsumed_preset_values(
-        [&name](const std::pair<std::string, cci_value>& iv) {
-            return iv.first.find(std::string(name) + ".") == 0;
-        });
+    auto uncon = m_broker.get_unconsumed_preset_values([&name](const std::pair<std::string, cci_value>& iv) { return iv.first.find(std::string(name) + ".") == 0; });
     for (auto p : uncon) {
         children.push_back(p.first.substr(l, p.first.find(".", l) - l));
     }
@@ -299,6 +296,22 @@ public:
         } else {
             return consuming_broker::remove_param(par);
         }
+    }
+
+    // Upstream consuming broker fails to pass get_unconsumed_preset_value to parent
+    std::vector<cci_name_value_pair> get_unconsumed_preset_values() const
+    {
+        std::vector<cci_name_value_pair> r = consuming_broker::get_unconsumed_preset_values();
+        if (has_parent) {
+            std::vector<cci_name_value_pair> p = m_parent.get_unconsumed_preset_values();
+            r.insert(r.end(), p.begin(), p.end());
+        }
+        return r;
+    }
+
+    cci_preset_value_range get_unconsumed_preset_values(const cci_preset_value_predicate& pred) const
+    {
+        return cci_preset_value_range(pred, ConfigurableBroker::get_unconsumed_preset_values());
     }
 
     // Functions below here require an orriginator to be passed to the local
