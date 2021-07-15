@@ -22,8 +22,12 @@
 
 #include <cassert>
 #include <sstream>
+#include <systemc>
+
+#include <cci_configuration>
 #include <vector>
 
+#include <greensocs/gsutils/cciutils.h>
 #include <greensocs/gsutils/report.h>
 
 #include <libqemu-cxx/libqemu-cxx.h>
@@ -57,7 +61,7 @@ public:
  * @brief This class encapsulates a libqemu-cxx qemu::LibQemu instance. It
  * handles QEMU parameters and instance initialization.
  */
-class QemuInstance {
+class QemuInstance : public sc_core::sc_module {
 public:
     using Target = qemu::Target;
     using LibLoader = qemu::LibraryLoaderIface;
@@ -86,6 +90,9 @@ protected:
 
     void push_default_args()
     {
+        gs::ConfigurableBroker m_conf_broker;
+        const size_t l = strlen(name()) + 1;
+
         m_inst.push_qemu_arg("libqbox"); /* argv[0] */
         m_inst.push_qemu_arg({
             "-M", "none", /* no machine */
@@ -95,13 +102,13 @@ protected:
             "-display", "none", /* no GUI */
         });
 
-        const size_t args = strlen("args.");
-        for (auto p : m_conf_broker.get_unconsumed_preset_values([&](const std::pair<std::string, cci::cci_value>& iv) { return iv.first.find(std::string(name()) + "." + "args.") == 0; })) {
+        const char* args = "args.";
+        for (auto p : m_conf_broker.get_unconsumed_preset_values([&](const std::pair<std::string, cci::cci_value>& iv) { return iv.first.find(std::string(name()) + "." + args) == 0; })) {
             if (p.second.get_string().is_string()) {
-                const char* arg_name = p.first.substr(l + args).c_str();
-                const char* arg_value = p.second.get_string().c_str();
-                std::cout << "Added QEMU argument : " << arg_name << " " << arg_value << std::endl;
-                m_inst.push_qemu_arg({ arg_name, arg_value });
+                const std::string arg_name = p.first.substr(l + strlen(args));
+                const std::string arg_value = p.second.get_string();
+                SC_REPORT_INFO("QemuInstance", ("Added QEMU argument : " + arg_name + " " + arg_value).c_str());
+                m_inst.push_qemu_arg({ arg_name.c_str(), arg_value.c_str() });
             } else {
                 SC_REPORT_ERROR("QemuInstance", "The value of the argument is not a string");
             }
@@ -147,8 +154,9 @@ protected:
     }
 
 public:
-    QemuInstance(LibLoader& loader, Target t)
-        : m_inst(loader, t)
+    QemuInstance(const sc_core::sc_module_name& n, LibLoader& loader, Target t)
+        : sc_core::sc_module(n)
+        , m_inst(loader, t)
         , m_dmi_mgr(m_inst)
     {
         push_default_args();
@@ -350,7 +358,7 @@ public:
      */
     QemuInstance& new_instance(Target t)
     {
-        QemuInstance* n = new QemuInstance(*m_loader, t);
+        QemuInstance* n = new QemuInstance("QemuInstance", *m_loader, t);
         m_insts.push_back(*n);
 
         return *n;
@@ -358,7 +366,8 @@ public:
     /* Destructor should only be called at the end of the program, if it is called before, then all Qemu instances
  * that it manages will, of course, be destroyed too
  */
-    virtual ~QemuInstanceManager() {
+    virtual ~QemuInstanceManager()
+    {
         while (m_insts.size()) {
             delete &m_insts.back().get();
             m_insts.pop_back();
