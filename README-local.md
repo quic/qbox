@@ -84,6 +84,14 @@ The `gs::ConfigurableBroker` can be instanced in 3 ways:
 
     Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either.
 
+## Print out the available params
+
+It is possible to display the list of available cci parameters with the `-h` option when launching the virtual platform.
+
+CAUTION:
+
+This will only print the parameters at the begining of simulation.
+
 [//]: # (SECTION 100)
 ## The GreenSocs utils Tests
 
