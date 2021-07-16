@@ -105,8 +105,6 @@ Libqemu-cxx encapsulates QEMU as a C++ object, such that it can be instanced (fo
 The greensocs Qbox library depends on the libraries : base-components, libgssync, libqemu-cxx, libgsutils, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
 
 [//]: # (SECTION 10 AUTOADDED)
-## Information about building and using the libqemu-cxx library
-The libqemu-cxx library depends only on the libqemu library
 
 ## Information about building and using the base-components library
 The base-components library depends on the libraries : Libgsutls, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
@@ -157,6 +155,9 @@ end
 yamldata=nil
 ytab=nil
 ```
+## Information about building and using the libqemu-cxx library
+
+The libgsutils library does not depend on any library.
 
 [//]: # (SECTION 50)
 ## Instanciate Qemu
@@ -184,6 +185,59 @@ Interrupt Controllers and others devices also need a QEMU instance and can be se
     QemuArmGicv3 m_gic("gic", m_qemu_inst);
     QemuUartPl011 m_uart("uart", m_qemu_inst)
 ```
+
+## QEMU Arguments
+
+QEMU arguments can be added to an entire instance using the configuration mechanism. The argument name should be in a form `"name.of.your.qemu.instance.args.-ARG" = "value"`.
+
+The QEMU instance provides the following default arguments :
+```
+    "-M", "none", /* no machine */
+    "-m", "2048", /* used by QEMU to set some interal buffer sizes */
+    "-monitor", "null", /* no monitor */
+    "-serial", "null", /* no serial backend */
+    "-display", "none", /* no GUI */
+```
+
+Example :
+Using the lua file configuration mechanism to set `-monitor` to enable telnet communication with QEMU, with the QEMU instance "platform.QemuInstance" the lua file should contain :
+
+```lua
+["platform.QemuInstance.args.-monitor"] = "tcp:127.0.0.1:55555,server,nowait",
+```
+To check that the QEMU argument has been added QEMU will report :
+`Added QEMU argument: "name of the argument" "value of the argument"`
+
+In the example it's :
+`Added QEMU argument : -monitor tcp:127.0.0.1:55555,server,nowait`
+
+Telnet can be used to connector to the monitor as follows:
+```bash
+$ telnet 127.0.0.1 55555
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+QEMU 5.1.0 monitor - type 'help' for more information
+(qemu) quit
+quit
+Connection closed by foreign host.
+```
+
+NOTE :
+
+This should not be used to enable GDB.
+
+Enabling GDB per CPU
+--------------------
+
+In order to connect a GDB the CCI parameter `name.of.cpu.gdb-port` must be set a none zero value.
+
+For instance 
+```bash
+$ ./build/vp --gs_luafile conf.lua -p platform.cpu_1.gdb-port=1234
+```
+Will open a gdb server on port 1234, for `cpu_1`, and the virtual platform will wait for GDB to connect.
+
 
 ## The components of libqbox
 ### CPU
@@ -287,6 +341,14 @@ The `gs::ConfigurableBroker` can be instanced in 3 ways:
     A ``{{key,value}}`` list can also be provided, otherwise it is assumed to be empty. Such a list will set parameter values within this broker. These values will be read and used **BEFORE** the command line is read.
 
     Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either.
+
+## Print out the available params
+
+It is possible to display the list of available cci parameters with the `-h` option when launching the virtual platform.
+
+CAUTION:
+
+This will only print the parameters at the begining of simulation.
 
 [//]: # (SECTION 100)
 
