@@ -58,6 +58,9 @@ private:
     cci_broker_if& m_parent;
     std::string m_orig_name;
     cci_originator m_originator;
+    cci_param<ConfigurableBroker *> *m_child_ref;
+
+    friend class cci_value_converter<ConfigurableBroker>;
 
     // convenience function for constructor
     cci_broker_if& get_parent_broker()
@@ -120,15 +123,29 @@ public:
  * public interface functions
  */
 
-    void print_help()
+    void print_help(bool top=true)
     {
-        std::cout << std::endl
+        if (top) {
+            std::cout << std::endl
                   << "Available Configuration Parameters:" << std::endl
                   << "===================================" << std::endl;
-        for (auto p : get_param_handles(get_cci_originator("Command line help"))) {
-            std::cout << p.name() << " : " << p.get_description() << " (configured value " << p.get_cci_value() << ") " << std::endl;
         }
-        std::cout << std::endl;
+
+        std::string ending = "childbroker";
+        for (auto p : get_param_handles(get_cci_originator("Command line help"))) {
+            if (!std::equal(ending.rbegin(), ending.rend(), std::string(p.name()).rbegin())) {
+                std::cout << p.name() << " : " << p.get_description() << " (configured value " << p.get_cci_value() << ") " << std::endl;
+            } else {
+              cci_param_typed_handle<ConfigurableBroker *> c(p);
+              ConfigurableBroker *cc = c.get_value();
+              if (cc!=this) {
+                  cc->print_help(false);
+              }
+            }
+        }
+        if (top){
+            std::cout << std::endl;
+        }
     }
 /*
  * default constructor:
@@ -140,14 +157,21 @@ public:
         bool load_conf_file = true)
         : m_orig_name(hierarchical_name())
         , m_originator(get_cci_originator(name.c_str()))
-        , consuming_broker(hierarchical_name() + name)
+        , consuming_broker(hierarchical_name() + "." + name)
         , conf_file("lua_conf", "",
               cci_broker_handle(get_parent_broker(),
                   get_cci_originator(name.c_str())),
               "Local lua configuration file", CCI_RELATIVE_NAME,
               get_cci_originator(name.c_str()))
         , m_parent(get_parent_broker()) // local convenience function
+        , m_child_ref(NULL)
     {
+        if (has_parent) {
+          m_child_ref = new cci_param<ConfigurableBroker *>(
+              (hierarchical_name() + "." + name + ".childbroker").c_str(),
+              (this), "");
+        }
+
         cci_register_broker(this);
 
         if (load_conf_file && !(std::string(conf_file).empty())) {
@@ -231,7 +255,11 @@ public:
         return m_orig_name + std::string(".") + n;
     }
 
-    ~ConfigurableBroker() {}
+    ~ConfigurableBroker() {
+        if (m_child_ref) {
+            delete m_child_ref;
+        }
+    }
 
     cci_originator get_value_origin(const std::string& parname) const
     {
@@ -365,5 +393,19 @@ public:
     bool is_global_broker() const { return (!has_parent); }
 };
 } // namespace gs
+
+template <>
+struct cci::cci_value_converter<gs::ConfigurableBroker *> {
+    typedef gs::ConfigurableBroker * type;
+    static bool pack(cci_value::reference dst, type const& src)
+    {
+        dst.set_string(src->name());
+        return true;
+    }
+    static bool unpack(type& dst, cci_value::const_reference src)
+    {
+        return false;
+    }
+};
 
 #endif // CCIUTILS_H
