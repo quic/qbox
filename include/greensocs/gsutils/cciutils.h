@@ -58,7 +58,7 @@ private:
     cci_broker_if& m_parent;
     std::string m_orig_name;
     cci_originator m_originator;
-    cci_param<ConfigurableBroker *> *m_child_ref;
+    cci_param<ConfigurableBroker*>* m_child_ref;
 
     friend class cci_value_converter<ConfigurableBroker>;
 
@@ -123,12 +123,12 @@ public:
  * public interface functions
  */
 
-    void print_help(bool top=true)
+    void print_help(bool top = true)
     {
         if (top) {
             std::cout << std::endl
-                  << "Available Configuration Parameters:" << std::endl
-                  << "===================================" << std::endl;
+                      << "Available Configuration Parameters:" << std::endl
+                      << "===================================" << std::endl;
         }
 
         std::string ending = "childbroker";
@@ -136,14 +136,14 @@ public:
             if (!std::equal(ending.rbegin(), ending.rend(), std::string(p.name()).rbegin())) {
                 std::cout << p.name() << " : " << p.get_description() << " (configured value " << p.get_cci_value() << ") " << std::endl;
             } else {
-              cci_param_typed_handle<ConfigurableBroker *> c(p);
-              ConfigurableBroker *cc = c.get_value();
-              if (cc!=this) {
-                  cc->print_help(false);
-              }
+                cci_param_typed_handle<ConfigurableBroker*> c(p);
+                ConfigurableBroker* cc = c.get_value();
+                if (cc != this) {
+                    cc->print_help(false);
+                }
             }
         }
-        if (top){
+        if (top) {
             std::cout << std::endl;
         }
     }
@@ -167,9 +167,9 @@ public:
         , m_child_ref(NULL)
     {
         if (has_parent) {
-          m_child_ref = new cci_param<ConfigurableBroker *>(
-              (hierarchical_name() + "." + name + ".childbroker").c_str(),
-              (this), "");
+            m_child_ref = new cci_param<ConfigurableBroker*>(
+                (hierarchical_name() + "." + name + ".childbroker").c_str(),
+                (this), "");
         }
 
         cci_register_broker(this);
@@ -255,7 +255,8 @@ public:
         return m_orig_name + std::string(".") + n;
     }
 
-    ~ConfigurableBroker() {
+    ~ConfigurableBroker()
+    {
         if (m_child_ref) {
             delete m_child_ref;
         }
@@ -395,8 +396,8 @@ public:
 } // namespace gs
 
 template <>
-struct cci::cci_value_converter<gs::ConfigurableBroker *> {
-    typedef gs::ConfigurableBroker * type;
+struct cci::cci_value_converter<gs::ConfigurableBroker*> {
+    typedef gs::ConfigurableBroker* type;
     static bool pack(cci_value::reference dst, type const& src)
     {
         dst.set_string(src->name());
