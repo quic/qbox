@@ -36,6 +36,59 @@ Interrupt Controllers and others devices also need a QEMU instance and can be se
     QemuUartPl011 m_uart("uart", m_qemu_inst)
 ```
 
+## QEMU Arguments
+
+QEMU arguments can be added to an entire instance using the configuration mechanism. The argument name should be in a form `"name.of.your.qemu.instance.args.-ARG" = "value"`.
+
+The QEMU instance provides the following default arguments :
+```
+    "-M", "none", /* no machine */
+    "-m", "2048", /* used by QEMU to set some interal buffer sizes */
+    "-monitor", "null", /* no monitor */
+    "-serial", "null", /* no serial backend */
+    "-display", "none", /* no GUI */
+```
+
+Example :
+Using the lua file configuration mechanism to set `-monitor` to enable telnet communication with QEMU, with the QEMU instance "platform.QemuInstance" the lua file should contain :
+
+```lua
+["platform.QemuInstance.args.-monitor"] = "tcp:127.0.0.1:55555,server,nowait",
+```
+To check that the QEMU argument has been added QEMU will report :
+`Added QEMU argument: "name of the argument" "value of the argument"`
+
+In the example it's :
+`Added QEMU argument : -monitor tcp:127.0.0.1:55555,server,nowait`
+
+Telnet can be used to connector to the monitor as follows:
+```bash
+$ telnet 127.0.0.1 55555
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+QEMU 5.1.0 monitor - type 'help' for more information
+(qemu) quit
+quit
+Connection closed by foreign host.
+```
+
+NOTE :
+
+This should not be used to enable GDB.
+
+Enabling GDB per CPU
+--------------------
+
+In order to connect a GDB the CCI parameter `name.of.cpu.gdb-port` must be set a none zero value.
+
+For instance 
+```bash
+$ ./build/vp --gs_luafile conf.lua -p platform.cpu_1.gdb-port=1234
+```
+Will open a gdb server on port 1234, for `cpu_1`, and the virtual platform will wait for GDB to connect.
+
+
 ## The components of libqbox
 ### CPU
 The libqbox library supports several CPU architectures such as ARM and RISCV.
