@@ -38,7 +38,7 @@ public:
     {
     }
 
-    virtual ~QemuInstanceTcgModeMismatchException() throw() { }
+    virtual ~QemuInstanceTcgModeMismatchException() throw() {}
 };
 
 class QemuInstanceIcountModeMismatchException : public QboxException {
@@ -48,7 +48,7 @@ public:
     {
     }
 
-    virtual ~QemuInstanceIcountModeMismatchException() throw() { }
+    virtual ~QemuInstanceIcountModeMismatchException() throw() {}
 };
 
 /**
@@ -94,6 +94,18 @@ protected:
             "-serial", "null", /* no serial backend */
             "-display", "none", /* no GUI */
         });
+
+        const size_t args = strlen("args.");
+        for (auto p : m_conf_broker.get_unconsumed_preset_values([&](const std::pair<std::string, cci::cci_value>& iv) { return iv.first.find(std::string(name()) + "." + "args.") == 0; })) {
+            if (p.second.get_string().is_string()) {
+                const char* arg_name = p.first.substr(l + args).c_str();
+                const char* arg_value = p.second.get_string().c_str();
+                std::cout << "Added QEMU argument : " << arg_name << " " << arg_value << std::endl;
+                m_inst.push_qemu_arg({ arg_name, arg_value });
+            } else {
+                SC_REPORT_ERROR("QemuInstance", "The value of the argument is not a string");
+            }
+        }
     }
 
     void push_icount_mode_args()
@@ -144,7 +156,7 @@ public:
 
     QemuInstance(const QemuInstance&) = delete;
     QemuInstance(QemuInstance&&) = delete;
-    virtual ~QemuInstance() { }
+    virtual ~QemuInstance() {}
 
     bool operator==(const QemuInstance& b) const
     {
@@ -343,13 +355,13 @@ public:
 
         return *n;
     }
-/* Destructor should only be called at the end of the program, if it is called before, then all Qemu instances
+    /* Destructor should only be called at the end of the program, if it is called before, then all Qemu instances
  * that it manages will, of course, be destroyed too
  */
     virtual ~QemuInstanceManager() {
         while (m_insts.size()) {
-          delete &m_insts.back().get();
-          m_insts.pop_back();
+            delete &m_insts.back().get();
+            m_insts.pop_back();
         }
     }
 };
