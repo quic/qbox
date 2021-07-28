@@ -237,7 +237,7 @@ public:
             switch (c) {
             case 'h': // -h and --help
                 sc_core::sc_spawn_options opts;
-                sc_core::sc_spawn([&]() { print_help();sc_core::sc_stop(); }, "print_help", &opts);
+                sc_core::sc_spawn([&]() { print_help();exit(0); }, "print_help", &opts);
                 break;
             }
         }
