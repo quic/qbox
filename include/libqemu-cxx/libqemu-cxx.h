@@ -258,7 +258,7 @@ public:
     using MemTxResult = MemoryRegionOps::MemTxResult;
     using MemTxAttrs = MemoryRegionOps::MemTxAttrs;
 
-    static constexpr const char * const TYPE = "qemu:memory-region";
+    static constexpr const char * const TYPE = "memory-region";
 
     MemoryRegion *container;
 
