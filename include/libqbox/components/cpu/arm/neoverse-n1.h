@@ -91,7 +91,7 @@ public:
     QemuInitiatorSignalSocket irq_timer_sec_out;
 
     QemuCpuArmNeoverseN1(sc_core::sc_module_name name, QemuInstance &inst)
-        : QemuCpu(name, inst, "cortex-a72-arm")
+        : QemuCpu(name, inst, "neoverse-n1-arm")
         , p_mp_affinity("mp-affinity", 0, "Multi-processor affinity value")
         , p_has_el2("has_el2", true, "ARM virtualization extensions")
         , p_has_el3("has_el3", true, "ARM secure-mode extensions")
