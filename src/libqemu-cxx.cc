@@ -162,6 +162,11 @@ std::shared_ptr<AddressSpace> LibQemu::address_space_new()
     return std::make_shared<AddressSpace>(as, m_int);
 }
 
+std::shared_ptr<AddressSpace> LibQemu::address_space_get_system_memory() {
+    QemuAddressSpace *as = m_int->exports().address_space_get_system_memory();
+    return std::make_shared<AddressSpace>(as, m_int);
+}
+
 static void qemu_gpio_generic_handler(void * opaque, int n, int level)
 {
     Gpio::GpioProxy *proxy = reinterpret_cast<Gpio::GpioProxy*>(opaque);

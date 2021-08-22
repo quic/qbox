@@ -219,6 +219,9 @@ AddressSpace::AddressSpace(QemuAddressSpace *as,
 
 AddressSpace::~AddressSpace()
 {
+    if (m_global) {
+        return;
+    }
     if (m_inited) {
         m_int->exports().address_space_destroy(m_as);
     }
@@ -226,11 +229,14 @@ AddressSpace::~AddressSpace()
     m_int->exports().address_space_free(m_as);
 }
 
-void AddressSpace::init(MemoryRegion mr, const char *name)
+void AddressSpace::init(MemoryRegion mr, const char *name, bool global)
 {
     QemuMemoryRegion *mr_obj = reinterpret_cast<QemuMemoryRegion*>(mr.get_qemu_obj());
     m_int->exports().address_space_init(m_as, mr_obj, name);
 
+    if (global) {
+        m_global = true;
+    }
     m_inited = true;
 }
 
