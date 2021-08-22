@@ -102,6 +102,7 @@ public:
     Object object_new(const char *type_name);
     std::shared_ptr<MemoryRegionOps> memory_region_ops_new();
     std::shared_ptr<AddressSpace> address_space_new();
+    std::shared_ptr<AddressSpace> address_space_get_system_memory();
     Gpio gpio_new();
 
     std::shared_ptr<Timer> timer_new();
@@ -293,6 +294,7 @@ private:
     std::shared_ptr<LibQemuInternals> m_int;
 
     bool m_inited = false;
+    bool m_global = false;
 
 public:
     using MemTxResult = MemoryRegionOps::MemTxResult;
@@ -304,7 +306,7 @@ public:
 
     ~AddressSpace();
 
-    void init(MemoryRegion mr, const char *name);
+    void init(MemoryRegion mr, const char *name, bool global = false);
 
     MemTxResult read(uint64_t addr, void *data,
                      size_t size, MemTxAttrs attrs);
