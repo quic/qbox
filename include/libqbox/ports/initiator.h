@@ -361,6 +361,30 @@ public:
         m_dev = dev;
     }
 
+    void init_global(qemu::Device &dev)
+        {
+            using namespace std::placeholders;
+
+            qemu::LibQemu &inst = m_inst.get();
+            qemu::MemoryRegionOpsPtr ops;
+
+            m_root = inst.object_new<qemu::MemoryRegion>();
+            ops = inst.memory_region_ops_new();
+
+            ops->set_read_callback(std::bind(&QemuInitiatorSocket::qemu_io_read,
+                                            this, _1, _2, _3, _4));
+            ops->set_write_callback(std::bind(&QemuInitiatorSocket::qemu_io_write,
+                                            this, _1, _2, _3, _4));
+            ops->set_max_access_size(8);
+
+            m_root.init_io(dev, TlmInitiatorSocket::name(),
+                        std::numeric_limits<uint64_t>::max(), ops);
+
+            auto as = inst.address_space_get_system_memory();
+            as->init(m_root, "global-peripheral-initiator", true);
+            m_dev = dev;
+        }
+
     void cancel_all()
     {
         m_on_sysc.cancel_all();
