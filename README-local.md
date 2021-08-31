@@ -49,6 +49,17 @@ _2 : External sync_
 When an external model injects events into a SystemC model (for instance, using an ‘async_request_update()’), time can drift between the two simulators. In order to maintain time, SystemC can be prevented from advancing by calling suspend_all(). If there are process in an unsuspendable state (for instance, processing on behalf of the external model), then the simulation will be allowed to continue. 
 NOTE, an event injected into the kernel by an async_request_update will cause the kernel to execute the associated update() function (leaving the suspended state). The update function should arrange to mark any processes that it requires as unsuspendable before the end of the current delta cycle, to ensure that they are scheduled.
 
+## List of options of sync policy parameter
+
+The libgssync library allows you to set several values to the `p_sync_policy` parameter :
+- `tlm2`
+- `multithread`
+- `multithread-quantum`
+- `multithread-rolling`
+- `multithread-unconstrained`
+
+By default the parameter is set to `multithread-quantum`.
+
 [//]: # (SECTION 100)
 ## The GreenSocs Synchronization Tests
 

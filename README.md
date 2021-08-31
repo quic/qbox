@@ -187,6 +187,17 @@ _2 : External sync_
 When an external model injects events into a SystemC model (for instance, using an ‘async_request_update()’), time can drift between the two simulators. In order to maintain time, SystemC can be prevented from advancing by calling suspend_all(). If there are process in an unsuspendable state (for instance, processing on behalf of the external model), then the simulation will be allowed to continue. 
 NOTE, an event injected into the kernel by an async_request_update will cause the kernel to execute the associated update() function (leaving the suspended state). The update function should arrange to mark any processes that it requires as unsuspendable before the end of the current delta cycle, to ensure that they are scheduled.
 
+## List of options of sync policy parameter
+
+The libgssync library allows you to set several values to the `p_sync_policy` parameter :
+- `tlm2`
+- `multithread`
+- `multithread-quantum`
+- `multithread-rolling`
+- `multithread-unconstrained`
+
+By default the parameter is set to `multithread-quantum`.
+
 [//]: # (SECTION 50 AUTOADDED)
 
 ## The GreenSocs component library memory
@@ -229,6 +240,14 @@ The `gs::ConfigurableBroker` can be instanced in 3 ways:
     A ``{{key,value}}`` list can also be provided, otherwise it is assumed to be empty. Such a list will set parameter values within this broker. These values will be read and used **BEFORE** the command line is read.
 
     Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either.
+
+## Print out the available params
+
+It is possible to display the list of available cci parameters with the `-h` option when launching the virtual platform.
+
+CAUTION:
+
+This will only print the parameters at the begining of simulation.
 
 [//]: # (SECTION 100)
 ## The GreenSocs Synchronization Tests
