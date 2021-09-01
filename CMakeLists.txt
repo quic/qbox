@@ -17,7 +17,7 @@ include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 
 gs_systemc()
 
-set(LIBQEMU_TARGETS aarch64)
+set(LIBQEMU_TARGETS aarch64 hexagon)
 gs_addpackage(qemu/libqbox)
 gs_addpackage(greensocs/components/base-components)
 

@@ -33,7 +33,7 @@
 #)
 # libqbox
 CPMDeclarePackage(libqbox
-  GIT_TAG v2.0.0
+  GIT_TAG feature/hexagon/v5.2.50
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqbox.git
   GIT_SHALLOW on
 )
@@ -63,13 +63,13 @@ CPMDeclarePackage(libgssync
 )
 # libqemu-cxx
 CPMDeclarePackage(libqemu-cxx
-  GIT_TAG v2.0.0
+  GIT_TAG feature/hexagon/v5.2.50
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqemu-cxx.git
   GIT_SHALLOW on
 )
 # libqemu
 CPMDeclarePackage(libqemu
-  GIT_TAG v2.0.0
+  GIT_TAG feature/hexagon/v5.2.50
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqemu.git
   GIT_SHALLOW on
   GIT_SUBMODULES CMakeLists.txt
