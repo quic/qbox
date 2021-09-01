@@ -39,6 +39,9 @@ const char *get_target_name(Target t)
     case MICROBLAZEEL:
         return "Microblaze (little-endian)";
 
+    case HEXAGON:
+        return "Hexagon";
+
     default:
         return "";
     }
@@ -64,6 +67,10 @@ const char *get_target_name(Target t)
 # define LIBQEMU_TARGET_microblazeel_LIBRARY nullptr
 #endif
 
+#ifndef LIBQEMU_TARGET_hexagon_LIBRARY
+# define LIBQEMU_TARGET_hexagon_LIBRARY nullptr
+#endif
+
 const char *get_target_lib(Target t)
 {
     switch (t) {
@@ -81,6 +88,9 @@ const char *get_target_lib(Target t)
 
     case MICROBLAZEEL:
         return LIBQEMU_TARGET_microblazeel_LIBRARY;
+
+    case HEXAGON:
+        return LIBQEMU_TARGET_hexagon_LIBRARY;
 
     default:
         return "";
