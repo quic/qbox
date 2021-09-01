@@ -41,6 +41,7 @@ public:
     cci::cci_param<uint64_t> p_time_base;
     cci::cci_param<bool> p_provide_rdtime;
     cci::cci_param<uint64_t> p_aperture_size;
+    cci::cci_param<uint32_t> p_timebase_freq;
 
     QemuTargetSocket<> socket;
 
@@ -53,6 +54,7 @@ public:
             , p_provide_rdtime("provide-rdtime", false, "If true, provide the CPU with "
                                                         "a rdtime register")
             , p_aperture_size("aperture-size", 0, "Size of the whole CLINT address space")
+            , p_timebase_freq("timebase-freq", 10000000, "")
             , socket("mem", inst)
     {}
 
@@ -65,6 +67,7 @@ public:
         m_dev.set_prop_int("sip-base", p_sip_base);
         m_dev.set_prop_int("timecmp-base", p_timecmp_base);
         m_dev.set_prop_int("time-base", p_time_base);
+        m_dev.set_prop_int("timebase-freq", p_timebase_freq);
         m_dev.set_prop_bool("provide-rdtime", p_provide_rdtime);
     }
 
