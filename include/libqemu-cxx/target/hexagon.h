@@ -1,6 +1,8 @@
 /*
  *  This file is part of libqemu-cxx
- *  Copyright (C) 2021 Luc Michel
+ *  Copyright (c) 2021 Greensocs
+ *
+ *  Author: Alwalid Salama
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -19,13 +21,18 @@
 
 #pragma once
 
+#include "libqemu-cxx/libqemu-cxx.h"
+
 namespace qemu {
+    class CpuHexagon : public Cpu {
+    public:
+        static constexpr const char *const TYPE = "v67-hexagon-cpu";
 
-enum Target {
-    AARCH64, RISCV64, RISCV32, MICROBLAZE, MICROBLAZEEL, HEXAGON,
-};
+        using MipUpdateCallbackFn = std::function<void (uint32_t)>;
 
-const char *get_target_name(Target t);
-const char *get_target_lib(Target t);
+        CpuHexagon() = default;
+        CpuHexagon(const CpuHexagon &) = default;
+        CpuHexagon(const Object &o) : Cpu(o) {}
 
+    };
 }

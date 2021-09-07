@@ -1,6 +1,8 @@
 /*
  *  This file is part of libqemu-cxx
- *  Copyright (C) 2021 Luc Michel
+ *  Copyright (C) 2021 Greensocs
+ *
+ *  Author: Alwalid Salama
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -17,15 +19,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#pragma once
+#include <libqemu/libqemu.h>
+
+#include "libqemu-cxx/target/hexagon.h"
 
 namespace qemu {
-
-enum Target {
-    AARCH64, RISCV64, RISCV32, MICROBLAZE, MICROBLAZEEL, HEXAGON,
-};
-
-const char *get_target_name(Target t);
-const char *get_target_lib(Target t);
 
 }
