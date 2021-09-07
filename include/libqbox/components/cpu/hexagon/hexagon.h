@@ -1,0 +1,74 @@
+/*
+ *  This file is part of libqbox
+ *  Copyright (c) 2021 Greensocs
+ *
+ *  Author: Alwalid Salama
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 2
+ *  of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+#pragma once
+
+#include <string>
+#include <functional>
+
+#include <libqemu-cxx/target/hexagon.h>
+
+#include <greensocs/libgssync.h>
+
+#include "libqbox/components/cpu/cpu.h"
+
+class QemuCpuHexagon : public QemuCpu {
+public:
+    typedef enum {
+        v66_rev = 0xa666,
+        v68_rev = 0x8d68,
+        v69_rev = 0x8c69,
+        v73_rev = 0x8c73,
+    } Rev_t;
+
+    QemuCpuHexagon(const sc_core::sc_module_name &name,
+                   QemuInstance &inst, uint32_t cfgbase, Rev_t rev, uint32_t exec_start_addr)
+        : QemuCpu(name, inst,"v67-hexagon")
+        , m_cfgbase(cfgbase)
+        , m_rev(rev)
+        , m_exec_start_addr(exec_start_addr)
+
+          /*
+           * We have no choice but to attach-suspend here. This is fixable but
+           * non-trivial. It means that the SystemC kernel will never starve...
+           */
+    {
+
+    }
+
+    void before_end_of_elaboration()
+    {
+        //set the parameter config-table-addr 195 hexagon_testboard
+        QemuCpu::before_end_of_elaboration();
+        qemu::CpuHexagon cpu(get_qemu_dev());
+
+        cpu.set_prop_int("config-table-addr", m_cfgbase);
+        cpu.set_prop_int("dsp-rev", m_rev);
+        cpu.set_prop_int("exec-start-addr", m_exec_start_addr);
+    }
+
+protected:
+    uint32_t m_cfgbase;
+    Rev_t m_rev;
+    uint32_t m_exec_start_addr;
+
+};
+
