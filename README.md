@@ -1,11 +1,14 @@
 
 
+[//]: # DONT EDIT THIS FILE
+
+
 [//]: # (SECTION 0)
-# Virtual Platform of ARM Cortex A53 for GreenSocs
+# Virtual Platform of ARM Cortex A53 and Hexagon for Qualcomm
 
 ## 1. Overview
 
-This release contains an example of a virtual platform based on an ARM Cortex A53 .
+This release contains an example of a virtual platform based on an ARM Cortex A53 and Hexagon DSP.
 ## 2. Requirements
 
 You can build this release natively on Ubuntu 18.04.
@@ -21,21 +24,21 @@ apt install -y make cmake g++ wget flex bison unzip python pkg-config libpixman-
 If you have an SSH key:
 ```bash
 cd $HOME
-git@git.greensocs.com:platforms/greensocs-cortex-a53.git
+git@git.greensocs.com:customers/qualcomm/qualcomm_vp.git
 ```
 
 otherwise:
 ```bash
 cd $HOME
-git clone https://git.greensocs.com/platforms/greensocs-cortex-a53.git
+https://git.greensocs.com/customers/qualcomm/qualcomm_vp.git
 ```
 
-this will extract the platform in $HOME/greensocs-cortex-a53
+this will extract the platform in $HOME/qualcomm_vp
 
 ## 4. Build the platform
 
 ```bash
-cd $HOME/greensocs-cortex-a53
+cd $HOME/qualcomm_vp
 mkdir build && cd build
 cmake .. [OPTIONS]
 ```
@@ -96,12 +99,12 @@ You can find all the recovered sources in the folder `build/_deps/<package>-src/
 # GreenSocs Build and make system
 
 # How to build
->
+> 
 > This project may be built using cmake
 > ```bash
 > cmake -B build;pushd build; make -j; popd
 > ```
->
+> 
 cmake may ask for your git.greensocs.com credentials (see below for advice about passwords)
 
 ## cmake version
@@ -110,7 +113,7 @@ cmake version 3.14 or newer is required. This can be downloaded and used as foll
  curl -L https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
  ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake
 ```
-
+ 
 
 
 ## details
@@ -121,12 +124,12 @@ To specify a specific package location use `<package>_ROOT`
 CPM will also search along the CMAKE_MODULE_PATH
 
 Sometimes it is convenient to have your own sources used, in this case, use the `CPM_<package>_SOURCE_DIR`.
-Hence you may wish to use your own copy of SystemC CCI
+Hence you may wish to use your own copy of SystemC CCI 
 ```bash
 cmake -B build -DCPM_SystemCCCI_SOURCE=/path/to/your/cci/source`
 ```
 
-It may also be convenient to have all the source files downloaded, you may do this by running
+It may also be convenient to have all the source files downloaded, you may do this by running 
 ```bash
 cmake -B build -DCPM_SOURCE_CACHE=`pwd`/Packages
 ```
@@ -175,10 +178,10 @@ These are based on a proposed standard means to handle the SystemC simulator. Th
 
 The GreenSocs basic utilities library contains utility functions for CCI, simple logging and test functions.
 It also includes some basic tlm port types
-## LIBQEMU-CXX
+## LIBQEMU-CXX 
 
 Libqemu-cxx encapsulates QEMU as a C++ object, such that it can be instanced (for instance) within a SystemC simulation framework.
-## LIBQBOX
+## LIBQBOX 
 
 Libqbox encapsulates QEMU in SystemC such that it can be instanced as a SystemC TLM-2.0 model.
 
@@ -200,7 +203,7 @@ The libgsutils library depends on the libraries : SystemC, RapidJSON, SystemCCI,
 
 The GreenSocs CCI libraries allows two options for setting configuration parameters
 
-> `--gs_luafile <FILE.lua>` this option will read the lua file to set parameters.
+> `--gs_luafile <FILE.lua>` this option will read the lua file to set parameters. 
 
 > `--param path.to.param=<value>` this option will allow individual parameters to be set.
 
@@ -238,6 +241,9 @@ end
 yamldata=nil
 ytab=nil
 ```
+## Information about building and using the libqemu-cxx library
+
+The libgsutils library does not depend on any library.
 ## Information about building and using the greensocs Qbox library
 The greensocs Qbox library depends on the libraries : base-components, libgssync, libqemu-cxx, libgsutils, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
 
@@ -301,12 +307,12 @@ These brokers can be used as global brokers.
 The `gs::ConfigurableBroker` can be instanced in 3 ways:
 1. `ConfigurableBroker()`
     This will instance a 'Private broker' and will hide **ALL** parameters held within this broker.
-
+    
     A local `lua_file` can be read and will set parameters in the private broker. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(false)`).
 
 2.  `ConfigurableBroker({{"key1","value1"},{"key2","value2")...})`
     This will instance a broker that sets and hides the listed keys. All other keys are passed through (exported). Hence the broker is 'invisible' for parameters that are not listed. This is specifically useful for structural parameters.
-
+    
     It is also possible to instance a 'pass through' broker using `ConfigurationBroker({})`. This is useful to provide a *local* configuration broker than can, for instance, read a local configuration file.
 
     A local `lua_file` can be read and will set parameters in the private broker (exported or not). This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(false)`). The `lua_file` will be read **AFTER** the construction key-value list and hence can be used to over-right default values in the code.
@@ -315,13 +321,13 @@ The `gs::ConfigurableBroker` can be instanced in 3 ways:
     This will instance a broker that is typically a global broker. The argc/argv values should come from the command line. The command line will be parsed to find:
 
     > `-p, --param path.to.param=<value>` this option will allow individual parameters to be set.
-
+    
     > `-l, --gs_luafile <FILE.lua>` this option will read the lua file to set parameters. Similar functionality can be achieved using --param lua_file=\"<FILE.lua>\".
 
     A ``{{key,value}}`` list can also be provided, otherwise it is assumed to be empty. Such a list will set parameter values within this broker. These values will be read and used **BEFORE** the command line is read.
 
     Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either.
-
+    
 ## Instanciate Qemu
 A QemuManager is required in order to instantiate a Qemu instance. A QemuManager will hold, and maintain the instance until the end of execution. The QemuInstance can contain one or many CPU's and other devices.
 To create a new instance you can do this:
