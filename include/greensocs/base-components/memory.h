@@ -52,11 +52,29 @@ private:
     /** Size of the memory in bytes */
     uint64_t m_size;
 
-    /** Host memory where the data will be stored */
-    uint8_t* m_ptr;
-
     /** Wether the current ptr has been mapped to a file */
     bool m_mapped;
+
+    bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
+    {
+        static const sc_core::sc_time LATENCY(10, sc_core::SC_NS);
+
+        if (txn.get_address() < m_size) {
+            dmi_data.allow_read_write();
+            dmi_data.set_dmi_ptr(reinterpret_cast<unsigned char*>(&m_ptr[0]));
+            dmi_data.set_start_address(0);
+            dmi_data.set_end_address(m_size - 1);
+            dmi_data.set_read_latency(LATENCY);
+            dmi_data.set_write_latency(LATENCY);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+protected:
+    /** Host memory where the data will be stored */
+    uint8_t* m_ptr;
 
     void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
@@ -121,23 +139,6 @@ private:
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
 
         return len;
-    }
-
-    bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
-    {
-        static const sc_core::sc_time LATENCY(10, sc_core::SC_NS);
-
-        if (txn.get_address() < m_size) {
-            dmi_data.allow_read_write();
-            dmi_data.set_dmi_ptr(reinterpret_cast<unsigned char*>(&m_ptr[0]));
-            dmi_data.set_start_address(0);
-            dmi_data.set_end_address(m_size - 1);
-            dmi_data.set_read_latency(LATENCY);
-            dmi_data.set_write_latency(LATENCY);
-            return true;
-        } else {
-            return false;
-        }
     }
 
 public:
