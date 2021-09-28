@@ -31,3 +31,5 @@ target_link_libraries(vp
     GreenSocs::qbox
     GreenSocs::base-components
 )
+
+gs_enable_testing()
