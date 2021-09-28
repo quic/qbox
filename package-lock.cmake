@@ -63,13 +63,13 @@ CPMDeclarePackage(libgssync
 )
 # libqemu-cxx
 CPMDeclarePackage(libqemu-cxx
-  GIT_TAG feature/hexagon/v5.2.50
+  GIT_TAG qemu-v6.0.0
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqemu-cxx.git
   GIT_SHALLOW on
 )
 # libqemu
 CPMDeclarePackage(libqemu
-  GIT_TAG feature/hexagon/v5.2.50
+  GIT_TAG feature/hexagon/v6.0.50
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqemu.git
   GIT_SHALLOW on
   GIT_SUBMODULES CMakeLists.txt
@@ -80,12 +80,4 @@ CPMDeclarePackage(base-components
   GIT_REPOSITORY git@git.greensocs.com:greensocs/components/base-components.git
   GIT_SHALLOW on
 )
-# keystone
-CPMDeclarePackage(keystone
-  NAME keystone
-  GIT_TAG 0.9.2
-  GIT_REPOSITORY https://github.com/keystone-engine/keystone.git
-  GIT_SHALLOW TRUE
-  OPTIONS
-    "BUILD_LIBS_ONLY"
-)
+
