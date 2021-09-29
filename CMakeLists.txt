@@ -7,7 +7,7 @@ project(greensocs-base-vp)
 if (NOT gs-cmake_SOURCE_DIR)
    include(FetchContent)
    FetchContent_Declare(gs-cmake
-      GIT_REPOSITORY https://git.greensocs.com/greensocs/cmake-boilerplate.git
+      GIT_REPOSITORY git@git.greensocs.com:greensocs/cmake-boilerplate.git
       GIT_TAG master
    )
    FetchContent_MakeAvailable(gs-cmake)
