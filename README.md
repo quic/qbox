@@ -88,6 +88,11 @@ The sc_main(), where the virtual platform is created is in `src/main.cc`.
 
 You can find all the recovered sources in the folder `build/_deps/<package>-src/`.
 
+### 7. Run the test
+
+You can run a test once you have compiled and built the project, just go to your build directory and run the `make test` command.
+To run this test you need to be in sudo.
+
 [//]: # (SECTION 0 AUTOADDED)
 
 
