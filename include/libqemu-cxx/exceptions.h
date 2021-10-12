@@ -78,4 +78,15 @@ public:
     virtual ~SetPropertyException() throw() {}
 };
 
+class GetPropertyException : public LibQemuException
+{
+public:
+    GetPropertyException(const char *type, const char *name)
+        : LibQemuException(std::string("Error while getting ")
+                           + type + " property `"
+                           + name + "` on object.") {}
+
+    virtual ~GetPropertyException() throw() {}
+};
+
 }
