@@ -141,6 +141,8 @@ public:
     void set_prop_link(const char *name, const Object &link);
     void set_prop_parse(const char *name, const char *value);
 
+    Object get_prop_link(const char *name);
+
     QemuObject *get_qemu_obj() { return m_obj; }
 
     LibQemu &get_inst();
