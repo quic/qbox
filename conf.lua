@@ -20,7 +20,6 @@ local conf = {
     [ "platform.hexagon_kernel_file" ] = top().."fw/linux-demo/helloworld.bin",
     [ "platform.hexagon_load_addr" ] = 0x0,
     [ "platform.hexagon_start_addr" ] = 0x60d8,
-
 }
 
 for k,v in pairs(conf) do
