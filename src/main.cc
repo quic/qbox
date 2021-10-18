@@ -215,7 +215,7 @@ hexagon_config_extensions v68n_1024_extensions = {
     .qtmr_rg0 =          0xfc921000,
     .qtmr_rg1 =          0xfc922000,
 };
-
+/*
 uint32_t hexagon_bootstrap[] = {
 
 0x07004000, // { immext(#1879048192)
@@ -228,7 +228,7 @@ uint32_t hexagon_bootstrap[] = {
 0x59fffffa //{ jump 0xc <write_loop> }
 
 };
-
+*/
 #define ARCH_TIMER_VIRT_IRQ   (16+11)
 #define ARCH_TIMER_S_EL1_IRQ  (16+13)
 #define ARCH_TIMER_NS_EL1_IRQ (16+14)
@@ -249,6 +249,11 @@ protected:
     /* OpenSBI/Linux bootloader params */
     cci::cci_param<std::string> m_kernel_file;
     cci::cci_param<std::string> m_dtb_file;
+
+    /* Hexagon bootloader params */
+    cci::cci_param<std::string> m_hexagon_kernel_file;
+    cci::cci_param<cci::uint64> m_hexagon_load_addr;
+    cci::cci_param<uint32_t> m_hexagon_start_addr;
 
     /* Address map params */
     cci::cci_param<cci::uint64> m_addr_map_ram;
@@ -339,6 +344,10 @@ protected:
             m_ram.load(m_kernel_file, KERNEL64_LOAD_ADDR);
         }
 
+        if (!m_hexagon_kernel_file.is_default_value()) {
+            m_ram.load(m_hexagon_kernel_file, m_hexagon_load_addr);
+        }
+
         if (!m_dtb_file.is_default_value()) {
             m_ram.load(m_dtb_file, DTB_LOAD_ADDR);
         }
@@ -354,7 +363,7 @@ protected:
         config_table->fastl2vic_base =
                              HEXAGON_CFG_ADDR_BASE(cfgTable->fastl2vic_base);
 
-       m_ram.load(reinterpret_cast<const uint8_t *>(hexagon_bootstrap),sizeof(hexagon_bootstrap),0x100);
+       //m_ram.load(reinterpret_cast<const uint8_t *>(hexagon_bootstrap),sizeof(hexagon_bootstrap), m_hexagon_start_addr);
 
     }
 
@@ -376,13 +385,17 @@ public:
         , m_kernel_file("kernel_file", "", "Kernel blob file")
         , m_dtb_file("dtb_file", "", "Device tree blob to load")
 
+        , m_hexagon_kernel_file("hexagon_kernel_file", "", "Hexagon kernel blob file")
+        , m_hexagon_load_addr("hexagon_load_addr",0x100,"Hexagon load address")
+        , m_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
+
         , m_addr_map_ram("addr_map_ram", 0x00000000, "")
         , m_addr_map_uart("addr_map_uart", 0xc0000000, "")
 
         , m_qemu_inst(m_inst_mgr.new_instance(QemuInstance::Target::AARCH64))
         , m_qemu_hex_inst(m_inst_mgr.new_instance(QemuInstance::Target::HEXAGON))
         , m_cpus("cpu", 4, [this] (const char *n, size_t i) { return new QemuCpuArmCortexA53(n, m_qemu_inst); })
-        , m_hexagon("hexagon", m_qemu_hex_inst, v68n_1024_extensions.cfgbase, QemuCpuHexagon::v68_rev, 0x100)
+        , m_hexagon("hexagon", m_qemu_hex_inst, v68n_1024_extensions.cfgbase, QemuCpuHexagon::v68_rev, m_hexagon_start_addr)
         , m_gic("gic", m_qemu_inst)
         , m_router("router")
         , m_ram("ram", m_ram_size)
