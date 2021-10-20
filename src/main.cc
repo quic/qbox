@@ -241,6 +241,7 @@ protected:
     cci::cci_param<int> m_quantum_ns;
     cci::cci_param<int> m_gdb_port;
     cci::cci_param<cci::uint64> m_ram_size;
+    cci::cci_param<cci::uint64> m_rom_size;
 
     /* Memory direct loading params */
     cci::cci_param<std::string> m_ram_blob_file;
@@ -257,6 +258,7 @@ protected:
 
     /* Address map params */
     cci::cci_param<cci::uint64> m_addr_map_ram;
+    cci::cci_param<cci::uint64> m_addr_map_rom;
     cci::cci_param<cci::uint64> m_addr_map_uart;
 
     QemuInstanceManager m_inst_mgr;
@@ -268,6 +270,7 @@ protected:
     QemuArmGicv3 m_gic;
     Router<> m_router;
     Memory m_ram;
+    Memory m_rom;
     Memory m_flash;
     QemuUartPl011 m_uart;
 
@@ -297,6 +300,7 @@ protected:
         }
         m_router.add_initiator(m_hexagon.socket);
         m_router.add_target(m_ram.socket, m_addr_map_ram, m_ram.size());
+        m_router.add_target(m_rom.socket, m_addr_map_rom, m_rom.size());
         m_router.add_target(m_flash.socket, 0x200000000, m_flash.size());
         m_router.add_target(m_gic.dist_iface, 0xc8000000, 0x10000);
         m_router.add_target(m_gic.redist_iface[0], 0xc8010000, 0x20000);
@@ -365,6 +369,8 @@ protected:
 
        //m_ram.load(reinterpret_cast<const uint8_t *>(hexagon_bootstrap),sizeof(hexagon_bootstrap), m_hexagon_start_addr);
 
+        // load hexagon config table into rom
+        m_rom.load(reinterpret_cast<const uint8_t *>(cfgTable), sizeof(hexagon_config_table), 0);
     }
 
 public:
@@ -378,6 +384,7 @@ public:
         , m_quantum_ns("quantum-ns", 1000000, "TLM-2.0 global quantum in ns")
         , m_gdb_port("gdb_port", 0, "GDB port")
         , m_ram_size("ram_size", 256 * 1024 * 1024, "RAM size")
+        , m_rom_size("rom_size", v68n_1024_extensions.cfgtable_size, "ROM size")
 
         , m_ram_blob_file("ram_blob_file", "", "Blob file to load into the RAM")
         , m_flash_blob_file("flash_blob_file", "", "Blob file to load into the flash")
@@ -390,6 +397,7 @@ public:
         , m_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
 
         , m_addr_map_ram("addr_map_ram", 0x00000000, "")
+        , m_addr_map_rom("addr_map_rom", v68n_1024_extensions.cfgbase, "")
         , m_addr_map_uart("addr_map_uart", 0xc0000000, "")
 
         , m_qemu_inst(m_inst_mgr.new_instance(QemuInstance::Target::AARCH64))
@@ -399,6 +407,7 @@ public:
         , m_gic("gic", m_qemu_inst)
         , m_router("router")
         , m_ram("ram", m_ram_size)
+        , m_rom("rom", m_rom_size)
         , m_flash("flash", 256 * 1024 * 1024)
         , m_uart("uart", m_qemu_inst)
 
