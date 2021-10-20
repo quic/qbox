@@ -348,10 +348,6 @@ protected:
             m_ram.load(m_kernel_file, KERNEL64_LOAD_ADDR);
         }
 
-        if (!m_hexagon_kernel_file.is_default_value()) {
-            m_ram.load(m_hexagon_kernel_file, m_hexagon_load_addr);
-        }
-
         if (!m_dtb_file.is_default_value()) {
             m_ram.load(m_dtb_file, DTB_LOAD_ADDR);
         }
@@ -368,6 +364,10 @@ protected:
                              HEXAGON_CFG_ADDR_BASE(cfgTable->fastl2vic_base);
 
        //m_ram.load(reinterpret_cast<const uint8_t *>(hexagon_bootstrap),sizeof(hexagon_bootstrap), m_hexagon_start_addr);
+
+        if (!m_hexagon_kernel_file.is_default_value()) {
+            m_ram.load(m_hexagon_kernel_file, m_hexagon_load_addr);
+        }
 
         // load hexagon config table into rom
         m_rom.load(reinterpret_cast<const uint8_t *>(cfgTable), sizeof(hexagon_config_table), 0);
