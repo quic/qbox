@@ -263,65 +263,65 @@ protected:
     cci::cci_param<cci::uint64> m_addr_map_uart;
 
     QemuInstanceManager m_inst_mgr;
-    QemuInstance &m_qemu_inst;
+//     QemuInstance &m_qemu_inst;
     QemuInstance &m_qemu_hex_inst;
 
-    sc_core::sc_vector<QemuCpuArmCortexA53> m_cpus;
+//     sc_core::sc_vector<QemuCpuArmCortexA53> m_cpus;
     QemuCpuHexagon m_hexagon;
-    QemuArmGicv3 m_gic;
+//     QemuArmGicv3 m_gic;
     Router<> m_router;
     Memory m_ram;
     Memory m_rom;
     Memory m_flash;
-    QemuUartPl011 m_uart;
+//     QemuUartPl011 m_uart;
 
     hexagon_config_table *cfgTable;
     hexagon_config_extensions *cfgExtensions;
-    void setup_cpus() {
-        for (int i = 0; i < m_cpus.size(); i++) {
-            auto &cpu = m_cpus[i];
-
-            cpu.p_has_el3 = false;
-            cpu.p_psci_conduit = "hvc";
-            cpu.p_mp_affinity = ((i / 4) << 8) | (i % 4);
-
-            if (i == 0) {
-                if (!m_gdb_port.is_default_value()) {
-                    cpu.p_gdb_port = m_gdb_port;
-                }
-            } else {
-                cpu.p_start_powered_off = true;
-            }
-        }
-    }
+//     void setup_cpus() {
+//         for (int i = 0; i < m_cpus.size(); i++) {
+//             auto &cpu = m_cpus[i];
+//
+//             cpu.p_has_el3 = false;
+//             cpu.p_psci_conduit = "hvc";
+//             cpu.p_mp_affinity = ((i / 4) << 8) | (i % 4);
+//
+// //             if (i == 0) {
+// //                 if (!m_gdb_port.is_default_value()) {
+// //                     cpu.p_gdb_port = m_gdb_port;
+// //                 }
+// //             } else {
+//                 cpu.p_start_powered_off = true;
+// //             }
+//         }
+//     }
 
     void setup_memory_mapping() {
-        for (auto &cpu: m_cpus) {
-            m_router.add_initiator(cpu.socket);
-        }
+//         for (auto &cpu: m_cpus) {
+//             m_router.add_initiator(cpu.socket);
+//         }
         m_router.add_initiator(m_hexagon.socket);
         m_router.add_target(m_ram.socket, m_addr_map_ram, m_ram.size());
         m_router.add_target(m_rom.socket, m_addr_map_rom, m_rom.size());
         m_router.add_target(m_flash.socket, 0x200000000, m_flash.size());
-        m_router.add_target(m_gic.dist_iface, 0xc8000000, 0x10000);
-        m_router.add_target(m_gic.redist_iface[0], 0xc8010000, 0x20000);
-        m_router.add_target(m_uart.socket, m_addr_map_uart, 0x1000);
+//         m_router.add_target(m_gic.dist_iface, 0xc8000000, 0x10000);
+//         m_router.add_target(m_gic.redist_iface[0], 0xc8010000, 0x20000);
+//         m_router.add_target(m_uart.socket, m_addr_map_uart, 0x1000);
 
     }
 
-    void setup_irq_mapping() {
-        for (int i = 0; i < m_cpus.size(); i++) {
-            m_gic.irq_out[i].bind(m_cpus[i].irq_in);
-            m_gic.fiq_out[i].bind(m_cpus[i].fiq_in);
-
-            m_cpus[i].irq_timer_phys_out.bind(m_gic.ppi_in[i][ARCH_TIMER_NS_EL1_IRQ]);
-            m_cpus[i].irq_timer_virt_out.bind(m_gic.ppi_in[i][ARCH_TIMER_VIRT_IRQ]);
-            m_cpus[i].irq_timer_hyp_out.bind(m_gic.ppi_in[i][ARCH_TIMER_NS_EL2_IRQ]);
-            m_cpus[i].irq_timer_sec_out.bind(m_gic.ppi_in[i][ARCH_TIMER_S_EL1_IRQ]);
-        }
-
-        m_uart.irq_out.bind(m_gic.spi_in[1]);
-    }
+//     void setup_irq_mapping() {
+//         for (int i = 0; i < m_cpus.size(); i++) {
+//             m_gic.irq_out[i].bind(m_cpus[i].irq_in);
+//             m_gic.fiq_out[i].bind(m_cpus[i].fiq_in);
+//
+//             m_cpus[i].irq_timer_phys_out.bind(m_gic.ppi_in[i][ARCH_TIMER_NS_EL1_IRQ]);
+//             m_cpus[i].irq_timer_virt_out.bind(m_gic.ppi_in[i][ARCH_TIMER_VIRT_IRQ]);
+//             m_cpus[i].irq_timer_hyp_out.bind(m_gic.ppi_in[i][ARCH_TIMER_NS_EL2_IRQ]);
+//             m_cpus[i].irq_timer_sec_out.bind(m_gic.ppi_in[i][ARCH_TIMER_S_EL1_IRQ]);
+//         }
+//
+//         m_uart.irq_out.bind(m_gic.spi_in[1]);
+//     }
 
     bool load_blobs()
     {
@@ -341,19 +341,19 @@ protected:
 
     void do_bootloader()
     {
-        if (load_blobs()) {
-            return;
-        }
+//         if (load_blobs()) {
+//             return;
+//         }
 
-        if (!m_kernel_file.is_default_value()) {
-            m_ram.load(m_kernel_file, KERNEL64_LOAD_ADDR);
-        }
-
-        if (!m_dtb_file.is_default_value()) {
-            m_ram.load(m_dtb_file, DTB_LOAD_ADDR);
-        }
-
-        m_ram.load(reinterpret_cast<const uint8_t *>(bootloader_aarch64), sizeof(bootloader_aarch64), 0x0);
+//         if (!m_kernel_file.is_default_value()) {
+//             m_ram.load(m_kernel_file, KERNEL64_LOAD_ADDR);
+//         }
+//
+//         if (!m_dtb_file.is_default_value()) {
+//             m_ram.load(m_dtb_file, DTB_LOAD_ADDR);
+//         }
+//
+//         m_ram.load(reinterpret_cast<const uint8_t *>(bootloader_aarch64), sizeof(bootloader_aarch64), 0x0);
 
         hexagon_config_table *config_table = cfgTable;
 
@@ -401,16 +401,16 @@ public:
         , m_addr_map_rom("addr_map_rom", v68n_1024_extensions.cfgbase, "")
         , m_addr_map_uart("addr_map_uart", 0xc0000000, "")
 
-        , m_qemu_inst(m_inst_mgr.new_instance(QemuInstance::Target::AARCH64))
+//         , m_qemu_inst(m_inst_mgr.new_instance(QemuInstance::Target::AARCH64))
         , m_qemu_hex_inst(m_inst_mgr.new_instance(QemuInstance::Target::HEXAGON))
-        , m_cpus("cpu", 4, [this] (const char *n, size_t i) { return new QemuCpuArmCortexA53(n, m_qemu_inst); })
+//         , m_cpus("cpu", 4, [this] (const char *n, size_t i) { return new QemuCpuArmCortexA53(n, m_qemu_inst); })
         , m_hexagon("hexagon", m_qemu_hex_inst, v68n_1024_extensions.cfgbase, QemuCpuHexagon::v68_rev, m_hexagon_start_addr)
-        , m_gic("gic", m_qemu_inst)
+//         , m_gic("gic", m_qemu_inst)
         , m_router("router")
         , m_ram("ram", m_ram_size)
         , m_rom("rom", m_rom_size)
         , m_flash("flash", 256 * 1024 * 1024)
-        , m_uart("uart", m_qemu_inst)
+//         , m_uart("uart", m_qemu_inst)
 
     {
         using tlm_utils::tlm_quantumkeeper;
@@ -419,9 +419,9 @@ public:
         sc_core::sc_time global_quantum(m_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);
 
-        setup_cpus();
+//         setup_cpus();
         setup_memory_mapping();
-        setup_irq_mapping();
+//         setup_irq_mapping();
 
         do_bootloader();
     }
