@@ -237,6 +237,7 @@ uint32_t hexagon_bootstrap[] = {
 class GreenSocsPlatform : public sc_core::sc_module {
 protected:
     gs::ConfigurableBroker m_broker;
+    gs::async_event event;
 
     cci::cci_param<int> m_quantum_ns;
     cci::cci_param<int> m_gdb_port;
