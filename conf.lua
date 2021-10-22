@@ -17,9 +17,9 @@ local conf = {
     [ "platform.flash_blob_file" ] = top().."fw/linux-demo/rootfs.squashfs",
     [ "platform.hexagon.sync-policy" ] = "tlm2",
     [ "platform.hexagon.gdb-port" ] = 1234,
-    [ "platform.hexagon_kernel_file" ] = top().."fw/linux-demo/helloworld.bin",
+    [ "platform.hexagon_kernel_file" ] = top().."fw/linux-demo/while1.bin",
     [ "platform.hexagon_load_addr" ] = 0x0,
-    [ "platform.hexagon_start_addr" ] = 0x60d8,
+    [ "platform.hexagon_start_addr" ] = 0x0,
 }
 
 for k,v in pairs(conf) do
