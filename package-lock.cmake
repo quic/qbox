@@ -80,4 +80,11 @@ CPMDeclarePackage(base-components
   GIT_REPOSITORY git@git.greensocs.com:greensocs/components/base-components.git
   GIT_SHALLOW on
 )
+# extra-components
+CPMDeclarePackage(extra-components
+  NAME extra-components
+  GIT_TAG v3.1.0
+  GIT_REPOSITORY git@git.greensocs.com:qemu/extra-components.git
+  GIT_SHALLOW on
+)
 

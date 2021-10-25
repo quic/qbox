@@ -20,6 +20,7 @@ gs_systemc()
 set(LIBQEMU_TARGETS aarch64 hexagon)
 gs_addpackage(qemu/libqbox)
 gs_addpackage(greensocs/components/base-components)
+gs_addpackage(qemu/extra-components)
 
 add_executable(vp
     src/main.cc
@@ -29,6 +30,7 @@ target_link_libraries(vp
     SystemC::systemc
     SystemC::cci
     GreenSocs::qbox
+    GreenSocs::qbox-extra
     GreenSocs::base-components
 )
 

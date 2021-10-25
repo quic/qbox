@@ -30,6 +30,8 @@
 #include <libqbox/components/irq-ctrl/arm-gicv3.h>
 #include <libqbox/components/uart/pl011.h>
 
+#include <libqbox-extra/components/meta/global_peripheral_initiator.h>
+
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/memory.h>
 
@@ -273,6 +275,7 @@ protected:
     Memory m_ram;
     Memory m_rom;
     Memory m_flash;
+    GlobalPeripheralInitiator m_global_peripheral_initiator;
 //     QemuUartPl011 m_uart;
 
     hexagon_config_table *cfgTable;
@@ -300,6 +303,7 @@ protected:
 //             m_router.add_initiator(cpu.socket);
 //         }
         m_router.add_initiator(m_hexagon.socket);
+        m_router.add_initiator(m_global_peripheral_initiator.m_initiator);
         m_router.add_target(m_ram.socket, m_addr_map_ram, m_ram.size());
         m_router.add_target(m_rom.socket, m_addr_map_rom, m_rom.size());
         m_router.add_target(m_flash.socket, 0x200000000, m_flash.size());
@@ -410,6 +414,7 @@ public:
         , m_ram("ram", m_ram_size)
         , m_rom("rom", m_rom_size)
         , m_flash("flash", 256 * 1024 * 1024)
+        , m_global_peripheral_initiator("glob-per-init", m_qemu_hex_inst, m_hexagon)
 //         , m_uart("uart", m_qemu_inst)
 
     {
