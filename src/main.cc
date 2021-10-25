@@ -239,7 +239,7 @@ uint32_t hexagon_bootstrap[] = {
 class GreenSocsPlatform : public sc_core::sc_module {
 protected:
     gs::ConfigurableBroker m_broker;
-    gs::async_event event;
+    gs::async_event event;   // this is only present for debug, and should be removed for CI (once the ARM is re-instated)
 
     cci::cci_param<int> m_quantum_ns;
     cci::cci_param<int> m_gdb_port;
