@@ -259,6 +259,10 @@ protected:
     cci::cci_param<cci::uint64> m_hexagon_load_addr;
     cci::cci_param<uint32_t> m_hexagon_start_addr;
 
+    /* Hexagon config params */
+    cci::cci_param<cci::uint64> m_hexagon_isdb_secure_flag;
+    cci::cci_param<cci::uint64> m_hexagon_isdb_trusted_flag;
+
     /* Address map params */
     cci::cci_param<cci::uint64> m_addr_map_ram;
     cci::cci_param<cci::uint64> m_addr_map_rom;
@@ -372,6 +376,9 @@ protected:
 
         if (!m_hexagon_kernel_file.is_default_value()) {
             m_ram.load(m_hexagon_kernel_file, m_hexagon_load_addr);
+
+            m_ram.load(reinterpret_cast<const uint8_t *>(&m_hexagon_isdb_secure_flag.get_value()), 8, m_hexagon_load_addr + 0x30);
+            m_ram.load(reinterpret_cast<const uint8_t *>(&m_hexagon_isdb_trusted_flag.get_value()), 8, m_hexagon_load_addr + 0x34);
         }
 
         // load hexagon config table into rom
@@ -400,6 +407,9 @@ public:
         , m_hexagon_kernel_file("hexagon_kernel_file", "", "Hexagon kernel blob file")
         , m_hexagon_load_addr("hexagon_load_addr",0x100,"Hexagon load address")
         , m_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
+
+        , m_hexagon_isdb_secure_flag("hexagon_isdb_secure_flag", 0, "Hexagon ISDB secure flag setting")
+        , m_hexagon_isdb_trusted_flag("hexagon_isdb_trusted_flag", 0, "Hexagon ISDB trusted flag setting")
 
         , m_addr_map_ram("addr_map_ram", 0x00000000, "")
         , m_addr_map_rom("addr_map_rom", v68n_1024_extensions.cfgbase, "")
