@@ -33,13 +33,13 @@
 #)
 # libqbox
 CPMDeclarePackage(libqbox
-  GIT_TAG feature/hexagon/v5.2.50
+  GIT_TAG v3.3.0
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqbox.git
   GIT_SHALLOW on
 )
 # libgsutils
 CPMDeclarePackage(libgsutils
-  GIT_TAG v2.0.0
+  GIT_TAG v2.1.1
   GIT_REPOSITORY git@git.greensocs.com:greensocs/libgsutils.git
   GIT_SHALLOW on
 )
@@ -63,7 +63,7 @@ CPMDeclarePackage(libgssync
 )
 # libqemu-cxx
 CPMDeclarePackage(libqemu-cxx
-  GIT_TAG qemu-v6.0.0
+  GIT_TAG v3.2.0
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqemu-cxx.git
   GIT_SHALLOW on
 )
@@ -78,6 +78,13 @@ CPMDeclarePackage(libqemu
 CPMDeclarePackage(base-components
   GIT_TAG v2.0.0
   GIT_REPOSITORY git@git.greensocs.com:greensocs/components/base-components.git
+  GIT_SHALLOW on
+)
+# extra-components
+CPMDeclarePackage(extra-components
+  NAME extra-components
+  GIT_TAG v3.1.0
+  GIT_REPOSITORY git@git.greensocs.com:qemu/extra-components.git
   GIT_SHALLOW on
 )
 

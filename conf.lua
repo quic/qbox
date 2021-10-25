@@ -6,7 +6,7 @@ function top()
     if str:match("(.*/)")
     then
         return str:match("(.*/)")
-    else 
+    else
         return "./"
     end
  end
@@ -17,6 +17,11 @@ local conf = {
     [ "platform.flash_blob_file" ] = top().."fw/linux-demo/rootfs.squashfs",
     [ "platform.hexagon.sync-policy" ] = "tlm2",
     [ "platform.hexagon.gdb-port" ] = 1234,
+    [ "platform.hexagon_kernel_file" ] = top().."fw/linux-demo/while1.bin",
+    [ "platform.hexagon_load_addr" ] = 0x0,
+    [ "platform.hexagon_start_addr" ] = 0x0,
+    [ "platform.hexagon_isdb_secure_flag" ] = 0x1,
+    [ "platform.hexagon_isdb_trusted_flag" ] = 0x1,
 }
 
 for k,v in pairs(conf) do
