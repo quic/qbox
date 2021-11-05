@@ -50,4 +50,11 @@ namespace qemu {
         CpuRiscv64(const CpuRiscv64 &) = default;
         CpuRiscv64(const Object &o) : CpuRiscv(o) {}
     };
+
+    class CpuRiscv64SiFiveX280 : public CpuRiscv {
+    public:
+        CpuRiscv64SiFiveX280() = default;
+        CpuRiscv64SiFiveX280(const CpuRiscv64SiFiveX280 &) = default;
+        CpuRiscv64SiFiveX280(const Object &o) : CpuRiscv(o) {}
+    };
 }
