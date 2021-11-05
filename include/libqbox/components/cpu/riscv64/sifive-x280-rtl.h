@@ -24,13 +24,11 @@
 #include <string>
 #include <functional>
 
-#include <libqemu-cxx/target/sifive-x280.h>
+#include <libqemu-cxx/target/riscv.h>
 
 #include <greensocs/libgssync.h>
 
 #include "libqbox/components/cpu/cpu.h"
-
-#define SIFIVE_X280_RTL_REV1_SUBSYSTEM_PBUS_CLOCK_FREQ   32500000
 
 class QemuCpuSifiveX280: public QemuCpu {
 
@@ -65,47 +63,11 @@ public:
     {
         QemuCpu::before_end_of_elaboration();
 
-        qemu::CpuSifive cpu(get_qemu_dev());
+        qemu::CpuRiscv64SiFiveX280 cpu(get_qemu_dev());
         cpu.set_prop_int("hartid", m_hartid);
-        cpu.set_prop_int("timebase-frequency", SIFIVE_X280_RTL_REV1_SUBSYSTEM_PBUS_CLOCK_FREQ);
-        cpu.set_prop_int("#size-cells", 0x0);
-        cpu.set_prop_int("#address-cells", 0x1);
-        cpu.set_prop_str("mmu-type", "riscv,sv48");
-        //cpu.set_prop_str("riscv,isa",cpu_isa); to be define
-        //qemu_fdt_setprop(fdt, cpu_name, "compatible", cpu_comp,sizeof(cpu_comp)); ??
-        cpu.set_prop_str("status", "okay");
-        //cpu.set_prop_int("reg", cpu); // check with mark
-        //qemu_fdt_setprop_cell(fdt, cpu_name, "reg", cpu);
-        cpu.set_prop_str("device_type", "cpu");
-        cpu.set_prop_int("d-cache-block-size", 64);
-        cpu.set_prop_int("d-cache-sets", 128);
-        cpu.set_prop_int("d-cache-size", 32768);
-        cpu.set_prop_int("d-tlb-sets", 1);
-        cpu.set_prop_int("d-tlb-size", 64);
-        cpu.set_prop_int("hardware-exec-breakpoint-count", 4);
-        cpu.set_prop_int("hwpf-distanceBits", 6);
-        cpu.set_prop_int("hitCacheThrdBits", 5);
-        cpu.set_prop_int("hwpf-hitMSHRThrdBits", 4);
-        cpu.set_prop_int("hwpf-l2pfPoolSize", 10);
-        cpu.set_prop_int("hwpf-nIssQEnt", 6);
-        cpu.set_prop_int("hwpf-nPrefetchQueueEntries", 8);
-        cpu.set_prop_int("hwpf-nStreams", 8);
-        cpu.set_prop_int("hwpf-qFullnessThrdBits", 4);
-        cpu.set_prop_int("hwpf-windowBits", 6);
-        cpu.set_prop_int("i-cache-block-size", 64);
-        cpu.set_prop_int("i-cache-sets", 128);
-        cpu.set_prop_int("i-cache-size", 32768);
-        cpu.set_prop_int("i-tlb-sets", 1);
-        cpu.set_prop_int("i-tlb-size", 64);
-        //cpu.set_prop_int("next-level-cache", );// check with mark
-        //cpu.set_prop_int("sifive,buserror", );// check with mark
-        cpu.set_prop_int("clock-frequency", 0);
-        cpu.set_prop_int("timebase-frequency", SIFIVE_X280_RTL_REV1_SUBSYSTEM_PBUS_CLOCK_FREQ);
-        //cpu.set_prop_int("phandle", );// check with mark
-        cpu.set_prop_str("compatible", "riscv,cpu-intc");
-        cpu.set_prop_bool("interrupt-controller", NULL);// ??
-        cpu.set_prop_int("#interrupt-cells", 1);
-        //cpu.set_mip_update_callback(std::bind(&QemuCpuSifiveX280::mip_update_cb, this, std::placeholders::_1));
+
+        cpu.set_mip_update_callback(std::bind(&QemuCpuSifiveX280::mip_update_cb,
+                                        this, std::placeholders::_1));
     }
 
 
