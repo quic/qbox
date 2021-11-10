@@ -170,19 +170,27 @@ class CpuTestBench : public CpuTestBenchBase
 {
 protected:
     QemuInstanceManager m_inst_manager;
-    QemuInstance &m_inst;
+    QemuInstance &m_inst_a;
+    QemuInstance &m_inst_b;
 
     sc_core::sc_vector<CPU> m_cpus;
     TESTER m_tester;
+    bool ab=false;
 
 public:
     CpuTestBench(const sc_core::sc_module_name &n)
         : CpuTestBenchBase(n, CPU::ARCH)
-        , m_inst(m_inst_manager.new_instance(CPU::ARCH))
-        , m_cpus("cpu", p_num_cpu, [this] (const char *n, int i) { return new CPU(n, m_inst); })
+        , m_inst_a(m_inst_manager.new_instance(CPU::ARCH))
+        , m_inst_b(m_inst_manager.new_instance(CPU::ARCH))
+        , m_cpus("cpu", p_num_cpu,  [this](const char *n, int i) {
+                   ab = !ab;
+                   return new CPU(n, ab ? m_inst_a : m_inst_b);
+                 })
         , m_tester("tester", *this)
     {
+        int i = 0;
         for (CPU &cpu: m_cpus) {
+            cpu.p_mp_affinity = i++;
             m_router.add_initiator(cpu.socket);
         }
     }
