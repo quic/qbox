@@ -74,7 +74,7 @@ protected:
 
         const tlm_dmi& dmi_data = m_initiator.get_last_dmi_data();
 
-        if (is_read == TLM_READ_COMMAND) {
+        if (is_read) {
             ASSERT_TRUE(dmi_data.is_read_allowed());
             memcpy(&data, dmi_data.get_dmi_ptr() + addr, len);
         } else {
