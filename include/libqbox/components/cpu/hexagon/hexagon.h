@@ -3,6 +3,7 @@
  *  Copyright (c) 2021 Greensocs
  *
  *  Author: Alwalid Salama
+ *  Author: Lukas Juenger
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -39,9 +40,14 @@ public:
         v73_rev = 0x8c73,
     } Rev_t;
 
+    sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
+
     QemuCpuHexagon(const sc_core::sc_module_name &name,
                    QemuInstance &inst, uint32_t cfgbase, Rev_t rev, uint32_t exec_start_addr)
         : QemuCpu(name, inst,"v67-hexagon")
+        , irq_in("irq-in", 8, [] (const char *n, int i) {
+                    return new QemuTargetSignalSocket(n);
+                })
         , m_cfgbase(cfgbase)
         , m_rev(rev)
         , m_exec_start_addr(exec_start_addr)
@@ -51,10 +57,12 @@ public:
            * non-trivial. It means that the SystemC kernel will never starve...
            */
     {
-
+        for (int i = 0; i < irq_in.size(); ++i) {
+            m_external_ev |= irq_in[i]->default_event();
+        }
     }
 
-    void before_end_of_elaboration()
+    void before_end_of_elaboration() override
     {
         //set the parameter config-table-addr 195 hexagon_testboard
         QemuCpu::before_end_of_elaboration();
@@ -63,6 +71,15 @@ public:
         cpu.set_prop_int("config-table-addr", m_cfgbase);
         cpu.set_prop_int("dsp-rev", m_rev);
         cpu.set_prop_int("exec-start-addr", m_exec_start_addr);
+    }
+
+    void end_of_elaboration() override
+    {
+        QemuCpu::end_of_elaboration();
+
+        for (int i = 0; i < irq_in.size(); ++i) {
+            irq_in[i].init(m_dev, i);
+        }
     }
 
 protected:
