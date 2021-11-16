@@ -39,8 +39,8 @@ endif()
 if (APPLE)
        set(CMAKE_MACOSX_RPATH ON)
 endif (APPLE)
-# using master branch as it has fixes for cmake
-CPMAddPackage("gh:google/googletest#master")
+# using main branch as it has fixes for cmake
+CPMAddPackage("gh:google/googletest#main")
 if (googletest_ADDED)
   target_link_libraries(${PROJECT_NAME} INTERFACE gtest gmock)
 endif()
