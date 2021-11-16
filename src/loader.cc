@@ -21,6 +21,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <iostream>
 
 #include "libqemu-cxx/loader.h"
 
@@ -29,8 +30,18 @@ static void copy_file(const char* src_file, const char* dest_file)
     std::ifstream src(src_file, std::ios::binary);
     std::ofstream dest(dest_file, std::ios::binary);
     dest << src.rdbuf();
-}
+    src.close();
+    dest.close();
+#if defined(__APPLE__)
+    std::stringstream libtool;
+    libtool << "install_name_tool -id " << dest_file << " " << dest_file;
+    system(libtool.str().c_str());
+#endif
+ }
 
+/*
+ * WINDOWS support
+ */
 #ifdef _WIN32
 #include <Lmcons.h>
 #include <windows.h>
@@ -139,11 +150,18 @@ public:
     }
 };
 
-#else /* _WIN32 */
+/*
+ * LINUX/APPLE support
+ */
+#else
 
 #include <dlfcn.h>
 #include <iostream>
+#if defined(__APPLE__)
+#include <mach-o/dyld.h>
+#else
 #include <link.h>
+#endif
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -177,19 +195,22 @@ public:
     qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name)
     {
         if (!m_base) {
-            void* handle = dlopen(lib_name, RTLD_NOW);
+            void* handle = dlopen(lib_name, RTLD_LOCAL | RTLD_NOW);
             if (handle == nullptr) {
                 m_last_error = dlerror();
                 return nullptr;
             }
 
+#if defined(__APPLE__)
+                  m_base = strdup(lib_name);//map.dli_fname);
+#else
             struct link_map* map;
             dlinfo(handle, RTLD_DI_LINKMAP, &map);
 
             if (map) {
                 m_base = strdup(map->l_name);
             }
-
+#endif
             return std::make_shared<Library>(handle);
         }
 
@@ -200,14 +221,12 @@ public:
         }
         copy_file(lib_name, tmp);
 
-        void* handle = dlopen(tmp, RTLD_NOW);
+        void* handle = dlopen(tmp, RTLD_LOCAL | RTLD_NOW);
         if (handle == nullptr) {
             m_last_error = dlerror();
             return nullptr;
         }
 
-        struct link_map* map;
-        dlinfo(handle, RTLD_DI_LINKMAP, &map);
 
 #ifndef DEBUG_TMP_LIBRARIES
         remove(tmp);
@@ -219,7 +238,11 @@ public:
 
     const char* get_lib_ext()
     {
+#if defined(__APPLE__)
+        return "dylib";
+#else
         return "so";
+#endif
     }
 
     const char* get_last_error()
