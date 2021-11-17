@@ -247,7 +247,7 @@ protected:
 
         mapping_addr = trans.get_address() - ext->get_offset();
 
-        qemu::MemoryRegion mr(m_inst.get().object_new<qemu::MemoryRegion>());
+        qemu::MemoryRegion mr(m_inst.get().template object_new<qemu::MemoryRegion>());
 
         mr.init_alias(m_dev, "mr-alias", target_mr, 0, target_mr.get_size());
         m_root.add_subregion(mr, mapping_addr);
