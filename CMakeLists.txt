@@ -23,7 +23,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # This is a hack to workaround a CMake issue. We specify an existing file which
 # is _not_ a submodule so that FetchContent does not init any submodule.
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/20579
-gs_addpackage(qemu/libqemu GIT_SUBMODULES "CMakeLists.txt")
+gs_addpackage(qemu/qemu GIT_SUBMODULES "CMakeLists.txt")
 
 set(LIBQEMU_CXX_SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/libqemu-cxx)
 set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
