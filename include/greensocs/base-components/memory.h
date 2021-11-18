@@ -61,7 +61,7 @@ class Memory : public sc_core::sc_module {
     bool m_mapped;
 
 protected:
-    bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
+    virtual bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
     {
         if (!p_dmi)
             return false;
@@ -104,7 +104,7 @@ protected:
         return true;
     }
 
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    virtual void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
@@ -182,7 +182,7 @@ protected:
             txn.set_dmi_allowed(true);
     }
 
-    unsigned int transport_dbg(tlm::tlm_generic_payload& txn)
+    virtual unsigned int transport_dbg(tlm::tlm_generic_payload& txn)
     {
         unsigned int len = txn.get_data_length();
         sc_core::sc_time delay = sc_core::SC_ZERO_TIME;
