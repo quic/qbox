@@ -29,6 +29,8 @@
 #include <libqbox/components/cpu/hexagon/hexagon.h>
 #include <libqbox/components/irq-ctrl/arm-gicv3.h>
 #include <libqbox/components/uart/pl011.h>
+#include <libqbox/components/irq-ctrl/hexagon-l2vic.h>
+#include <libqbox/components/timer/hexagon-qtimer.h>
 
 #include <libqbox-extra/components/meta/global_peripheral_initiator.h>
 
@@ -274,6 +276,8 @@ protected:
 
 //     sc_core::sc_vector<QemuCpuArmCortexA53> m_cpus;
     QemuCpuHexagon m_hexagon;
+    QemuHexagonL2vic m_l2vic;
+    QemuHexagonQtimer m_qtimer;
 //     QemuArmGicv3 m_gic;
     Router<> m_router;
     Memory m_ram;
@@ -311,13 +315,23 @@ protected:
         m_router.add_target(m_ram.socket, m_addr_map_ram, m_ram.size());
         m_router.add_target(m_rom.socket, m_addr_map_rom, m_rom.size());
         m_router.add_target(m_flash.socket, 0x200000000, m_flash.size());
+        m_router.add_target(m_l2vic.socket, v68n_1024_extensions.l2vic_base, 0x1000);
+        m_router.add_target(m_qtimer.socket, 0xfab20000, 0x1000);
+        m_router.add_target(m_qtimer.timer_socket[0], v68n_1024_extensions.qtmr_rg0, 0x1000);
+        m_router.add_target(m_qtimer.timer_socket[1], v68n_1024_extensions.qtmr_rg1, 0x1000);
 //         m_router.add_target(m_gic.dist_iface, 0xc8000000, 0x10000);
 //         m_router.add_target(m_gic.redist_iface[0], 0xc8010000, 0x20000);
 //         m_router.add_target(m_uart.socket, m_addr_map_uart, 0x1000);
 
     }
 
-//     void setup_irq_mapping() {
+     void setup_irq_mapping() {
+        for(int i = 0; i < m_l2vic.p_num_outputs; ++i) {
+            m_l2vic.irq_out[i].bind(m_hexagon.irq_in[i]);
+        }
+        m_qtimer.timer_irq[0].bind(m_l2vic.irq_in[2]); // FIXME: Depends on static boolean syscfg_is_linux, may be 3
+        m_qtimer.timer_irq[1].bind(m_l2vic.irq_in[4]);
+
 //         for (int i = 0; i < m_cpus.size(); i++) {
 //             m_gic.irq_out[i].bind(m_cpus[i].irq_in);
 //             m_gic.fiq_out[i].bind(m_cpus[i].fiq_in);
@@ -329,7 +343,7 @@ protected:
 //         }
 //
 //         m_uart.irq_out.bind(m_gic.spi_in[1]);
-//     }
+     }
 
     bool load_blobs()
     {
@@ -419,6 +433,8 @@ public:
         , m_qemu_hex_inst(m_inst_mgr.new_instance(QemuInstance::Target::HEXAGON))
 //         , m_cpus("cpu", 4, [this] (const char *n, size_t i) { return new QemuCpuArmCortexA53(n, m_qemu_inst); })
         , m_hexagon("hexagon", m_qemu_hex_inst, v68n_1024_extensions.cfgbase, QemuCpuHexagon::v68_rev, m_hexagon_start_addr)
+        , m_l2vic("l2vic", m_qemu_hex_inst)
+        , m_qtimer("qtimer", m_qemu_hex_inst)
 //         , m_gic("gic", m_qemu_inst)
         , m_router("router")
         , m_ram("ram", m_ram_size)
@@ -436,7 +452,7 @@ public:
 
 //         setup_cpus();
         setup_memory_mapping();
-//         setup_irq_mapping();
+        setup_irq_mapping();
 
         do_bootloader();
     }
