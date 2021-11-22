@@ -175,7 +175,8 @@ public:
      * @details This method initializes the socket using the given QEMU
      * SysBusDevice (SBD) and the corresponding GPIO index) in this SBD. See
      * the QEMU API and the SBD you want to wrap to know what index to use
-     * here.
+     * here. This is only for "sysbus-irq", if you want to wrap a normal gpio,
+     * just use init or init_named.
      *
      * @param[in] sbd The QEMU SysBusDevice
      * @param[in] gpio_idx The GPIO index within the SBD
