@@ -43,13 +43,14 @@ public:
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
 
     QemuCpuHexagon(const sc_core::sc_module_name &name,
-                   QemuInstance &inst, uint32_t cfgbase, Rev_t rev, uint32_t exec_start_addr)
+                   QemuInstance &inst, uint32_t cfgbase, Rev_t rev, uint32_t l2vic_base_addr, uint32_t exec_start_addr)
         : QemuCpu(name, inst,"v67-hexagon")
         , irq_in("irq-in", 8, [] (const char *n, int i) {
                     return new QemuTargetSignalSocket(n);
                 })
         , m_cfgbase(cfgbase)
         , m_rev(rev)
+        , m_l2vic_base_addr(l2vic_base_addr)
         , m_exec_start_addr(exec_start_addr)
 
           /*
@@ -70,6 +71,7 @@ public:
 
         cpu.set_prop_int("config-table-addr", m_cfgbase);
         cpu.set_prop_int("dsp-rev", m_rev);
+        cpu.set_prop_int("l2vic-base-addr", m_l2vic_base_addr);
         cpu.set_prop_int("exec-start-addr", m_exec_start_addr);
     }
 
@@ -85,7 +87,6 @@ public:
 protected:
     uint32_t m_cfgbase;
     Rev_t m_rev;
+    uint32_t m_l2vic_base_addr;
     uint32_t m_exec_start_addr;
-
 };
-
