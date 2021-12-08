@@ -30,41 +30,6 @@
 #include "libqbox/ports/initiator-signal-socket.h"
 
 class QemuHexagonQtimer : public QemuDevice {
-protected:
-    class QemuHexagonHextimer : public QemuDevice {
-    public:
-        QemuTargetSocket<> &socket;
-        QemuInitiatorSignalSocket &irq;
-
-        QemuHexagonHextimer(sc_core::sc_module_name nm, QemuInstance &inst,
-                        QemuTargetSocket<> &socket,
-                        QemuInitiatorSignalSocket &irq)
-            : QemuDevice(nm, inst, "hextimer")
-            , socket(socket)
-            , irq(irq)
-        {}
-
-        void before_end_of_elaboration() override
-        {
-            /* NO-OP: see Qtimer before_end_of_elaboration */
-        }
-
-        void do_before_end_of_elaboration()
-        {
-            QemuDevice::before_end_of_elaboration();
-        }
-
-        void end_of_elaboration() override
-        {
-            QemuDevice::end_of_elaboration();
-
-            qemu::SysBusDevice sbd(m_dev);
-            socket.init(sbd, 0);
-
-            irq.init_sbd(sbd, 0);
-        }
-    };
-
 public:
     QemuTargetSocket<> socket;
     /*
@@ -78,31 +43,17 @@ public:
     QemuTargetSocket<> timer_socket[2];
     QemuInitiatorSignalSocket timer_irq[2];
 
-protected:
-    QemuHexagonHextimer timer[2];
-
 public:
     QemuHexagonQtimer(sc_core::sc_module_name nm, QemuInstance &inst)
-        : QemuDevice(nm, inst, "qutimer")
+        : QemuDevice(nm, inst, "qct-qtimer")
         , socket("mem", inst)
         , timer_socket{{"timer0_mem", inst},{"timer1_mem", inst}}
         , timer_irq{{"timer0_irq"},{"timer1_irq"}}
-        , timer{{"timer0", inst, timer_socket[0], timer_irq[0]},
-                {"timer1", inst, timer_socket[1], timer_irq[1]}}
     {}
 
     void before_end_of_elaboration() override
     {
-        /*
-         * FIXME:
-         * Due to qemu using a global variable to store the Qtimer
-         * we need to ensure we first created the QuTimer
-         * Qemu also uses the creation order to set a devid to hextimer
-         * so we need to create timer[0] then [1]
-         */
         QemuDevice::before_end_of_elaboration();
-        timer[0].do_before_end_of_elaboration();
-        timer[1].do_before_end_of_elaboration();
     }
 
     void end_of_elaboration() override
@@ -111,6 +62,16 @@ public:
 
         qemu::SysBusDevice sbd(m_dev);
         socket.init(sbd, 0);
+
+        for (int i = 0; i < 2; i++) {
+            char buffer[16];
+            std::snprintf(buffer, 15, "timer[%d]", i);
+            qemu::Object obj = sbd.get_prop_link(buffer);
+            qemu::SysBusDevice tim_sbd(obj);
+
+            timer_socket[i].init(tim_sbd, 0);
+            timer_irq[i].init_sbd(tim_sbd, 0);
+        }
     }
 };
 
