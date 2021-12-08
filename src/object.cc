@@ -117,6 +117,19 @@ void Object::set_prop_parse(const char *name, const char *value)
     }
 }
 
+Object Object::get_prop_link(const char *name)
+{
+    QemuError *e = nullptr;
+    QemuObject *obj = nullptr;
+    obj = m_int->exports().object_property_get_link(m_obj, name, &e);
+
+    if (e != nullptr) {
+        throw GetPropertyException("link", name);
+    }
+
+    return Object(obj, m_int);
+}
+
 void Object::clear_callbacks()
 {
     m_int->clear_callbacks(*this);
