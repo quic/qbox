@@ -4,7 +4,7 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG v3.6.0
+  GIT_TAG 944e466e8d0ffb0472bc9dc70654e1f360a0c289
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqbox.git
   GIT_SHALLOW on
 )
@@ -37,7 +37,7 @@ CPMDeclarePackage(libgssync
 # libqemu-cxx
 CPMDeclarePackage(libqemu-cxx
   NAME libqemu-cxx
-  GIT_TAG v3.4.0
+  GIT_TAG 285726489db7411ff57051df2032c014b328a968
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqemu-cxx.git
   GIT_SHALLOW on
 )
