@@ -1,45 +1,17 @@
 # CPM Package Lock
 # This file should be committed to version control
 
-# SystemCLanguage (unversioned)
-# CPMDeclarePackage(SystemCLanguage
-#  NAME SystemCLanguage
-#  GIT_TAG async_suspendable
-#  GIT_REPOSITORY git@git.greensocs.com:accellera/systemc.git
-#  GIT_SHALLOW True
-#  OPTIONS
-#    "ENABLE_SUSPEND_ALL"
-#    "ENABLE_PHASE_CALLBACKS"
-#)
-# RapidJSON (unversioned)
-# CPMDeclarePackage(RapidJSON
-#  NAME RapidJSON
-#  GIT_TAG e0f68a435610e70ab5af44fc6a90523d69b210b3
-#  GIT_REPOSITORY https://github.com/Tencent/rapidjson
-#  GIT_SHALLOW FALSE
-#  OPTIONS
-#    "RAPIDJSON_BUILD_TESTS OFF"
-#    "RAPIDJSON_BUILD_DOC OFF"
-#    "RAPIDJSON_BUILD_EXAMPLES OFF"
-#)
-# SystemCCCI (unversioned)
-# CPMDeclarePackage(SystemCCCI
-#  NAME SystemCCCI
-#  GIT_TAG accellera-automake-flow
-#  GIT_REPOSITORY git@git.greensocs.com:accellera/cci.git
-#  GIT_SHALLOW True
-#  OPTIONS
-#    "SYSTEMCCCI_BUILD_TESTS OFF"
-#)
 # libqbox
 CPMDeclarePackage(libqbox
-  GIT_TAG v3.3.0
+  NAME libqbox
+  GIT_TAG 944e466e8d0ffb0472bc9dc70654e1f360a0c289
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqbox.git
   GIT_SHALLOW on
 )
 # libgsutils
 CPMDeclarePackage(libgsutils
-  GIT_TAG v2.1.1
+  NAME libgsutils
+  GIT_TAG v2.1.2
   GIT_REPOSITORY git@git.greensocs.com:greensocs/libgsutils.git
   GIT_SHALLOW on
 )
@@ -57,29 +29,33 @@ CPMDeclarePackage(lua
 #)
 # libgssync
 CPMDeclarePackage(libgssync
-  GIT_TAG v2.0.0
+  NAME libgssync
+  GIT_TAG v2.1.0
   GIT_REPOSITORY git@git.greensocs.com:greensocs/libgssync.git
   GIT_SHALLOW on
 )
 # libqemu-cxx
 CPMDeclarePackage(libqemu-cxx
-  GIT_TAG v3.2.0
+  NAME libqemu-cxx
+  GIT_TAG 285726489db7411ff57051df2032c014b328a968
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqemu-cxx.git
   GIT_SHALLOW on
 )
 # libqemu
 CPMDeclarePackage(libqemu
-  GIT_TAG feature/hexagon/v6.0.50
-  GIT_REPOSITORY git@git.greensocs.com:qemu/libqemu.git
+  GIT_TAG libqemu/hexagon-v6.0.50
+  GIT_REPOSITORY git@git.greensocs.com:customers/qualcomm/qualcomm-qemu/qemu-hexagon.git
   GIT_SHALLOW on
   GIT_SUBMODULES CMakeLists.txt
 )
 # base-components
 CPMDeclarePackage(base-components
-  GIT_TAG v2.0.0
+  NAME base-components
+  GIT_TAG v2.1.2
   GIT_REPOSITORY git@git.greensocs.com:greensocs/components/base-components.git
   GIT_SHALLOW on
 )
+
 # extra-components
 CPMDeclarePackage(extra-components
   NAME extra-components
@@ -87,4 +63,3 @@ CPMDeclarePackage(extra-components
   GIT_REPOSITORY git@git.greensocs.com:qemu/extra-components.git
   GIT_SHALLOW on
 )
-

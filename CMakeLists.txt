@@ -4,6 +4,9 @@ project(greensocs-base-vp)
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
+if(EXISTS "${PROJECT_SOURCE_DIR}/Packages" AND EXISTS "${PROJECT_SOURCE_DIR}/Packages/cmake-boilerplate")
+    set (gs-cmake_SOURCE_DIR  "${PROJECT_SOURCE_DIR}/Packages/cmake-boilerplate")
+endif()
 if (NOT gs-cmake_SOURCE_DIR)
    include(FetchContent)
    FetchContent_Declare(gs-cmake
