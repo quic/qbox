@@ -217,7 +217,10 @@ public:
             printf("Memory::load(): error file not found (%s)\n", filename.c_str());
             exit(1);
         }
-        return fin.readsome((char*)&m_ptr[addr], m_size);
+        fin.read(reinterpret_cast<char*>(&m_ptr[addr]), m_size);
+        size_t r=fin.gcount();
+        fin.close();
+        return r;
     }
 
     /**
