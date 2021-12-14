@@ -412,7 +412,7 @@ public:
     virtual void start_of_simulation() override
     {
         QemuDevice::start_of_simulation();
-
+        m_cpu.reset();
         if (!m_coroutines) {
             /* Prepare the CPU for its first run and release it */
             m_cpu.set_soft_stopped(false);
