@@ -469,6 +469,13 @@ public:
 
         do_bootloader();
     }
+
+    ~GreenSocsPlatform() {
+        if(m_with_hexagon) {
+            delete m_hexagon;
+            delete m_global_peripheral_initiator;
+        }
+    }
 };
 
 int sc_main(int argc, char *argv[])
