@@ -16,6 +16,7 @@ include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 ##############################################
 
 gs_systemc()
+gs_addpackage(greensocs/libgsutils)
 
 add_library(${PROJECT_NAME} INTERFACE)
 
@@ -28,6 +29,7 @@ target_include_directories(
 target_link_libraries(${PROJECT_NAME} INTERFACE
     SystemC::systemc
     SystemC::cci
+    GreenSocs::gsutils
 )
 
 gs_export()

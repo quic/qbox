@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <greensocs/gsutils/ports/initiator-signal-socket.h>
 #include <systemc>
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
@@ -50,7 +51,7 @@ IPC_PROTOCOLp_CLIENTc_CLIENT_ENABLE_STATUS_1_n, 0x400900, Read, Yes, 0x0
 
 class IPCC : public sc_core::sc_module {
 private:
-    enum {
+    enum IPCC_Regs {
         VERSION,
         ID,
         CONFIG,
@@ -83,7 +84,6 @@ private:
     class IPC_client {
     public:
         uint32_t regs[0x1000 / 4];
-        IPC_client& clients[64];
         bool status(int client, int signal)
         {
             assert(client < 64);
@@ -100,7 +100,7 @@ private:
             if (signal < 32)
                 return (regs[CLIENT_ENABLE_STATUS_0_n + client] & (1 << signal)) != 0;
             else
-                return (regs[CLIENT_SIGNAL_ENABLE_1_n + client] & (1 << (signal - 32))) != 0;
+                return (regs[CLIENT_ENABLE_STATUS_1_n + client] & (1 << (signal - 32))) != 0;
         }
 
         void set_status(int client, int signal)
@@ -110,7 +110,7 @@ private:
             if (signal < 32)
                 regs[CLIENT_SIGNAL_STATUS_0_n + client] |= (1 << signal);
             else
-                return regs[CLIENT_SIGNAL_STATUS_1_n + client] |= (1 << (signal - 32));
+                regs[CLIENT_SIGNAL_STATUS_1_n + client] |= (1 << (signal - 32));
         }
 
         void clear_status(int client, int signal)
@@ -120,7 +120,7 @@ private:
             if (signal < 32)
                 regs[CLIENT_SIGNAL_STATUS_0_n + client] &= ~(1 << signal);
             else
-                return regs[CLIENT_SIGNAL_STATUS_1_n + client] &= ~(1 << (signal - 32));
+                regs[CLIENT_SIGNAL_STATUS_1_n + client] &= ~(1 << (signal - 32));
         }
 
         void set_enable(int client, int signal)
@@ -130,7 +130,7 @@ private:
             if (signal < 32)
                 regs[CLIENT_ENABLE_STATUS_0_n + client] |= (1 << signal);
             else
-                return regs[CLIENT_ENABLE_STATUS_1_n + client] |= (1 << (signal - 32));
+                regs[CLIENT_ENABLE_STATUS_1_n + client] |= (1 << (signal - 32));
         }
 
         void clear_enable(int client, int signal)
@@ -140,12 +140,12 @@ private:
             if (signal < 32)
                 regs[CLIENT_ENABLE_STATUS_0_n + client] &= ~(1 << signal);
             else
-                return regs[CLIENT_ENABLE_STATUS_1_n + client] &= ~(1 << (signal - 32));
+                regs[CLIENT_ENABLE_STATUS_1_n + client] &= ~(1 << (signal - 32));
         }
 
-        IPCStruct_client()
+        IPC_client()
         {
-            memset(regs, 0, sizeof(data));
+            memset(regs, 0, sizeof(regs));
             regs[VERSION] = 0x10200;
             regs[RECV_ID] = 0xFFFFFFFF;
         };
@@ -160,39 +160,38 @@ private:
             regs[addr / 4] = data;
             // side effects
             switch (addr / 4) {
-            case SEND:
+            case SEND: {
                 int s = data & 0xffff;
                 if (data & 0x80000000) {
                     for (int c = 0; c < 64; c++) {
-                        set_status(c, s);
+                        send(c, s);
                     }
                 } else {
                     int c = data >> 16 & 0x8fff;
-                    set_status(c, s);
+                    send(c, s);
                 }
                 break;
-            case RECV_SIGNAL_ENABLE:
+            }
+            case RECV_SIGNAL_ENABLE: {
                 int c = (data >> 16) & 0xffff;
-                assert(c < 64);
                 int s = (data & 0xffff);
-                assert(c << 64);
-                enable[c][s] = true;
+                set_enable(c,s);
                 break;
+            }
             }
         }
         void send(int c, int s)
         {
-            IPC_client& dst = clients[c];
-            dst->set_status(c, s);
-            if (dst.regs[CONFIG] & 0x80000000 == 0) {
-                if (dst.enable(dst.reg[ID],sig]) {
-                    irq[(dst.regs[ID] >> 16) & 0xff]->write(1);
-                }
-            }
-            irq[c]->write(1);
+            int p=regs[ID]&0x3f;
+            int sc=(regs[ID]>>16)&0x3f;
+            IPC_client& dst = find_client(p,c);
+            dst.set_status(sc, s);
         }
-    } client[4][64];
-
+    };
+    static IPC_client client[4][64];
+    static IPC_client & find_client(int p, int c) {
+        return client[p][c];
+    }
 protected:
     void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
@@ -200,7 +199,7 @@ protected:
         unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
 
-        if ((addr + len) > m_size) {
+        if (len > sizeof(client)) {
             txn.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return;
         }
@@ -209,15 +208,17 @@ protected:
         int c = (addr / 0x1000) & 0x3f;
         int p = (addr / 0x40000) & 0x3;
         switch (txn.get_command()) {
-        case tlm::TLM_READ_COMMAND:
-            uint32_t data = clientp[p][c].read(addr & 0xfff);
+        case tlm::TLM_READ_COMMAND: {
+            uint32_t data = client[p][c].read(addr & 0xfff);
             memcpy(ptr, &data, len);
             break;
-        case tlm::TLM_WRITE_COMMAND:
+        }
+        case tlm::TLM_WRITE_COMMAND: {
             uint32_t data;
             memcpy(ptr, &data, len);
             client[p][c].write(addr & 0xfff, data);
             break;
+        }
         default:
             SC_REPORT_ERROR("IPPC", "TLM command not supported\n");
             break;
@@ -229,19 +230,18 @@ protected:
     }
 
 public:
-    tlm_utils::simple_target_socket<Memory> socket;
-    InitiatorSignalSocket<bool> irq[size_c];
+    tlm_utils::simple_target_socket<IPCC> socket;
+    InitiatorSignalSocket<bool> irq[64];
 
     IPCC(sc_core::sc_module_name name, uint64_t size)
         : socket("socket")
     {
         for (int p = 0; p < 3; p++) {
             for (int c = 0; c < 64; c++) {
-                client.data[ID] = i << 16 + p;
-                client.clients = client[p]
+                client[p][c].regs[ID] = (c << 16) + p;
             }
         }
-        socket.register_b_transport(this, &Memory::b_transport);
+        socket.register_b_transport(this, &IPCC::b_transport);
     }
 
     void update_irq()
@@ -256,15 +256,15 @@ public:
 
                 for (int sc = 0; sc < 64; sc++) {
                     for (int s = 0; s < 64; s++) {
-                        if (clients[p][c].status(sc, s)) {
+                        if (client[p][c].status(sc, s)) {
                             // there is an active signal s from p/sc to p/c
-                            if (clients[p][c].regs[CONFIG] & 0x80000000 == 0) {
-                                if (clients[p][c].enable(sc, s)) {
-                                    int p = clients[p][c].regs[RECV_CLIENT_PRIORITY_n + sc];
+                            if ((client[p][c].regs[CONFIG] & 0x80000000) == 0) {
+                                if (client[p][c].enable(sc, s)) {
+                                    int p = client[p][c].regs[RECV_CLIENT_PRIORITY_n + sc];
                                     if (irqcount == 0 || p > prio) {
                                         prio = p;
                                         sig = s;
-                                        cli = sc; 
+                                        cli = sc;
                                     }
                                     irqcount++;
                                 }
@@ -272,14 +272,14 @@ public:
                         }
                     }
                 }
-                allirqcont += irqcont;
+                allirqcount += irqcount;
                 if (irqcount)
-                    clients[p][c].regs[RECV_ID] = (cli << 16) + sig;
+                    client[p][c].regs[RECV_ID] = (cli << 16) + sig;
             }
-            if (allirqcont >= 1) {
-                irq(c)->write(1);
-//            } else {
-//                irq(c)->write(0);
+            if (allirqcount >= 1) {
+                irq[c]->write(1);
+                //            } else {
+                //                irq(c)->write(0);
             }
         }
     }
