@@ -3,7 +3,7 @@
 
 # libqbox
 CPMDeclarePackage(libqbox
-  NAME libqbox
+  NAME 775d542cf8b92e2874b0f40ebf21482e755b585f
   GIT_TAG master
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqbox.git
 )
