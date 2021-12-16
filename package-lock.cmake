@@ -4,7 +4,7 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG 944e466e8d0ffb0472bc9dc70654e1f360a0c289
+  GIT_TAG 775d542cf8b92e2874b0f40ebf21482e755b585f
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqbox.git
 )
 # libgsutils
@@ -21,11 +21,11 @@ CPMDeclarePackage(lua
   EXCLUDE_FROM_ALL YES
 )
 # googletest (unversioned)
-# CPMDeclarePackage(googletest
-#  GIT_TAG master
-#  GITHUB_REPOSITORY google/googletest
-#  EXCLUDE_FROM_ALL YES
-#)
+CPMDeclarePackage(googletest
+ GIT_TAG main
+ GITHUB_REPOSITORY google/googletest
+ EXCLUDE_FROM_ALL YES
+)
 # libgssync
 CPMDeclarePackage(libgssync
   NAME libgssync

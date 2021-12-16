@@ -12,9 +12,13 @@ function top()
  end
 
 local conf = {
-    [ "platform.kernel_file" ] = top().."fw/linux-demo/Image",
-    [ "platform.dtb_file" ] = top().."fw/linux-demo/platform.dtb",
+    [ "platform.kernel_file" ] = top().."fw/linux-demo/Image2",
+    [ "platform.dtb_file" ] = top().."fw/linux-demo/virt_512M_simple.dtb",
+    [ "platform.bootloader_file" ] = top().."fw/linux-demo/my_debug_hypvm_dump.bin",
     [ "platform.flash_blob_file" ] = top().."fw/linux-demo/rootfs.squashfs",
+    [ "platform.with_hexagon" ] = true,
+    -- [ "platform.gdb_port" ] = 1234,
+
     [ "platform.hexagon.sync-policy" ] = "tlm2",
 --    [ "platform.hexagon.gdb-port" ] = 1234,
     [ "platform.hexagon_kernel_file" ] = top().."tests/qualcomm/prebuilt/qtimer_test.bin",
