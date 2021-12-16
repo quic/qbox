@@ -149,101 +149,82 @@ private:
             regs[VERSION] = 0x10200;
             regs[RECV_ID] = 0xFFFFFFFF;
         };
-
-        uint32_t read(uint64_t addr)
-        {
-            return regs[addr / 4];
-            // Side effects
-        }
-        void write(uint64_t addr, uint32_t data)
-        {
-            regs[addr / 4] = data;
-            // side effects
-            switch (addr / 4) {
-            case SEND: {
-                int s = data & 0xffff;
-                if (data & 0x80000000) {
-                    for (int c = 0; c < 64; c++) {
-                        send(c, s);
-                    }
-                } else {
-                    int c = data >> 16 & 0x8fff;
-                    send(c, s);
-                }
-                break;
-            }
-            case RECV_SIGNAL_ENABLE: {
-                int c = (data >> 16) & 0xffff;
-                int s = (data & 0xffff);
-                set_enable(c,s);
-                break;
-            }
-            }
-        }
-        void send(int c, int s)
-        {
-            int p=regs[ID]&0x3f;
-            int sc=(regs[ID]>>16)&0x3f;
-            IPC_client& dst = find_client(p,c);
-            dst.set_status(sc, s);
-        }
     };
-    static IPC_client client[4][64];
-    static IPC_client & find_client(int p, int c) {
-        return client[p][c];
-    }
+    IPC_client client[4][64];
+
 protected:
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    uint32_t read(IPC_client& src, uint64_t addr)
     {
-        unsigned int len = txn.get_data_length();
-        unsigned char* ptr = txn.get_data_ptr();
-        sc_dt::uint64 addr = txn.get_address();
-
-        if (len > sizeof(client)) {
-            txn.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
-            return;
-        }
-        assert(len == 4);
-
-        int c = (addr / 0x1000) & 0x3f;
-        int p = (addr / 0x40000) & 0x3;
-        switch (txn.get_command()) {
-        case tlm::TLM_READ_COMMAND: {
-            uint32_t data = client[p][c].read(addr & 0xfff);
-            memcpy(ptr, &data, len);
-            break;
-        }
-        case tlm::TLM_WRITE_COMMAND: {
-            uint32_t data;
-            memcpy(ptr, &data, len);
-            client[p][c].write(addr & 0xfff, data);
-            break;
-        }
-        default:
-            SC_REPORT_ERROR("IPPC", "TLM command not supported\n");
-            break;
-        }
-
-        txn.set_response_status(tlm::TLM_OK_RESPONSE);
-
-        update_irq();
-    }
-
-public:
-    tlm_utils::simple_target_socket<IPCC> socket;
-    InitiatorSignalSocket<bool> irq[64];
-
-    IPCC(sc_core::sc_module_name name, uint64_t size)
-        : socket("socket")
-    {
-        for (int p = 0; p < 3; p++) {
-            for (int c = 0; c < 64; c++) {
-                client[p][c].regs[ID] = (c << 16) + p;
+        uint32_t ret = src.regs[addr / 4];
+        // Side effects
+        switch (addr / 4) {
+        case RECV_ID:
+            if (src.regs[CONFIG] & 0x1) {
+                int sc = (src.regs[ID] >> 16) & 0x3f;
+                src.clear_status(ret>>16, ret&0xffff);
+                irq[sc]->write(0);
+                //update_irq(); done anyway
             }
         }
-        socket.register_b_transport(this, &IPCC::b_transport);
-    }
 
+        return ret;
+    }
+    void write(IPC_client& src, uint64_t addr, uint32_t data)
+    {
+        src.regs[addr / 4] = data;
+        // side effects
+        switch (addr / 4) {
+        case SEND: {
+            int s = data & 0xffff;
+            if (data & 0x80000000) {
+                for (int c = 0; c < 64; c++) {
+                    send(src, c, s);
+                }
+            } else {
+                int c = data >> 16 & 0x8fff;
+                send(src, c, s);
+            }
+            break;
+        }
+        case RECV_SIGNAL_ENABLE: {
+            int c = (data >> 16) & 0xffff;
+            int s = (data & 0xffff);
+            src.set_enable(c, s);
+            break;
+        }
+        case RECV_SIGNAL_DISABLE: {
+            int c = (data >> 16) & 0xffff;
+            int s = (data & 0xffff);
+            src.clear_enable(c, s);
+            break;
+        }
+        case RECV_SIGNAL_CLEAR: {
+            int c = (data >> 16) & 0xffff;
+            int s = (data & 0xffff);
+            src.clear_status(c,s);
+            int sc = (src.regs[ID] >> 16) & 0x3f;
+            irq[sc]->write(0);
+            break;
+        }
+        case CLIENT_CLEAR: {
+            uint32_t id=src.regs[ID];
+            if (data &0x1) {
+                memset(src.regs, 0, sizeof(src.regs));
+                src.regs[VERSION] = 0x10200;
+                src.regs[RECV_ID] = 0xFFFFFFFF;
+                src.regs[ID]=id;
+            }
+            break;
+        }
+        }
+    }
+    void send(IPC_client& src, int c, int s)
+    {
+        int p = src.regs[ID] & 0x3f;
+        int sc = (src.regs[ID] >> 16) & 0x3f;
+        IPC_client& dst = client[p][c];
+        dst.set_status(sc, s);
+    }
     void update_irq()
     {
         for (int c = 0; c < 64; c++) {
@@ -278,13 +259,62 @@ public:
             }
             if (allirqcount >= 1) {
                 irq[c]->write(1);
-                //            } else {
-                //                irq(c)->write(0);
             }
         }
     }
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
+        unsigned int len = txn.get_data_length();
+        unsigned char* ptr = txn.get_data_ptr();
+        sc_dt::uint64 addr = txn.get_address();
 
-    IPCC() = delete;
+        if (len > sizeof(client)) {
+            txn.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
+            return;
+        }
+        assert(len == 4);
+
+        int c = (addr / 0x1000) & 0x3f;
+        int p = (addr / 0x40000) & 0x3;
+        switch (txn.get_command()) {
+        case tlm::TLM_READ_COMMAND: {
+            uint32_t data = read(client[p][c], addr & 0xfff);
+            memcpy(ptr, &data, len);
+            break;
+        }
+        case tlm::TLM_WRITE_COMMAND: {
+            uint32_t data;
+            memcpy(ptr, &data, len);
+            write(client[p][c], addr & 0xfff, data);
+            break;
+        }
+        default:
+            SC_REPORT_ERROR("IPPC", "TLM command not supported\n");
+            break;
+        }
+
+        txn.set_response_status(tlm::TLM_OK_RESPONSE);
+
+        update_irq();
+    }
+
+public:
+    tlm_utils::simple_target_socket<IPCC> socket;
+    InitiatorSignalSocket<bool> irq[64];
+
+    IPCC(sc_core::sc_module_name name, uint64_t size)
+        : socket("socket")
+    {
+        for (int p = 0; p < 3; p++) {
+            for (int c = 0; c < 64; c++) {
+                client[p][c].regs[ID] = (c << 16) + p;
+            }
+        }
+        socket.register_b_transport(this, &IPCC::b_transport);
+    }
+
+    IPCC()
+        = delete;
     IPCC(const IPCC&) = delete;
 
     ~IPCC()
