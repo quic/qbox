@@ -41,7 +41,7 @@ CPMDeclarePackage(libqemu-cxx
 )
 # libqemu
 CPMDeclarePackage(libqemu
-  GIT_TAG 7ab23ade465d84b1f95e165aaec768efc99c36c4
+  GIT_TAG 626fcaac7e598e5e051713aea9bdc40797daf914
   GIT_REPOSITORY git@git.greensocs.com:customers/qualcomm/qualcomm-qemu/qemu-hexagon.git
   GIT_SUBMODULES CMakeLists.txt
 )
