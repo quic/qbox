@@ -336,6 +336,7 @@ protected:
         m_router.add_target(m_hexagon_ram.socket, m_addr_map_hexagon_ram, m_hexagon_ram.size());
         m_router.add_target(m_rom.socket, m_addr_map_rom, m_rom.size());
         m_router.add_target(m_l2vic.socket, v68n_1024_extensions.l2vic_base, 0x1000);
+        m_router.add_target(m_l2vic.socket_fast, cfgTable->fastl2vic_base, 0x10000);
         m_router.add_target(m_qtimer.socket, 0xfab20000, 0x1000);
         m_router.add_target(m_qtimer.timer0_socket, v68n_1024_extensions.qtmr_rg0, 0x1000);
         m_router.add_target(m_qtimer.timer1_socket, v68n_1024_extensions.qtmr_rg1, 0x1000);
