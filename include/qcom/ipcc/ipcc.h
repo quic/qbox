@@ -302,7 +302,7 @@ public:
     tlm_utils::simple_target_socket<IPCC> socket;
     InitiatorSignalSocket<bool> irq[64];
 
-    IPCC(sc_core::sc_module_name name, uint64_t size)
+    IPCC(sc_core::sc_module_name name)
         : socket("socket")
     {
         for (int p = 0; p < 3; p++) {
