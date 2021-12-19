@@ -48,7 +48,7 @@ CPMDeclarePackage(libqemu
 # base-components
 CPMDeclarePackage(base-components
   NAME base-components
-  GIT_TAG v2.1.2
+  GIT_TAG v2.2.0
   GIT_REPOSITORY git@git.greensocs.com:greensocs/components/base-components.git
   GIT_SHALLOW on
 )

@@ -36,6 +36,7 @@
 
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/memory.h>
+#include <qcom/ipcc/ipcc.h>
 
 #define KERNEL64_LOAD_ADDR (0x41080000)
 #define DTB_LOAD_ADDR      (0x44200000)
@@ -289,6 +290,7 @@ protected:
     Memory m_rom;
     GlobalPeripheralInitiator* m_global_peripheral_initiator;
     QemuUartPl011 m_uart;
+    IPCC m_ipcc;
 
     hexagon_config_table *cfgTable;
     hexagon_config_extensions *cfgExtensions;
@@ -343,6 +345,7 @@ protected:
         m_router.add_target(m_gic.dist_iface, 0x8000000, 0x10000);
         m_router.add_target(m_gic.redist_iface[0], 0x80a0000, 0xf60000);
         m_router.add_target(m_uart.socket, m_addr_map_uart, 0x1000);
+        m_router.add_target(m_ipcc.socket, 0x400000,0xFC000);
 
     }
 
@@ -452,6 +455,7 @@ public:
         , m_hexagon_ram("hexagon_ram", 0x08000000)
         , m_rom("rom", m_rom_size)
         , m_uart("uart", m_qemu_inst)
+        , m_ipcc("ipcc")
 
     {
         using tlm_utils::tlm_quantumkeeper;

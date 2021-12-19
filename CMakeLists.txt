@@ -24,6 +24,7 @@ set(LIBQEMU_TARGETS aarch64 hexagon)
 gs_addpackage(qemu/libqbox)
 gs_addpackage(greensocs/components/base-components)
 gs_addpackage(qemu/extra-components)
+gs_addpackage(customers/qualcomm/ipcc)
 
 add_executable(vp
     src/main.cc
@@ -35,6 +36,7 @@ target_link_libraries(vp
     GreenSocs::qbox
     GreenSocs::qbox-extra
     GreenSocs::base-components
+    GreenSocs::qcom-ipcc
 )
 
 gs_enable_testing()
