@@ -73,6 +73,8 @@ public:
         cpu.set_prop_int("dsp-rev", m_rev);
         cpu.set_prop_int("l2vic-base-addr", m_l2vic_base_addr);
         cpu.set_prop_int("exec-start-addr", m_exec_start_addr);
+        //in case of additional reset, this value will be loaded for PC
+        cpu.set_prop_int("start-evb", m_exec_start_addr);
     }
 
     void end_of_elaboration() override
