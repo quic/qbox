@@ -35,6 +35,7 @@ public:
     const unsigned int p_num_outputs;
 
     QemuTargetSocket<> socket;
+    QemuTargetSocket<> socket_fast;
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
     sc_core::sc_vector<QemuInitiatorSignalSocket> irq_out;
 
@@ -43,6 +44,7 @@ public:
         , p_num_sources(1024) /* this is hardcoded in qemu */
         , p_num_outputs(8) /* this is hardcoded in qemu */
         , socket("mem", inst)
+        , socket_fast("fastmem", inst)
         , irq_in("irq-in", p_num_sources, [] (const char *n, int i) {
                     return new QemuTargetSignalSocket(n);
                  })
@@ -62,6 +64,7 @@ public:
 
         qemu::SysBusDevice sbd(m_dev);
         socket.init(sbd, 0);
+        socket_fast.init(sbd, 1);
 
         for (int i = 0; i < p_num_sources; i++) {
             irq_in[i].init(m_dev, i);
