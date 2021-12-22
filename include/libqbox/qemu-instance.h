@@ -107,10 +107,10 @@ protected:
             if (p.second.get_string().is_string()) {
                 const std::string arg_name = p.first.substr(l + strlen(args));
                 const std::string arg_value = p.second.get_string();
-                SC_REPORT_INFO("QemuInstance", ("Added QEMU argument : " + arg_name + " " + arg_value).c_str());
+                SC_REPORT_INFO(name(), ("Added QEMU argument : " + arg_name + " " + arg_value).c_str());
                 m_inst.push_qemu_arg({ arg_name.c_str(), arg_value.c_str() });
             } else {
-                SC_REPORT_ERROR("QemuInstance", "The value of the argument is not a string");
+                SC_REPORT_ERROR(name(), "The value of the argument is not a string");
             }
         }
     }
@@ -356,13 +356,18 @@ public:
     /**
      * @brief Returns a new QEMU instance for target t
      */
+    QemuInstance& new_instance(const std::string &n, Target t)
+    {
+        QemuInstance* ptr = new QemuInstance(n.c_str(), *m_loader, t);
+        m_insts.push_back(*ptr);
+
+        return *ptr;
+    }
     QemuInstance& new_instance(Target t)
     {
-        QemuInstance* n = new QemuInstance("QemuInstance", *m_loader, t);
-        m_insts.push_back(*n);
-
-        return *n;
+        return new_instance("QemuInstance", t);
     }
+
     /* Destructor should only be called at the end of the program, if it is called before, then all Qemu instances
  * that it manages will, of course, be destroyed too
  */
