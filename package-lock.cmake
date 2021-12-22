@@ -4,7 +4,7 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG 77bb57ef4bb03d98bd07e60412336c2b276f2bf5
+  GIT_TAG 0c21d2fcb595f96c50827c5f4a3227257ffac738 
   GIT_REPOSITORY git@git.greensocs.com:qemu/libqbox.git
 )
 # libgsutils
