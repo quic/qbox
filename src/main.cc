@@ -441,8 +441,8 @@ public:
         , m_addr_map_rom("addr_map_rom", v68n_1024_extensions.cfgbase, "")
         , m_addr_map_uart("addr_map_uart", 0x9000000, "")
 
-        , m_qemu_inst(m_inst_mgr.new_instance(QemuInstance::Target::AARCH64))
-        , m_qemu_hex_inst(m_inst_mgr.new_instance(QemuInstance::Target::HEXAGON))
+        , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
+        , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_cpus("cpu", 8, [this] (const char *n, size_t i) { return new QemuCpuArmMax(n, m_qemu_inst); })
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer", m_qemu_hex_inst)
