@@ -68,8 +68,8 @@ private:
         InitiatorSocket* i;
     };
 
-    std::vector<tlm_utils::simple_target_socket_tagged<Router>*> m_target_sockets;
-    std::vector<tlm_utils::simple_initiator_socket_tagged<Router>*> m_initiator_sockets;
+    std::vector<tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>*> m_target_sockets;
+    std::vector<tlm_utils::simple_initiator_socket_tagged<Router, BUSWIDTH>*> m_initiator_sockets;
     std::vector<TargetInfo> m_targets;
     std::vector<InitiatorInfo> m_initiators;
 
@@ -187,7 +187,7 @@ protected:
     virtual void before_end_of_elaboration()
     {
         for (size_t i = 0; i < m_initiators.size(); i++) {
-            tlm_utils::simple_target_socket_tagged<Router>* socket = new tlm_utils::simple_target_socket_tagged<Router>(sc_core::sc_gen_unique_name("target"));
+            tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>* socket = new tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>(sc_core::sc_gen_unique_name("target"));
             socket->register_b_transport(this, &Router::b_transport, i);
             socket->register_transport_dbg(this, &Router::transport_dbg, i);
             socket->register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr, i);
@@ -196,7 +196,7 @@ protected:
         }
 
         for (size_t i = 0; i < m_targets.size(); i++) {
-            tlm_utils::simple_initiator_socket_tagged<Router>* socket = new tlm_utils::simple_initiator_socket_tagged<Router>(sc_core::sc_gen_unique_name("initiator"));
+            tlm_utils::simple_initiator_socket_tagged<Router, BUSWIDTH>* socket = new tlm_utils::simple_initiator_socket_tagged<Router, BUSWIDTH>(sc_core::sc_gen_unique_name("initiator"));
             socket->register_invalidate_direct_mem_ptr(this, &Router::invalidate_direct_mem_ptr, i);
             socket->bind(*m_targets.at(i).t);
             m_initiator_sockets.push_back(socket);
