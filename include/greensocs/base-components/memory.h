@@ -82,8 +82,10 @@ protected:
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
+        unsigned char* byt = txn.get_byte_enable_ptr();
+        unsigned int bel = txn.get_byte_enable_length();
 
-        if (txn.get_byte_enable_ptr() != 0 || txn.get_streaming_width() < len) {
+        if (txn.get_streaming_width() < len) {
             SC_REPORT_ERROR("Memory", "not supported.\n");
         }
 
@@ -94,10 +96,22 @@ protected:
 
         switch (txn.get_command()) {
         case tlm::TLM_READ_COMMAND:
-            memcpy(ptr, &m_ptr[addr], len);
+            if (byt) {
+                for (unsigned int i = 0; i < len; i++)
+                    if (byt[i & bel] == TLM_BYTE_ENABLED)
+                        ptr[i] = m_ptr[addr + i];
+            } else {
+                memcpy(ptr, &m_ptr[addr], len);
+            }
             break;
         case tlm::TLM_WRITE_COMMAND:
-            memcpy(&m_ptr[addr], ptr, len);
+            if (byt) {
+                for (unsigned int i = 0; i < len; i++)
+                    if (byt[i & bel] == TLM_BYTE_ENABLED)
+                        m_ptr[addr + i] = ptr[i];
+            } else {
+                memcpy(&m_ptr[addr], ptr, len);
+            }
             break;
         default:
             SC_REPORT_ERROR("Memory", "TLM command not supported\n");
