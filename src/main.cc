@@ -36,6 +36,8 @@
 
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/memory.h>
+#include <greensocs/elf-loader/elf-loader.h>
+#include <qcom/ipcc/ipcc.h>
 
 #define KERNEL64_LOAD_ADDR (0x41080000)
 #define DTB_LOAD_ADDR      (0x44200000)
@@ -252,7 +254,8 @@ protected:
 
     /* Memory direct loading params */
     cci::cci_param<std::string> m_ram_blob_file;
-    cci::cci_param<std::string> m_flash_blob_file;
+    cci::cci_param<std::string> m_vendor_flash_blob_file;
+    cci::cci_param<std::string> m_system_flash_blob_file;
 
     /* OpenSBI/Linux bootloader params */
     cci::cci_param<std::string> m_kernel_file;
@@ -287,8 +290,12 @@ protected:
     Memory m_ram;
     Memory m_hexagon_ram;
     Memory m_rom;
+    Memory m_vendor_flash;
+    Memory m_system_flash;
     GlobalPeripheralInitiator* m_global_peripheral_initiator;
     QemuUartPl011 m_uart;
+    IPCC m_ipcc;
+    elf_reader m_elf_loader;
 
     hexagon_config_table *cfgTable;
     hexagon_config_extensions *cfgExtensions;
@@ -343,7 +350,12 @@ protected:
         m_router.add_target(m_gic.dist_iface, 0x8000000, 0x10000);
         m_router.add_target(m_gic.redist_iface[0], 0x80a0000, 0xf60000);
         m_router.add_target(m_uart.socket, m_addr_map_uart, 0x1000);
+        m_router.add_target(m_ipcc.socket, 0x400000,0xFC000);
 
+        m_router.add_target(m_vendor_flash.socket, 0x10000000, m_vendor_flash.size());
+        m_router.add_target(m_system_flash.socket, 0x30000000, m_system_flash.size());
+
+        m_router.add_initiator(m_elf_loader.socket);
     }
 
      void setup_irq_mapping() {
@@ -384,7 +396,14 @@ protected:
             m_ram.load(m_dtb_file, DTB_LOAD_ADDR - m_addr_map_ram.get_value());
         }
 
-        m_ram.load(m_bootloader_file,0x40000000);
+        if (!m_vendor_flash_blob_file.is_default_value()) {
+            m_vendor_flash.load(m_vendor_flash_blob_file, 0);
+        }
+        if (!m_system_flash_blob_file.is_default_value()) {
+            m_system_flash.load(m_system_flash_blob_file, 0);
+        }
+
+        //m_ram.load(m_bootloader_file,0x40000000);
 
         hexagon_config_table *config_table = cfgTable;
 
@@ -423,7 +442,8 @@ public:
         , m_rom_size("rom_size", v68n_1024_extensions.cfgtable_size, "ROM size")
 
         , m_ram_blob_file("ram_blob_file", "", "Blob file to load into the RAM")
-        , m_flash_blob_file("flash_blob_file", "", "Blob file to load into the flash")
+        , m_vendor_flash_blob_file("vendor_flash_blob_file", "", "Blob file to load into the flash")
+        , m_system_flash_blob_file("system_flash_blob_file", "", "Blob file to load into the flash")
 
         , m_kernel_file("kernel_file", "", "Kernel blob file")
         , m_dtb_file("dtb_file", "", "Device tree blob to load")
@@ -451,8 +471,11 @@ public:
         , m_ram("ram", m_ram_size)
         , m_hexagon_ram("hexagon_ram", 0x08000000)
         , m_rom("rom", m_rom_size)
+        , m_vendor_flash("vendor", 0x20000000)
+        , m_system_flash("system", 0x10000000)
         , m_uart("uart", m_qemu_inst)
-
+        , m_ipcc("ipcc")
+        , m_elf_loader("elfloader", m_bootloader_file)
     {
         using tlm_utils::tlm_quantumkeeper;
         cfgTable = &v68n_1024_cfgtable;
