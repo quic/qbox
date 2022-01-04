@@ -47,6 +47,7 @@
  *    - DMI invalidates are not issued.
  */
 
+template <unsigned int BUSWIDTH = 32>
 class Memory : public sc_core::sc_module {
 private:
     /** Size of the memory in bytes */
@@ -142,7 +143,7 @@ protected:
     }
 
 public:
-    tlm_utils::simple_target_socket<Memory> socket;
+    tlm_utils::simple_target_socket<Memory, BUSWIDTH> socket;
 
     Memory(sc_core::sc_module_name name, uint64_t size)
         : socket("socket")

@@ -68,10 +68,12 @@ private:
         InitiatorSocket* i;
     };
 
-    std::vector<tlm_utils::simple_target_socket_tagged<Router>*> m_target_sockets;
-    std::vector<tlm_utils::simple_initiator_socket_tagged<Router>*> m_initiator_sockets;
+    std::vector<tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>*> m_target_sockets;
+    std::vector<tlm_utils::simple_initiator_socket_tagged<Router, BUSWIDTH>*> m_initiator_sockets;
     std::vector<TargetInfo> m_targets;
     std::vector<InitiatorInfo> m_initiators;
+    Router<BUSWIDTH> *m_top;
+    tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>* target_socket;
 
     void check_exclusive_extension(int id, tlm::tlm_generic_payload& trans)
     {
@@ -93,6 +95,9 @@ private:
         unsigned int target_nr;
 
         bool success = decode_address(addr, target_addr, target_nr);
+	if (!success && m_top)
+		return m_top->b_transport(id, trans, delay);
+
         if (!success) {
             const char* cmd = "unknown";
             switch (trans.get_command()) {
@@ -126,6 +131,8 @@ private:
         unsigned int target_nr;
 
         bool success = decode_address(addr, target_addr, target_nr);
+	if (!success && m_top)
+		return m_top->transport_dbg(id, trans);
 
         if (!success) {
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
@@ -143,6 +150,8 @@ private:
         unsigned int target_nr;
 
         bool success = decode_address(trans.get_address(), target_addr, target_nr);
+	if (!success && m_top)
+		return m_top-get_direct_mem_ptr(id, trans, dmi_data);
         if (!success) {
             return false;
         }
@@ -187,7 +196,7 @@ protected:
     virtual void before_end_of_elaboration()
     {
         for (size_t i = 0; i < m_initiators.size(); i++) {
-            tlm_utils::simple_target_socket_tagged<Router>* socket = new tlm_utils::simple_target_socket_tagged<Router>(sc_core::sc_gen_unique_name("target"));
+            tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>* socket = new tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>(sc_core::sc_gen_unique_name("target"));
             socket->register_b_transport(this, &Router::b_transport, i);
             socket->register_transport_dbg(this, &Router::transport_dbg, i);
             socket->register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr, i);
@@ -196,7 +205,7 @@ protected:
         }
 
         for (size_t i = 0; i < m_targets.size(); i++) {
-            tlm_utils::simple_initiator_socket_tagged<Router>* socket = new tlm_utils::simple_initiator_socket_tagged<Router>(sc_core::sc_gen_unique_name("initiator"));
+            tlm_utils::simple_initiator_socket_tagged<Router, BUSWIDTH>* socket = new tlm_utils::simple_initiator_socket_tagged<Router, BUSWIDTH>(sc_core::sc_gen_unique_name("initiator"));
             socket->register_invalidate_direct_mem_ptr(this, &Router::invalidate_direct_mem_ptr, i);
             socket->bind(*m_targets.at(i).t);
             m_initiator_sockets.push_back(socket);
@@ -207,6 +216,8 @@ public:
     explicit Router(const sc_core::sc_module_name& nm)
         : sc_core::sc_module(nm)
     {
+	    m_top = nullptr;
+	    target_socket = nullptr;
     }
 
     Router() = delete;
@@ -221,6 +232,9 @@ public:
         for (const auto& t : m_target_sockets) {
             delete t;
         }
+
+	if (target_socket)
+		delete target_socket;
     }
 
     /**
@@ -252,6 +266,25 @@ public:
         ii.index = m_initiators.size();
         ii.i = &i;
         m_initiators.push_back(ii);
+    }
+
+    /**
+     * @brief This method will bind a router to a child router. 
+     * The router will register its address and size according to the parameters we have given it.
+     * 
+     * @param top the parent router to bind
+     * @param address Address of the child target router
+     * @param size Size of the child target router
+     */
+    void add_top_router(Router *top, uint64_t address, uint64_t size)
+    {
+	m_top = top;
+        target_socket = new tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>(sc_core::sc_gen_unique_name("target"));
+
+	target_socket->register_b_transport(this, &Router::b_transport,255);
+        target_socket->register_transport_dbg(this, &Router::transport_dbg, 255);
+        target_socket->register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr, 255);
+	top->add_target(*target_socket, address, size);
     }
 };
 

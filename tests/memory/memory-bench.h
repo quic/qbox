@@ -33,7 +33,7 @@ public:
 
 protected:
     InitiatorTester m_initiator;
-    Memory m_target;
+    Memory<> m_target;
 
     /* Initiator callback */
     void invalidate_direct_mem_ptr(uint64_t start_range, uint64_t end_range)
