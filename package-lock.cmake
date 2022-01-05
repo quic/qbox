@@ -5,13 +5,13 @@
 CPMDeclarePackage(libqbox
   NAME libqbox
   GIT_TAG 0c21d2fcb595f96c50827c5f4a3227257ffac738 
-  GIT_REPOSITORY git@git.greensocs.com:qemu/libqbox.git
+  GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
 CPMDeclarePackage(libgsutils
   NAME libgsutils
   GIT_TAG v2.1.2
-  GIT_REPOSITORY git@git.greensocs.com:greensocs/libgsutils.git
+  GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgsutils.git
   GIT_SHALLOW on
 )
 # lua
@@ -30,26 +30,26 @@ CPMDeclarePackage(googletest
 CPMDeclarePackage(libgssync
   NAME libgssync
   GIT_TAG v2.1.0
-  GIT_REPOSITORY git@git.greensocs.com:greensocs/libgssync.git
+  GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgssync.git
   GIT_SHALLOW on
 )
 # libqemu-cxx
 CPMDeclarePackage(libqemu-cxx
   NAME libqemu-cxx
   GIT_TAG 285726489db7411ff57051df2032c014b328a968
-  GIT_REPOSITORY git@git.greensocs.com:qemu/libqemu-cxx.git
+  GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqemu-cxx.git
 )
 # libqemu
 CPMDeclarePackage(libqemu
   GIT_TAG 6452339b49f4605977c45818f7448d20d21be01f
-  GIT_REPOSITORY git@git.greensocs.com:customers/qualcomm/qualcomm-qemu/qemu-hexagon.git
+  GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/qualcomm-qemu/qemu-hexagon.git
   GIT_SUBMODULES CMakeLists.txt
 )
 # base-components
 CPMDeclarePackage(base-components
   NAME base-components
   GIT_TAG v2.2.0
-  GIT_REPOSITORY git@git.greensocs.com:greensocs/components/base-components.git
+  GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/base-components.git
   GIT_SHALLOW on
 )
 
@@ -57,6 +57,22 @@ CPMDeclarePackage(base-components
 CPMDeclarePackage(extra-components
   NAME extra-components
   GIT_TAG v3.1.0
-  GIT_REPOSITORY git@git.greensocs.com:qemu/extra-components.git
+  GIT_REPOSITORY ${GREENSOCS_GIT}qemu/extra-components.git
+  GIT_SHALLOW on
+)
+
+# IPCC
+CPMDeclarePackage(ipcc
+  NAME ipcc
+  GIT_TAG 491836963e3b4eada8005df098fcf4d15e18c591
+  GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/ipcc.git
+  GIT_SHALLOW on
+)
+
+# IPCC
+CPMDeclarePackage(elf-loader
+  NAME elf-loader
+  GIT_TAG bdc3557a610984432df9d9da0a4a40fbbd7af0a6
+  GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/elf-loader
   GIT_SHALLOW on
 )
