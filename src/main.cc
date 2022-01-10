@@ -366,7 +366,7 @@ protected:
                 m_l2vic.irq_out[i].bind(m_hexagon->irq_in[i]);
             }
         }
-        m_qtimer.timer0_irq.bind(m_l2vic.irq_in[3]); // FIXME: Depends on static boolean syscfg_is_linux, may be 3
+        m_qtimer.timer0_irq.bind(m_l2vic.irq_in[3]); // FIXME: Depends on static boolean syscfg_is_linux, may be 2
         m_qtimer.timer1_irq.bind(m_l2vic.irq_in[4]);
 
         m_uart.irq_out.bind(m_gic.spi_in[1]);
