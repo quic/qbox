@@ -23,6 +23,7 @@ local conf = {
     [ "platform.vendor_flash_blob_file" ] = top().."fw/fastrpc-images/vendor.squashfs",
     [ "platform.system_flash_blob_file" ] = top().."fw/fastrpc-images/system.squashfs",
     [ "platform.with_hexagon" ] = false,
+    [ "platform.with_arm" ] = true,
 --    [ "platform.cpu_0.gdb-port" ] = 1234,
 
     [ "platform.hexagon.sync-policy" ] = "tlm2",
