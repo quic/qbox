@@ -28,9 +28,11 @@ local conf = {
 
     [ "platform.hexagon.sync-policy" ] = "tlm2",
 --    [ "platform.hexagon.gdb-port" ] = 1234,
-    [ "platform.hexagon_kernel_file" ] = top().."tests/qualcomm/prebuilt/qtimer_test.bin",
+    -- [ "platform.hexagon_kernel_file" ] = top().."tests/qualcomm/prebuilt/qtimer_test.bin",
+    [ "platform.hexagon_kernel_file" ] = top().."fw/hexagon-images/bootimage_kailua.cdsp.coreQ.pbn",
     [ "platform.hexagon_load_addr" ] = 0x0,
-    [ "platform.hexagon_start_addr" ] = 0x0,
+    -- [ "platform.hexagon_start_addr" ] = 0x0,
+    [ "platform.hexagon_start_addr" ] = 0x8B500000,
     [ "platform.hexagon_isdb_secure_flag" ] = 0x1,
     [ "platform.hexagon_isdb_trusted_flag" ] = 0x1,
 

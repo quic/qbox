@@ -297,6 +297,7 @@ protected:
     QemuUartPl011 m_uart;
     IPCC m_ipcc;
     elf_reader m_elf_loader;
+    elf_reader m_hexagon_elf_loader;
 
     hexagon_config_table *cfgTable;
     hexagon_config_extensions *cfgExtensions;
@@ -375,7 +376,7 @@ protected:
         m_router.add_target(m_system_flash.socket, 0x30000000, m_system_flash.size());
 
         m_router.add_initiator(m_elf_loader.socket);
-        // m_router.add_initiator(m_hexagon_elf_loader.socket);
+        m_router.add_initiator(m_hexagon_elf_loader.socket);
     }
 
      void setup_irq_mapping() {
@@ -437,7 +438,7 @@ protected:
 
         if(m_with_hexagon) {
             if (!m_hexagon_kernel_file.is_default_value()) {
-                m_hexagon_ram.load(m_hexagon_kernel_file, m_hexagon_load_addr);
+                // m_hexagon_ram.load(m_hexagon_kernel_file, m_hexagon_load_addr);
 
                 m_hexagon_ram.load(reinterpret_cast<const uint8_t *>(&m_hexagon_isdb_secure_flag.get_value()), 8, m_hexagon_load_addr + 0x30);
                 m_hexagon_ram.load(reinterpret_cast<const uint8_t *>(&m_hexagon_isdb_trusted_flag.get_value()), 8, m_hexagon_load_addr + 0x34);
@@ -499,6 +500,7 @@ public:
         , m_uart("uart", m_qemu_inst)
         , m_ipcc("ipcc")
         , m_elf_loader("elfloader", m_bootloader_file)
+        , m_hexagon_elf_loader("m_hexagon_elf_loader", m_hexagon_kernel_file)
     {
         using tlm_utils::tlm_quantumkeeper;
         cfgTable = &v68n_1024_cfgtable;
