@@ -22,8 +22,8 @@ local conf = {
     [ "platform.bootloader_file" ] = top().."fw/fastrpc-images/hypvm.elf",
     [ "platform.vendor_flash_blob_file" ] = top().."fw/fastrpc-images/vendor.squashfs",
     [ "platform.system_flash_blob_file" ] = top().."fw/fastrpc-images/system.squashfs",
-    [ "platform.with_hexagon" ] = false,
-    [ "platform.with_arm" ] = true,
+    [ "platform.with_hexagon" ] = true,
+    [ "platform.with_arm" ] = false,
 --    [ "platform.cpu_0.gdb-port" ] = 1234,
 
     [ "platform.hexagon.sync-policy" ] = "tlm2",
@@ -33,6 +33,15 @@ local conf = {
     [ "platform.hexagon_start_addr" ] = 0x0,
     [ "platform.hexagon_isdb_secure_flag" ] = 0x1,
     [ "platform.hexagon_isdb_trusted_flag" ] = 0x1,
+
+    [ "platform.hexagon.sync-policy" ] = "tlm2",
+    [ "platform.hexagon_0.sync-policy" ] = "tlm2",
+    [ "platform.hexagon_1.sync-policy" ] = "tlm2",
+    [ "platform.hexagon_2.sync-policy" ] = "tlm2",
+    [ "platform.hexagon_3.sync-policy" ] = "tlm2",
+    [ "platform.hexagon_4.sync-policy" ] = "tlm2",
+    [ "platform.hexagon_5.sync-policy" ] = "tlm2",
+    [ "platform.hexagon_6.sync-policy" ] = "tlm2",
 }
 
 for i=0,8 do

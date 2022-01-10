@@ -283,7 +283,7 @@ protected:
     QemuInstance &m_qemu_hex_inst;
 
     sc_core::sc_vector<QemuCpuArmMax> m_cpus;
-    QemuCpuHexagon* m_hexagon;
+    sc_core::sc_vector<QemuCpuHexagon> m_hexagon_cpus;
     QemuHexagonL2vic m_l2vic;
     QemuHexagonQtimer m_qtimer;
     QemuArmGicv3* m_gic;
@@ -320,6 +320,15 @@ protected:
                 }
             }
         }
+
+        if(m_with_hexagon) {
+            for (int i = 0; i < m_hexagon_cpus.size(); i++) {
+                auto &cpu = m_hexagon_cpus[i];
+                if(i != 0) {
+                    cpu.p_start_powered_off = true;
+                }
+            }
+        }
     }
 
     /*
@@ -345,9 +354,12 @@ protected:
         }
 
         if(m_with_hexagon) {
-            m_router.add_initiator(m_hexagon->socket);
+            for (auto &cpu: m_hexagon_cpus) {
+                m_router.add_initiator(cpu.socket);
+            }
             m_router.add_initiator(m_global_peripheral_initiator->m_initiator);
         }
+
         m_router.add_target(m_ram.socket, m_addr_map_ram, m_ram.size());
         m_router.add_target(m_hexagon_ram.socket, m_addr_map_hexagon_ram, m_hexagon_ram.size());
         m_router.add_target(m_rom.socket, m_addr_map_rom, m_rom.size());
@@ -363,13 +375,14 @@ protected:
         m_router.add_target(m_system_flash.socket, 0x30000000, m_system_flash.size());
 
         m_router.add_initiator(m_elf_loader.socket);
+        // m_router.add_initiator(m_hexagon_elf_loader.socket);
     }
 
      void setup_irq_mapping() {
 
         if(m_with_hexagon) {
             for(int i = 0; i < m_l2vic.p_num_outputs; ++i) {
-                m_l2vic.irq_out[i].bind(m_hexagon->irq_in[i]);
+                m_l2vic.irq_out[i].bind(m_hexagon_cpus[0].irq_in[i]);
             }
         }
         m_qtimer.timer0_irq.bind(m_l2vic.irq_in[3]); // FIXME: Depends on static boolean syscfg_is_linux, may be 2
@@ -473,6 +486,7 @@ public:
         , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
         , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_cpus("cpu", m_with_arm?8:0, [this] (const char *n, size_t i) { return new QemuCpuArmMax(n, m_qemu_inst); })
+        , m_hexagon_cpus("hexagon_cpu", m_with_hexagon?8:0, [this] (const char *n, size_t i) { return new QemuCpuHexagon("hexagon", m_qemu_hex_inst, v68n_1024_extensions.cfgbase, QemuCpuHexagon::v68_rev, v68n_1024_extensions.l2vic_base, m_hexagon_start_addr); })
 
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer", m_qemu_hex_inst)
@@ -493,8 +507,7 @@ public:
         tlm_quantumkeeper::set_global_quantum(global_quantum);
 
         if(m_with_hexagon) {
-            m_hexagon = new QemuCpuHexagon("hexagon", m_qemu_hex_inst, v68n_1024_extensions.cfgbase, QemuCpuHexagon::v68_rev, v68n_1024_extensions.l2vic_base, m_hexagon_start_addr);
-            m_global_peripheral_initiator = new GlobalPeripheralInitiator("glob-per-init", m_qemu_hex_inst, *m_hexagon);
+            m_global_peripheral_initiator = new GlobalPeripheralInitiator("glob-per-init", m_qemu_hex_inst, m_hexagon_cpus[0]);
         }
 
         if(m_with_arm) {
@@ -510,7 +523,6 @@ public:
 
     ~GreenSocsPlatform() {
         if(m_with_hexagon) {
-            delete m_hexagon;
             delete m_global_peripheral_initiator;
         }
     }
