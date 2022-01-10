@@ -52,6 +52,8 @@ public:
         , m_rev(rev)
         , m_l2vic_base_addr(l2vic_base_addr)
         , m_exec_start_addr(exec_start_addr)
+        , p_start_powered_off("start-powered-off", false, "Start and reset the CPU "
+                                                    "in powered-off state")
 
           /*
            * We have no choice but to attach-suspend here. This is fixable but
@@ -73,6 +75,7 @@ public:
         cpu.set_prop_int("dsp-rev", m_rev);
         cpu.set_prop_int("l2vic-base-addr", m_l2vic_base_addr);
         cpu.set_prop_int("exec-start-addr", m_exec_start_addr);
+        cpu.set_prop_bool("start-powered-off", p_start_powered_off);
         //in case of additional reset, this value will be loaded for PC
         cpu.set_prop_int("start-evb", m_exec_start_addr);
     }
@@ -91,4 +94,6 @@ protected:
     Rev_t m_rev;
     uint32_t m_l2vic_base_addr;
     uint32_t m_exec_start_addr;
+public:
+    cci::cci_param<bool> p_start_powered_off;
 };

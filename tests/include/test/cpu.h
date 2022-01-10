@@ -69,7 +69,7 @@ protected:
     cci::cci_param<int> p_quantum_ns;
 
     Router<> m_router;
-    Memory m_mem;
+    Memory<> m_mem;
 
     void preset_cpu_cci_value(int cpu, const char *param, const cci::cci_value &val)
     {
