@@ -320,16 +320,17 @@ protected:
     }
 
     /*
-    hexagon_ram : 0x00000000 - 0x10000000
-    gic_dist_if : 0x08000000 - 0x08010000
-    gic_redist  : 0x080a0000 - 0x09000000
-    uart        : 0x09000000 - 0x09001000
-    ram         : 0x40000000 - 0xde000000
-    rom         : 0xde000000 - 0xde000400
-    qtimer      : 0xfab20000 - 0xfab21000
-    l2vic       : 0xfc910000 - 0xfc911000
-    qtimer_0    : 0xfc921000 - 0xfc922000
-    qtimer_1    : 0xfc922000 - 0xfc923000
+    hexagon_ram      : 0x00000000 - 0x08000000
+    gic_dist_if      : 0x08000000 - 0x08010000
+    gic_redist       : 0x080a0000 - 0x09000000
+    uart             : 0x09000000 - 0x09001000
+    ram              : 0x40000000 - 0xd81e0000
+    fastl2vic        : 0xd81e0000 - 0xd81f0000
+    rom              : 0xde000000 - 0xde000400
+    qtimer           : 0xfab20000 - 0xfab21000
+    l2vic            : 0xfc910000 - 0xfc911000
+    qtimer_0         : 0xfc921000 - 0xfc922000
+    qtimer_1         : 0xfc922000 - 0xfc923000
     */
     void setup_memory_mapping() {
         for (auto &cpu: m_cpus) {
@@ -438,7 +439,7 @@ public:
         , m_with_hexagon("with_hexagon", false, "Enable hexagon")
         , m_quantum_ns("quantum-ns", 1000000, "TLM-2.0 global quantum in ns")
         , m_gdb_port("gdb_port", 0, "GDB port")
-        , m_ram_size("ram_size", 0x9E000000, "RAM size")
+        , m_ram_size("ram_size", 0x981E0000, "RAM size")
         , m_rom_size("rom_size", v68n_1024_extensions.cfgtable_size, "ROM size")
 
         , m_ram_blob_file("ram_blob_file", "", "Blob file to load into the RAM")
