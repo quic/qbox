@@ -72,7 +72,7 @@ CPMDeclarePackage(ipcc
 # IPCC
 CPMDeclarePackage(elf-loader
   NAME elf-loader
-  GIT_TAG bdc3557a610984432df9d9da0a4a40fbbd7af0a6
+  GIT_TAG 26aa4af5cd9ff4be03ba05b6b2bd7c097b71c82d
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/elf-loader
   GIT_SHALLOW on
 )
