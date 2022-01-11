@@ -246,6 +246,7 @@ protected:
     gs::async_event event;   // this is only present for debug, and should be removed for CI (once the ARM is re-instated)
 
     cci::cci_param<bool> m_with_hexagon;
+    cci::cci_param<bool> m_with_arm;
 
     cci::cci_param<int> m_quantum_ns;
     cci::cci_param<int> m_gdb_port;
@@ -282,10 +283,10 @@ protected:
     QemuInstance &m_qemu_hex_inst;
 
     sc_core::sc_vector<QemuCpuArmMax> m_cpus;
-    QemuCpuHexagon* m_hexagon;
+    sc_core::sc_vector<QemuCpuHexagon> m_hexagon_cpus;
     QemuHexagonL2vic m_l2vic;
     QemuHexagonQtimer m_qtimer;
-    QemuArmGicv3 m_gic;
+    QemuArmGicv3* m_gic;
     Router<> m_router;
     Memory m_ram;
     Memory m_hexagon_ram;
@@ -296,49 +297,70 @@ protected:
     QemuUartPl011 m_uart;
     IPCC m_ipcc;
     elf_reader m_elf_loader;
+    elf_reader m_hexagon_elf_loader;
 
     hexagon_config_table *cfgTable;
     hexagon_config_extensions *cfgExtensions;
     void setup_cpus() {
-        for (int i = 0; i < m_cpus.size(); i++) {
-            auto &cpu = m_cpus[i];
+        if(m_with_arm) {
+            for (int i = 0; i < m_cpus.size(); i++) {
+                auto &cpu = m_cpus[i];
 
-            cpu.p_has_el2 = true;
-            cpu.p_has_el3 = false;
-            cpu.p_psci_conduit = "smc";
-            cpu.p_mp_affinity = ((i / 8) << 8) | (i % 8);
+                cpu.p_has_el2 = true;
+                cpu.p_has_el3 = false;
+                cpu.p_psci_conduit = "smc";
+                cpu.p_mp_affinity = ((i / 8) << 8) | (i % 8);
 
-            if (i == 0) {
-                if (!m_gdb_port.is_default_value()) {
-                    cpu.p_gdb_port = m_gdb_port;
+                if (i == 0) {
+                    if (!m_gdb_port.is_default_value()) {
+                        cpu.p_gdb_port = m_gdb_port;
+                    }
+                    cpu.p_rvbar = 0x80000000;
+                } else {
+                    cpu.p_start_powered_off = true;
                 }
-                cpu.p_rvbar = 0x80000000;
-            } else {
-                cpu.p_start_powered_off = true;
+            }
+        }
+
+        if(m_with_hexagon) {
+            for (int i = 0; i < m_hexagon_cpus.size(); i++) {
+                auto &cpu = m_hexagon_cpus[i];
+                if(i != 0) {
+                    cpu.p_start_powered_off = true;
+                }
             }
         }
     }
 
     /*
-    hexagon_ram : 0x00000000 - 0x10000000
-    gic_dist_if : 0x08000000 - 0x08010000
-    gic_redist  : 0x080a0000 - 0x09000000
-    uart        : 0x09000000 - 0x09001000
-    ram         : 0x40000000 - 0xde000000
-    rom         : 0xde000000 - 0xde000400
-    qtimer      : 0xfab20000 - 0xfab21000
-    l2vic       : 0xfc910000 - 0xfc911000
-    qtimer_0    : 0xfc921000 - 0xfc922000
-    qtimer_1    : 0xfc922000 - 0xfc923000
+    hexagon_ram      : 0x00000000 - 0x08000000
+    gic_dist_if      : 0x08000000 - 0x08010000
+    gic_redist       : 0x080a0000 - 0x09000000
+    uart             : 0x09000000 - 0x09001000
+    ram              : 0x40000000 - 0xd81e0000
+    fastl2vic        : 0xd81e0000 - 0xd81f0000
+    rom              : 0xde000000 - 0xde000400
+    qtimer           : 0xfab20000 - 0xfab21000
+    l2vic            : 0xfc910000 - 0xfc911000
+    qtimer_0         : 0xfc921000 - 0xfc922000
+    qtimer_1         : 0xfc922000 - 0xfc923000
     */
     void setup_memory_mapping() {
-        for (auto &cpu: m_cpus) {
-            m_router.add_initiator(cpu.socket);
+        if(m_with_arm) {
+            for (auto &cpu: m_cpus) {
+                m_router.add_initiator(cpu.socket);
+            }
+            m_router.add_target(m_gic->dist_iface, 0x8000000, 0x10000);
+            m_router.add_target(m_gic->redist_iface[0], 0x80a0000, 0xf60000);
         }
+
         if(m_with_hexagon) {
-            m_router.add_initiator(m_hexagon->socket);
+            for (auto &cpu: m_hexagon_cpus) {
+                m_router.add_initiator(cpu.socket);
+            }
             m_router.add_initiator(m_global_peripheral_initiator->m_initiator);
         }
+
         m_router.add_target(m_ram.socket, m_addr_map_ram, m_ram.size());
         m_router.add_target(m_hexagon_ram.socket, m_addr_map_hexagon_ram, m_hexagon_ram.size());
         m_router.add_target(m_rom.socket, m_addr_map_rom, m_rom.size());
@@ -347,8 +369,6 @@ protected:
         m_router.add_target(m_qtimer.socket, 0xfab20000, 0x1000);
         m_router.add_target(m_qtimer.timer0_socket, v68n_1024_extensions.qtmr_rg0, 0x1000);
         m_router.add_target(m_qtimer.timer1_socket, v68n_1024_extensions.qtmr_rg1, 0x1000);
-        m_router.add_target(m_gic.dist_iface, 0x8000000, 0x10000);
-        m_router.add_target(m_gic.redist_iface[0], 0x80a0000, 0xf60000);
         m_router.add_target(m_uart.socket, m_addr_map_uart, 0x1000);
         m_router.add_target(m_ipcc.socket, 0x400000,0xFC000);
 
@@ -356,33 +376,35 @@ protected:
         m_router.add_target(m_system_flash.socket, 0x30000000, m_system_flash.size());
 
         m_router.add_initiator(m_elf_loader.socket);
+        m_router.add_initiator(m_hexagon_elf_loader.socket);
     }
 
      void setup_irq_mapping() {
 
         if(m_with_hexagon) {
             for(int i = 0; i < m_l2vic.p_num_outputs; ++i) {
-                m_l2vic.irq_out[i].bind(m_hexagon->irq_in[i]);
+                m_l2vic.irq_out[i].bind(m_hexagon_cpus[0].irq_in[i]);
             }
         }
-        m_qtimer.timer0_irq.bind(m_l2vic.irq_in[3]); // FIXME: Depends on static boolean syscfg_is_linux, may be 3
+        m_qtimer.timer0_irq.bind(m_l2vic.irq_in[3]); // FIXME: Depends on static boolean syscfg_is_linux, may be 2
         m_qtimer.timer1_irq.bind(m_l2vic.irq_in[4]);
 
-        m_uart.irq_out.bind(m_gic.spi_in[1]);
+        if(m_with_arm) {
+            m_uart.irq_out.bind(m_gic->spi_in[1]);
+            for (int i = 0; i < m_cpus.size(); i++) {
+                m_gic->irq_out[i].bind(m_cpus[i].irq_in);
+                m_gic->fiq_out[i].bind(m_cpus[i].fiq_in);
 
-        for (int i = 0; i < m_cpus.size(); i++) {
-            m_gic.irq_out[i].bind(m_cpus[i].irq_in);
-            m_gic.fiq_out[i].bind(m_cpus[i].fiq_in);
+                m_gic->virq_out[i].bind(m_cpus[i].virq_in);
+                m_gic->vfiq_out[i].bind(m_cpus[i].vfiq_in);
 
-            m_gic.virq_out[i].bind(m_cpus[i].virq_in);
-            m_gic.vfiq_out[i].bind(m_cpus[i].vfiq_in);
-
-            m_cpus[i].irq_timer_phys_out.bind(m_gic.ppi_in[i][ARCH_TIMER_NS_EL1_IRQ]);
-            m_cpus[i].irq_timer_virt_out.bind(m_gic.ppi_in[i][ARCH_TIMER_VIRT_IRQ]);
-            m_cpus[i].irq_timer_hyp_out.bind(m_gic.ppi_in[i][ARCH_TIMER_NS_EL2_IRQ]);
-            m_cpus[i].irq_timer_sec_out.bind(m_gic.ppi_in[i][ARCH_TIMER_S_EL1_IRQ]);
-            m_cpus[i].irq_maintenance_out.bind(m_gic.ppi_in[i][25]);
-            m_cpus[i].irq_pmu_out.bind(m_gic.ppi_in[i][23]);
+                m_cpus[i].irq_timer_phys_out.bind(m_gic->ppi_in[i][ARCH_TIMER_NS_EL1_IRQ]);
+                m_cpus[i].irq_timer_virt_out.bind(m_gic->ppi_in[i][ARCH_TIMER_VIRT_IRQ]);
+                m_cpus[i].irq_timer_hyp_out.bind(m_gic->ppi_in[i][ARCH_TIMER_NS_EL2_IRQ]);
+                m_cpus[i].irq_timer_sec_out.bind(m_gic->ppi_in[i][ARCH_TIMER_S_EL1_IRQ]);
+                m_cpus[i].irq_maintenance_out.bind(m_gic->ppi_in[i][25]);
+                m_cpus[i].irq_pmu_out.bind(m_gic->ppi_in[i][23]);
+            }
         }
      }
 
@@ -416,7 +438,7 @@ protected:
 
         if(m_with_hexagon) {
             if (!m_hexagon_kernel_file.is_default_value()) {
-                m_hexagon_ram.load(m_hexagon_kernel_file, m_hexagon_load_addr);
+                // m_hexagon_ram.load(m_hexagon_kernel_file, m_hexagon_load_addr);
 
                 m_hexagon_ram.load(reinterpret_cast<const uint8_t *>(&m_hexagon_isdb_secure_flag.get_value()), 8, m_hexagon_load_addr + 0x30);
                 m_hexagon_ram.load(reinterpret_cast<const uint8_t *>(&m_hexagon_isdb_trusted_flag.get_value()), 8, m_hexagon_load_addr + 0x34);
@@ -436,9 +458,10 @@ public:
             {"gic.redist-region", cci::cci_value(std::vector<unsigned int>({32}))},
         })
         , m_with_hexagon("with_hexagon", false, "Enable hexagon")
+        , m_with_arm("with_arm", false, "Enable ARM cores")
         , m_quantum_ns("quantum-ns", 1000000, "TLM-2.0 global quantum in ns")
         , m_gdb_port("gdb_port", 0, "GDB port")
-        , m_ram_size("ram_size", 0x9E000000, "RAM size")
+        , m_ram_size("ram_size", 0x981E0000, "RAM size")
         , m_rom_size("rom_size", v68n_1024_extensions.cfgtable_size, "ROM size")
 
         , m_ram_blob_file("ram_blob_file", "", "Blob file to load into the RAM")
@@ -463,10 +486,11 @@ public:
 
         , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
         , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
-        , m_cpus("cpu", 8, [this] (const char *n, size_t i) { return new QemuCpuArmMax(n, m_qemu_inst); })
+        , m_cpus("cpu", m_with_arm?8:0, [this] (const char *n, size_t i) { return new QemuCpuArmMax(n, m_qemu_inst); })
+        , m_hexagon_cpus("hexagon_cpu", m_with_hexagon?6:0, [this] (const char *n, size_t i) { return new QemuCpuHexagon("hexagon", m_qemu_hex_inst, v68n_1024_extensions.cfgbase, QemuCpuHexagon::v68_rev, v68n_1024_extensions.l2vic_base, v68n_1024_extensions.qtmr_rg0, m_hexagon_start_addr); })
+
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer", m_qemu_hex_inst)
-        , m_gic("gic", m_qemu_inst)
         , m_router("router")
         , m_ram("ram", m_ram_size)
         , m_hexagon_ram("hexagon_ram", 0x08000000)
@@ -476,6 +500,7 @@ public:
         , m_uart("uart", m_qemu_inst)
         , m_ipcc("ipcc")
         , m_elf_loader("elfloader", m_bootloader_file)
+        , m_hexagon_elf_loader("m_hexagon_elf_loader", m_hexagon_kernel_file)
     {
         using tlm_utils::tlm_quantumkeeper;
         cfgTable = &v68n_1024_cfgtable;
@@ -484,9 +509,13 @@ public:
         tlm_quantumkeeper::set_global_quantum(global_quantum);
 
         if(m_with_hexagon) {
-            m_hexagon = new QemuCpuHexagon("hexagon", m_qemu_hex_inst, v68n_1024_extensions.cfgbase, QemuCpuHexagon::v68_rev, v68n_1024_extensions.l2vic_base, m_hexagon_start_addr);
-            m_global_peripheral_initiator = new GlobalPeripheralInitiator("glob-per-init", m_qemu_hex_inst, *m_hexagon);
+            m_global_peripheral_initiator = new GlobalPeripheralInitiator("glob-per-init", m_qemu_hex_inst, m_hexagon_cpus[0]);
         }
+
+        if(m_with_arm) {
+            m_gic = new QemuArmGicv3("gic", m_qemu_inst);
+        }
+
         setup_cpus();
         setup_memory_mapping();
         setup_irq_mapping();
@@ -496,7 +525,6 @@ public:
 
     ~GreenSocsPlatform() {
         if(m_with_hexagon) {
-            delete m_hexagon;
             delete m_global_peripheral_initiator;
         }
     }
