@@ -487,7 +487,7 @@ public:
         , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
         , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_cpus("cpu", m_with_arm?8:0, [this] (const char *n, size_t i) { return new QemuCpuArmMax(n, m_qemu_inst); })
-        , m_hexagon_cpus("hexagon_cpu", m_with_hexagon?8:0, [this] (const char *n, size_t i) { return new QemuCpuHexagon("hexagon", m_qemu_hex_inst, v68n_1024_extensions.cfgbase, QemuCpuHexagon::v68_rev, v68n_1024_extensions.l2vic_base, v68n_1024_extensions.qtmr_rg0, m_hexagon_start_addr); })
+        , m_hexagon_cpus("hexagon_cpu", m_with_hexagon?6:0, [this] (const char *n, size_t i) { return new QemuCpuHexagon("hexagon", m_qemu_hex_inst, v68n_1024_extensions.cfgbase, QemuCpuHexagon::v68_rev, v68n_1024_extensions.l2vic_base, v68n_1024_extensions.qtmr_rg0, m_hexagon_start_addr); })
 
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer", m_qemu_hex_inst)
