@@ -12,6 +12,11 @@ function top()
  end
 
 local conf = {
+    --uncomment to disable arm
+    --[ "platform.arm-num-cpus" ] = 0,
+    --uncomment to disable hexagon
+    --[ "platform.hexagon-num-cpus" ] = 0,
+
 --    [ "platform.kernel_file" ] = top().."fw/linux-demo/Image2",
 --    [ "platform.dtb_file" ] = top().."fw/linux-demo/virt_512M_simple.dtb",
 --    [ "platform.bootloader_file" ] = top().."fw/linux-demo/my_debug_hypvm_dump.bin",
@@ -22,8 +27,6 @@ local conf = {
     [ "platform.bootloader_file" ] = top().."fw/fastrpc-images/hypvm.elf",
     [ "platform.vendor_flash_blob_file" ] = top().."fw/fastrpc-images/vendor.squashfs",
     [ "platform.system_flash_blob_file" ] = top().."fw/fastrpc-images/system.squashfs",
-    [ "platform.with_hexagon" ] = true,
-    [ "platform.with_arm" ] = true,
 --    [ "platform.cpu_0.gdb-port" ] = 1234,
 
 --    [ "platform.hexagon.gdb-port" ] = 1234,
@@ -35,14 +38,14 @@ local conf = {
     [ "platform.hexagon_isdb_secure_flag" ] = 0x1,
     [ "platform.hexagon_isdb_trusted_flag" ] = 0x1,
 
-    [ "platform.hexagon.sync-policy" ] = "tlm2",
-    [ "platform.hexagon_0.sync-policy" ] = "tlm2",
-    [ "platform.hexagon_1.sync-policy" ] = "tlm2",
-    [ "platform.hexagon_2.sync-policy" ] = "tlm2",
-    [ "platform.hexagon_3.sync-policy" ] = "tlm2",
-    [ "platform.hexagon_4.sync-policy" ] = "tlm2",
-    [ "platform.hexagon_5.sync-policy" ] = "tlm2",
-    [ "platform.hexagon_6.sync-policy" ] = "tlm2",
+    [ "platform.hexagon-cpu_0.sync-policy" ] = "tlm2",
+    [ "platform.hexagon-cpu_1.sync-policy" ] = "tlm2",
+    [ "platform.hexagon-cpu_2.sync-policy" ] = "tlm2",
+    [ "platform.hexagon-cpu_3.sync-policy" ] = "tlm2",
+    [ "platform.hexagon-cpu_4.sync-policy" ] = "tlm2",
+    [ "platform.hexagon-cpu_5.sync-policy" ] = "tlm2",
+    [ "platform.hexagon-cpu_6.sync-policy" ] = "tlm2",
+    [ "platform.hexagon-cpu_7.sync-policy" ] = "tlm2",
 }
 
 for i=0,8 do
