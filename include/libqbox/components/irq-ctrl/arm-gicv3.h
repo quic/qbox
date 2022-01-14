@@ -60,9 +60,9 @@ public:
     sc_core::sc_vector<QemuInitiatorSignalSocket> virq_out;
     sc_core::sc_vector<QemuInitiatorSignalSocket> vfiq_out;
 
-    QemuArmGicv3(const sc_core::sc_module_name &name, QemuInstance &inst)
+    QemuArmGicv3(const sc_core::sc_module_name &name, QemuInstance &inst, unsigned num_cpus = 0)
         : QemuDevice(name, inst, "arm-gicv3")
-        , p_num_cpu("num-cpu", 0, "Number of CPU interfaces")
+        , p_num_cpu("num-cpu", num_cpus, "Number of CPU interfaces")
         , p_num_spi("num-spi", 0, "Number of shared peripheral interrupts")
         , p_revision("revision", 3, "Revision of the GIC (3 -> v3, the only supported revision)")
         , p_redist_region("redist-region", std::vector<unsigned int>({}),
