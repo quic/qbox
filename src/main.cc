@@ -536,6 +536,9 @@ public:
         if (m_global_peripheral_initiator) {
             delete m_global_peripheral_initiator;
         }
+        if (m_gic) {
+            delete m_gic;
+        }
     }
 };
 
