@@ -17,11 +17,11 @@ local conf = {
     --uncomment to disable hexagon
     --[ "platform.hexagon-num-cpus" ] = 0,
 
-    [ "platform.kernel_file" ] = top().."fw/fastrpc-images/Image",
-    [ "platform.dtb_file" ] = top().."fw/fastrpc-images/rumi-edited.dtb",
-    [ "platform.bootloader_file" ] = top().."fw/fastrpc-images/hypvm.elf",
-    [ "platform.vendor_flash_blob_file" ] = top().."fw/fastrpc-images/vendor.squashfs",
-    [ "platform.system_flash_blob_file" ] = top().."fw/fastrpc-images/system.squashfs",
+    [ "platform.kernel_file" ] = top().."fw/fastrpc-images/images/Image",
+    [ "platform.dtb_file" ] = top().."fw/fastrpc-images/images/rumi-edited.dtb",
+    [ "platform.bootloader_file" ] = top().."fw/fastrpc-images/images/hypvm.elf",
+    [ "platform.vendor_flash_blob_file" ] = top().."fw/fastrpc-images/images/vendor.squashfs",
+    [ "platform.system_flash_blob_file" ] = top().."fw/fastrpc-images/images/system.squashfs",
 --    [ "platform.cpu_0.gdb-port" ] = 1234,
 
 --    [ "platform.hexagon.gdb-port" ] = 1234,
