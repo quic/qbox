@@ -88,6 +88,8 @@ protected:
 
     int m_icount_mips = 0;
 
+    cci::cci_param<std::string> p_args;
+
     void push_default_args()
     {
         gs::ConfigurableBroker m_conf_broker;
@@ -112,6 +114,12 @@ protected:
             } else {
                 SC_REPORT_ERROR(name(), "The value of the argument is not a string");
             }
+        }
+
+        std::stringstream ss_args(p_args);
+        std::string arg;
+        while (ss_args >> arg) {
+            m_inst.push_qemu_arg(arg.c_str());
         }
     }
 
@@ -158,6 +166,7 @@ public:
         : sc_core::sc_module(n)
         , m_inst(loader, t)
         , m_dmi_mgr(m_inst)
+        , p_args("args", "", "additional space separated arguments")
     {
         push_default_args();
     }
