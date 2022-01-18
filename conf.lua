@@ -17,11 +17,6 @@ local conf = {
     --uncomment to disable hexagon
     --[ "platform.hexagon-num-cpus" ] = 0,
 
---    [ "platform.kernel_file" ] = top().."fw/linux-demo/Image2",
---    [ "platform.dtb_file" ] = top().."fw/linux-demo/virt_512M_simple.dtb",
---    [ "platform.bootloader_file" ] = top().."fw/linux-demo/my_debug_hypvm_dump.bin",
---    [ "platform.flash_blob_file" ] = top().."fw/linux-demo/rootfs.squashfs",
---    [ "platform.kernel_file" ] = top().."fastrpc-images/Image",
     [ "platform.kernel_file" ] = top().."fw/fastrpc-images/Image",
     [ "platform.dtb_file" ] = top().."fw/fastrpc-images/rumi-edited.dtb",
     [ "platform.bootloader_file" ] = top().."fw/fastrpc-images/hypvm.elf",
