@@ -38,8 +38,6 @@ Interrupt Controllers and others devices also need a QEMU instance and can be se
 
 ## QEMU Arguments
 
-QEMU arguments can be added to an entire instance using the configuration mechanism. The argument name should be in a form `"name.of.your.qemu.instance.args.-ARG" = "value"`.
-
 The QEMU instance provides the following default arguments :
 ```
     "-M", "none", /* no machine */
@@ -48,6 +46,15 @@ The QEMU instance provides the following default arguments :
     "-serial", "null", /* no serial backend */
     "-display", "none", /* no GUI */
 ```
+
+QEMU arguments can be added to an entire instance using the configuration
+mechanism. The instance has one parameter `args` that can be used to append a
+whitespace separated list of arguments. To enable some qemu traces, one can
+set `"qemu-instance-name.args" = "-D file.log -trace pattern1 -trace pattern2"`.
+
+To append a specific QEMU option value you can also use the form
+`"qemu-instance-name.args.-OPTION" = "value"`.
+The latter cannot be used to append several time the same option, as a parameter definition will override any previous one.
 
 Example :
 Using the lua file configuration mechanism to set `-monitor` to enable telnet communication with QEMU, with the QEMU instance "platform.QemuInstance" the lua file should contain :
