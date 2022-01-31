@@ -36,6 +36,7 @@
 
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/memory.h>
+#include <greensocs/base-components/fallbackmemory.h>
 #include <greensocs/elf-loader/elf-loader.h>
 #include <qcom/ipcc/ipcc.h>
 
@@ -285,6 +286,8 @@ protected:
     cci::cci_param<cci::uint64> m_addr_map_rom;
     cci::cci_param<cci::uint64> m_addr_map_uart;
 
+    cci::cci_param<std::string> m_fallback_datafile;
+
     QemuInstanceManager m_inst_mgr;
     QemuInstance &m_qemu_inst;
     QemuInstance &m_qemu_hex_inst;
@@ -295,15 +298,16 @@ protected:
     QemuHexagonQtimer m_qtimer;
     QemuArmGicv3* m_gic;
     Router<> m_router;
-    Memory m_ram;
-    Memory m_hexagon_ram;
-    Memory m_rom;
-    Memory m_vendor_flash;
-    Memory m_system_flash;
+    Memory<> m_ram;
+    Memory<> m_hexagon_ram;
+    Memory<> m_rom;
+    Memory<> m_vendor_flash;
+    Memory<> m_system_flash;
     GlobalPeripheralInitiator* m_global_peripheral_initiator;
     QemuUartPl011 m_uart;
     IPCC m_ipcc;
 
+   FallbackMemory<> m_fallback_mem;
 #ifdef WITH_HYP
     elf_reader m_elf_loader;
 #endif
@@ -393,6 +397,9 @@ protected:
         m_router.add_initiator(m_elf_loader.socket);
 #endif
         m_router.add_initiator(m_hexagon_elf_loader.socket);
+
+        // MUST be added last
+        m_router.add_target(m_fallback_mem.socket, 0x0, 0x10000000);
     }
 
      void setup_irq_mapping() {
@@ -444,7 +451,7 @@ protected:
         //m_ram.load(m_bootloader_file,0x40000000);
         m_ram.load(reinterpret_cast<const uint8_t *>(bootloader_aarch64),
                    sizeof(bootloader_aarch64), 0);
-
+        m_fallback_mem.csv_load(m_fallback_datafile, 0x0, "Address", "Reset Value");
         hexagon_config_table *config_table = cfgTable;
 
         config_table->l2tcm_base = HEXAGON_CFG_ADDR_BASE(cfgTable->l2tcm_base);
@@ -501,6 +508,8 @@ public:
         , m_addr_map_rom("addr_map_rom", v68n_1024_extensions.cfgbase, "")
         , m_addr_map_uart("addr_map_uart", 0x9000000, "")
 
+        , m_fallback_datafile("fallback_datafile", "", "File to preload fallback data")
+
         , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
         , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_cpus("cpu", p_arm_num_cpus, [this] (const char *n, size_t i) {
@@ -530,6 +539,7 @@ public:
         , m_elf_loader("elfloader", m_bootloader_file)
 #endif
         , m_hexagon_elf_loader("m_hexagon_elf_loader", m_hexagon_kernel_file)
+        , m_fallback_mem("fallback_memory", 0x10000000)
     {
         using tlm_utils::tlm_quantumkeeper;
         cfgTable = &v68n_1024_cfgtable;
