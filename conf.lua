@@ -15,6 +15,7 @@ num_arm = 8
 num_hex = 8
 
 local conf = {
+    [ "platform.fallback_datafile"] = top().."fw/SM8450_Waipio.csv",
     [ "platform.arm-num-cpus" ] = num_arm,
     [ "platform.hexagon-num-cpus" ] = num_hex,
     [ "platform.quantum-ns"] = 100000000,
