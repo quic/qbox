@@ -11,40 +11,36 @@ function top()
     end
  end
 
-local conf = {
-    --uncomment to disable arm
-    --[ "platform.arm-num-cpus" ] = 0,
-    --uncomment to disable hexagon
-    --[ "platform.hexagon-num-cpus" ] = 0,
+num_arm = 8
+num_hex = 8
 
+local conf = {
+    [ "platform.arm-num-cpus" ] = num_arm,
+    [ "platform.hexagon-num-cpus" ] = num_hex,
+    [ "platform.quantum-ns"] = 100000000,
     [ "platform.kernel_file" ] = top().."fw/fastrpc-images/images/Image",
-    [ "platform.dtb_file" ] = top().."fw/fastrpc-images/images/rumi-edited.dtb",
-    [ "platform.bootloader_file" ] = top().."fw/fastrpc-images/images/hypvm.elf",
+    [ "platform.dtb_file" ] = top().."fw/fastrpc-images/images/rumi.dtb",
+--    [ "platform.bootloader_file" ] = top().."fw/fastrpc-images/images/hypvm.elf",
     [ "platform.vendor_flash_blob_file" ] = top().."fw/fastrpc-images/images/vendor.squashfs",
     [ "platform.system_flash_blob_file" ] = top().."fw/fastrpc-images/images/system.squashfs",
---    [ "platform.cpu_0.gdb-port" ] = 1234,
 
+--    [ "platform.cpu_0.gdb-port" ] = 1234,
 --    [ "platform.hexagon.gdb-port" ] = 1234,
-    -- [ "platform.hexagon_kernel_file" ] = top().."tests/qualcomm/prebuilt/qtimer_test.bin",
+
+-- [ "platform.hexagon_kernel_file" ] = top().."tests/qualcomm/prebuilt/qtimer_test.bin",
     [ "platform.hexagon_kernel_file" ] = top().."fw/hexagon-images/bootimage_kailua.cdsp.coreQ.pbn",
     [ "platform.hexagon_load_addr" ] = 0x0,
-    -- [ "platform.hexagon_start_addr" ] = 0x0,
+--[ "platform.hexagon_start_addr" ] = 0x50000000, // for qtimer_test
     [ "platform.hexagon_start_addr" ] = 0x8B500000,
     [ "platform.hexagon_isdb_secure_flag" ] = 0x1,
     [ "platform.hexagon_isdb_trusted_flag" ] = 0x1,
-
-    [ "platform.hexagon-cpu_0.sync-policy" ] = "tlm2",
-    [ "platform.hexagon-cpu_1.sync-policy" ] = "tlm2",
-    [ "platform.hexagon-cpu_2.sync-policy" ] = "tlm2",
-    [ "platform.hexagon-cpu_3.sync-policy" ] = "tlm2",
-    [ "platform.hexagon-cpu_4.sync-policy" ] = "tlm2",
-    [ "platform.hexagon-cpu_5.sync-policy" ] = "tlm2",
-    [ "platform.hexagon-cpu_6.sync-policy" ] = "tlm2",
-    [ "platform.hexagon-cpu_7.sync-policy" ] = "tlm2",
 }
 
-for i=0,8 do
+for i=0,num_arm do
     conf["platform.cpu_"..tostring(i)..".sync-policy"] = "multithread-unconstrained"
+end
+for i=0,num_hex do
+    conf["platform.hexagon-cpu_"..tostring(i)..".sync-policy"] = "multithread-unconstrained"
 end
 
 

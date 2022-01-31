@@ -39,8 +39,15 @@
 #include <greensocs/elf-loader/elf-loader.h>
 #include <qcom/ipcc/ipcc.h>
 
+//#define WITH_HYP
+
+#ifndef WITH_HYP
 #define KERNEL64_LOAD_ADDR (0x41080000)
 #define DTB_LOAD_ADDR      (0x44200000)
+#else
+#define KERNEL64_LOAD_ADDR (0x40200000)
+#define DTB_LOAD_ADDR      (0x44000000)
+#endif
 
 #define HEXAGON_CFGSPACE_ENTRIES (128)
 #define HEXAGON_CFG_ADDR_BASE(addr) ((addr >> 16) & 0x0fffff)
@@ -296,7 +303,10 @@ protected:
     GlobalPeripheralInitiator* m_global_peripheral_initiator;
     QemuUartPl011 m_uart;
     IPCC m_ipcc;
+
+#ifdef WITH_HYP
     elf_reader m_elf_loader;
+#endif
     elf_reader m_hexagon_elf_loader;
 
     hexagon_config_table *cfgTable;
@@ -315,7 +325,11 @@ protected:
                     if (!m_gdb_port.is_default_value()) {
                         cpu.p_gdb_port = m_gdb_port;
                     }
+#ifdef WITH_HYP                    
                     cpu.p_rvbar = 0x80000000;
+#else
+                    cpu.p_rvbar = 0x40000000;
+#endif
                 } else {
                     cpu.p_start_powered_off = true;
                 }
@@ -350,8 +364,9 @@ protected:
             for (auto &cpu: m_cpus) {
                 m_router.add_initiator(cpu.socket);
             }
-            m_router.add_target(m_gic->dist_iface, 0x8000000, 0x10000);
-            m_router.add_target(m_gic->redist_iface[0], 0x80a0000, 0xf60000);
+            m_router.add_target(m_gic->dist_iface, 0x17100000, 0x10000);
+            m_router.add_target(m_gic->redist_iface[0], 0x171a0000, 0xf60000);
+
         }
 
         if (p_hexagon_num_cpus) {
@@ -374,8 +389,9 @@ protected:
 
         m_router.add_target(m_vendor_flash.socket, 0x10000000, m_vendor_flash.size());
         m_router.add_target(m_system_flash.socket, 0x30000000, m_system_flash.size());
-
+#ifdef WITH_HYP
         m_router.add_initiator(m_elf_loader.socket);
+#endif
         m_router.add_initiator(m_hexagon_elf_loader.socket);
     }
 
@@ -426,6 +442,8 @@ protected:
         }
 
         //m_ram.load(m_bootloader_file,0x40000000);
+        m_ram.load(reinterpret_cast<const uint8_t *>(bootloader_aarch64),
+                   sizeof(bootloader_aarch64), 0);
 
         hexagon_config_table *config_table = cfgTable;
 
@@ -508,7 +526,9 @@ public:
         , m_system_flash("system", 0x10000000)
         , m_uart("uart", m_qemu_inst)
         , m_ipcc("ipcc")
+#ifdef WITH_HYP
         , m_elf_loader("elfloader", m_bootloader_file)
+#endif
         , m_hexagon_elf_loader("m_hexagon_elf_loader", m_hexagon_kernel_file)
     {
         using tlm_utils::tlm_quantumkeeper;
