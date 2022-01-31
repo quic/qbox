@@ -16,6 +16,11 @@ The memory component allows you to add memory when creating an object of type `M
 
 The memory component consists of a simple target socket :`tlm_utils::simple_target_socket<Memory> socket`
 
+## The GreenSocs component library fallback memory
+The fallback memory component allows you to add memory when creating an object of type `FallbackMemory("name",size)`.
+The memory component consists of a simple target socket :`tlm_utils::simple_target_socket<Memory> socket`
+The fallback memory allows loading from a CSV file, and will print a warning for each and every access. It will also refuse all DMI requests.
+
 ## The GreenSocs component library router
 The router offers `add_target(socket, base_address, size)` as an API to add components into the address map for routing. (It is recommended that the addresses and size are CCI parameters).
 
