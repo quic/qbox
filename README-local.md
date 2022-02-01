@@ -11,7 +11,7 @@ You can build this release natively on Ubuntu 18.04.
 Install dependencies:
 ```bash
 apt update && apt upgrade -y
-apt install -y make cmake g++ wget flex bison unzip python pkg-config libpixman-1-dev libglib2.0-dev
+apt install -y make cmake g++ wget flex bison unzip python pkg-config libpixman-1-dev libglib2.0-dev libelf-dev
 ```
 
 ## 3. Fetch the qbox sources
@@ -54,28 +54,32 @@ cd ../
 You should see the following output:
 ```bash
 
-        SystemC 2.3.4_pub_rev_20200101-GreenSocs --- May 20 2021 10:00:27
+        SystemC 2.3.4_pub_rev_20200101-GreenSocs --- Feb  1 2022 14:35:03
         Copyright (c) 1996-2019 by all Contributors,
         ALL RIGHTS RESERVED
 @0 s /0 (lua): Parse command line for --gs_luafile option (3 arguments)
 @0 s /0 (lua): Option --gs_luafile with value conf.lua
 Lua file command line parser: parse option --gs_luafile conf.lua
 @0 s /0 (lua): Read lua file 'conf.lua'
-Booting Linux on physical CPU 0x0000000000 [0x410fd034]
-Linux version 4.15.18 (clement@chartreuse) (gcc version 6.4.0 (Buildroot 2018.02.12)) #8 SMP Thu Oct 8 10:24:10 CEST 2020
-Machine model: linux,dummy-virt
-earlycon: pl11 at MMIO 0x00000000c0000000 (options '')
-bootconsole [pl11] enabled
+
+Info: non_module: Initializing QEMU instance with args:
+
 [...]
 Welcome to Buildroot
 buildroot login: root
+login[176]: root login on 'console'
 # ls /
-bin      lib      media    proc     sbin     usr
-dev      lib64    mnt      root     sys      var
-etc      linuxrc  opt      run      tmp
+bin           lib           mnt           run           usr
+bins          lib64         opt           sbin          var
+dev           lib64_debug   proc          sys
+etc           linuxrc       qemu.sh       system_lib64
+init          media         root          tmp
 ```
 
 Once the kernel has booted, you can log in with the 'root' account (no password required).
+
+If the virtual platform crashes and doesn't work, it may be due to the LFS files that make up the repo.
+You might want to run the 'git lfs pull' command to get all the LFS files.
 
 ### 6. Explore Sources
 
