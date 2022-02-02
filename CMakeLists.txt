@@ -7,7 +7,7 @@ project(systemc-uarts VERSION 1.0)
 if (NOT gs-cmake_SOURCE_DIR)
    include(FetchContent)
    FetchContent_Declare(gs-cmake
-      GIT_REPOSITORY https://git.greensocs.com/greensocs/cmake-boilerplate.git
+      GIT_REPOSITORY git@git.greensocs.com:greensocs/cmake-boilerplate.git
       GIT_TAG master
    )
    FetchContent_MakeAvailable(gs-cmake)
@@ -18,6 +18,7 @@ include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 gs_systemc()
 
 gs_addpackage(greensocs/libgsutils)
+gs_addpackage(greensocs/libgssync)
 
 add_library(${PROJECT_NAME} INTERFACE)
 
@@ -34,3 +35,4 @@ target_link_libraries(${PROJECT_NAME} INTERFACE
 )
 
 gs_export()
+gs_enable_testing()
