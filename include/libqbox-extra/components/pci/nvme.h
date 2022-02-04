@@ -31,6 +31,7 @@ class QemuNvmeDisk : public QemuGPEX::Device {
 protected:
     cci::cci_param<std::string> p_serial;
     cci::cci_param<std::string> p_blob_file;
+    cci::cci_param<uint32_t> max_ioqpairs;
     std::string m_drive_id;
 
 public:
@@ -38,6 +39,7 @@ public:
         : QemuGPEX::Device(name, inst, "nvme")
         , p_serial("serial", basename(), "Serial name of the nvme disk")
         , p_blob_file("blob_file", "", "Blob file to load as data storage")
+        , max_ioqpairs("max_ioqpairs", 64, "Passed through to QEMU max_ioqpairs")
         , m_drive_id(basename())
     {
         m_drive_id += "_drive";
@@ -58,6 +60,7 @@ public:
         std::string serial = p_serial;
         m_dev.set_prop_str("serial", serial.c_str());
         m_dev.set_prop_parse("drive", m_drive_id.c_str());
+        m_dev.set_prop_int("max_ioqpairs", max_ioqpairs);
     }
 
     void gpex_realize(qemu::Bus &bus) override
