@@ -111,13 +111,15 @@ void Cpu::async_safe_run(AsyncJobFn job)
 
 [[ noreturn ]] void Cpu::exit_loop_from_io()
 {
-    /* Use a noreturn fonction pointer to convince GCC we actually won't return */
     uintptr_t pc = m_int->exports().cpu_get_mem_io_pc(m_obj);
 
     auto cpu_loop_exit_noexc = m_int->exports().cpu_loop_exit_noexc;
 
     m_int->exports().cpu_restore_state(m_obj, pc, true);
     cpu_loop_exit_noexc(m_obj);
+
+    /* Use a throw to convince GCC we actually won't return */
+    throw("Exiting");
 }
 
 void Cpu::set_end_of_loop_callback(Cpu::EndOfLoopCallbackFn cb)
