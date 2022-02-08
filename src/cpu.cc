@@ -118,8 +118,13 @@ void Cpu::async_safe_run(AsyncJobFn job)
     m_int->exports().cpu_restore_state(m_obj, pc, true);
     cpu_loop_exit_noexc(m_obj);
 
-    /* Use a throw to convince GCC we actually won't return */
-    throw("Exiting");
+    /*
+    * Use the function abort() to convince GCC we actually won't return.
+    * We have to do this because the function pointer type in the export
+    * does not has the noreturn attribute but the qemu function is really
+    * "noreturn"
+    */
+    std::abort();
 }
 
 void Cpu::set_end_of_loop_callback(Cpu::EndOfLoopCallbackFn cb)
