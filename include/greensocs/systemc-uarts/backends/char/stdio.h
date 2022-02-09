@@ -25,7 +25,6 @@
 #include <greensocs/libgssync/async_event.h>
 #include <queue>
 #include <signal.h>
-#include <sys/epoll.h>
 #include <termios.h>
 #endif
 
