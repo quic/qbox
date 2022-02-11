@@ -87,11 +87,11 @@ This should not be used to enable GDB.
 Enabling GDB per CPU
 --------------------
 
-In order to connect a GDB the CCI parameter `name.of.cpu.gdb-port` must be set a none zero value.
+In order to connect a GDB the CCI parameter `name.of.cpu.gdb_port` must be set a none zero value.
 
 For instance 
 ```bash
-$ ./build/vp --gs_luafile conf.lua -p platform.cpu_1.gdb-port=1234
+$ ./build/vp --gs_luafile conf.lua -p platform.cpu_1.gdb_port=1234
 ```
 Will open a gdb server on port 1234, for `cpu_1`, and the virtual platform will wait for GDB to connect.
 
@@ -120,3 +120,54 @@ Finally, it has 2 uarts:
 
 ### PORTS
 The library also provides socket initiators and targets for Qemu
+
+## QEMU/SystemC parallelism
+### QEMU TCG threading mode
+
+QEMU/SystemC integration support 3 threading mechanisms. They determine the threading mode used within the qemu tcg.
+This is selected using the QEMU instance parameter `"tcg_mode"` which can take the following three values:
+
+- `coroutine`
+      - qemu uses the single thread tcg mode
+      - qemu tcg code does not run in parallel of systemC engine
+      - useful for determinism (with icount enabled, see below)
+
+- `singlethread`
+      - qemu use single thread tcg mode
+      - qemu tcg code run in a separate thread of systemc engine
+
+
+- `multithread` (this is the default)
+      - qemu use mutiples threads tcg mode
+      - qemu tcg threads run in parallel of systemc engine
+      - not every qemu architecture support multithread
+
+To select a threading mode, set the param `"tcg_mode"` on the QEMU instance to one of `"COROUTINE"`, `"SINGLE"` or `"MULTI"`
+(The defualt is `"MULTI"`)
+
+QEMU also supports `icount` mode, where timing is based on the number of instructions executed.
+Two parameters control icount mode
+- `"icount"` enables or disables icount mode
+- `"icount_mips_shift"` is the MIPS shift value for icount mode (1 insn = 2^(mips) ns). If this is set to anything other than 0, icount mode is also enabled.
+
+If icount is not selected, QEMU will use 'wall clock' time internally. This is (clearly) non deterministic.
+
+The default is that icount mode is disabled.
+
+_NB icount mode should not be enabled with multi-threading as this is not possible within QEMU. Doing so will cause an error._
+
+### TLM2 Quantum keeper synchronization mode
+
+The GreenSocs synchronization library supports a number of synchronization policies:
+- `tlm2`
+ - This is standard TLM2 mode, there is no attempt in the quantum keeper to handle multiple threads. This mode should only be used with `COROUTINES` (This will be assumed and does not need to be set).
+- `multithread`
+ - This is a basic multi-threaded quantum keeper, it will attempt, by default, to keep everything within 2 quantums (+- a quantum).
+- `multithread-quantum`
+ - This mode attempts to replicate a closer to tlm behaviour, in that things should not advance until everybody has reached the quantum boundry.
+- `multithread-unconstrained`
+ - This mode allows QEMU to run at it's own pace. This is the _DEFAULT_
+
+_NB, none of the `multithread` based syncronisation policies can be used with COROUTINES, and this will generate an error_
+
+_For deterministic execution enable BOTH `tlm2` synchronisation _and_ `icount` mode._

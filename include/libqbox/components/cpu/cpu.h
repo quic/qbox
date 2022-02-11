@@ -63,51 +63,38 @@ protected:
     int64_t m_last_vclock;
 
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
-
+    bool finished=false;
     QemuCpuHintTlmExtension m_cpu_hint_ext;
 
     /*
-     * Create the quantum keeper according to the p_sync_policy parameter, and
-     * lock the parameter to prevent any modification.
+     * Request quantum keeper from instance
      */
     void create_quantum_keeper()
     {
-        m_qk = gs::tlm_quantumkeeper_factory(p_sync_policy);
+        m_qk = m_inst.create_quantum_keeper();
 
         if (!m_qk) {
             SC_REPORT_FATAL("qbox", "Sync policy unknown");
         }
 
         m_qk->reset();
-
-        /* The p_sync_policy parameter should not be modified anymore */
-        p_sync_policy.lock();
     }
 
     /*
      * Given the quantum keeper nature (synchronous or asynchronous) and the
      * p_icount parameter, we can configure the QEMU instance accordingly.
      */
-    void set_qemu_instance_options()
+    void set_coroutine_mode()
     {
         switch (m_qk->get_thread_type()) {
         case gs::SyncPolicy::SYSTEMC_THREAD:
-            m_inst.set_tcg_mode(QemuInstance::TCG_SINGLE_COROUTINE);
             m_coroutines = true;
             break;
 
         case gs::SyncPolicy::OS_THREAD:
-            m_inst.set_tcg_mode(QemuInstance::TCG_MULTI);
             m_coroutines = false;
             break;
         }
-
-        if (p_icount.get_value()) {
-            m_inst.set_icount_mode(QemuInstance::ICOUNT_ON, p_icount_mips);
-        }
-
-        p_icount.lock();
-        p_icount_mips.lock();
     }
 
 
@@ -222,15 +209,22 @@ protected:
          */
         m_inst.get().lock_iothread();
 
-        while (!m_cpu.can_run()) {
-            m_inst.get().unlock_iothread();
-            wait_for_work();
-            m_inst.get().lock_iothread();
+        bool can_run=false;
+        if (m_inst.get_tcg_mode()==QemuInstance::TCG_SINGLE) {
+            can_run=m_inst.can_run();
         }
-
-        m_cpu.set_soft_stopped(false);
-
-        rearm_deadline_timer();
+        if (!can_run) {
+            while (!m_cpu.can_run()) {
+                m_inst.get().unlock_iothread();
+                wait_for_work();
+                m_inst.get().lock_iothread();
+            }
+        }
+        if (m_cpu.can_run()) {
+            m_cpu.set_soft_stopped(false);
+        }
+        if (!finished)
+            rearm_deadline_timer();
     }
 
     /*
@@ -263,6 +257,7 @@ protected:
 
         m_inst.get().unlock_iothread();
 
+        if (now < m_last_vclock) {m_last_vclock = now;}
         elapsed = sc_core::sc_time(now - m_last_vclock, sc_core::SC_NS);
         m_qk->inc(elapsed);
 
@@ -302,10 +297,7 @@ protected:
     }
 
 public:
-    cci::cci_param<bool> p_icount;
-    cci::cci_param<int> p_icount_mips;
     cci::cci_param<unsigned int> p_gdb_port;
-    cci::cci_param<std::string> p_sync_policy;
 
     /* The default memory socket. Mapped to the default CPU address space in QEMU */
     QemuInitiatorSocket<> socket;
@@ -319,10 +311,7 @@ public:
         , halt("halt")
         , m_qemu_kick_ev(false)
         , m_signaled(false)
-        , p_icount("icount", false, "Enable virtual instruction counter")
-        , p_icount_mips("icount-mips", 0, "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
-        , p_gdb_port("gdb-port", 0, "Wait for gdb connection on TCP port <gdb_port>")
-        , p_sync_policy("sync-policy", "multithread-quantum", "Synchronization Policy to use")
+        , p_gdb_port("gdb_port", 0, "Wait for gdb connection on TCP port <gdb_port>")
         , socket("mem", *this, inst)
     {
         using namespace std::placeholders;
@@ -333,15 +322,23 @@ public:
            halt.register_value_changed_cb(cb);
 
         create_quantum_keeper();
-        set_qemu_instance_options();
+        set_coroutine_mode();
 
         if (!m_coroutines) {
             SC_THREAD(watch_external_ev);
         }
+
+        for (auto p : gs::sc_cci_children(sc_module::name())) {
+            SC_REPORT_WARNING("libqbox", ("Unexpected parameter "+p+" to "+sc_module::name()).c_str());
+        }
+
+        m_inst.add_dev(this);
     }
 
     virtual ~QemuCpu()
     {
+        m_inst.del_dev(this);
+
         if (!m_cpu.valid()) {
             /* CPU hasn't been created yet */
             return;
@@ -357,7 +354,7 @@ public:
         }
 
         m_inst.get().lock_iothread();
-
+        finished=true;
         /* Make sure QEMU won't call us anymore */
         m_cpu.clear_callbacks();
 
@@ -371,9 +368,20 @@ public:
         socket.cancel_all();
 
         /* Wait for QEMU to terminate the CPU thread */
-        m_cpu.remove_sync();
+        if (m_inst.get_tcg_mode()==QemuInstance::TCG_MULTI) {
+            m_cpu.remove_sync();
+        } else { // Handle non multi- non coroutine mode (SINGLE mode)
+            m_cpu.set_unplug(true);
+            m_cpu.halt(true);
+        }
 
         m_inst.get().unlock_iothread();
+
+    }
+
+    bool can_run() override
+    {
+        return m_cpu.can_run();
     }
 
     void before_end_of_elaboration() override

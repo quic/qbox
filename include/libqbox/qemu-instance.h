@@ -29,32 +29,20 @@
 
 #include <greensocs/gsutils/cciutils.h>
 #include <greensocs/gsutils/report.h>
+#include <greensocs/libgssync.h>
 
 #include <libqemu-cxx/libqemu-cxx.h>
 
 #include "libqbox/dmi-manager.h"
 #include "libqbox/exceptions.h"
 
-class QemuInstanceTcgModeMismatchException : public QboxException {
+
+class QemuDeviceBaseIF {
 public:
-    QemuInstanceTcgModeMismatchException()
-        : QboxException("Mismatch in requested TCG mode")
-    {
+    virtual bool can_run() {
+        return true;
     }
-
-    virtual ~QemuInstanceTcgModeMismatchException() throw() {}
 };
-
-class QemuInstanceIcountModeMismatchException : public QboxException {
-public:
-    QemuInstanceIcountModeMismatchException()
-        : QboxException("Mismatch in requested icount mode")
-    {
-    }
-
-    virtual ~QemuInstanceIcountModeMismatchException() throw() {}
-};
-
 /**
  * @class QemuInstance
  *
@@ -62,37 +50,66 @@ public:
  * handles QEMU parameters and instance initialization.
  */
 class QemuInstance : public sc_core::sc_module {
+private:
+    std::shared_ptr<gs::tlm_quantumkeeper_extended> m_first_qk=NULL;
+    std::mutex m_lock;
+    std::list<QemuDeviceBaseIF *> devices;
 public:
+    void add_dev(QemuDeviceBaseIF *d) {
+        std::lock_guard<std::mutex> lock(m_lock);
+        devices.push_back(d);
+    }
+    void del_dev(QemuDeviceBaseIF *d) {
+        std::lock_guard<std::mutex> lock(m_lock);
+        devices.remove(d);
+    }
+    bool can_run()
+    {
+        std::lock_guard<std::mutex> lock(m_lock);
+        bool can_run=false;
+        // In SINGLE mode, check if another CPU could run
+        for (auto const& i : devices) {
+            if (i->can_run()) {
+                can_run=true;
+                break;
+            }
+        }
+        return can_run;
+    }
     using Target = qemu::Target;
     using LibLoader = qemu::LibraryLoaderIface;
 
     enum TcgMode {
         TCG_UNSPECIFIED,
         TCG_SINGLE,
-        TCG_SINGLE_COROUTINE,
+        TCG_COROUTINE,
         TCG_MULTI,
     };
-
-    enum IcountMode {
-        ICOUNT_UNSPECIFIED,
-        ICOUNT_OFF,
-        ICOUNT_ON,
-    };
+    TcgMode StringToTcgMode(std::string s)
+    {
+        if (s == "SINGLE") return TCG_SINGLE;
+        if (s == "COROUTINE") return TCG_COROUTINE;
+        if (s == "MULTI") return TCG_MULTI;
+        SC_REPORT_WARNING("libqbox",("Unknown TCG mode "+s).c_str());
+        return TCG_UNSPECIFIED;
+    }
 
 protected:
     qemu::LibQemu m_inst;
     QemuInstanceDmiManager m_dmi_mgr;
 
-    TcgMode m_tcg_mode = TCG_UNSPECIFIED;
-    IcountMode m_icount_mode = ICOUNT_UNSPECIFIED;
+    cci::cci_param<std::string> p_tcg_mode;
+    cci::cci_param<std::string> p_sync_policy;
+    TcgMode m_tcg_mode;
 
-    int m_icount_mips = 0;
+    cci::cci_param<bool> p_icount;
+    cci::cci_param<int> p_icount_mips;
 
     cci::cci_param<std::string> p_args;
 
     void push_default_args()
     {
-        gs::ConfigurableBroker m_conf_broker;
+        auto m_conf_broker = cci::cci_get_broker();
         const size_t l = strlen(name()) + 1;
 
         m_inst.push_qemu_arg("libqbox"); /* argv[0] */
@@ -126,16 +143,19 @@ protected:
     void push_icount_mode_args()
     {
         std::ostringstream ss;
-
-        assert(m_icount_mode != ICOUNT_UNSPECIFIED);
-
-        if (m_icount_mode == ICOUNT_OFF) {
-            return;
+        if (p_icount_mips > 0) {
+            p_icount = true;
         }
-
+        p_icount.lock();
+        p_icount_mips.lock();
+        if (!p_icount) return;
+        if (m_tcg_mode == TCG_MULTI) {
+            SC_REPORT_ERROR("libqbox", "MULTI threading can not be used with icount");
+            assert(m_tcg_mode != TCG_MULTI);
+        }
         m_inst.push_qemu_arg("-icount");
 
-        ss << m_icount_mips << ",nosleep";
+        ss << p_icount_mips << ",nosleep";
         m_inst.push_qemu_arg(ss.str().c_str());
     }
 
@@ -148,12 +168,16 @@ protected:
             m_inst.push_qemu_arg("tcg,thread=single");
             break;
 
-        case TCG_SINGLE_COROUTINE:
+        case TCG_COROUTINE:
             m_inst.push_qemu_arg("tcg,thread=single,coroutine=on");
             break;
 
         case TCG_MULTI:
             m_inst.push_qemu_arg("tcg,thread=multi");
+            if (p_icount) {
+                SC_REPORT_ERROR("libqbox", "MULTI threading can not be used with icount");
+                assert(!p_icount);
+            }
             break;
 
         default:
@@ -167,7 +191,13 @@ public:
         , m_inst(loader, t)
         , m_dmi_mgr(m_inst)
         , p_args("args", "", "additional space separated arguments")
+        , p_tcg_mode("tcg_mode", "MULTI", "The TCG mode required, SINGLE, COROUTINE or MULTI")
+        , p_sync_policy("sync_policy", "multithread-quantum", "Synchronization Policy to use")
+        , m_tcg_mode(StringToTcgMode(p_tcg_mode))
+        , p_icount("icount", false, "Enable virtual instruction counter")
+        , p_icount_mips("icount_mips_shift", 0, "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
     {
+        p_tcg_mode.lock();
         push_default_args();
     }
 
@@ -196,62 +226,38 @@ public:
     }
 
     /**
-     * @brief Set the desired TCG mode for this instance
+     * @brief Get the TCG mode for this instance
      *
-     * @details This method is called by CPU instances to specify the desired
-     * TCG mode according to the synchronization policy in use. All CPUs should
-     * use the same mode (meaning they should all use synchronization policies
-     * compatible one with the other).
-     *
-     * This method should be called before the instance is initialized.
+     * @details This method is called by CPU instances determin if to use 
+     * coroutines or not.
      */
-    void set_tcg_mode(TcgMode m)
+    TcgMode get_tcg_mode()
     {
-        assert(!is_inited());
-
-        if (m == TCG_UNSPECIFIED) {
-            return;
-        }
-
-        if ((m_tcg_mode != TCG_UNSPECIFIED) && (m != m_tcg_mode)) {
-            throw QemuInstanceTcgModeMismatchException();
-        }
-
-        m_tcg_mode = m;
+        return m_tcg_mode;
     }
 
     /**
-     * @brief Set the desired icount mode for this instance
+     * @brief Get the TCG mode for this instance
      *
-     * @details This method is called by CPU instances to specify the desired
-     * icount mode according to the synchronization policy in use. All CPUs should
-     * use the same mode.
-     *
-     * This method should be called before the instance is initialized.
-     *
-     * @param[in] m The desired icount mode
-     * @param[in] mips_shift The QEMU icount shift parameter. It sets the
-     *                       virtual time an instruction takes to execute to
-     *                       2^(mips_shift) ns.
+     * @details This method is called by CPU instances determin if to use
+     * coroutines or not.
      */
-    void set_icount_mode(IcountMode m, int mips_shift)
+    std::shared_ptr<gs::tlm_quantumkeeper_extended> create_quantum_keeper()
     {
-        assert(!is_inited());
-
-        if (m == ICOUNT_UNSPECIFIED) {
-            return;
+        std::shared_ptr<gs::tlm_quantumkeeper_extended> qk;
+        /* only multi-mode sync should have separate QK's per CPU */
+        if (m_first_qk && m_tcg_mode!=TCG_MULTI) {
+            qk=m_first_qk;
+        } else {
+            qk=gs::tlm_quantumkeeper_factory(p_sync_policy);
         }
-
-        if ((m_icount_mode != ICOUNT_UNSPECIFIED) && (m != m_icount_mode)) {
-            throw QemuInstanceIcountModeMismatchException();
+        if (!m_first_qk) m_first_qk=qk;
+        if (qk->get_thread_type()==gs::SyncPolicy::SYSTEMC_THREAD) {
+            assert(m_tcg_mode==TCG_COROUTINE);
         }
-
-        if ((m_icount_mode != ICOUNT_UNSPECIFIED) && (mips_shift != m_icount_mips)) {
-            throw QemuInstanceIcountModeMismatchException();
-        }
-
-        m_icount_mode = m;
-        m_icount_mips = mips_shift;
+        /* The p_sync_policy parameter should not be modified anymore */
+        p_sync_policy.lock();
+        return qk;
     }
 
     /**
@@ -268,11 +274,21 @@ public:
         assert(!is_inited());
 
         if (m_tcg_mode == TCG_UNSPECIFIED) {
-            m_tcg_mode = TCG_SINGLE;
+            SC_REPORT_ERROR("libqbox", ("Unknown tcg mode : " + std::string(p_tcg_mode)).c_str());
         }
+        // By now, if there is a CPU, it would be loaded into QEMU, and we would have a QK
+        if (m_first_qk) {
+            if (m_first_qk->get_thread_type()==gs::SyncPolicy::SYSTEMC_THREAD) {
+                if (p_tcg_mode.is_preset_value() && m_tcg_mode!=TCG_COROUTINE) {
+                    SC_REPORT_WARNING("libqbox", "This quantum keeper can only be used with TCG_COROUTINES");
+                }
+                m_tcg_mode=TCG_COROUTINE;
+            } else {
+                if (m_tcg_mode == TCG_COROUTINE) {
+                    SC_REPORT_ERROR("libqbox", "Please select a suitable threading mode for this quantum keeper, it can't be used with COROUTINES");
+                }
+            }
 
-        if (m_icount_mode == ICOUNT_UNSPECIFIED) {
-            m_icount_mode = ICOUNT_OFF;
         }
 
         push_tcg_mode_args();

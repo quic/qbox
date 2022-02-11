@@ -2,7 +2,10 @@ list(APPEND QBOX_CPU_TEST_SYNC_POLICY_COMBINATION
     tlm2
     tlm2-icount
     multithread
-    multithread-quantum)
+    multithread-quantum
+    multithread-unconstrained
+    multithread-single
+    )
 
 list(APPEND QBOX_CPU_TEST_NUM_CPU_COMBINATION
     1
@@ -41,24 +44,41 @@ function(qbox_add_cpu_test target timeout_s)
 
     foreach(sync_pol ${QBOX_CPU_TEST_SYNC_POLICY_COMBINATION})
         if("${sync_pol}" STREQUAL "tlm2-icount")
-            set(sync_pol tlm2)
+            set(sync_pol "tlm2")
             set(icount "true")
         else()
             set(icount "false")
         endif()
 
+        if("${sync_pol}" STREQUAL "multithread-single")
+           set(sync_pol "multithread")
+           set(threading "SINGLE")
+        else ()
+            set(threading "MULTI")
+        endif()
+
+        if("${sync_pol}" STREQUAL "tlm2")
+            set(threading "COROUTINE")
+        endif()
+
+
         foreach(num_cpu ${QBOX_CPU_TEST_NUM_CPU_COMBINATION})
-            set(test_name ${target}|sync-pol:${sync_pol}|num-cpu:${num_cpu}|icount:${icount})
+            set(test_name ${target}|sync-pol:${sync_pol}|num-cpu:${num_cpu}|icount:${icount}|threading:${threading})
 
             add_test(
                 NAME ${test_name}
-                COMMAND $<TARGET_FILE:${target}> -p test-bench.sync-policy=\"${sync_pol}\"
-                                                 -p test-bench.num-cpu=${num_cpu}
-                                                 -p test-bench.icount=${icount})
+                COMMAND $<TARGET_FILE:${target}> -p test-bench.inst_a.sync_policy=\"${sync_pol}\"
+                                                 -p test-bench.inst_b.sync_policy=\"${sync_pol}\"
+                                                 -p test-bench.num_cpu=${num_cpu}
+                                                 -p test-bench.inst_a.icount=${icount}
+                                                 -p test-bench.inst_b.icount=${icount}
+                                                 -p test-bench.inst_a.tcg_mode=\"${threading}\"
+                                                 -p test-bench.inst_b.tcg_mode=\"${threading}\"
+                                                 )
             set_property(TEST ${test_name} PROPERTY TIMEOUT ${timeout_s})
             # Alternative solution until the problem is solved with the exclusive access tests
             # --------------------------------------------------------------------------------
-            if(("${target}" STREQUAL "aarch64-ld-st-excl-fail-test") AND ("${sync_pol}" STREQUAL "tlm2"))
+            if(("${target}" STREQUAL "aarch64-ld-st-excl-fail-test") AND ( ("${sync_pol}" STREQUAL "tlm2") OR ("${threading}" STREQUAL "SINGLE") ) )
                 set_tests_properties(${test_name} PROPERTIES WILL_FAIL TRUE)
             endif()
             # --------------------------------------------------------------------------------

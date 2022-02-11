@@ -26,7 +26,7 @@
 #include <systemc>
 #include <cci/utils/broker.h>
 
-#include <greensocs/gsutils/luafile_tool.h>
+#include <greensocs/gsutils/cciutils.h>
 
 class TestFailureException : public std::runtime_error {
 protected:
@@ -85,16 +85,12 @@ public:
 template <class TESTBENCH>
 int run_testbench(int argc, char *argv[])
 {
-    cci_utils::broker cci_broker("Global Broker");
-    cci::cci_register_broker(cci_broker);
-
-    LuaFile_Tool cmdline_parser("parser");
-    cmdline_parser.parseCommandLine(argc, argv);
+    auto m_broker = new gs::ConfigurableBroker(argc, argv);
 
     TESTBENCH test_bench("test-bench");
 
     test_bench.run();
-
+    std::cout << " Test done\n";
     return test_bench.get_rc();
 }
 

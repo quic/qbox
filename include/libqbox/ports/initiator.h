@@ -77,8 +77,14 @@ protected:
     qemu::Device m_dev;
     gs::RunOnSysC m_on_sysc;
 
-    qemu::MemoryRegion m_root;
-
+    class m_mem_obj {
+    public:
+        qemu::MemoryRegion m_root;
+        m_mem_obj(qemu::LibQemu &inst) {
+            m_root = inst.object_new<qemu::MemoryRegion>();
+        }
+    };
+    m_mem_obj *m_r=nullptr;
     std::map<DmiRegionAliasKey, DmiRegionAlias> m_dmi_aliases;
 
     void init_payload(TlmPayload &trans, tlm::tlm_command command, uint64_t addr,
@@ -114,7 +120,7 @@ protected:
                alias.get_start(), alias.get_end());
 
         m_inst.get().lock_iothread();
-        m_root.add_subregion(alias_mr, alias.get_start());
+        m_r->m_root.add_subregion(alias_mr, alias.get_start());
         m_inst.get().unlock_iothread();
 
         alias.set_installed();
@@ -132,7 +138,7 @@ protected:
                alias.get_start(), alias.get_end());
 
         m_inst.get().lock_iothread();
-        m_root.del_subregion(alias_mr);
+        m_r->m_root.del_subregion(alias_mr);
         m_inst.get().unlock_iothread();
     }
 
@@ -250,7 +256,7 @@ protected:
         qemu::MemoryRegion mr(m_inst.get().template object_new<qemu::MemoryRegion>());
 
         mr.init_alias(m_dev, "mr-alias", target_mr, 0, target_mr.get_size());
-        m_root.add_subregion(mr, mapping_addr);
+        m_r->m_root.add_subregion(mr, mapping_addr);
     }
 
     void do_regular_access(TlmPayload &trans)
@@ -344,7 +350,7 @@ public:
         qemu::LibQemu &inst = m_inst.get();
         qemu::MemoryRegionOpsPtr ops;
 
-        m_root = inst.object_new<qemu::MemoryRegion>();
+        m_r = new m_mem_obj(inst);//oot = inst.object_new<qemu::MemoryRegion>();
         ops = inst.memory_region_ops_new();
 
         ops->set_read_callback(std::bind(&QemuInitiatorSocket::qemu_io_read,
@@ -353,22 +359,24 @@ public:
                                           this, _1, _2, _3, _4));
         ops->set_max_access_size(8);
 
-        m_root.init_io(dev, TlmInitiatorSocket::name(),
+        m_r->m_root.init_io(dev, TlmInitiatorSocket::name(),
                        std::numeric_limits<uint64_t>::max(), ops);
 
-        dev.set_prop_link(prop, m_root);
+        dev.set_prop_link(prop, m_r->m_root);
 
         m_dev = dev;
     }
-
+    void end_of_simulation()
+    {
+        delete m_r;
+    }
     void init_global(qemu::Device &dev)
         {
             using namespace std::placeholders;
 
             qemu::LibQemu &inst = m_inst.get();
             qemu::MemoryRegionOpsPtr ops;
-
-            m_root = inst.object_new<qemu::MemoryRegion>();
+            m_r = new m_mem_obj(inst);//oot = inst.object_new<qemu::MemoryRegion>();
             ops = inst.memory_region_ops_new();
 
             ops->set_read_callback(std::bind(&QemuInitiatorSocket::qemu_io_read,
@@ -377,11 +385,11 @@ public:
                                             this, _1, _2, _3, _4));
             ops->set_max_access_size(8);
 
-            m_root.init_io(dev, TlmInitiatorSocket::name(),
+            m_r->m_root.init_io(dev, TlmInitiatorSocket::name(),
                         std::numeric_limits<uint64_t>::max(), ops);
 
             auto as = inst.address_space_get_system_memory();
-            as->init(m_root, "global-peripheral-initiator", true);
+            as->init(m_r->m_root, "global-peripheral-initiator", true);
             m_dev = dev;
         }
 

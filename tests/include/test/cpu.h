@@ -60,25 +60,11 @@ private:
 protected:
     qemu::Target m_arch;
 
-    cci_utils::broker m_broker;
-
     cci::cci_param<int> p_num_cpu;
-    cci::cci_param<std::string> p_sync_policy;
-    cci::cci_param<bool> p_icount;
-    cci::cci_param<int> p_icount_mips;
     cci::cci_param<int> p_quantum_ns;
 
     Router<> m_router;
     Memory<> m_mem;
-
-    void preset_cpu_cci_value(int cpu, const char *param, const cci::cci_value &val)
-    {
-            std::stringstream ss;
-            auto broker(cci::cci_get_broker());
-
-            ss << name() << ".cpu_" << cpu << "." << param;
-            broker.set_preset_cci_value(ss.str(), val);
-    }
 
     void set_firmware(const char *assembly)
     {
@@ -107,30 +93,13 @@ protected:
 public:
     CpuTestBenchBase(const sc_core::sc_module_name &n, qemu::Target arch)
         : TestBench(n)
-
         , m_arch(arch)
-
-        , m_broker("broker")
-        , p_num_cpu("num-cpu", 1, "Number of CPUs to instantiate in the test")
-        , p_sync_policy("sync-policy", "tlm2", "Synchronization policy to use for the CPUs")
-        , p_icount("icount", false, "Enable icount mode on the QEMU instance")
-        , p_icount_mips("icount-mips", 0,
-                        "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
-        , p_quantum_ns("quantum-ns", 1000000, "Value of the global TLM-2.0 quantum in ns")
+        , p_num_cpu("num_cpu", 1, "Number of CPUs to instantiate in the test")
+        , p_quantum_ns("quantum_ns", 1000000, "Value of the global TLM-2.0 quantum in ns")
         , m_router("router")
         , m_mem("mem", MEM_SIZE)
     {
         using tlm_utils::tlm_quantumkeeper;
-
-        cci_register_broker(m_broker);
-
-        auto broker(cci::cci_get_broker());
-
-        for (int i = 0; i < p_num_cpu; i++) {
-            preset_cpu_cci_value(i, "sync-policy", cci::cci_value(p_sync_policy.get_value()));
-            preset_cpu_cci_value(i, "icount", cci::cci_value(p_icount.get_value()));
-            preset_cpu_cci_value(i, "icount-mips", cci::cci_value(p_icount_mips.get_value()));
-        }
 
         m_router.add_target(m_mem.socket, MEM_ADDR, MEM_SIZE);
 
@@ -180,8 +149,8 @@ protected:
 public:
     CpuTestBench(const sc_core::sc_module_name &n)
         : CpuTestBenchBase(n, CPU::ARCH)
-        , m_inst_a(m_inst_manager.new_instance(CPU::ARCH))
-        , m_inst_b(m_inst_manager.new_instance(CPU::ARCH))
+        , m_inst_a(m_inst_manager.new_instance("inst_a",CPU::ARCH))
+        , m_inst_b(m_inst_manager.new_instance("inst_b",CPU::ARCH))
         , m_cpus("cpu", p_num_cpu,  [this](const char *n, int i) {
                    ab = !ab;
                    return new CPU(n, ab ? m_inst_a : m_inst_b);

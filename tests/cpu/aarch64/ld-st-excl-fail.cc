@@ -35,6 +35,7 @@
  */
 class CpuArmCortexA53LdStExclTest : public CpuTestBench<QemuCpuArmCortexA53, CpuTesterExclusive>
 {
+    bool passed=true;
 public:
     static constexpr const char* FIRMWARE = R"(
         _start:
@@ -84,7 +85,7 @@ public:
         int cpuid = addr >> 3;
 
         GS_LOG("CPU %d write, data: %" PRIu64 ", len: %zu", cpuid, data, len);
-        TEST_ASSERT(false);
+        passed=false;
     }
 
     virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override
@@ -94,6 +95,7 @@ public:
 
     virtual void end_of_simulation() override
     {
+        TEST_ASSERT(passed);
         CpuTestBench<QemuCpuArmCortexA53, CpuTesterExclusive>::end_of_simulation();
     }
 };

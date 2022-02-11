@@ -44,7 +44,7 @@
  *     property can be set (unless particular cases such as some link
  *     properties) and the device can now be connected to busses and GPIO.
  */
-class QemuDevice : public sc_core::sc_module
+class QemuDevice : public sc_core::sc_module, public QemuDeviceBaseIF
 {
 private:
     std::string m_qom_type;
