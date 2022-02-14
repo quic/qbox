@@ -38,4 +38,6 @@ target_link_libraries(vp
     GreenSocs::qcom-ipcc
 )
 
+install (TARGETS vp DESTINATION ${CMAKE_INSTALL_BINDIR})
+
 gs_enable_testing()
