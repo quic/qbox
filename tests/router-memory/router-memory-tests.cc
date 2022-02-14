@@ -18,6 +18,7 @@
  */
 
 #include "router-memory-bench.h"
+#include <cci/utils/broker.h>
 
 // Simple read into the memory
 TEST_BENCH(RouterMemoryTestBench, SimpleWriteRead)
@@ -215,6 +216,9 @@ TEST_BENCH(RouterMemoryTestBench, DmiWriteRead)
 
 int sc_main(int argc, char* argv[])
 {
+    cci_utils::consuming_broker broker("global_broker");
+    cci_register_broker(broker);
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

@@ -23,82 +23,154 @@
 #include <cinttypes>
 #include <vector>
 
+#define THREAD_SAFE true
+#if THREAD_SAFE==true
+#include <mutex>
+#endif
+
+#include <cci_configuration>
 #include <systemc>
 #include <tlm>
-#include <tlm_utils/simple_initiator_socket.h>
-#include <tlm_utils/simple_target_socket.h>
 
-#include <greensocs/gsutils/tlm-extensions/exclusive-access.h>
-#include <greensocs/libgsutils.h>
+#include <tlm_utils/multi_passthrough_initiator_socket.h>
+#include <tlm_utils/multi_passthrough_target_socket.h>
+
+namespace gs {
+namespace router {
+    static const char* log_enabled = std::getenv("GS_LOG");
+}
 
 /**
- * @class Router
+ * @class Path recording TLM extension
  *
- * @brief A Router component that can add router to a virtual platform project to manage the various transactions
+ * @brief Path recording TLM extension
  *
- * @details This component models a router. It has a single multi-target socket so any other component with an initiator socket can connect to this component. It behaves as follows:
- *    - Manages exclusive accesses, adding this router as a 'hop' in the exclusive access extension (see GreenSocs/libgsutils).
- *    - Manages connections to multiple initiators and targets with the method `add_initiator` and `add_target`.
- *    - Allows to manage read and write transactions with `b_transport` and `transport_dbg` methods.
- *    - Supports passing through DMI requests with the method `get_direct_mem_ptr`.
- *    - Handles invalidation of multiple DMI pointers with the method `invalidate_direct_mem_ptr` which passes the invalidate back to *all* initiators.
- *    - It checks for each transaction if the address is valid or not and returns an error if the address is invalid with the method `decode_address`.
+ * @details Embeds an  ID field in the txn, which is populated as the network
+ * is traversed - see README.
  */
+
+class PathIDExtension : public tlm::tlm_extension<PathIDExtension>, public std::vector<int> {
+public:
+    PathIDExtension() = default;
+    PathIDExtension(const PathIDExtension&) = default;
+public:
+    virtual tlm_extension_base* clone() const override
+    {
+        return new PathIDExtension(*this);
+    }
+
+    virtual void copy_from(const tlm_extension_base& ext) override
+    {
+        const PathIDExtension& other = static_cast<const PathIDExtension&>(ext);
+        *this = other;
+    }
+};
 
 template <unsigned int BUSWIDTH = 32>
 class Router : public sc_core::sc_module {
-private:
     using TargetSocket = tlm::tlm_base_target_socket_b<BUSWIDTH,
         tlm::tlm_fw_transport_if<>,
         tlm::tlm_bw_transport_if<>>;
-
     using InitiatorSocket = tlm::tlm_base_initiator_socket_b<BUSWIDTH,
         tlm::tlm_fw_transport_if<>,
         tlm::tlm_bw_transport_if<>>;
 
-    struct TargetInfo {
-        size_t index;
-        TargetSocket* t;
-        sc_dt::uint64 address;
-        sc_dt::uint64 size;
-    };
+private:
+    template <typename MOD>
+    class multi_passthrough_initiator_socket_spying
+        : public tlm_utils::multi_passthrough_initiator_socket<MOD> {
+        using typename tlm_utils::multi_passthrough_initiator_socket<
+            MOD>::base_target_socket_type;
 
-    struct InitiatorInfo {
-        size_t index;
-        InitiatorSocket* i;
-    };
+        const std::function<void(std::string)> register_cb;
 
-    std::vector<tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>*> m_target_sockets;
-    std::vector<tlm_utils::simple_initiator_socket_tagged<Router, BUSWIDTH>*> m_initiator_sockets;
-    std::vector<TargetInfo> m_targets;
-    std::vector<InitiatorInfo> m_initiators;
-    Router<BUSWIDTH> *m_top;
-    tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>* target_socket;
-
-    void check_exclusive_extension(int id, tlm::tlm_generic_payload& trans)
-    {
-        ExclusiveAccessTlmExtension* ext;
-
-        trans.get_extension(ext);
-
-        if (ext == nullptr) {
-            return;
+    public:
+        multi_passthrough_initiator_socket_spying(const char* name,
+            const std::function<void(std::string)>& f)
+            : tlm_utils::multi_passthrough_initiator_socket<
+                MOD>::multi_passthrough_initiator_socket(name)
+            , register_cb(f)
+        {
         }
 
-        ext->add_hop(id);
+        void bind(base_target_socket_type& socket)
+        {
+            tlm_utils::multi_passthrough_initiator_socket<MOD>::bind(socket);
+            register_cb(socket.get_base_export().name());
+        }
+    };
+
+    struct target_info {
+        size_t index;
+        std::string name;
+        sc_dt::uint64 address;
+        sc_dt::uint64 size;
+        bool mask_addr;
+    };
+
+    /* NB use the EXPORT name, so as not to be hassled by the _port_0*/
+    std::string nameFromSocket(std::string s)
+    {
+        return s;
+    }
+    void register_boundto(std::string s)
+    {
+        s = nameFromSocket(s);
+        struct target_info ti = { 0 };
+        ti.name = s;
+        ti.index = targets.size();
+        targets.push_back(ti);
+    }
+    typedef multi_passthrough_initiator_socket_spying<Router<BUSWIDTH>>
+        initiator_socket_type;
+    initiator_socket_type initiator_socket;
+    tlm_utils::multi_passthrough_target_socket<Router<BUSWIDTH>> target_socket;
+
+    std::vector<target_info> targets;
+    std::vector<PathIDExtension *> m_pathIDPool; // at most one per thread!
+#if THREAD_SAFE==true
+    std::mutex m_pool_mutex;
+#endif
+    void stamp_txn(int id, tlm::tlm_generic_payload& txn)
+    {
+        PathIDExtension* ext;
+        txn.get_extension(ext);
+        if (ext == nullptr) {
+#if THREAD_SAFE==true
+            std::lock_guard<std::mutex> l(m_pool_mutex);
+#endif
+            if (m_pathIDPool.size() == 0) {
+                ext = new PathIDExtension();
+            } else {
+                ext = m_pathIDPool.back();
+                m_pathIDPool.pop_back();
+            }
+            txn.set_extension(ext);
+        }
+        ext->push_back(id);
+    }
+    void unstamp_txn(int id, tlm::tlm_generic_payload& txn)
+    {
+        PathIDExtension* ext;
+        txn.get_extension(ext);
+        assert(ext);
+        assert(ext->back() == id);
+        ext->pop_back();
+        if (ext->size() == 0) {
+#if THREAD_SAFE==true
+            std::lock_guard<std::mutex> l(m_pool_mutex);
+#endif
+            txn.clear_extension(ext);
+            m_pathIDPool.push_back(ext);
+        }
     }
 
-    void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
+    void b_transport(int id, tlm::tlm_generic_payload& trans,
+        sc_core::sc_time& delay)
     {
         sc_dt::uint64 addr = trans.get_address();
-        sc_dt::uint64 target_addr;
-        unsigned int target_nr;
-
-        bool success = decode_address(addr, target_addr, target_nr);
-	if (!success && m_top)
-		return m_top->b_transport(id, trans, delay);
-
-        if (!success) {
+        auto ti = decode_address(addr);
+        if (!ti) {
             const char* cmd = "unknown";
             switch (trans.get_command()) {
             case tlm::TLM_IGNORE_COMMAND:
@@ -112,180 +184,186 @@ private:
                 break;
             }
 
-            GS_LOG("Warning: '%s' access to unmapped address 0x%" PRIx64 " in '%s' module\n",
-                cmd, static_cast<uint64_t>(trans.get_address()), name());
+            std::stringstream info;
+            if (gs::router::log_enabled) {
+                info << "Warning: " << cmd << " access to unmapped address "
+                     << " address "
+                     << "0x" << std::hex << trans.get_address()
+                     << "in module " << name();
+                SC_REPORT_INFO("Router", info.str().c_str());
+            }
+
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return;
         }
 
-        trans.set_address(target_addr);
-        check_exclusive_extension(id, trans);
+        stamp_txn(id, trans);
 
-        (*m_initiator_sockets[target_nr])->b_transport(trans, delay);
+        if (ti->mask_addr)
+            trans.set_address(addr - ti->address);
+        initiator_socket[ti->index]->b_transport(trans, delay);
+        if (ti->mask_addr)
+            trans.set_address(addr);
+
+        unstamp_txn(id, trans);
     }
 
     unsigned int transport_dbg(int id, tlm::tlm_generic_payload& trans)
     {
         sc_dt::uint64 addr = trans.get_address();
-        sc_dt::uint64 target_addr;
-        unsigned int target_nr;
-
-        bool success = decode_address(addr, target_addr, target_nr);
-	if (!success && m_top)
-		return m_top->transport_dbg(id, trans);
-
-        if (!success) {
+        auto ti = decode_address(addr);
+        if (!ti) {
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return 0;
         }
 
-        trans.set_address(target_addr);
-
-        return (*m_initiator_sockets[target_nr])->transport_dbg(trans);
+        if (ti->mask_addr)
+            trans.set_address(addr - ti->address);
+        unsigned int ret = initiator_socket[ti->index]->transport_dbg(trans);
+        if (ti->mask_addr)
+            trans.set_address(addr);
+        return ret;
     }
 
-    bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
+    bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans,
+        tlm::tlm_dmi& dmi_data)
     {
-        sc_dt::uint64 target_addr;
-        unsigned int target_nr;
-
-        bool success = decode_address(trans.get_address(), target_addr, target_nr);
-	if (!success && m_top)
-		return m_top-get_direct_mem_ptr(id, trans, dmi_data);
-        if (!success) {
+        sc_dt::uint64 addr = trans.get_address();
+        auto ti = decode_address(addr);
+        if (!ti) {
             return false;
         }
 
-        trans.set_address(target_addr);
+        if (ti->mask_addr)
+            trans.set_address(addr - ti->address);
 
-        bool status = (*m_initiator_sockets[target_nr])->get_direct_mem_ptr(trans, dmi_data);
-        dmi_data.set_start_address(compose_address(target_nr, dmi_data.get_start_address()));
-        dmi_data.set_end_address(compose_address(target_nr, dmi_data.get_end_address()));
+        bool status = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
+        if (ti->mask_addr) {
+            dmi_data.set_start_address(
+                compose_address(ti->index, dmi_data.get_start_address()));
+            dmi_data.set_end_address(
+                compose_address(ti->index, dmi_data.get_end_address()));
+            trans.set_address(addr);
+        }
         return status;
     }
 
-    void invalidate_direct_mem_ptr(int id, sc_dt::uint64 start, sc_dt::uint64 end)
+    void invalidate_direct_mem_ptr(int id, sc_dt::uint64 start,
+        sc_dt::uint64 end)
     {
         sc_dt::uint64 bw_start_range = compose_address(id, start);
         sc_dt::uint64 bw_end_range = compose_address(id, end);
 
-        for (auto* socket : m_target_sockets) {
-            (*socket)->invalidate_direct_mem_ptr(bw_start_range, bw_end_range);
+        for (int i = 0; i < target_socket.size(); i++) {
+            target_socket[i]->invalidate_direct_mem_ptr(bw_start_range, bw_end_range);
         }
     }
 
-    bool decode_address(sc_dt::uint64 addr, sc_dt::uint64& addr_out, unsigned int& index_out)
+    struct target_info* decode_address(sc_dt::uint64 addr)
     {
-        for (unsigned int i = 0; i < m_targets.size(); i++) {
-            struct TargetInfo& ti = m_targets.at(i);
+        for (unsigned int i = 0; i < targets.size(); i++) {
+            struct target_info& ti = targets.at(i);
             if (addr >= ti.address && addr < (ti.address + ti.size)) {
-                addr_out = addr - ti.address;
-                index_out = i;
-                return true;
+                return &ti;
             }
         }
-        return false;
+        return nullptr;
     }
 
-    inline sc_dt::uint64 compose_address(unsigned int target_nr, sc_dt::uint64 address)
+    inline sc_dt::uint64 compose_address(unsigned int index,
+        sc_dt::uint64 address)
     {
-        return m_targets[target_nr].address + address;
+        return targets[index].address + address;
     }
 
 protected:
     virtual void before_end_of_elaboration()
     {
-        for (size_t i = 0; i < m_initiators.size(); i++) {
-            tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>* socket = new tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>(sc_core::sc_gen_unique_name("target"));
-            socket->register_b_transport(this, &Router::b_transport, i);
-            socket->register_transport_dbg(this, &Router::transport_dbg, i);
-            socket->register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr, i);
-            socket->bind(*m_initiators.at(i).i);
-            m_target_sockets.push_back(socket);
-        }
+        target_socket.register_b_transport(this, &Router::b_transport);
+        target_socket.register_transport_dbg(this, &Router::transport_dbg);
+        target_socket.register_get_direct_mem_ptr(this,
+            &Router::get_direct_mem_ptr);
 
-        for (size_t i = 0; i < m_targets.size(); i++) {
-            tlm_utils::simple_initiator_socket_tagged<Router, BUSWIDTH>* socket = new tlm_utils::simple_initiator_socket_tagged<Router, BUSWIDTH>(sc_core::sc_gen_unique_name("initiator"));
-            socket->register_invalidate_direct_mem_ptr(this, &Router::invalidate_direct_mem_ptr, i);
-            socket->bind(*m_targets.at(i).t);
-            m_initiator_sockets.push_back(socket);
+        for (auto& ti : targets) {
+            if (!m_broker.has_preset_value(ti.name + ".address")) {
+                SC_REPORT_ERROR("Router",
+                    ("Can't find " + ti.name + ".address").c_str());
+            }
+            if (!m_broker.has_preset_value(ti.name + ".size")) {
+                SC_REPORT_ERROR("Router",
+                    ("Can't find " + ti.name + ".size").c_str());
+            }
+            bool mask = false;
+            if (m_broker.has_preset_value(ti.name + ".mask_address")) {
+                mask = m_broker.get_preset_cci_value(ti.name + ".mask_address").get_bool();
+            }
+            uint64_t address = m_broker.get_preset_cci_value(ti.name + ".address").get_uint64();
+            uint64_t size = m_broker.get_preset_cci_value(ti.name + ".size").get_uint64();
+            std::stringstream info;
+            info << "Address map " << ti.name + " at"
+                 << " address "
+                 << "0x" << std::hex << address
+                 << " size "
+                 << "0x" << std::hex << size
+                 << (mask ? " (with address masked) " : "");
+            SC_REPORT_INFO("Router", info.str().c_str());
+            ti.address = address;
+            ti.size = size;
+            ti.mask_addr = mask;
         }
     }
 
 public:
+    cci::cci_broker_handle m_broker;
+    cci::cci_param<bool> thread_safe;
+
     explicit Router(const sc_core::sc_module_name& nm)
         : sc_core::sc_module(nm)
+        , initiator_socket("initiator_socket", [&](std::string s) -> void { register_boundto(s); })
+        , target_socket("target_socket")
+        , m_broker(cci::cci_get_broker())
+        , thread_safe("thread_safe", THREAD_SAFE, "Is this model thread safe")
     {
-	    m_top = nullptr;
-	    target_socket = nullptr;
+        // nothing to do
     }
 
     Router() = delete;
 
     Router(const Router&) = delete;
 
-    virtual ~Router()
+    ~Router()
     {
-        for (const auto& i : m_initiator_sockets) {
-            delete i;
+        while (m_pathIDPool.size()) {
+            delete (m_pathIDPool.back());
+            m_pathIDPool.pop_back();
         }
-        for (const auto& t : m_target_sockets) {
-            delete t;
+    }
+
+    void add_target(TargetSocket& t, uint64_t address,
+        uint64_t size, bool masked = true)
+    {
+        std::string s = nameFromSocket(t.get_base_export().name());
+        if (!m_broker.has_preset_value(s + ".address")) {
+            m_broker.set_preset_cci_value(s + ".address",
+                cci::cci_value(address));
         }
-
-	if (target_socket)
-		delete target_socket;
+        if (!m_broker.has_preset_value(s + ".size")) {
+            m_broker.set_preset_cci_value(s + ".size",
+                cci::cci_value(size));
+        }
+        if (!m_broker.has_preset_value(s + ".mask_address")) {
+            m_broker.set_preset_cci_value(s + ".mask_address",
+                cci::cci_value(masked));
+        }
+        initiator_socket.bind(t);
     }
 
-    /**
-     * @brief This method will bind a target to the router. 
-     * The router will register its address and size according to the parameters we have given it.
-     * 
-     * @param t target socket which will allow to bind the router with the target (ex: memory)
-     * @param address Address of the target
-     * @param size Size of the target
-     */
-    void add_target(TargetSocket& t, uint64_t address, uint64_t size)
+    virtual void add_initiator(InitiatorSocket& i)
     {
-        struct TargetInfo ti;
-        ti.index = m_targets.size();
-        ti.t = &t;
-        ti.address = address;
-        ti.size = size;
-        m_targets.push_back(ti);
-    }
-
-    /**
-     * @brief This method will bind a Initiator to the router. 
-     * 
-     * @param i initiator socket which will allow to bind the router with the initiator
-     */
-    void add_initiator(InitiatorSocket& i)
-    {
-        struct InitiatorInfo ii;
-        ii.index = m_initiators.size();
-        ii.i = &i;
-        m_initiators.push_back(ii);
-    }
-
-    /**
-     * @brief This method will bind a router to a child router. 
-     * The router will register its address and size according to the parameters we have given it.
-     * 
-     * @param top the parent router to bind
-     * @param address Address of the child target router
-     * @param size Size of the child target router
-     */
-    void add_top_router(Router *top, uint64_t address, uint64_t size)
-    {
-	m_top = top;
-        target_socket = new tlm_utils::simple_target_socket_tagged<Router, BUSWIDTH>(sc_core::sc_gen_unique_name("target"));
-
-	target_socket->register_b_transport(this, &Router::b_transport,255);
-        target_socket->register_transport_dbg(this, &Router::transport_dbg, 255);
-        target_socket->register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr, 255);
-	top->add_target(*target_socket, address, size);
+        // hand bind the port/exports as we are using base classes
+        (i.get_base_port())(target_socket.get_base_interface());
+        (target_socket.get_base_port())(i.get_base_interface());
     }
 };
-
+}
 #endif

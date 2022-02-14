@@ -18,6 +18,7 @@
  */
 
 #include "router-bench.h"
+#include <cci/utils/broker.h>
 
 // Simple load and store into the Target 1 and 2
 TEST_BENCH(RouterTestBenchSimple, SimpleReadWrite)
@@ -124,6 +125,9 @@ TEST_BENCH(RouterTestBenchSimple, SimpleDmiOverlap)
 
 int sc_main(int argc, char* argv[])
 {
+    cci_utils::consuming_broker broker("global_broker");
+    cci_register_broker(broker);
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

@@ -22,7 +22,7 @@ public:
 
 private:
     InitiatorTester m_initiator;
-    Router<> m_router;
+    gs::Router<> m_router;
     std::vector<TargetTester*> m_target;
 
     bool m_overlap_address = false;

@@ -22,10 +22,27 @@ The memory component consists of a simple target socket :`tlm_utils::simple_targ
 The fallback memory allows loading from a CSV file, and will print a warning for each and every access. It will also refuse all DMI requests.
 
 ## The GreenSocs component library router
-The router offers `add_target(socket, base_address, size)` as an API to add components into the address map for routing. (It is recommended that the addresses and size are CCI parameters).
+The  router is a simple device, the expectation is that initiators and targets are directly bound to the router's `target_socket` and `initiator_socket` directly (both are multi-sockets).
+The router will use CCI param's to discover the addresses and size of target devices as follows:
+ * `<target_name>.<socket_name>.address`
+ * `<target_name>.<socket_name>.size`
+ * `<target_name>.<socket_name>.mask_address`
 
-It also allows to bind multiple initiators with `add_initiator(socket)` to send multiple transactions.
-So there is no need for the bind() method offered by sockets because the add_initiator method already takes care of that.
+A default tlm2 "simple target socket" will have the name `simple_target_socket_0` by default (this can be changed in the target).
+The mask address is a boolean - targets which opt to have the router mask their address will receive addresses based from "address". Otherwise they will receive full addresses.
+
+The router also offers `add_target(socket, base_address, size)` as a convenience, this will set appropriate param's (if they are not already set), and will set `mask_address` to be `true`.
+
+Likewise the convenience function `add_initiator(socket)` allows multiple initiators to be connected to the router. Both `add_target` and `add_initiator` take care of binding.
+
+__NB Routing is perfromed in _BIND_ order. In other words, overlapping addresses are allowed, and the first to match (in bind order) will be used. This allows 'fallback' routing.__
+
+Also note that the router will add an extension called gs::PathIDExtension. This extension holds a std::vector of port index's (collectively a unique 'ID'). 
+
+The ID is meant to be composed by all the routers on the path that
+support this extension. This ID field can be used (for instance) to ascertain a unique ID for the issuing initiator.
+
+The ID extension is held in a (thread safe) pool. Thread safety can be switched of in the code.
 
 [//]: # (SECTION 100)
 ## The GreenSocs component Tests

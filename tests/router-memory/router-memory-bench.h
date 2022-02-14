@@ -37,7 +37,7 @@ public:
 
 protected:
     InitiatorTester m_initiator;
-    Router<> m_router;
+    gs::Router<> m_router;
     std::vector<Memory<>*> m_memory;
 
     /* Initiator callback */
