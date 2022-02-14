@@ -35,6 +35,7 @@
 #include <libqbox/components/irq-ctrl/hexagon-l2vic.h>
 #include <libqbox/components/timer/hexagon-qtimer.h>
 #include <libqbox/components/net/virtio-mmio-net.h>
+#include <libqbox/components/mmu/arm-smmu.h>
 
 #include <libqbox-extra/components/meta/global_peripheral_initiator.h>
 
