@@ -45,7 +45,7 @@ public:
     QemuCpuHexagon(const sc_core::sc_module_name &name,
                    QemuInstance &inst, uint32_t cfgbase, Rev_t rev, uint32_t l2vic_base_addr, uint32_t qtimer_base_addr, uint32_t exec_start_addr)
         : QemuCpu(name, inst,"v67-hexagon")
-        , irq_in("irq-in", 8, [] (const char *n, int i) {
+        , irq_in("irq_in", 8, [] (const char *n, int i) {
                     return new QemuTargetSignalSocket(n);
                 })
         , m_cfgbase(cfgbase)
@@ -53,7 +53,7 @@ public:
         , m_l2vic_base_addr(l2vic_base_addr)
         , m_qtimer_base_addr(qtimer_base_addr)
         , m_exec_start_addr(exec_start_addr)
-        , p_start_powered_off("start-powered-off", false, "Start and reset the CPU "
+        , p_start_powered_off("start_powered_off", false, "Start and reset the CPU "
                                                     "in powered-off state")
 
           /*

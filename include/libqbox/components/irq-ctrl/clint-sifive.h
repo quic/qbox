@@ -47,14 +47,14 @@ public:
 
     QemuRiscvSifiveClint(sc_core::sc_module_name nm, QemuInstance &inst)
             : QemuDevice(nm, inst, "riscv.sifive.clint")
-            , p_num_harts("num-harts", 0, "Number of HARTS this CLINT is connected to")
-            , p_sip_base("sip-base", 0, "Base address for the SIP registers")
-            , p_timecmp_base("timecmp-base", 0, "Base address for the TIMECMP registers")
-            , p_time_base("time-base", 0, "Base address for the TIME registers")
-            , p_provide_rdtime("provide-rdtime", false, "If true, provide the CPU with "
+            , p_num_harts("num_harts", 0, "Number of HARTS this CLINT is connected to")
+            , p_sip_base("sip_base", 0, "Base address for the SIP registers")
+            , p_timecmp_base("timecmp_base", 0, "Base address for the TIMECMP registers")
+            , p_time_base("time_base", 0, "Base address for the TIME registers")
+            , p_provide_rdtime("provide_rdtime", false, "If true, provide the CPU with "
                                                         "a rdtime register")
-            , p_aperture_size("aperture-size", 0, "Size of the whole CLINT address space")
-            , p_timebase_freq("timebase-freq", 10000000, "")
+            , p_aperture_size("aperture_size", 0, "Size of the whole CLINT address space")
+            , p_timebase_freq("timebase_freq", 10000000, "")
             , socket("mem", inst)
     {}
 

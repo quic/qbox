@@ -43,7 +43,7 @@ public:
         : QemuDevice(n, inst, "riscv.sifive.uart")
         , m_ext_ev(true)
         , socket("mem", inst)
-        , irq_out("irq-out")
+        , irq_out("irq_out")
     {
     }
 

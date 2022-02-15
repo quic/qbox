@@ -337,7 +337,7 @@ public:
     QemuInitiatorSocket(const char *name, QemuInitiatorIface &initiator, QemuInstance &inst)
         : TlmInitiatorSocket(name)
         , m_inst(inst)
-        , m_on_sysc(sc_core::sc_gen_unique_name("initiator-run-on-sysc"))
+        , m_on_sysc(sc_core::sc_gen_unique_name("initiator_run_on_sysc"))
         , m_initiator(initiator)
     {
         TlmInitiatorSocket::bind(*static_cast<tlm::tlm_bw_transport_if<>*>(this));

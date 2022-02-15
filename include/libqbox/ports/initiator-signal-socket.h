@@ -132,7 +132,7 @@ protected:
 public:
     QemuInitiatorSignalSocket(const char *name)
         : InitiatorSignalSocket<bool>(name)
-        , m_on_sysc(sc_core::sc_gen_unique_name("run-on-sysc"))
+        , m_on_sysc(sc_core::sc_gen_unique_name("run_on_sysc"))
     {}
 
     /**
@@ -175,7 +175,7 @@ public:
      * @details This method initializes the socket using the given QEMU
      * SysBusDevice (SBD) and the corresponding GPIO index) in this SBD. See
      * the QEMU API and the SBD you want to wrap to know what index to use
-     * here. This is only for "sysbus-irq", if you want to wrap a normal gpio,
+     * here. This is only for "sysbus_irq", if you want to wrap a normal gpio,
      * just use init or init_named.
      *
      * @param[in] sbd The QEMU SysBusDevice

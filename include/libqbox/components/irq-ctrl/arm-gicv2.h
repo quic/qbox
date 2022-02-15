@@ -45,8 +45,8 @@ public:
 
     QemuArmGicv2m(const sc_core::sc_module_name &name, QemuInstance &inst)
         : QemuDevice(name, inst, "arm-gicv2m")
-        , p_base_spi("base-spi", 0, "Start index of gic's spis")
-        , p_num_spis("num-spis", 0, "Number of gic's spis")
+        , p_base_spi("base_spi", 0, "Start index of gic's spis")
+        , p_num_spis("num_spis", 0, "Number of gic's spis")
         , spi_out("spi_out", p_num_spis)
         , iface("iface", inst)
     {
@@ -125,30 +125,30 @@ public:
 
     QemuArmGicv2(const sc_core::sc_module_name &name, QemuInstance &inst)
         : QemuDevice(name, inst, "arm_gic")
-        , p_num_cpu("num-cpu", 0, "Number of CPU interfaces")
-        , p_num_spi("num-spi", 0, "Number of shared peripheral interrupts")
+        , p_num_cpu("num_cpu", 0, "Number of CPU interfaces")
+        , p_num_spi("num_spi", 0, "Number of shared peripheral interrupts")
         , p_revision("revision", 2, "Revision of the GIC (1 -> v1, 2 -> v2, 0 -> 11MPCore)")
-        , p_has_virt_extensions("has-virt-extensions", false, "Enable virtualization extensions "
+        , p_has_virt_extensions("has_virt_extensions", false, "Enable virtualization extensions "
                                                               "(v2 only)")
-        , p_has_security_extensions("has-security-extensions", false, "Enable security extensions "
+        , p_has_security_extensions("has_security_extensions", false, "Enable security extensions "
                                                                       "(v1 and v2 only)")
-        , p_num_prio_bits("num-prio-bits", 8, "Number of priority bits implemented by this GIC")
-        , p_has_msi_support("has-msi-support", false, "Enable gicv2m extension to support MSI")
+        , p_num_prio_bits("num_prio_bits", 8, "Number of priority bits implemented by this GIC")
+        , p_has_msi_support("has_msi_support", false, "Enable gicv2m extension to support MSI")
         , m_gicv2m(NULL)
-        , dist_iface("dist-iface", inst)
-        , cpu_iface("cpu-iface", inst)
-        , virt_iface("virt-iface", inst)
-        , vcpu_iface("vcpu-iface", inst)
-        , v2m_iface("v2m-iface")
-        , spi_in("spi-in", p_num_spi)
-        , ppi_in("ppi-in-cpu", p_num_cpu, [] (const char *n, size_t i) {
+        , dist_iface("dist_iface", inst)
+        , cpu_iface("cpu_iface", inst)
+        , virt_iface("virt_iface", inst)
+        , vcpu_iface("vcpu_iface", inst)
+        , v2m_iface("v2m_iface")
+        , spi_in("spi_in", p_num_spi)
+        , ppi_in("ppi_in_cpu", p_num_cpu, [] (const char *n, size_t i) {
                      return new sc_core::sc_vector<QemuTargetSignalSocket>(n, NUM_PPI);
                  })
-        , irq_out("irq-out", p_num_cpu)
-        , fiq_out("fiq-out", p_num_cpu)
-        , virq_out("virq-out", p_num_cpu)
-        , vfiq_out("vfiq-out", p_num_cpu)
-        , maintenance_out("maintenance-out", p_num_cpu)
+        , irq_out("irq_out", p_num_cpu)
+        , fiq_out("fiq_out", p_num_cpu)
+        , virq_out("virq_out", p_num_cpu)
+        , vfiq_out("vfiq_out", p_num_cpu)
+        , maintenance_out("maintenance_out", p_num_cpu)
     {
         if (p_has_msi_support) {
             m_gicv2m = new QemuArmGicv2m("v2m", inst);

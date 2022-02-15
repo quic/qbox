@@ -62,23 +62,23 @@ public:
 
     QemuArmGicv3(const sc_core::sc_module_name &name, QemuInstance &inst, unsigned num_cpus = 0)
         : QemuDevice(name, inst, "arm-gicv3")
-        , p_num_cpu("num-cpu", num_cpus, "Number of CPU interfaces")
-        , p_num_spi("num-spi", 0, "Number of shared peripheral interrupts")
+        , p_num_cpu("num_cpu", num_cpus, "Number of CPU interfaces")
+        , p_num_spi("num_spi", 0, "Number of shared peripheral interrupts")
         , p_revision("revision", 3, "Revision of the GIC (3 -> v3, the only supported revision)")
-        , p_redist_region("redist-region", std::vector<unsigned int>({}),
+        , p_redist_region("redist_region", std::vector<unsigned int>({}),
                           "Redistributor regions configuration")
-        , p_has_security_extensions("has-security-extensions", false, "Enable security extensions")
-        , dist_iface("dist-iface", inst)
-        , redist_iface("redist-iface", p_redist_region.get_value().size(),
+        , p_has_security_extensions("has_security_extensions", false, "Enable security extensions")
+        , dist_iface("dist_iface", inst)
+        , redist_iface("redist_iface", p_redist_region.get_value().size(),
                        [&inst] (const char *n, int i) { return new QemuTargetSocket<>(n, inst); })
-        , spi_in("spi-in", p_num_spi)
-        , ppi_in("ppi-in-cpu", p_num_cpu, [] (const char *n, size_t i) {
+        , spi_in("spi_in", p_num_spi)
+        , ppi_in("ppi_in_cpu", p_num_cpu, [] (const char *n, size_t i) {
                      return new sc_core::sc_vector<QemuTargetSignalSocket>(n, NUM_PPI);
                  })
-        , irq_out("irq-out", p_num_cpu)
-        , fiq_out("fiq-out", p_num_cpu)
-        , virq_out("virq-out", p_num_cpu)
-        , vfiq_out("vfiq-out", p_num_cpu)
+        , irq_out("irq_out", p_num_cpu)
+        , fiq_out("fiq_out", p_num_cpu)
+        , virq_out("virq_out", p_num_cpu)
+        , vfiq_out("vfiq_out", p_num_cpu)
     {
     }
 

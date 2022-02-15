@@ -92,25 +92,25 @@ public:
 
     QemuCpuArmCortexA53(sc_core::sc_module_name name, QemuInstance &inst)
         : QemuCpu(name, inst, "cortex-a53-arm")
-        , p_mp_affinity("mp-affinity", 0, "Multi-processor affinity value")
+        , p_mp_affinity("mp_affinity", 0, "Multi-processor affinity value")
         , p_has_el2("has_el2", true, "ARM virtualization extensions")
         , p_has_el3("has_el3", true, "ARM secure-mode extensions")
-        , p_start_powered_off("start-powered-off", false, "Start and reset the CPU "
+        , p_start_powered_off("start_powered_off", false, "Start and reset the CPU "
                                                           "in powered-off state")
-        , p_psci_conduit("psci-conduit", "disabled", "Set the QEMU PSCI conduit: "
+        , p_psci_conduit("psci_conduit", "disabled", "Set the QEMU PSCI conduit: "
                                                      "disabled->no conduit, "
                                                      "hvc->through hvc call, "
                                                      "smc->through smc call")
         , p_rvbar("rvbar", 0ull, "Reset vector base address register value")
 
-        , irq_in("irq-in")
-        , fiq_in("fiq-in")
-        , virq_in("virq-in")
-        , vfiq_in("vfiq-in")
-        , irq_timer_phys_out("irq-timer-phys-out")
-        , irq_timer_virt_out("irq-timer-virt-out")
-        , irq_timer_hyp_out("irq-timer-hyp-out")
-        , irq_timer_sec_out("irq-timer-sec-out")
+        , irq_in("irq_in")
+        , fiq_in("fiq_in")
+        , virq_in("virq_in")
+        , vfiq_in("vfiq_in")
+        , irq_timer_phys_out("irq_timer_phys_out")
+        , irq_timer_virt_out("irq_timer_virt_out")
+        , irq_timer_hyp_out("irq_timer_hyp_out")
+        , irq_timer_sec_out("irq_timer_sec_out")
     {
         m_external_ev |= irq_in->default_event();
         m_external_ev |= fiq_in->default_event();

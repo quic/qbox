@@ -46,9 +46,9 @@ public:
         QemuNvicArmv7m(const sc_core::sc_module_name& n, QemuInstance& inst)
             : QemuDevice(n, inst, "armv7m_nvic")
             , before_end_of_elaboration_done(false)
-            , p_num_irq("num-irq", 64, "Number of external interrupts")
+            , p_num_irq("num_irq", 64, "Number of external interrupts")
             , socket("mem", inst)
-            , irq_in("irq-in", p_num_irq)
+            , irq_in("irq_in", p_num_irq)
         {
         }
 
@@ -99,7 +99,7 @@ public:
     CpuArmCortexM7(sc_core::sc_module_name name, QemuInstance& inst)
         : QemuCpu(name, inst, "cortex-m7-arm")
         , m_nvic("nvic", inst)
-        , p_start_powered_off("start-powered-off", false, "Start and reset the CPU "
+        , p_start_powered_off("start_powered_off", false, "Start and reset the CPU "
                                                           "in powered-off state")
     {
     }

@@ -45,10 +45,10 @@ public:
         , p_num_outputs(8) /* this is hardcoded in qemu */
         , socket("mem", inst)
         , socket_fast("fastmem", inst)
-        , irq_in("irq-in", p_num_sources, [] (const char *n, int i) {
+        , irq_in("irq_in", p_num_sources, [] (const char *n, int i) {
                     return new QemuTargetSignalSocket(n);
                  })
-        , irq_out("irq-out", p_num_outputs, [] (const char *n, int i) {
+        , irq_out("irq_out", p_num_outputs, [] (const char *n, int i) {
                     return new QemuInitiatorSignalSocket(n);
                  })
     {}

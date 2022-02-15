@@ -44,7 +44,7 @@ public:
         , p_regshift("regshift", 2, "Shift to apply to the MMIO register map "
                                     "(2 means one reg = 32 bits)")
         , socket("mem", inst)
-        , irq_out("irq-out")
+        , irq_out("irq_out")
     {
     }
 
