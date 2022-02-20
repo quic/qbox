@@ -133,6 +133,10 @@ public:
         case qemu::MemoryRegionOps::MemTxError:
             trans.set_response_status(tlm::TLM_GENERIC_ERROR_RESPONSE);
             break;
+
+        default:
+            trans.set_response_status(tlm::TLM_COMMAND_ERROR_RESPONSE);
+            break;
         }
 
         pop_current_cpu(current_cpu_save);

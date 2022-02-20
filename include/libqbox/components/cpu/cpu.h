@@ -426,8 +426,6 @@ public:
             m_inst.get().vm_stop_paused();
             m_inst.get().unlock_iothread();
         }
-
-        m_qk->start();
     }
 
     virtual void start_of_simulation() override
@@ -440,6 +438,7 @@ public:
             rearm_deadline_timer();
             m_cpu.kick();
         }
+        m_qk->start();
     }
 
     /* QemuInitiatorIface  */
