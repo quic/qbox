@@ -4,7 +4,11 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
+<<<<<<< HEAD
   GIT_TAG 0a63b02f2a5811bcb6fe41af46d7cd757bc12bde
+=======
+  GIT_TAG v4.0.0
+>>>>>>> 6977e34 (Using new router/memory, cleanup of main, and config file)
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
@@ -48,7 +52,7 @@ CPMDeclarePackage(libqemu
 # base-components
 CPMDeclarePackage(base-components
   NAME base-components
-  GIT_TAG v2.2.2
+  GIT_TAG v3.0.0
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/base-components.git
   GIT_SHALLOW on
 )

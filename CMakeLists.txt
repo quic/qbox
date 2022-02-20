@@ -25,7 +25,6 @@ gs_addpackage(qemu/libqbox)
 gs_addpackage(greensocs/components/base-components)
 gs_addpackage(qemu/extra-components)
 gs_addpackage(customers/qualcomm/ipcc)
-gs_addpackage(greensocs/components/elf-loader)
 add_executable(vp
     src/main.cc
 )
@@ -37,7 +36,6 @@ target_link_libraries(vp
     GreenSocs::qbox-extra
     GreenSocs::base-components
     GreenSocs::qcom-ipcc
-    GreenSocs::elf-loader
 )
 
 gs_enable_testing()
