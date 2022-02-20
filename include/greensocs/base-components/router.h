@@ -24,7 +24,7 @@
 #include <vector>
 
 #define THREAD_SAFE true
-#if THREAD_SAFE==true
+#if THREAD_SAFE == true
 #include <mutex>
 #endif
 
@@ -53,6 +53,7 @@ class PathIDExtension : public tlm::tlm_extension<PathIDExtension>, public std::
 public:
     PathIDExtension() = default;
     PathIDExtension(const PathIDExtension&) = default;
+
 public:
     virtual tlm_extension_base* clone() const override
     {
@@ -78,9 +79,9 @@ class Router : public sc_core::sc_module {
 private:
     template <typename MOD>
     class multi_passthrough_initiator_socket_spying
-        : public tlm_utils::multi_passthrough_initiator_socket<MOD> {
+        : public tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH> {
         using typename tlm_utils::multi_passthrough_initiator_socket<
-            MOD>::base_target_socket_type;
+            MOD, BUSWIDTH>::base_target_socket_type;
 
         const std::function<void(std::string)> register_cb;
 
@@ -88,7 +89,7 @@ private:
         multi_passthrough_initiator_socket_spying(const char* name,
             const std::function<void(std::string)>& f)
             : tlm_utils::multi_passthrough_initiator_socket<
-                MOD>::multi_passthrough_initiator_socket(name)
+                MOD, BUSWIDTH>::multi_passthrough_initiator_socket(name)
             , register_cb(f)
         {
         }
@@ -121,14 +122,18 @@ private:
         ti.index = targets.size();
         targets.push_back(ti);
     }
+
+public:
+// make the sockets public for binding
     typedef multi_passthrough_initiator_socket_spying<Router<BUSWIDTH>>
         initiator_socket_type;
     initiator_socket_type initiator_socket;
     tlm_utils::multi_passthrough_target_socket<Router<BUSWIDTH>> target_socket;
 
+private:
     std::vector<target_info> targets;
-    std::vector<PathIDExtension *> m_pathIDPool; // at most one per thread!
-#if THREAD_SAFE==true
+    std::vector<PathIDExtension*> m_pathIDPool; // at most one per thread!
+#if THREAD_SAFE == true
     std::mutex m_pool_mutex;
 #endif
     void stamp_txn(int id, tlm::tlm_generic_payload& txn)
@@ -136,7 +141,7 @@ private:
         PathIDExtension* ext;
         txn.get_extension(ext);
         if (ext == nullptr) {
-#if THREAD_SAFE==true
+#if THREAD_SAFE == true
             std::lock_guard<std::mutex> l(m_pool_mutex);
 #endif
             if (m_pathIDPool.size() == 0) {
@@ -157,7 +162,7 @@ private:
         assert(ext->back() == id);
         ext->pop_back();
         if (ext->size() == 0) {
-#if THREAD_SAFE==true
+#if THREAD_SAFE == true
             std::lock_guard<std::mutex> l(m_pool_mutex);
 #endif
             txn.clear_extension(ext);
@@ -251,8 +256,12 @@ private:
     void invalidate_direct_mem_ptr(int id, sc_dt::uint64 start,
         sc_dt::uint64 end)
     {
-        sc_dt::uint64 bw_start_range = compose_address(id, start);
-        sc_dt::uint64 bw_end_range = compose_address(id, end);
+        sc_dt::uint64 bw_start_range = start;
+        sc_dt::uint64 bw_end_range = end;
+        if (targets[id]->mask_addr) {
+            bw_start_range = compose_address(id, start);
+            bw_end_range = compose_address(id, end);
+        }
 
         for (int i = 0; i < target_socket.size(); i++) {
             target_socket[i]->invalidate_direct_mem_ptr(bw_start_range, bw_end_range);
@@ -289,23 +298,34 @@ protected:
                 SC_REPORT_ERROR("Router",
                     ("Can't find " + ti.name + ".address").c_str());
             }
+            uint64_t address = m_broker.get_preset_cci_value(ti.name + ".address").get_uint64();
+            m_broker.lock_preset_value(ti.name + ".address");
+            m_broker.ignore_unconsumed_preset_values(
+                [ti](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first==(ti.name + ".address"); });
             if (!m_broker.has_preset_value(ti.name + ".size")) {
                 SC_REPORT_ERROR("Router",
                     ("Can't find " + ti.name + ".size").c_str());
             }
-            bool mask = false;
-            if (m_broker.has_preset_value(ti.name + ".mask_address")) {
-                mask = m_broker.get_preset_cci_value(ti.name + ".mask_address").get_bool();
-            }
-            uint64_t address = m_broker.get_preset_cci_value(ti.name + ".address").get_uint64();
             uint64_t size = m_broker.get_preset_cci_value(ti.name + ".size").get_uint64();
+            m_broker.lock_preset_value(ti.name + ".size");
+            m_broker.ignore_unconsumed_preset_values(
+                [ti](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first==(ti.name + ".size"); });
+
+            bool mask = true;
+            if (m_broker.has_preset_value(ti.name + ".relative_addresses")) {
+                mask = m_broker.get_preset_cci_value(ti.name + ".relative_addresses").get_bool();
+                m_broker.lock_preset_value(ti.name + ".relative_addresses");
+                m_broker.ignore_unconsumed_preset_values(
+                    [ti](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first==(ti.name + ".relative_addresses"); });
+            }
+
             std::stringstream info;
             info << "Address map " << ti.name + " at"
                  << " address "
                  << "0x" << std::hex << address
                  << " size "
                  << "0x" << std::hex << size
-                 << (mask ? " (with address masked) " : "");
+                 << (mask ? " (with relative address) " : "");
             SC_REPORT_INFO("Router", info.str().c_str());
             ti.address = address;
             ti.size = size;
@@ -351,8 +371,8 @@ public:
             m_broker.set_preset_cci_value(s + ".size",
                 cci::cci_value(size));
         }
-        if (!m_broker.has_preset_value(s + ".mask_address")) {
-            m_broker.set_preset_cci_value(s + ".mask_address",
+        if (!m_broker.has_preset_value(s + ".relative_addresses")) {
+            m_broker.set_preset_cci_value(s + ".relative_addresses",
                 cci::cci_value(masked));
         }
         initiator_socket.bind(t);

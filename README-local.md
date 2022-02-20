@@ -11,27 +11,78 @@ It also has several unit tests for memory, router and exclusive monitor.
 The base-components library depends on the libraries : Libgsutls, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
 
 [//]: # (SECTION 50)
+
+
+## The GreenSocs component library loader
+The loader components exposes a single initiator socket (`initiator_socket`) which should be bound to the bus fabric through which it's intended to load memory components.
+The loader can be confgured to load the following:
+ * elf files\
+Configure parameter: `elf_file`\
+function: `void elf_load(const std::string& path)`\
+ _Note, no address or offset is possible, as they are built into the elf file. If this is specified within the context of a memory, the addresses will be offset within the memory, this is probably NOT what is desired._
+
+ * bin_file\
+  Configure parameter `bin_file`\
+  options: `address` (absolute address), or `offset` (relative address)\
+  function: `void file_load(std::string filename, uint64_t addr)`
+
+ * csv_file (32 bit data)\
+ Configure parameter `csv_file`\
+ options: `address` (absolute address), or `offset` (relative address)\
+        `addr_str` : header in the CSV file for the column used for addresses\
+        `value_str`: header in the CSV file for the column used for values\
+        `byte_swap`: whether bytes should be swapped\
+  function: `void csv_load(std::string filename, uint64_t offset, std::string addr_str std::string value_str, bool byte_swap)`
+
+* param\
+Configurable parameter `param`\
+A configuration paramter that must be of type `std::string` is loaded into memory. The parameter must be realized such that a typed handled can be obtained.\
+options: `address` (absolute address), or `offset` (relative address)\
+function: `void str_load(std::string data, uint64_t addr)`
+
+* data (32 bit data)\
+Configure parameter `data`\
+options: `byte_swap`: whether bytes should be swapped\
+The data parameter is expected to be an array with index's numbered. The indexes will be used to address the memory.\
+No function access is provided.
+
+* ptr\
+No config parameter is provided.\
+function `void ptr_load(uint8_t *data, uint64_t addr, uint64_t len)`
+
+as an example, a configuration may look like
+`loader = {{elf_file="my_elf.elf"}, {data={0x1,0x2}, address = 0x30}}`
+
 ## The GreenSocs component library memory
-The memory component allows you to add memory when creating an object of type `Memory("name",size)`.
+The memory component allows you to add memory when creating an object of type `Memory("name")`.
+The memory should be bound with it's tarket socket:
+`tlm_utils::simple_target_socket<Memory> socket`
 
-The memory component consists of a simple target socket :`tlm_utils::simple_target_socket<Memory> socket`
+The memory accepts the following configuration options:
+`read_only`: Read Only Memory (default false)\
+`dmi_allow`: DMI allowed (default true)\
+`verbose`: Switch on verbose logging (default false)\
+`latency`: Latency reported for DMI access (default 10 NS)\
+`map_file`: file used to map this memory (such that it can be preserved through runs) (default,none)
 
-## The GreenSocs component library fallback memory
-The fallback memory component allows you to add memory when creating an object of type `FallbackMemory("name",size)`.
-The memory component consists of a simple target socket :`tlm_utils::simple_target_socket<Memory> socket`
-The fallback memory allows loading from a CSV file, and will print a warning for each and every access. It will also refuse all DMI requests.
+The memory's size is set by the address space allocated to it on it's target socket.
+An optional size can be provided to the constructor.
+The size set by the configurator will take precedence. The size given to the constructor will take precedence over that set on the target socket at bind time.
+
+The memory has a 'loader' built in. configuration can be applied to `memory_name.load`. In this case, all addresses are assumed to be offsets.
+
 
 ## The GreenSocs component library router
 The  router is a simple device, the expectation is that initiators and targets are directly bound to the router's `target_socket` and `initiator_socket` directly (both are multi-sockets).
 The router will use CCI param's to discover the addresses and size of target devices as follows:
  * `<target_name>.<socket_name>.address`
  * `<target_name>.<socket_name>.size`
- * `<target_name>.<socket_name>.mask_address`
+ * `<target_name>.<socket_name>.relative_addresses`
 
 A default tlm2 "simple target socket" will have the name `simple_target_socket_0` by default (this can be changed in the target).
-The mask address is a boolean - targets which opt to have the router mask their address will receive addresses based from "address". Otherwise they will receive full addresses.
+The `relative_addresses` flag is a boolean - targets which opt to have the router mask their address will receive addresses based from the IP base "address". Otherwise they will receive full addresses. The defaut is to receive relative addresses.
 
-The router also offers `add_target(socket, base_address, size)` as a convenience, this will set appropriate param's (if they are not already set), and will set `mask_address` to be `true`.
+The router also offers `add_target(socket, base_address, size)` as a convenience, this will set appropriate param's (if they are not already set), and will set `relative_addresses` to be `true`.
 
 Likewise the convenience function `add_initiator(socket)` allows multiple initiators to be connected to the router. Both `add_target` and `add_initiator` take care of binding.
 

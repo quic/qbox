@@ -38,7 +38,7 @@ public:
 protected:
     InitiatorTester m_initiator;
     gs::Router<> m_router;
-    std::vector<Memory<>*> m_memory;
+    std::vector<gs::Memory<>*> m_memory;
 
     /* Initiator callback */
     void invalidate_direct_mem_ptr(uint64_t start_range, uint64_t end_range)
@@ -94,7 +94,7 @@ public:
         for (int i = 0; i < NB_MEMORY; i++) {
             char txt[20];
             sprintf(txt, "Memory_%d", i);
-            m_memory.push_back(new Memory<>(txt, size[i]));
+            m_memory.push_back(new gs::Memory<>(txt, size[i]));
             memory_size.push_back(address[i] + size[i]);
         }
 

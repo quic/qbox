@@ -24,6 +24,7 @@
 #include <tlm_utils/simple_target_socket.h>
 
 #include "memory.h"
+#include "loader.h"
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/test-bench.h>
 
@@ -33,7 +34,7 @@ public:
 
 protected:
     InitiatorTester m_initiator;
-    Memory<> m_target;
+    gs::Memory<> m_target;
 
     /* Initiator callback */
     void invalidate_direct_mem_ptr(uint64_t start_range, uint64_t end_range)
