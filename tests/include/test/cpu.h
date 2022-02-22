@@ -209,6 +209,15 @@ public:
             }
         }
     }
+
+    void map_halt_to_cpus(sc_core::sc_vector<sc_core::sc_out<bool>> &halt){
+
+        int i = 0;
+
+        for (auto &cpu: m_cpus) {
+                halt[i++].bind(cpu.halt);
+            }
+        }
 };
 
 #endif

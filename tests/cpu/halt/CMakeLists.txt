@@ -1,0 +1,1 @@
+qbox_add_cpu_test(halt-tests 30 halt-tests.cc)

@@ -26,6 +26,7 @@
 
 #include <tlm>
 #include <tlm_utils/simple_initiator_socket.h>
+#include <tlm_utils/simple_target_socket.h>
 #include <cci_configuration>
 
 #include <greensocs/libgssync.h>
@@ -33,6 +34,7 @@
 #include "libqbox/components/device.h"
 #include "libqbox/ports/initiator.h"
 #include "libqbox/tlm-extensions/qemu-cpu-hint.h"
+#include "libqbox/ports/target-signal-socket.h"
 
 class QemuCpu : public QemuDevice, public QemuInitiatorIface {
 protected:
@@ -307,12 +309,14 @@ public:
 
     /* The default memory socket. Mapped to the default CPU address space in QEMU */
     QemuInitiatorSocket<> socket;
+    TargetSignalSocket<bool> halt;
 
     SC_HAS_PROCESS(QemuCpu);
 
     QemuCpu(const sc_core::sc_module_name &name, QemuInstance &inst,
             const std::string &type_name)
         : QemuDevice(name, inst, (type_name + "-cpu").c_str())
+        , halt("halt")
         , m_qemu_kick_ev(false)
         , m_signaled(false)
         , p_icount("icount", false, "Enable virtual instruction counter")
@@ -321,7 +325,12 @@ public:
         , p_sync_policy("sync-policy", "multithread-quantum", "Synchronization Policy to use")
         , socket("mem", *this, inst)
     {
+        using namespace std::placeholders;
+
         m_external_ev |= m_qemu_kick_ev;
+
+        auto cb = std::bind(&QemuCpu::halt_cb, this, _1);
+           halt.register_value_changed_cb(cb);
 
         create_quantum_keeper();
         set_qemu_instance_options();
@@ -389,6 +398,10 @@ public:
                                                  this));
 
         m_cpu_hint_ext.set_cpu(m_cpu);
+    }
+
+    void halt_cb(const bool &val){
+        m_cpu.halt(val);
     }
 
     virtual void end_of_elaboration() override
