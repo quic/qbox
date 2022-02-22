@@ -29,6 +29,7 @@
 #include <tlm_utils/simple_target_socket.h>
 
 #include <greensocs/gsutils/tlm-extensions/exclusive-access.h>
+#include <greensocs/base-components/pathid_extension.h>
 
 /**
  * @class ExclusiveMonitor
@@ -56,7 +57,7 @@
  */
 class ExclusiveMonitor : public sc_core::sc_module {
 private:
-    using InitiatorId = ExclusiveAccessTlmExtension::InitiatorId;
+    using InitiatorId = gs::PathIDExtension;
 
     class Region {
     public:
@@ -85,6 +86,13 @@ private:
 
     std::map<uint64_t, RegionPtr> m_regions;
     std::map<InitiatorId, RegionPtr> m_regions_by_id;
+
+    const InitiatorId get_initiator_id(const tlm::tlm_generic_payload &txn)
+    {
+        gs::PathIDExtension* ext;
+        txn.get_extension(ext);
+        return *ext;
+    }
 
     RegionPtr find_region(const tlm::tlm_generic_payload &txn)
     {
@@ -158,7 +166,7 @@ private:
     void handle_exclusive_load(const tlm::tlm_generic_payload &txn,
                                const ExclusiveAccessTlmExtension &ext)
     {
-        const InitiatorId &id = ext.get_initiator_id();
+        const InitiatorId &id = get_initiator_id(txn);
         RegionPtr region = find_region(txn);
 
         if (region) {
@@ -186,7 +194,7 @@ private:
             return false;
         }
 
-        if (region->id != ext.get_initiator_id()) {
+        if (region->id != get_initiator_id(txn)) {
             /* This region is locked by another initiator */
             ext.set_exclusive_store_failure();
             return false;

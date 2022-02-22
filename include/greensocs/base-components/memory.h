@@ -239,9 +239,9 @@ protected:
 #endif
     }
 
-    gs::Loader<> m_loader;
-
 public:
+    gs::Loader<> load;
+
     tlm_utils::simple_target_socket<Memory, BUSWIDTH> socket;
     cci::cci_param<bool> p_rom;
     cci::cci_param<bool> p_dmi;
@@ -261,7 +261,7 @@ public:
         , p_verbose("verbose", false, "Switch on verbose logging")
         , p_latency("latency", sc_core::sc_time(10, sc_core::SC_NS), "Latency reported for DMI access")
         , p_mapfile("map_file", "", "(optional) file to map this memory")
-        , m_loader(
+        , load(
               "load",
               [&](const uint8_t* data, uint64_t offset, uint64_t len) -> void { write(data, offset, len); })
     {

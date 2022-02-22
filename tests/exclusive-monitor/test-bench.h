@@ -30,10 +30,11 @@
 #include <greensocs/gsutils/tests/target-tester.h>
 
 #include "greensocs/base-components/misc/exclusive-monitor.h"
+#include <greensocs/base-components/router.h>
 
 class ExclusiveMonitorTestBench : public TestBench {
 public:
-    static constexpr size_t TARGET_MMIO_SIZE = 1024;
+    static constexpr uint64_t TARGET_MMIO_SIZE = 1024;
 
     using TlmResponseStatus = InitiatorTester::TlmResponseStatus;
     using TlmGenericPayload = InitiatorTester::TlmGenericPayload;
@@ -42,8 +43,10 @@ public:
 private:
     ExclusiveMonitor m_monitor;
 
+    sc_core::sc_vector<InitiatorTester> m_initiators;
     InitiatorTester m_initiator;
     TargetTester m_target;
+    gs::Router<> m_router;
 
     bool m_last_dmi_inval_valid = false;
     uint64_t m_last_dmi_inval_start;
@@ -113,14 +116,14 @@ private:
         TlmResponseStatus ret;
 
         ExclusiveAccessTlmExtension ext;
-        ext.add_hop(id);
-
         txn.set_extension(&ext);
 
+// We could add the path ID here, but we will test the router's ability to do that.
+// So the ID will effectively be given by the initiator and it's socket being used.
         if (is_load) {
-            ret = m_initiator.do_read_with_txn_and_ptr(txn, addr, nullptr, len);
+            ret = m_initiators[id].do_read_with_txn_and_ptr(txn, addr, nullptr, len);
         } else {
-            ret = m_initiator.do_write_with_txn_and_ptr(txn, addr, nullptr, len);
+            ret = m_initiators[id].do_write_with_txn_and_ptr(txn, addr, nullptr, len);
         }
 
         check_txn(is_load, addr, len, ret);
@@ -223,15 +226,27 @@ protected:
         return m_initiator.get_last_dmi_hint();
     }
 
+    bool get_last_dmi_hint(int id) const
+    {
+        return m_initiators[id].get_last_dmi_hint();
+    }
+
 public:
     ExclusiveMonitorTestBench(const sc_core::sc_module_name &n)
         : TestBench(n)
         , m_monitor("exclusive-monitor")
-        , m_initiator("initiator-tester")
+        , m_initiators("initiator-testers",10)
+        , m_initiator("initiator_tester")
         , m_target("target-tester", TARGET_MMIO_SIZE)
+        , m_router("router")
     {
         using namespace std::placeholders;
 
+        for (auto &i : m_initiators) {
+            i.register_invalidate_direct_mem_ptr(
+                std::bind(&ExclusiveMonitorTestBench::invalidate_direct_mem_ptr, this, _1, _2));
+            i.socket.bind(m_router.target_socket);
+        }
         m_initiator.register_invalidate_direct_mem_ptr(
             std::bind(&ExclusiveMonitorTestBench::invalidate_direct_mem_ptr, this, _1, _2));
         m_target.register_read_cb(
@@ -241,7 +256,8 @@ public:
         m_target.register_get_direct_mem_ptr_cb(
             std::bind(&ExclusiveMonitorTestBench::get_direct_mem_ptr, this, _1, _2));
 
-        m_monitor.front_socket.bind(m_initiator.socket);
+        m_initiator.socket.bind(m_router.target_socket);
+        m_router.add_target(m_monitor.front_socket, 0, TARGET_MMIO_SIZE+1);
         m_monitor.back_socket.bind(m_target.socket);
     }
 

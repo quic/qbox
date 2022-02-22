@@ -18,6 +18,7 @@
  */
 
 #include "test-bench.h"
+#include <cci/utils/broker.h>
 
 /*
  * Regular load and stores. Check that the monitor does not introduce bugs when
@@ -252,22 +253,22 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclLockDmiHint)
 
     /* Lock a region, hint should be false */
     do_excl_load_and_check(0, 128, 8, true);
-    ASSERT_FALSE(get_last_dmi_hint());
+    ASSERT_FALSE(get_last_dmi_hint(0));
 
     /* Unlock it, hint should be true */
     do_excl_store_and_check(0, 128, 8, true);
-    ASSERT_TRUE(get_last_dmi_hint());
+    ASSERT_TRUE(get_last_dmi_hint(0));
 
     /* Relock the region, hint should be false */
     do_excl_load_and_check(0, 128, 8, true);
-    ASSERT_FALSE(get_last_dmi_hint());
+    ASSERT_FALSE(get_last_dmi_hint(0));
 
     /*
      * Already locked, the exclusive load has no effect but the hint should
      * still be false.
      */
     do_excl_load_and_check(0, 132, 8, false);
-    ASSERT_FALSE(get_last_dmi_hint());
+    ASSERT_FALSE(get_last_dmi_hint(0));
 
     /* Regular load, region locked, hint should be false */
     do_load_and_check(124, 16);
@@ -288,6 +289,9 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclLockDmiHint)
 
 int sc_main(int argc, char *argv[])
 {
+    cci_utils::consuming_broker broker("global_broker");
+    cci_register_broker(broker);
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

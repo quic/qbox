@@ -35,37 +35,12 @@
 #include <tlm_utils/multi_passthrough_initiator_socket.h>
 #include <tlm_utils/multi_passthrough_target_socket.h>
 
+#include <greensocs/base-components/pathid_extension.h>
+
 namespace gs {
 namespace router {
     static const char* log_enabled = std::getenv("GS_LOG");
 }
-
-/**
- * @class Path recording TLM extension
- *
- * @brief Path recording TLM extension
- *
- * @details Embeds an  ID field in the txn, which is populated as the network
- * is traversed - see README.
- */
-
-class PathIDExtension : public tlm::tlm_extension<PathIDExtension>, public std::vector<int> {
-public:
-    PathIDExtension() = default;
-    PathIDExtension(const PathIDExtension&) = default;
-
-public:
-    virtual tlm_extension_base* clone() const override
-    {
-        return new PathIDExtension(*this);
-    }
-
-    virtual void copy_from(const tlm_extension_base& ext) override
-    {
-        const PathIDExtension& other = static_cast<const PathIDExtension&>(ext);
-        *this = other;
-    }
-};
 
 template <unsigned int BUSWIDTH = 32>
 class Router : public sc_core::sc_module {
@@ -258,7 +233,7 @@ private:
     {
         sc_dt::uint64 bw_start_range = start;
         sc_dt::uint64 bw_end_range = end;
-        if (targets[id]->mask_addr) {
+        if (targets[id].mask_addr) {
             bw_start_range = compose_address(id, start);
             bw_end_range = compose_address(id, end);
         }
@@ -282,6 +257,7 @@ private:
     inline sc_dt::uint64 compose_address(unsigned int index,
         sc_dt::uint64 address)
     {
+        assert(address < targets[index].size);
         return targets[index].address + address;
     }
 
@@ -292,6 +268,7 @@ protected:
         target_socket.register_transport_dbg(this, &Router::transport_dbg);
         target_socket.register_get_direct_mem_ptr(this,
             &Router::get_direct_mem_ptr);
+        initiator_socket.register_invalidate_direct_mem_ptr(this, &Router::invalidate_direct_mem_ptr);
 
         for (auto& ti : targets) {
             if (!m_broker.has_preset_value(ti.name + ".address")) {
@@ -359,7 +336,7 @@ public:
         }
     }
 
-    void add_target(TargetSocket& t, uint64_t address,
+    void add_target(TargetSocket& t, const uint64_t address,
         uint64_t size, bool masked = true)
     {
         std::string s = nameFromSocket(t.get_base_export().name());
