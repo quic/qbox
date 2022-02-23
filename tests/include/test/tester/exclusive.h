@@ -23,6 +23,7 @@
 #include <greensocs/gsutils/tlm-extensions/exclusive-access.h>
 
 #include <greensocs/base-components/misc/exclusive-monitor.h>
+#include <greensocs/base-components/pathid_extension.h>
 
 #include "test/tester/mmio.h"
 
@@ -58,10 +59,12 @@ public:
 
         tlm_generic_payload txn;
         ExclusiveAccessTlmExtension ext;
+        gs::PathIDExtension pid;
         sc_core::sc_time delay = sc_core::SC_ZERO_TIME;
         uint64_t buf;
 
         ext.add_hop(0x1337);
+        pid.push_back(0x1337);
 
         txn.set_address(start);
         txn.set_data_ptr(reinterpret_cast<uint8_t *>(&buf));
@@ -69,10 +72,12 @@ public:
         txn.set_command(TLM_READ_COMMAND);
         txn.set_response_status(TLM_INCOMPLETE_RESPONSE);
         txn.set_extension(&ext);
+        txn.set_extension(&pid);
 
         m_monitor.front_socket.get_base_export()->b_transport(txn, delay);
 
         txn.clear_extension(&ext);
+        txn.clear_extension(&pid);
     }
 
 };

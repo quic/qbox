@@ -63,8 +63,8 @@ protected:
     cci::cci_param<int> p_num_cpu;
     cci::cci_param<int> p_quantum_ns;
 
-    Router<> m_router;
-    Memory<> m_mem;
+    gs::Router<> m_router;
+    gs::Memory<> m_mem;
 
     void set_firmware(const char *assembly)
     {
@@ -84,7 +84,7 @@ protected:
             TEST_FAIL("Unable to assemble the test firmware\n");
         }
 
-        m_mem.load(fw, size, 0);
+        m_mem.load.ptr_load(fw, 0, size);
 
         ks_free(fw);
         ks_close(ks);

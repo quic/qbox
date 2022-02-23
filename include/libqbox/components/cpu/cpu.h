@@ -174,6 +174,7 @@ protected:
             std::unique_lock<std::mutex> lock(m_signaled_lock);
             m_signaled_cond.wait(lock, [this] { return m_signaled; });
             m_signaled = false;
+            if (finished) return;
         }
         m_qk->start();
     }
@@ -353,16 +354,19 @@ public:
             return;
         }
 
+        finished=true; // assert before taking lock
+
         m_inst.get().lock_iothread();
-        finished=true;
+
+        /* Unblock it if it's waiting for run budget */
+        m_qk->stop();
+
         /* Make sure QEMU won't call us anymore */
         m_cpu.clear_callbacks();
 
         /* Unblock the CPU thread if it's sleeping */
         set_signaled();
 
-        /* Unblock it if it's waiting for run budget */
-        m_qk->stop();
 
         /* Unblock it if it's waiting for some I/O to complete */
         socket.cancel_all();
