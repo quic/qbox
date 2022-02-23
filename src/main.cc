@@ -36,19 +36,9 @@
 
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/memory.h>
-#include <greensocs/base-components/fallbackmemory.h>
-#include <greensocs/elf-loader/elf-loader.h>
 #include <qcom/ipcc/ipcc.h>
 
 //#define WITH_HYP
-
-#ifndef WITH_HYP
-#define KERNEL64_LOAD_ADDR (0x41080000)
-#define DTB_LOAD_ADDR      (0x44200000)
-#else
-#define KERNEL64_LOAD_ADDR (0x40200000)
-#define DTB_LOAD_ADDR      (0x44000000)
-#endif
 
 #define HEXAGON_CFGSPACE_ENTRIES (128)
 #define HEXAGON_CFG_ADDR_BASE(addr) ((addr >> 16) & 0x0fffff)
@@ -118,51 +108,6 @@ typedef struct {
     uint32_t qtmr_rg1;
 } hexagon_config_extensions;
 
-static const uint32_t bootloader_aarch64[] = {
-    /* 0000000000000000 <start>: */
-    0xd53800a6, /*	mrs	x6, mpidr_el1 */
-    0x580001c7, /*	ldr	x7, 3c <aff_mask> */
-    0x8a0600e7, /*	and	x7, x7, x6 */
-    0xf10000ff, /*	cmp	x7, #0x0 */
-    0x54000061, /*	b.ne	1c <secondary>  // b.any */
-    /* 0000000000000014 <core0>: */
-    0x580001a4, /*	ldr	x4, 48 <kernel_entry> */
-    0x14000004, /*	b	28 <boot> */
-    /* 000000000000001c <secondary>: */
-    0xd503205f, /*	wfe */
-    0x58000304, /*	ldr	x4, 80 <spintable> */
-    0xb4ffffc4, /*	cbz	x4, 1c <secondary> */
-    /* 0000000000000028 <boot>: */
-    0x580000c0, /*	ldr	x0, 40 <dtb_ptr> */
-    0xaa1f03e1, /*	mov	x1, xzr */
-    0xaa1f03e2, /*	mov	x2, xzr */
-    0xaa1f03e3, /*	mov	x3, xzr */
-    0xd61f0080, /*	br	x4 */
-    /* 000000000000003c <aff_mask>: */
-    0x00ffffff, /*	.word	0x00ffffff */
-    /* 0000000000000040 <dtb_ptr>: */
-    DTB_LOAD_ADDR, /*	.word	0x08000000 */
-    0x00000000,    /*	.word	0x00000000 */
-    /* 0000000000000048 <kernel_entry>: */
-    KERNEL64_LOAD_ADDR, /*	.word	0x00080000 */
-    0x00000000,         /*	.word	0x00000000 */
-    /* 0000000000000050 <reserved>: */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-    /* 0000000000000080 <spintable>: */
-    0x00000000, /*	.word	0x00000000 */
-    0x00000000, /*	.word	0x00000000 */
-};
 
 hexagon_config_table v68n_1024_cfgtable = {
  /* The following values were derived from hexagon-sim, QuRT config files, */
@@ -250,43 +195,14 @@ uint32_t hexagon_bootstrap[] = {
 
 class GreenSocsPlatform : public sc_core::sc_module {
 protected:
-    gs::ConfigurableBroker m_broker;
     gs::async_event event;   // this is only present for debug, and should be removed for CI (once the ARM is re-instated)
 
     cci::cci_param<unsigned> p_arm_num_cpus;
     cci::cci_param<unsigned> p_hexagon_num_cpus;
 
     cci::cci_param<int> m_quantum_ns;
-    cci::cci_param<int> m_gdb_port;
-    cci::cci_param<cci::uint64> m_ram_size;
-    cci::cci_param<cci::uint64> m_rom_size;
 
-    /* Memory direct loading params */
-    cci::cci_param<std::string> m_ram_blob_file;
-    cci::cci_param<std::string> m_vendor_flash_blob_file;
-    cci::cci_param<std::string> m_system_flash_blob_file;
-
-    /* OpenSBI/Linux bootloader params */
-    cci::cci_param<std::string> m_kernel_file;
-    cci::cci_param<std::string> m_dtb_file;
-    cci::cci_param<std::string> m_bootloader_file;
-
-    /* Hexagon bootloader params */
-    cci::cci_param<std::string> m_hexagon_kernel_file;
-    cci::cci_param<cci::uint64> m_hexagon_load_addr;
     cci::cci_param<uint32_t> m_hexagon_start_addr;
-
-    /* Hexagon config params */
-    cci::cci_param<cci::uint64> m_hexagon_isdb_secure_flag;
-    cci::cci_param<cci::uint64> m_hexagon_isdb_trusted_flag;
-
-    /* Address map params */
-    cci::cci_param<cci::uint64> m_addr_map_ram;
-    cci::cci_param<cci::uint64> m_addr_map_hexagon_ram;
-    cci::cci_param<cci::uint64> m_addr_map_rom;
-    cci::cci_param<cci::uint64> m_addr_map_uart;
-
-    cci::cci_param<std::string> m_fallback_datafile;
 
     QemuInstanceManager m_inst_mgr;
     QemuInstance &m_qemu_inst;
@@ -297,21 +213,19 @@ protected:
     QemuHexagonL2vic m_l2vic;
     QemuHexagonQtimer m_qtimer;
     QemuArmGicv3* m_gic;
-    Router<> m_router;
-    Memory<> m_ram;
-    Memory<> m_hexagon_ram;
-    Memory<> m_rom;
-    Memory<> m_vendor_flash;
-    Memory<> m_system_flash;
+    gs::Router<> m_router;
+    gs::Memory<> m_ram;
+    gs::Memory<> m_hexagon_ram;
+    gs::Memory<> m_rom;
+    gs::Memory<> m_vendor_flash;
+    gs::Memory<> m_system_flash;
     GlobalPeripheralInitiator* m_global_peripheral_initiator;
     QemuUartPl011 m_uart;
     IPCC m_ipcc;
 
-   FallbackMemory<> m_fallback_mem;
-#ifdef WITH_HYP
-    elf_reader m_elf_loader;
-#endif
-    elf_reader m_hexagon_elf_loader;
+    gs::Memory<> m_fallback_mem;
+
+    gs::Loader<> m_loader;
 
     hexagon_config_table *cfgTable;
     hexagon_config_extensions *cfgExtensions;
@@ -326,9 +240,6 @@ protected:
                 cpu.p_mp_affinity = ((i / 8) << 8) | (i % 8);
 
                 if (i == 0) {
-                    if (!m_gdb_port.is_default_value()) {
-                        cpu.p_gdb_port = m_gdb_port;
-                    }
 #ifdef WITH_HYP                    
                     cpu.p_rvbar = 0x80000000;
 #else
@@ -350,56 +261,44 @@ protected:
         }
     }
 
-    /*
-    hexagon_ram      : 0x00000000 - 0x08000000
-    gic_dist_if      : 0x08000000 - 0x08010000
-    gic_redist       : 0x080a0000 - 0x09000000
-    uart             : 0x09000000 - 0x09001000
-    ram              : 0x40000000 - 0xd81e0000
-    fastl2vic        : 0xd81e0000 - 0xd81f0000
-    rom              : 0xde000000 - 0xde000400
-    qtimer           : 0xfab20000 - 0xfab21000
-    l2vic            : 0xfc910000 - 0xfc911000
-    qtimer_0         : 0xfc921000 - 0xfc922000
-    qtimer_1         : 0xfc922000 - 0xfc923000
-    */
-    void setup_memory_mapping() {
+
+    void do_bus_binding() {
         if (p_arm_num_cpus) {
             for (auto &cpu: m_cpus) {
-                m_router.add_initiator(cpu.socket);
+                cpu.socket.bind(m_router.target_socket);
             }
-            m_router.add_target(m_gic->dist_iface, 0x17100000, 0x10000);
-            m_router.add_target(m_gic->redist_iface[0], 0x171a0000, 0xf60000);
 
+            m_router.initiator_socket.bind(m_gic->dist_iface);
+            m_router.initiator_socket.bind(m_gic->redist_iface[0]);
         }
 
         if (p_hexagon_num_cpus) {
             for (auto &cpu: m_hexagon_cpus) {
-                m_router.add_initiator(cpu.socket);
+                cpu.socket.bind(m_router.target_socket);
             }
-            m_router.add_initiator(m_global_peripheral_initiator->m_initiator);
+            m_global_peripheral_initiator->m_initiator.bind(m_router.target_socket);
         }
 
-        m_router.add_target(m_ram.socket, m_addr_map_ram, m_ram.size());
-        m_router.add_target(m_hexagon_ram.socket, m_addr_map_hexagon_ram, m_hexagon_ram.size());
-        m_router.add_target(m_rom.socket, m_addr_map_rom, m_rom.size());
-        m_router.add_target(m_l2vic.socket, v68n_1024_extensions.l2vic_base, 0x1000);
-        m_router.add_target(m_l2vic.socket_fast, cfgTable->fastl2vic_base, 0x10000);
-        m_router.add_target(m_qtimer.socket, 0xfab20000, 0x1000);
-        m_router.add_target(m_qtimer.timer0_socket, v68n_1024_extensions.qtmr_rg0, 0x1000);
-        m_router.add_target(m_qtimer.timer1_socket, v68n_1024_extensions.qtmr_rg1, 0x1000);
-        m_router.add_target(m_uart.socket, m_addr_map_uart, 0x1000);
-        m_router.add_target(m_ipcc.socket, 0x400000,0xFC000);
 
-        m_router.add_target(m_vendor_flash.socket, 0x10000000, m_vendor_flash.size());
-        m_router.add_target(m_system_flash.socket, 0x30000000, m_system_flash.size());
-#ifdef WITH_HYP
-        m_router.add_initiator(m_elf_loader.socket);
-#endif
-        m_router.add_initiator(m_hexagon_elf_loader.socket);
+        m_router.initiator_socket.bind(m_ram.socket);
+        m_router.initiator_socket.bind(m_hexagon_ram.socket);
+        m_router.initiator_socket.bind(m_rom.socket);
+        m_router.initiator_socket.bind(m_l2vic.socket);
+        m_router.initiator_socket.bind(m_l2vic.socket_fast);
+        m_router.initiator_socket.bind(m_qtimer.socket);
+        m_router.initiator_socket.bind(m_qtimer.timer0_socket);
+        m_router.initiator_socket.bind(m_qtimer.timer1_socket);
+        m_router.initiator_socket.bind(m_uart.socket);
+        m_router.initiator_socket.bind(m_ipcc.socket);
+
+        m_router.initiator_socket.bind(m_vendor_flash.socket);
+        m_router.initiator_socket.bind(m_system_flash.socket);
+
+        // General loader
+        m_loader.initiator_socket.bind(m_router.target_socket);
 
         // MUST be added last
-        m_router.add_target(m_fallback_mem.socket, 0x0, 0x10000000);
+        m_router.initiator_socket.bind(m_fallback_mem.socket);
     }
 
      void setup_irq_mapping() {
@@ -431,84 +330,42 @@ protected:
         }
      }
 
-    void do_bootloader()
+    void cci_get_int(std::string name, uint32_t &dst) {
+        auto m_broker = cci::cci_get_broker();
+        std::string fullname=std::string(sc_module::name()) + "." + name;
+        if (m_broker.has_preset_value(fullname)) {
+            dst = m_broker.get_preset_cci_value(fullname).get_uint();
+            m_broker.ignore_unconsumed_preset_values(
+                [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == fullname;});
+        }
+    }
+
+    void hexagon_config_setup()
     {
-        if (!m_kernel_file.is_default_value()) {
-            m_ram.load(m_kernel_file, KERNEL64_LOAD_ADDR - m_addr_map_ram.get_value());
-        }
+        cfgTable = &v68n_1024_cfgtable;
+        cfgExtensions = &v68n_1024_extensions;
 
-        if (!m_dtb_file.is_default_value()) {
-            m_ram.load(m_dtb_file, DTB_LOAD_ADDR - m_addr_map_ram.get_value());
-        }
+        cci_get_int("cfgTable.fastl2vic_base", (cfgTable->fastl2vic_base));
+        cci_get_int("cfgExtensions.cfgtable_size", (cfgExtensions->cfgtable_size));
+        cci_get_int("cfgExtensions.l2vic_base", (cfgExtensions->l2vic_base));
+        cci_get_int("cfgExtensions.qtmr_rg0", (cfgExtensions->qtmr_rg0));
+        cci_get_int("cfgExtensions.qtmr_rg1", (cfgExtensions->qtmr_rg1));
 
-        if (!m_vendor_flash_blob_file.is_default_value()) {
-            m_vendor_flash.load(m_vendor_flash_blob_file, 0);
-        }
-        if (!m_system_flash_blob_file.is_default_value()) {
-            m_system_flash.load(m_system_flash_blob_file, 0);
-        }
-
-        //m_ram.load(m_bootloader_file,0x40000000);
-        m_ram.load(reinterpret_cast<const uint8_t *>(bootloader_aarch64),
-                   sizeof(bootloader_aarch64), 0);
-        m_fallback_mem.csv_load(m_fallback_datafile, 0x0, "Address", "Reset Value");
-        hexagon_config_table *config_table = cfgTable;
-
-        config_table->l2tcm_base = HEXAGON_CFG_ADDR_BASE(cfgTable->l2tcm_base);
-        config_table->subsystem_base = HEXAGON_CFG_ADDR_BASE(cfgExtensions->csr_base);
-        config_table->vtcm_base = HEXAGON_CFG_ADDR_BASE(cfgTable->vtcm_base);
-        config_table->l2cfg_base = HEXAGON_CFG_ADDR_BASE(cfgTable->l2cfg_base);
-        config_table->fastl2vic_base =
-                             HEXAGON_CFG_ADDR_BASE(cfgTable->fastl2vic_base);
-
-        if (p_hexagon_num_cpus) {
-            if (!m_hexagon_kernel_file.is_default_value()) {
-                // m_hexagon_ram.load(m_hexagon_kernel_file, m_hexagon_load_addr);
-
-                m_hexagon_ram.load(reinterpret_cast<const uint8_t *>(&m_hexagon_isdb_secure_flag.get_value()), 8, m_hexagon_load_addr + 0x30);
-                m_hexagon_ram.load(reinterpret_cast<const uint8_t *>(&m_hexagon_isdb_trusted_flag.get_value()), 8, m_hexagon_load_addr + 0x34);
-            }
-
-            // load hexagon config table into rom
-            m_rom.load(reinterpret_cast<const uint8_t *>(cfgTable), sizeof(hexagon_config_table), 0);
-        }
     }
 
 public:
     GreenSocsPlatform(const sc_core::sc_module_name &n)
         : sc_core::sc_module(n)
-        , m_broker({
-            {"gic.num-spi", cci::cci_value(64)},
-            {"gic.redist-region", cci::cci_value(std::vector<unsigned int>({32}))},
-        })
-        , p_hexagon_num_cpus("hexagon-num-cpus", 8, "Number of Hexagon threads")
-        , p_arm_num_cpus("arm-num-cpus", 8, "Number of ARM cores")
-        , m_quantum_ns("quantum-ns", 1000000, "TLM-2.0 global quantum in ns")
-        , m_gdb_port("gdb_port", 0, "GDB port")
-        , m_ram_size("ram_size", 0x981E0000, "RAM size")
-        , m_rom_size("rom_size", v68n_1024_extensions.cfgtable_size, "ROM size")
+        /* Need to patch CCI's broker...*/
+        /*, m_broker({
+            {"gic.num_spi", cci::cci_value(64)},
+            {"gic.redist_region", cci::cci_value(std::vector<unsigned int>({32}))},
+        })*/
+        , p_hexagon_num_cpus("hexagon_num_cpus", 8, "Number of Hexagon threads")
+        , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
+        , m_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
 
-        , m_ram_blob_file("ram_blob_file", "", "Blob file to load into the RAM")
-        , m_vendor_flash_blob_file("vendor_flash_blob_file", "", "Blob file to load into the flash")
-        , m_system_flash_blob_file("system_flash_blob_file", "", "Blob file to load into the flash")
-
-        , m_kernel_file("kernel_file", "", "Kernel blob file")
-        , m_dtb_file("dtb_file", "", "Device tree blob to load")
-        , m_bootloader_file("bootloader_file", "", "Bootloader blob file")
-
-        , m_hexagon_kernel_file("hexagon_kernel_file", "", "Hexagon kernel blob file")
-        , m_hexagon_load_addr("hexagon_load_addr",0x100,"Hexagon load address")
         , m_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
-
-        , m_hexagon_isdb_secure_flag("hexagon_isdb_secure_flag", 0, "Hexagon ISDB secure flag setting")
-        , m_hexagon_isdb_trusted_flag("hexagon_isdb_trusted_flag", 0, "Hexagon ISDB trusted flag setting")
-
-        , m_addr_map_ram("addr_map_ram", 0x40000000, "")
-        , m_addr_map_hexagon_ram("addr_map_hexagon_ram", 0x0000000, "")
-        , m_addr_map_rom("addr_map_rom", v68n_1024_extensions.cfgbase, "")
-        , m_addr_map_uart("addr_map_uart", 0x9000000, "")
-
-        , m_fallback_datafile("fallback_datafile", "", "File to preload fallback data")
 
         , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
         , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
@@ -516,7 +373,7 @@ public:
             /* here n is already "cpu_<vector-index>" */
             return new QemuCpuArmMax(n, m_qemu_inst);
         })
-        , m_hexagon_cpus("hexagon-cpu", p_hexagon_num_cpus, [this] (const char *n, size_t i) {
+        , m_hexagon_cpus("hexagon_cpu", p_hexagon_num_cpus, [this] (const char *n, size_t i) {
             /* here n is already "hexagon-cpu_<vector-index>" */
             return new QemuCpuHexagon(n, m_qemu_hex_inst,
                                       v68n_1024_extensions.cfgbase,
@@ -528,22 +385,18 @@ public:
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer", m_qemu_hex_inst)
         , m_router("router")
-        , m_ram("ram", m_ram_size)
-        , m_hexagon_ram("hexagon_ram", 0x08000000)
-        , m_rom("rom", m_rom_size)
-        , m_vendor_flash("vendor", 0x20000000)
-        , m_system_flash("system", 0x10000000)
+        , m_ram("ram")
+        , m_hexagon_ram("hexagon_ram")
+        , m_rom("rom")
+        , m_vendor_flash("vendor")
+        , m_system_flash("system")
         , m_uart("uart", m_qemu_inst)
         , m_ipcc("ipcc")
-#ifdef WITH_HYP
-        , m_elf_loader("elfloader", m_bootloader_file)
-#endif
-        , m_hexagon_elf_loader("m_hexagon_elf_loader", m_hexagon_kernel_file)
-        , m_fallback_mem("fallback_memory", 0x10000000)
+        , m_fallback_mem("fallback_memory")
+        , m_loader("load")
     {
         using tlm_utils::tlm_quantumkeeper;
-        cfgTable = &v68n_1024_cfgtable;
-        cfgExtensions = &v68n_1024_extensions;
+
         sc_core::sc_time global_quantum(m_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);
 
@@ -555,11 +408,11 @@ public:
             m_gic = new QemuArmGicv3("gic", m_qemu_inst, p_arm_num_cpus);
         }
 
+        hexagon_config_setup();
         setup_cpus();
-        setup_memory_mapping();
+        do_bus_binding();
         setup_irq_mapping();
 
-        do_bootloader();
     }
 
     ~GreenSocsPlatform() {
@@ -570,11 +423,42 @@ public:
             delete m_gic;
         }
     }
+
+    /* this re-writing would seem to be necissary as the values in the configuration want to be different from those read by the device */
+    void end_of_elaboration()
+    {
+        hexagon_config_table* config_table = cfgTable;
+
+        config_table->l2tcm_base = HEXAGON_CFG_ADDR_BASE(cfgTable->l2tcm_base);
+        config_table->subsystem_base = HEXAGON_CFG_ADDR_BASE(cfgExtensions->csr_base);
+        config_table->vtcm_base = HEXAGON_CFG_ADDR_BASE(cfgTable->vtcm_base);
+        config_table->l2cfg_base = HEXAGON_CFG_ADDR_BASE(cfgTable->l2cfg_base);
+        config_table->fastl2vic_base = HEXAGON_CFG_ADDR_BASE(cfgTable->fastl2vic_base);
+        m_loader.ptr_load(reinterpret_cast<uint8_t*>(cfgTable), m_hexagon_ram.base(), sizeof(hexagon_config_table));
+    }
+
+    void start_of_simulation()
+    {
+
+        auto m_broker = cci::cci_get_broker();
+
+        m_broker.ignore_unconsumed_preset_values(
+            [](const std::pair<std::string, cci::cci_value>& iv) -> bool { return ((iv.first)[0]=='_' || iv.first == "math.maxinteger") || (iv.first == "math.mininteger") || (iv.first == "utf8.charpattern"); });
+
+        auto uncon = m_broker.get_unconsumed_preset_values();
+        for (auto p : uncon) {
+            SC_REPORT_INFO("Params", ("WARNING: Unconsumed parameter : " + p.first + " = " + p.second.to_json()).c_str());
+        }
+    }
 };
 
 int sc_main(int argc, char *argv[])
 {
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
+
+/* should be moved to an internal broker when thats fixed */
+    m_broker->set_preset_cci_value("platform.gic.num_spi", cci::cci_value(64), cci::cci_originator("sc_main"));
+    m_broker->set_preset_cci_value("platform.gic.redist_region", cci::cci_value(std::vector<unsigned int>({32})), cci::cci_originator("sc_main"));
 
     GreenSocsPlatform platform("platform");
 

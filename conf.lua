@@ -1,5 +1,4 @@
 -- Virtual platform configuration
--- Commented out parameters show default values
 
 function top()
     local str = debug.getinfo(2, "S").source:sub(2)
@@ -11,40 +10,68 @@ function top()
     end
  end
 
-num_arm = 8
-num_hex = 8
 
-local conf = {
-    [ "platform.fallback_datafile"] = top().."fw/SM8450_Waipio.csv",
-    [ "platform.arm-num-cpus" ] = num_arm,
-    [ "platform.hexagon-num-cpus" ] = num_hex,
-    [ "platform.quantum-ns"] = 100000000,
-    [ "platform.kernel_file" ] = top().."fw/fastrpc-images/images/Image",
-    [ "platform.dtb_file" ] = top().."fw/fastrpc-images/images/rumi.dtb",
---    [ "platform.bootloader_file" ] = top().."fw/fastrpc-images/images/hypvm.elf",
-    [ "platform.vendor_flash_blob_file" ] = top().."fw/fastrpc-images/images/vendor.squashfs",
-    [ "platform.system_flash_blob_file" ] = top().."fw/fastrpc-images/images/system.squashfs",
+ -- to use the hypervisor:
+ --KERNEL64_LOAD_ADDR (0x40200000)
+ --DTB_LOAD_ADDR      (0x44000000)
 
---    [ "platform.cpu_0.gdb-port" ] = 1234,
---    [ "platform.hexagon.gdb-port" ] = 1234,
+_KERNEL64_LOAD_ADDR =0x41080000
+_DTB_LOAD_ADDR =     0x44200000
+dofile (top().."fw/arm64_bootloader.lua")
 
--- [ "platform.hexagon_kernel_file" ] = top().."tests/qualcomm/prebuilt/qtimer_test.bin",
-    [ "platform.hexagon_kernel_file" ] = top().."fw/hexagon-images/bootimage_kailua.cdsp.coreQ.pbn",
-    [ "platform.hexagon_load_addr" ] = 0x0,
---[ "platform.hexagon_start_addr" ] = 0x50000000, // for qtimer_test
-    [ "platform.hexagon_start_addr" ] = 0x8B500000,
-    [ "platform.hexagon_isdb_secure_flag" ] = 0x1,
-    [ "platform.hexagon_isdb_trusted_flag" ] = 0x1,
-}
+platform = {
+    arm_num_cpus = 8;
+    hexagon_num_cpus = 8;
+    quantum_ns = 100000000;
 
-for i=0,num_arm do
-    conf["platform.cpu_"..tostring(i)..".sync-policy"] = "multithread-unconstrained"
-end
-for i=0,num_hex do
-    conf["platform.hexagon-cpu_"..tostring(i)..".sync-policy"] = "multithread-unconstrained"
-end
+    hexagon_start_addr = 0x8B500000;
+
+    ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
+    HexagonQemuInstance = { tcg_mode="SINGLE", sync_policy = "multithread-unconstrained"};
+
+-- cpu_0 = { gdb_port = 1234 };
+-- hexagon_0 = { gdb_port = 1234 };
 
 
-for k,v in pairs(conf) do
-    _G[k]=v
-end
+    ram=  {  target_socket = {address=0x40000000, size=0x981E0000}};
+    hexagon_ram={target_socket={address=0x0, size=0x08000000}};
+    rom=  {  target_socket = {address=0xde000000, size=0x400 },read_only=true};
+    gic=  {  dist_iface    = {address=0x17100000, size=0x10000 };
+             redist_iface_0= {address=0x171a0000, size=0xf60000}};
+    l2vic={  mem           = {address=0xfc910000, size=0x1000};
+             fastmem       = {address=0xd81e0000, size=0x10000}};
+    qtimer={ mem           = {address=0xfab20000, size=0x1000};
+             timer0_mem    = {address=0xfc921000, size=0x1000};
+             timer1_mem    = {address=0xfc922000, size=0x1000}};
+    uart= {  mem           = {address= 0x9000000, size=0x1000}};
+    ipcc= {  socket        = {address=  0x410000, size=0xfc000}};
+    vendor={ target_socket = {address=0x10000000, size=0x20000000}, load={bin_file=top().."fw/fastrpc-images/images/vendor.squashfs", offset=0}};
+    system={ target_socket = {address=0x30000000, size=0x10000000}, load={bin_file=top().."fw/fastrpc-images/images/system.squashfs", offset=0}};
+
+    fallback_memory = { target_socket={address=0x0, size=0x10000000}, dmi_allow=false, verbose=true, load={csv_file=top().."fw/SM8450_Waipio.csv", offset=0, addr_str="Address", value_str="Reset Value", byte_swap=true}};
+    load={
+        {bin_file=top().."fw/fastrpc-images/images/Image",    address=_KERNEL64_LOAD_ADDR};
+        {bin_file=top().."fw/fastrpc-images/images/rumi.dtb", address=_DTB_LOAD_ADDR};
+        {data=_bootloader_aarch64, address = 0x40000000};
+
+        {elf_file=top().."fw/hexagon-images/bootimage_kailua.cdsp.coreQ.pbn"};
+
+        -- for hypervisor        {elf_file=top().."fw/fastrpc-images/images/hypvm.elf"};
+
+        {data={0x1}, address = 0x30}; -- isdb_secure_flag
+        {data={0x1}, address = 0x34}; -- isdb_trusted_flag
+    }
+};
+
+
+
+platform["cfgTable"] = {
+    fastl2vic_base = platform.l2vic.fastmem.address,
+};
+
+platform["cfgExtensions"] = {
+    cfgtable_size = platform.rom.target_socket.size,
+    l2vic_base = platform.l2vic.mem.address,
+    qtmr_rg0 = platform.qtimer.timer0_mem.address,
+    qtmr_rg1 = platform.qtimer.timer1_mem.address,
+};
