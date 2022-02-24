@@ -329,10 +329,6 @@ public:
             SC_THREAD(watch_external_ev);
         }
 
-        for (auto p : gs::sc_cci_children(sc_module::name())) {
-            SC_REPORT_WARNING("libqbox", ("Unexpected parameter "+p+" to "+sc_module::name()).c_str());
-        }
-
         m_inst.add_dev(this);
     }
 
@@ -430,6 +426,11 @@ public:
             m_inst.get().vm_stop_paused();
             m_inst.get().unlock_iothread();
         }
+
+        for (auto p : gs::sc_cci_children(sc_module::name())) {
+            SC_REPORT_WARNING("libqbox", ("Unexpected parameter "+p+" to "+sc_module::name()).c_str());
+        }
+
     }
 
     virtual void start_of_simulation() override

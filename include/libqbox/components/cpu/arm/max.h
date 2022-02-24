@@ -139,7 +139,7 @@ public:
         cpu.set_prop_int("psci-conduit", get_psci_conduit_val());
 
         cpu.set_prop_int("rvbar", p_rvbar);
-        
+
     }
 
     void end_of_elaboration() override
