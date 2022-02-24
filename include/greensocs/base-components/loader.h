@@ -335,7 +335,7 @@ public:
             uint32_t value = std::stoi(std::string(row[value_i]));
             if (byte_swap)
                 value = byte_swap32(value);
-            send(std::stoi(addr), (uint8_t*)(&value), 8);
+            send(std::stoi(addr), (uint8_t*)(&value), sizeof(value));
         }
     }
 
