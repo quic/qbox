@@ -10,6 +10,7 @@ function top()
     end
  end
 
+print ("Lua config running. . . ");
 
  -- to use the hypervisor:
  --KERNEL64_LOAD_ADDR (0x40200000)
@@ -62,6 +63,34 @@ platform = {
         {data={0x1}, address = 0x34}; -- isdb_trusted_flag
     }
 };
+
+
+if (platform.arm_num_cpus) then
+    for i=0,(platform.arm_num_cpus-1) do
+        local cpu = {
+            has_el3 = true;
+            has_el3 = false;
+            psci_conduit = "smc";
+            mp_affinity = (math.floor(i / 8) << 8) | (i % 8);
+            start_powered_off = true;
+        };
+        if (i==0) then
+            cpu["rvbar"] = 0x40000000;
+            cpu["start_powered_off"] = false;
+        end
+        platform["cpu_"..tostring(i)]=cpu;
+    end
+end
+
+
+if (platform.hexagon_num_cpus) then
+    for i=1,(platform.hexagon_num_cpus-1) do
+        local cpu = {
+            start_powered_off = true;
+        }
+        platform["hexagon_cpu_"..tostring(i)]=cpu;
+    end
+end
 
 
 
