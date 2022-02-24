@@ -229,38 +229,6 @@ protected:
 
     hexagon_config_table *cfgTable;
     hexagon_config_extensions *cfgExtensions;
-    void setup_cpus() {
-        if (p_arm_num_cpus) {
-            for (int i = 0; i < m_cpus.size(); i++) {
-                auto &cpu = m_cpus[i];
-
-                cpu.p_has_el2 = true;
-                cpu.p_has_el3 = false;
-                cpu.p_psci_conduit = "smc";
-                cpu.p_mp_affinity = ((i / 8) << 8) | (i % 8);
-
-                if (i == 0) {
-#ifdef WITH_HYP                    
-                    cpu.p_rvbar = 0x80000000;
-#else
-                    cpu.p_rvbar = 0x40000000;
-#endif
-                } else {
-                    cpu.p_start_powered_off = true;
-                }
-            }
-        }
-
-        if (p_hexagon_num_cpus) {
-            for (int i = 0; i < m_hexagon_cpus.size(); i++) {
-                auto &cpu = m_hexagon_cpus[i];
-                if(i != 0) {
-                    cpu.p_start_powered_off = true;
-                }
-            }
-        }
-    }
-
 
     void do_bus_binding() {
         if (p_arm_num_cpus) {
@@ -409,7 +377,7 @@ public:
         }
 
         hexagon_config_setup();
-        setup_cpus();
+        //setup_cpus();
         do_bus_binding();
         setup_irq_mapping();
 
