@@ -23,8 +23,12 @@ gs_systemc()
 set(LIBQEMU_TARGETS aarch64 hexagon)
 gs_addpackage(qemu/libqbox)
 gs_addpackage(greensocs/components/base-components)
+gs_addpackage(greensocs/components/systemc-uarts)
+
 gs_addpackage(qemu/extra-components)
 gs_addpackage(customers/qualcomm/ipcc)
+gs_addpackage(customers/qualcomm/qtb)
+
 add_executable(vp
     src/main.cc
 )
@@ -35,7 +39,9 @@ target_link_libraries(vp
     GreenSocs::qbox
     GreenSocs::qbox-extra
     GreenSocs::base-components
+    GreenSocs::systemc-uarts
     GreenSocs::qcom-ipcc
+    GreenSocs::qcom-qtb
 )
 
 install (TARGETS vp DESTINATION ${CMAKE_INSTALL_BINDIR})

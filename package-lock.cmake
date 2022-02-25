@@ -4,7 +4,7 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG v5.1.0
+  GIT_TAG v5.1.1
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
@@ -49,8 +49,15 @@ CPMDeclarePackage(libqemu
 # base-components
 CPMDeclarePackage(base-components
   NAME base-components
-  GIT_TAG v3.1.0
+  GIT_TAG f77cab4912ba61789067b2eb2918099778f64864
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/base-components.git
+#  GIT_SHALLOW on
+)
+
+CPMDeclarePackage(systemc-uarts
+  NAME systemc-uarts
+  GIT_TAG v2.1.1
+  GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/systemc-uarts.git
   GIT_SHALLOW on
 )
 
@@ -67,13 +74,12 @@ CPMDeclarePackage(ipcc
   NAME ipcc
   GIT_TAG 491836963e3b4eada8005df098fcf4d15e18c591
   GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/ipcc.git
-  GIT_SHALLOW on
+#  GIT_SHALLOW on
 )
-
-# IPCC
-CPMDeclarePackage(elf-loader
-  NAME elf-loader
-  GIT_TAG 26aa4af5cd9ff4be03ba05b6b2bd7c097b71c82d
-  GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/elf-loader
-  GIT_SHALLOW on
+# QTB
+CPMDeclarePackage(qtb
+  NAME qtb
+  GIT_TAG 09a336d254d6bab8e3593d399a365d87e5ee6a38
+  GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/qtb.git
+#  GIT_SHALLOW on
 )

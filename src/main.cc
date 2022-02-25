@@ -41,9 +41,14 @@
 
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/memory.h>
-#include <qcom/ipcc/ipcc.h>
+#include <greensocs/base-components/connectors.h>
+#include "greensocs/systemc-uarts/uart-pl011.h"
+#include "greensocs/systemc-uarts/backends/char-backend.h"
+#include <greensocs/systemc-uarts/backends/char/stdio.h>
+#include <greensocs/systemc-uarts/backends/char/socket.h>
 
-//#define WITH_HYP
+#include <qcom/ipcc/ipcc.h>
+#include <qcom/qtb/qtb.h>
 
 #define HEXAGON_CFGSPACE_ENTRIES (128)
 #define HEXAGON_CFG_ADDR_BASE(addr) ((addr >> 16) & 0x0fffff)
@@ -198,69 +203,24 @@ uint32_t hexagon_bootstrap[] = {
 #define ARCH_TIMER_NS_EL1_IRQ (16+14)
 #define ARCH_TIMER_NS_EL2_IRQ (16+10)
 
-template <unsigned int BUSWIDTH = 32>
-class fake_tbu : public sc_core::sc_module {
-public:
-    tlm_utils::simple_initiator_socket<fake_tbu<BUSWIDTH>> initiator_socket;
-    tlm_utils::simple_target_socket<fake_tbu, BUSWIDTH> target_socket;
-
-private:
-    void b_transport(tlm::tlm_generic_payload& trans,
-        sc_core::sc_time& delay)
-    {
-        initiator_socket->b_transport(trans, delay);
-    }
-
-    unsigned int transport_dbg(tlm::tlm_generic_payload& trans)
-    {
-        return initiator_socket->transport_dbg(trans);
-    }
-
-    bool get_direct_mem_ptr(tlm::tlm_generic_payload& trans,
-        tlm::tlm_dmi& dmi_data)
-    {
-        return  initiator_socket->get_direct_mem_ptr(trans, dmi_data);
-    }
-
-    void invalidate_direct_mem_ptr(sc_dt::uint64 start,
-        sc_dt::uint64 end)
-    {
-        target_socket->invalidate_direct_mem_ptr(start, end);
-    }
-
-public:
-    explicit fake_tbu(const sc_core::sc_module_name& nm)
-        : sc_core::sc_module(nm)
-        , initiator_socket("initiator_socket")
-        , target_socket("target_socket")
-    {
-        target_socket.register_b_transport(this, &fake_tbu::b_transport);
-        target_socket.register_transport_dbg(this, &fake_tbu::transport_dbg);
-        target_socket.register_get_direct_mem_ptr(this, &fake_tbu::get_direct_mem_ptr);
-        initiator_socket.register_invalidate_direct_mem_ptr(this, &fake_tbu::invalidate_direct_mem_ptr);
-    }
-    fake_tbu() = delete;
-    fake_tbu(const fake_tbu&) = delete;
-    ~fake_tbu() {}
-};
-
 class hexagon_cluster : public sc_core::sc_module {
 public:
     cci::cci_param<unsigned> p_hexagon_num_threads;
     cci::cci_param<uint32_t> p_hexagon_start_addr;
-private:
+
+        // keep public so that smmu can be associated with hexagon
     QemuInstance &m_qemu_hex_inst;
+private:
     QemuHexagonL2vic m_l2vic;
     QemuHexagonQtimer m_qtimer;
+    gs::pass<> *p1;
 
     sc_core::sc_vector<QemuCpuHexagon> m_hexagon_threads;
     GlobalPeripheralInitiator m_global_peripheral_initiator_hex;
-    gs::Router<> m_router;
-    fake_tbu<> m_fake_tbu;
-
-
 public:
-    tlm::tlm_initiator_socket<> initiator_socket;
+    // expose the router, to facilitate binding
+    // otherwise we would need a 'bridge' to bind to the router and an initiator socket.
+    gs::Router<> m_router;
 
     hexagon_cluster(const sc_core::sc_module_name& n, QemuInstanceManager &m_inst_mgr)
         : sc_core::sc_module(n)
@@ -280,7 +240,6 @@ public:
                                       p_hexagon_start_addr);
         })
         , m_router("router")
-        , m_fake_tbu("tbu")
         , m_global_peripheral_initiator_hex("glob-per-init-hex", m_qemu_hex_inst, m_hexagon_threads[0])
     {
         m_router.initiator_socket.bind(m_l2vic.socket);
@@ -288,13 +247,11 @@ public:
         m_router.initiator_socket.bind(m_qtimer.socket);
         m_router.initiator_socket.bind(m_qtimer.timer0_socket);
         m_router.initiator_socket.bind(m_qtimer.timer1_socket);
-
+        p1= new gs::pass<>("p1", true);
         for (auto& cpu : m_hexagon_threads) {
-            cpu.socket.bind(m_router.target_socket);
+            cpu.socket.bind(p1->target_socket);
+                p1->initiator_socket(m_router.target_socket);
         }
-        m_router.initiator_socket.bind(m_fake_tbu.target_socket);
-
-        m_fake_tbu.initiator_socket.bind(initiator_socket);
 
         for(int i = 0; i < m_l2vic.p_num_outputs; ++i) {
             m_l2vic.irq_out[i].bind(m_hexagon_threads[0].irq_in[i]);
@@ -310,13 +267,16 @@ public:
 
 class GreenSocsPlatform : public sc_core::sc_module {
 protected:
-    gs::ConfigurableBroker m_broker;
     gs::async_event event;   // this is only present for debug, and should be removed for CI (once the ARM is re-instated)
 
     cci::cci_param<unsigned> p_arm_num_cpus;
+    cci::cci_param<unsigned> p_num_redists;
     cci::cci_param<unsigned> p_hexagon_num_clusters;
 
-    cci::cci_param<int> m_quantum_ns;
+    gs::ConfigurableBroker m_broker;
+
+    cci::cci_param<int> p_quantum_ns;
+    cci::cci_param<int> p_uart_backend;
 
     QemuInstanceManager m_inst_mgr;
     QemuInstanceManager m_inst_mgr_h;
@@ -329,16 +289,19 @@ protected:
     gs::Memory<> m_ram;
     gs::Memory<> m_hexagon_ram;
     gs::Memory<> m_rom;
-    gs::Memory<> m_vendor_flash;
-    gs::Memory<> m_system_flash;
+    gs::Memory<> m_system_imem;
     GlobalPeripheralInitiator* m_global_peripheral_initiator_arm;
-    QemuUartPl011 m_uart;
+    Uart m_uart;
     IPCC m_ipcc;
+
     QemuVirtioMMIONet m_virtio_net_0;
 
     gs::Memory<> m_fallback_mem;
 
     gs::Loader<> m_loader;
+
+    QemuArmSmmu *m_smmu=nullptr;
+    qtb<> *m_qtb;
 
     hexagon_config_table *cfgTable;
     hexagon_config_extensions *cfgExtensions;
@@ -354,13 +317,6 @@ protected:
             m_global_peripheral_initiator_arm->m_initiator.bind(m_router.target_socket);
         }
 
-        if (p_hexagon_num_clusters) {
-            for (auto &cpu: m_hexagon_clusters) {
-                cpu.initiator_socket.bind(m_router.target_socket);
-            }
-        }
-
-
         m_router.initiator_socket.bind(m_ram.socket);
         m_router.initiator_socket.bind(m_hexagon_ram.socket);
         m_router.initiator_socket.bind(m_rom.socket);
@@ -368,8 +324,7 @@ protected:
         m_router.initiator_socket.bind(m_ipcc.socket);
         m_router.initiator_socket.bind(m_virtio_net_0.socket);
 
-        m_router.initiator_socket.bind(m_vendor_flash.socket);
-        m_router.initiator_socket.bind(m_system_flash.socket);
+        m_router.initiator_socket.bind(m_system_imem.socket);
 
         // General loader
         m_loader.initiator_socket.bind(m_router.target_socket);
@@ -383,7 +338,8 @@ protected:
         if (p_arm_num_cpus) {
             {
                 int irq=gs::cci_get<int>(std::string(m_uart.name())+".irq");
-                m_uart.irq_out.bind(m_gic->spi_in[irq]);
+//                m_uart.irq_out.bind(m_gic->spi_in[irq]);
+                m_uart.irq.bind(m_gic->spi_in[irq]);
             }
             {
                 int irq=gs::cci_get<int>(std::string(m_virtio_net_0.name())+".irq");
@@ -422,13 +378,15 @@ protected:
 public:
     GreenSocsPlatform(const sc_core::sc_module_name &n)
         : sc_core::sc_module(n)
-        , m_broker({
-            {"gic.num_spi", cci::cci_value(64)},
-            {"gic.redist_region", cci::cci_value(std::vector<unsigned int>({8}))},
-        })
         , p_hexagon_num_clusters("hexagon_num_clusters", 2, "Number of Hexagon cluster")
         , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
-        , m_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
+        , p_num_redists("num_redists", 1, "Number of redistribution regions")
+        , m_broker({
+            {"gic.num_spi", cci::cci_value(128)}, // 64 seems reasonable, but can be up to 960 or 987 depending on how the gic is used
+            {"gic.redist_region", cci::cci_value(std::vector<unsigned int>(p_num_redists, p_arm_num_cpus/p_num_redists)) },
+        })
+        , p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
+        , p_uart_backend("uart_backend_port", 0, "uart backend port number, either 0 for 'stdio' or a port number (e.g. 4001)")
 
         , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
         , m_cpus("cpu", p_arm_num_cpus, [this] (const char *n, size_t i) {
@@ -442,9 +400,8 @@ public:
         , m_ram("ram")
         , m_hexagon_ram("hexagon_ram")
         , m_rom("rom")
-        , m_vendor_flash("vendor")
-        , m_system_flash("system")
-        , m_uart("uart", m_qemu_inst)
+        , m_system_imem("system_imem")
+        , m_uart("uart")
         , m_ipcc("ipcc")
         , m_virtio_net_0("virtionet0", m_qemu_inst)
         , m_fallback_mem("fallback_memory")
@@ -452,7 +409,7 @@ public:
     {
         using tlm_utils::tlm_quantumkeeper;
 
-        sc_core::sc_time global_quantum(m_quantum_ns, sc_core::SC_NS);
+        sc_core::sc_time global_quantum(p_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);
 
         if (p_arm_num_cpus) {
@@ -460,11 +417,38 @@ public:
             m_global_peripheral_initiator_arm = new GlobalPeripheralInitiator("glob-per-init-arm", m_qemu_inst, m_cpus[0]);
         }
 
-        if (p_hexagon_num_clusters) hexagon_config_setup();
+        if (p_hexagon_num_clusters) {
+            hexagon_config_setup();
+            if (p_hexagon_num_clusters==1) {
+                m_smmu = new QemuArmSmmu("smmu", m_hexagon_clusters[0].m_qemu_hex_inst);
+                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[0]);
+                m_smmu->downstream_socket[0].bind(m_router.target_socket);
+                m_router.initiator_socket.bind(m_smmu->register_socket);
+
+                m_qtb= new qtb<>("qtb");
+                m_router.initiator_socket(m_qtb->control_socket);
+                m_qtb->initiator_socket(m_smmu->upstream_socket[1]);
+                m_smmu->downstream_socket[1](m_qtb->target_socket);
+
+
+            } else {
+                for (auto &cpu: m_hexagon_clusters) {
+                    cpu.m_router.initiator_socket.bind(m_router.target_socket);
+                }
+            }
+        }
 
         do_bus_binding();
         setup_irq_mapping();
 
+        CharBackend *backend;
+        if (!p_uart_backend) {
+            backend=new CharBackendStdio("backend_stdio");
+        } else {
+            backend=new CharBackendSocket("backend_socket", "tcp", "127.0.0.1:"+std::to_string(p_uart_backend.get_value()));
+        }
+
+        m_uart.set_backend(backend);
     }
 
     ~GreenSocsPlatform() {
@@ -474,11 +458,16 @@ public:
         if (m_gic) {
             delete m_gic;
         }
+        if (m_smmu) {
+            delete m_smmu;
+        }
     }
 
     /* this re-writing would seem to be necissary as the values in the configuration want to be different from those read by the device */
     void end_of_elaboration()
     {
+        if (!p_hexagon_num_clusters) return;
+
         hexagon_config_table* config_table = cfgTable;
 
         config_table->l2tcm_base = HEXAGON_CFG_ADDR_BASE(cfgTable->l2tcm_base);

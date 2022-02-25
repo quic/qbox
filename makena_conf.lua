@@ -53,40 +53,40 @@ local hexagon_cluster= {
 
 platform = {
     arm_num_cpus = 8;
+    num_redists=1;
     hexagon_num_clusters = 0;
     quantum_ns = 100000000;
-
-    hexagon_start_addr = 0x0B500000; -- fixme
 
     ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
     HexagonQemuInstance = { tcg_mode="SINGLE", sync_policy = "multithread-unconstrained"};
 
--- cpu_0 = { gdb_port = 4321 };
--- hexagon_0 = { gdb_port = 1234 };
-
     ram=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=8*1024*1024*1024}};
     hexagon_ram={target_socket={address=UNLIKELY_TO_BE_USED+0x0, size=0x08000000}};
     rom=  {  target_socket = {address=UNLIKELY_TO_BE_USED+0xde000000, size=0x400 },read_only=true};
-    gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size=0x10000 };
+    gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
              redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0xf60000}};
-    virtionet0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=2};-- netdev_str="type=tap"};
+    virtionet0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=76};-- netdev_str="type=tap"};
 -- shoudl be 76?
 --devb-virtio disk name=system blk "alloc=demand,cache=10M,noatime,ra=128k:128k,devdir=/dev/disk" cam "quiet,cache" virtio "smem=0x1c0d0000,irq=41"
 --p tcpip timertol=1000,stacksize=65536,mclbytes=81920,pagesize=65536,pkt_cache=1024,mbuf_cache=1024 -ppf-v6 -dvirtio smem=0x1c120000,irq=76
 
-    uart= {  mem           = {address=UART0, size=0x1000}, irq=1};
+    uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=1};
 
     ipcc= {  socket        = {address=0x410000, size=0xfc000}};
 
-    -- FIXME: this cannot be removed, so it's configured with minimal size for now
-    system={ target_socket = {address=UNLIKELY_TO_BE_USED+0x30000000, size=0x1}, offset=0};
 
-    -- FIXME: this is not used on this platform but its presence is masking some
-    -- other defect:
-    vendor={ target_socket = {address=0x10000000, size=0x20000000}, load={bin_file=top().."fw/fastrpc-images/images/vendor.squashfs", offset=0}};
+    system_imem={ target_socket = {address=0x14680000, size=0x40000}, verbose=true, dmi_allow=false};
 
-    fallback_memory = { target_socket={address=0x0, size=0x10000000}, dmi_allow=false, verbose=true, load={csv_file=top().."fw/makena/SA8540P_MakenaAU_v2_Registers.csv", offset=0, addr_str="Address", value_str="Reset Value", byte_swap=true}};
+    smmu = { mem = {address=0x15000000, size=0x100000};
+        num_tbu=2;
+        upstream_socket_0 = {address=0x0, size=0xd81e0000, relative_addresses=false};
+        upstream_socket_1 = {address=0x0, size=0xd81e0000, relative_addresses=false};
+    };
+    qtb = { control_socket = {address=0x15180000, size=0x80000}};
+
+    fallback_memory = { target_socket={address=0x0, size=0x40000000}, dmi_allow=false, verbose=true, load={csv_file=top().."fw/makena/SA8540P_MakenaAU_v2_Registers.csv", offset=0, addr_str="Address", value_str="Reset Value", byte_swap=true}};
     load={
+--        {bin_file=top().."fw/makena/images/mifs_qdrive.img", address=INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE };
         {bin_file=top().."fw/makena/images/mifs_qdrive.img", address=INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE };
         {bin_file=top().."fw/makena/images/smem_v3.bin", address=INITIAL_DDR_SPACE_14GB + OFFSET_SMEM_DDR_SPACE };
         -- Entry point for bl31.elf should be set to INITIAL_DDR_SPACE_14GB:
@@ -95,7 +95,7 @@ platform = {
 };
 
 
-if (platform.arm_num_cpus) then
+if (platform.arm_num_cpus > 0) then
     for i=0,(platform.arm_num_cpus-1) do
         local cpu = {
             has_el3 = true;
@@ -112,7 +112,13 @@ if (platform.arm_num_cpus) then
     end
 end
 
-if (platform.num_hexagon_clusters) then
+
+if (platform.hexagon_num_clusters > 0) then
+    -- need to set teh SID for each hexagon
+    -- stuff from qtb registers ... 84203181 - ony bottom 0x3ff shoudl be used...
+    -- e.g. 0x  181 ..2 ..3 ..
+    -- SID Composition   SID[14:0] = { TBU_ID[4:0], TopoID[4:0], CSID[4:0] }
+
     platform["cfgTable"] = {
         fastl2vic_base = platform.hexagon_cluster_0.l2vic.fastmem.address,
     };
@@ -124,3 +130,5 @@ if (platform.num_hexagon_clusters) then
         qtmr_rg1 = platform.hexagon_cluster_0.qtimer.timer1_mem.address,
     };
 end
+
+print ("Lua config run. . . ");
