@@ -46,6 +46,20 @@ static std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
     return children;
 }
 
+template <typename T>
+T cci_get(std::string name)
+{
+    auto m_broker = cci::cci_get_broker();
+    m_broker.ignore_unconsumed_preset_values(
+        [name](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == name; });
+    m_broker.lock_preset_value(name);
+    T ret;
+    if (!m_broker.get_preset_cci_value(name).template try_get<T>(ret)) {
+        SC_REPORT_ERROR("Loader", ("Unable to get parameter " + name).c_str());
+    };
+    return ret;
+}
+
 class ConfigurableBroker : public cci_utils::consuming_broker {
 
 public:
@@ -202,23 +216,78 @@ private:
   }  
 }
 
+class help_helper : public sc_core::sc_module {
+public:
+    help_helper(sc_core::sc_module_name name) { }
+    std::function<void()> help_cb;
+    void register_cb (std::function<void()> cb) {help_cb=cb;}
+    void end_of_elaboration()
+    {
+        if (help_cb) help_cb();
+    }
+
+    void start_of_simulation()
+    {
+        auto m_broker = cci::cci_get_broker();
+        // remove lua builtins
+        m_broker.ignore_unconsumed_preset_values(
+            [](const std::pair<std::string, cci::cci_value>& iv) -> bool { return ((iv.first)[0]=='_' || iv.first == "math.maxinteger") || (iv.first == "math.mininteger") || (iv.first == "utf8.charpattern"); });
+
+        auto uncon = m_broker.get_unconsumed_preset_values();
+        for (auto p : uncon) {
+            SC_REPORT_INFO("Params", ("WARNING: Unconsumed parameter : " + p.first + " = " + p.second.to_json()).c_str());
+        }
+
+        if (help_cb) exit(0);
+    }
+};
+help_helper m_help_helper;
+
 public:
     /*
  * public interface functions
  */
 
+     std::vector<cci_name_value_pair> get_consumed_preset_values() const
+    {
+        std::vector<cci_name_value_pair> consumed_preset_cci_values;
+        std::map<std::string, cci_value>::const_iterator iter;
+        std::vector<cci_preset_value_predicate>::const_iterator pred;
+
+        for (iter = m_unused_value_registry.begin(); iter != m_unused_value_registry.end(); ++iter) {
+            for (pred = m_ignored_unconsumed_predicates.begin(); pred != m_ignored_unconsumed_predicates.end(); ++pred) {
+                const cci_preset_value_predicate& p = *pred; // get the actual predicate
+                if (p(std::make_pair(iter->first, iter->second))) {
+                    break;
+                }
+            }
+            if (pred != m_ignored_unconsumed_predicates.end()) {
+                consumed_preset_cci_values.push_back(std::make_pair(iter->first, iter->second));
+            }
+        }
+        return consumed_preset_cci_values;
+    }
+
     void print_help(bool top = true)
     {
+        /* NB there is a race condition between this and the QEMU uart which 
+         * has a tendency to wipe the buffer. We will use cerr here */
+
         if (top) {
-            std::cout << std::endl
+            std::cerr << std::endl
                       << "Available Configuration Parameters:" << std::endl
                       << "===================================" << std::endl;
+        }
+
+        for (auto p : get_consumed_preset_values()) 
+        {
+            std::cerr << "Consumed parameter : "<< p.first << " (with value 0x"<<std::hex << p.second<<")"<<std::endl;
         }
 
         std::string ending = "childbroker";
         for (auto p : get_param_handles(get_cci_originator("Command line help"))) {
             if (!std::equal(ending.rbegin(), ending.rend(), std::string(p.name()).rbegin())) {
-                std::cout << p.name() << " : " << p.get_description() << " (configured value " << p.get_cci_value() << ") " << std::endl;
+                std::cerr << p.name() << " : " << p.get_description() << " (configured value " << p.get_cci_value() << ") " << std::endl;
             } else {
                 cci_param_typed_handle<ConfigurableBroker*> c(p);
                 ConfigurableBroker* cc = c.get_value();
@@ -228,7 +297,8 @@ public:
             }
         }
         if (top) {
-            std::cout << std::endl;
+            std::cerr << "---" << std::endl;
+//            exit(0);
         }
     }
 /*
@@ -249,6 +319,7 @@ public:
               get_cci_originator(name.c_str()))
         , m_parent(get_parent_broker()) // local convenience function
         , m_child_ref(NULL)
+        , m_help_helper("help_helper")
     {
         if (has_parent) {
             m_child_ref = new cci_param<ConfigurableBroker*>(
@@ -321,7 +392,7 @@ public:
             switch (c) {
             case 'h': // -h and --help
                 sc_core::sc_spawn_options opts;
-                sc_core::sc_spawn([&]() { print_help();exit(0); }, "print_help", &opts);
+                m_help_helper.register_cb([&]() -> void { print_help();});
                 break;
             }
         }
@@ -420,6 +491,15 @@ public:
             r.insert(r.end(), p.begin(), p.end());
         }
         return r;
+    }
+
+    // Upstream consuming broker fails to pass ignore_unconsumed_preset_values
+    void ignore_unconsumed_preset_values(const cci_preset_value_predicate& pred)
+    {
+        if (has_parent) {
+            m_parent.ignore_unconsumed_preset_values(pred);
+        }
+        consuming_broker::ignore_unconsumed_preset_values(pred);
     }
 
     cci_preset_value_range get_unconsumed_preset_values(const cci_preset_value_predicate& pred) const
