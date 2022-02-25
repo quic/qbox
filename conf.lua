@@ -52,8 +52,9 @@ platform = {
     rom=  {  target_socket = {address=0xde000000, size=0x400 },read_only=true};
     gic=  {  dist_iface    = {address=0x17100000, size=0x10000 };
              redist_iface_0= {address=0x171a0000, size=0xf60000}};
-    uart= {  mem           = {address= 0x9000000, size=0x1000}};
+    uart= {  mem           = {address= 0x9000000, size=0x1000}, irq=1};
     ipcc= {  socket        = {address=  0x410000, size=0xfc000}};
+    virtionet0= { mem    =   {address=0x0a003e00, size=0x2000}, irq=2}; -- netdev_str="type=tap"};
     vendor={ target_socket = {address=0x10000000, size=0x20000000}, load={bin_file=top().."fw/fastrpc-images/images/vendor.squashfs", offset=0}};
     system={ target_socket = {address=0x30000000, size=0x10000000}, load={bin_file=top().."fw/fastrpc-images/images/system.squashfs", offset=0}};
 
@@ -96,7 +97,7 @@ if (platform.arm_num_cpus) then
 end
 
 
-if (platform.num_hexagon_clusters) then
+if (platform.hexagon_num_clusters) then
     platform["cfgTable"] = {
         fastl2vic_base = platform.hexagon_cluster_0.l2vic.fastmem.address,
     };

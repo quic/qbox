@@ -34,6 +34,7 @@
 #include <libqbox/components/uart/pl011.h>
 #include <libqbox/components/irq-ctrl/hexagon-l2vic.h>
 #include <libqbox/components/timer/hexagon-qtimer.h>
+#include <libqbox/components/net/virtio-mmio-net.h>
 
 #include <libqbox-extra/components/meta/global_peripheral_initiator.h>
 
@@ -252,6 +253,7 @@ private:
     QemuHexagonQtimer m_qtimer;
 
     sc_core::sc_vector<QemuCpuHexagon> m_hexagon_threads;
+    GlobalPeripheralInitiator m_global_peripheral_initiator_hex;
     gs::Router<> m_router;
     fake_tbu<> m_fake_tbu;
 
@@ -278,6 +280,7 @@ public:
         })
         , m_router("router")
         , m_fake_tbu("tbu")
+        , m_global_peripheral_initiator_hex("glob-per-init-hex", m_qemu_hex_inst, m_hexagon_threads[0])
     {
         m_router.initiator_socket.bind(m_l2vic.socket);
         m_router.initiator_socket.bind(m_l2vic.socket_fast);
@@ -299,7 +302,7 @@ public:
         m_qtimer.timer0_irq.bind(m_l2vic.irq_in[3]); // FIXME: Depends on static boolean syscfg_is_linux, may be 2
         m_qtimer.timer1_irq.bind(m_l2vic.irq_in[4]);
 
-//        m_global_peripheral_initiator = new GlobalPeripheralInitiator("glob-per-init", m_qemu_hex_inst, m_hexagon_cpus[0]);
+        m_global_peripheral_initiator_hex.m_initiator.bind(m_router.target_socket);
 
     }
 };
@@ -326,9 +329,10 @@ protected:
     gs::Memory<> m_rom;
     gs::Memory<> m_vendor_flash;
     gs::Memory<> m_system_flash;
-    GlobalPeripheralInitiator* m_global_peripheral_initiator;
+    GlobalPeripheralInitiator* m_global_peripheral_initiator_arm;
     QemuUartPl011 m_uart;
     IPCC m_ipcc;
+    QemuVirtioMMIONet m_virtio_net_0;
 
     gs::Memory<> m_fallback_mem;
 
@@ -345,6 +349,7 @@ protected:
 
             m_router.initiator_socket.bind(m_gic->dist_iface);
             m_router.initiator_socket.bind(m_gic->redist_iface[0]);
+            m_global_peripheral_initiator_arm->m_initiator.bind(m_router.target_socket);
         }
 
         if (p_hexagon_num_clusters) {
@@ -359,6 +364,7 @@ protected:
         m_router.initiator_socket.bind(m_rom.socket);
         m_router.initiator_socket.bind(m_uart.socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
+        m_router.initiator_socket.bind(m_virtio_net_0.socket);
 
         m_router.initiator_socket.bind(m_vendor_flash.socket);
         m_router.initiator_socket.bind(m_system_flash.socket);
@@ -373,7 +379,15 @@ protected:
      void setup_irq_mapping() {
 
         if (p_arm_num_cpus) {
-            m_uart.irq_out.bind(m_gic->spi_in[1]);
+            {
+                int irq=gs::cci_get<int>(std::string(m_uart.name())+".irq");
+                m_uart.irq_out.bind(m_gic->spi_in[irq]);
+            }
+            {
+                int irq=gs::cci_get<int>(std::string(m_virtio_net_0.name())+".irq");
+                m_virtio_net_0.irq_out.bind(m_gic->spi_in[irq]);
+            }
+
             for (int i = 0; i < m_cpus.size(); i++) {
                 m_gic->irq_out[i].bind(m_cpus[i].irq_in);
                 m_gic->fiq_out[i].bind(m_cpus[i].fiq_in);
@@ -430,6 +444,7 @@ public:
         , m_system_flash("system")
         , m_uart("uart", m_qemu_inst)
         , m_ipcc("ipcc")
+        , m_virtio_net_0("virtionet0", m_qemu_inst)
         , m_fallback_mem("fallback_memory")
         , m_loader("load")
     {
@@ -440,6 +455,7 @@ public:
 
         if (p_arm_num_cpus) {
             m_gic = new QemuArmGicv3("gic", m_qemu_inst, p_arm_num_cpus);
+            m_global_peripheral_initiator_arm = new GlobalPeripheralInitiator("glob-per-init-arm", m_qemu_inst, m_cpus[0]);
         }
 
         if (p_hexagon_num_clusters) hexagon_config_setup();
@@ -450,8 +466,8 @@ public:
     }
 
     ~GreenSocsPlatform() {
-        if (m_global_peripheral_initiator) {
-            delete m_global_peripheral_initiator;
+        if (m_global_peripheral_initiator_arm) {
+            delete m_global_peripheral_initiator_arm;
         }
         if (m_gic) {
             delete m_gic;

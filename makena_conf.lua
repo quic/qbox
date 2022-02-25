@@ -69,8 +69,12 @@ platform = {
     rom=  {  target_socket = {address=UNLIKELY_TO_BE_USED+0xde000000, size=0x400 },read_only=true};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size=0x10000 };
              redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0xf60000}};
+    virtionet0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=2};-- netdev_str="type=tap"};
+-- shoudl be 76?
+--devb-virtio disk name=system blk "alloc=demand,cache=10M,noatime,ra=128k:128k,devdir=/dev/disk" cam "quiet,cache" virtio "smem=0x1c0d0000,irq=41"
+--p tcpip timertol=1000,stacksize=65536,mclbytes=81920,pagesize=65536,pkt_cache=1024,mbuf_cache=1024 -ppf-v6 -dvirtio smem=0x1c120000,irq=76
 
-    uart= {  mem           = {address=UART0, size=0x1000}};
+    uart= {  mem           = {address=UART0, size=0x1000}, irq=1};
 
     ipcc= {  socket        = {address=0x410000, size=0xfc000}};
 
