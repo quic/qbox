@@ -52,7 +52,18 @@ private:
 protected:
     QemuInstance &m_inst;
     qemu::Device m_dev;
+    bool m_instanciated = false;
     bool m_realized = false;
+
+    void instantiate()
+    {
+        if (m_instanciated) {
+            return;
+        }
+
+        m_dev = m_inst.get().object_new(m_qom_type.c_str());
+        m_instanciated = true;
+    }
 
     void realize()
     {
@@ -83,7 +94,7 @@ public:
 
     virtual void before_end_of_elaboration() override
     {
-        m_dev = m_inst.get().object_new(m_qom_type.c_str());
+        instantiate();
     }
 
     virtual void end_of_elaboration() override
