@@ -159,7 +159,7 @@ protected:
             return nullptr;
         }
 
-        GS_LOG("Got DMI for range [0x%16l" PRIu64 ", 0x%16l" PRIu64 "]",
+        GS_LOG("Got DMI for range [0x%16" PRIx64 ", 0x%16" PRIx64 "]",
                dmi_data.get_start_address(),
                dmi_data.get_end_address());
 
@@ -214,7 +214,7 @@ protected:
             return;
         }
 
-        GS_LOG("DMI request for address 0x%16l" PRIu64, trans.get_address());
+        GS_LOG("DMI request for address 0x%16" PRIx64, trans.get_address());
         m_on_sysc.run_on_sysc([this, &trans, &alias] { alias = request_dmi_region(trans); });
 
         if (alias == nullptr) {
@@ -411,7 +411,7 @@ public:
     virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start_range,
                                            sc_dt::uint64 end_range)
     {
-        GS_LOG("DMI invalidate: [0x%16l" PRIu64 ", 0x%16l" PRIu64 "]",
+        GS_LOG("DMI invalidate: [0x%16" PRIx64 ", 0x%16" PRIx64 "]",
                start_range, end_range);
 
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());

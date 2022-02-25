@@ -129,7 +129,7 @@ protected:
                 SC_REPORT_INFO(name(), ("Added QEMU argument : " + arg_name + " " + arg_value).c_str());
                 m_inst.push_qemu_arg({ arg_name.c_str(), arg_value.c_str() });
             } else {
-                SC_REPORT_ERROR(name(), "The value of the argument is not a string");
+                SC_REPORT_FATAL(name(), "The value of the argument is not a string");
             }
         }
 
@@ -150,7 +150,7 @@ protected:
         p_icount_mips.lock();
         if (!p_icount) return;
         if (m_tcg_mode == TCG_MULTI) {
-            SC_REPORT_ERROR("libqbox", "MULTI threading can not be used with icount");
+            SC_REPORT_FATAL("libqbox", "MULTI threading can not be used with icount");
             assert(m_tcg_mode != TCG_MULTI);
         }
         m_inst.push_qemu_arg("-icount");
@@ -175,7 +175,7 @@ protected:
         case TCG_MULTI:
             m_inst.push_qemu_arg("tcg,thread=multi");
             if (p_icount) {
-                SC_REPORT_ERROR("libqbox", "MULTI threading can not be used with icount");
+                SC_REPORT_FATAL("libqbox", "MULTI threading can not be used with icount");
                 assert(!p_icount);
             }
             break;
@@ -274,7 +274,7 @@ public:
         assert(!is_inited());
 
         if (m_tcg_mode == TCG_UNSPECIFIED) {
-            SC_REPORT_ERROR("libqbox", ("Unknown tcg mode : " + std::string(p_tcg_mode)).c_str());
+            SC_REPORT_FATAL("libqbox", ("Unknown tcg mode : " + std::string(p_tcg_mode)).c_str());
         }
         // By now, if there is a CPU, it would be loaded into QEMU, and we would have a QK
         if (m_first_qk) {
@@ -285,7 +285,7 @@ public:
                 m_tcg_mode=TCG_COROUTINE;
             } else {
                 if (m_tcg_mode == TCG_COROUTINE) {
-                    SC_REPORT_ERROR("libqbox", "Please select a suitable threading mode for this quantum keeper, it can't be used with COROUTINES");
+                    SC_REPORT_FATAL("libqbox", "Please select a suitable threading mode for this quantum keeper, it can't be used with COROUTINES");
                 }
             }
 
