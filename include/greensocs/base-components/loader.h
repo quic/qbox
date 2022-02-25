@@ -149,7 +149,7 @@ private:
             trans.set_streaming_width(len);
             trans.set_byte_enable_length(0);
             if (initiator_socket->transport_dbg(trans) != len) {
-                SC_REPORT_ERROR("Loader", "Error loading data to memory");
+                SC_REPORT_FATAL("Loader", "Error loading data to memory");
             }
         }
     }
@@ -162,7 +162,7 @@ private:
         m_broker.lock_preset_value(name);
         T ret;
         if (!m_broker.get_preset_cci_value(name).template try_get<T>(ret)) {
-            SC_REPORT_ERROR("Loader", ("Unable to get parameter " + name).c_str());
+            SC_REPORT_FATAL("Loader", ("Unable to get parameter " + name).c_str());
         };
         return ret;
     }
@@ -220,12 +220,12 @@ protected:
                 if (m_broker.has_preset_value(name + ".offset"))
                     addr = cci_get<uint64_t>(name + ".offset");
                 else
-                    SC_REPORT_ERROR("loader", "No offset found");
+                    SC_REPORT_FATAL("loader", "No offset found");
             } else {
                 if (m_broker.has_preset_value(name + ".address"))
                     addr = cci_get<uint64_t>(name + ".address");
                 else
-                    SC_REPORT_ERROR("loader", "No address found");
+                    SC_REPORT_FATAL("loader", "No address found");
             }
             if (m_broker.has_preset_value(name + ".bin_file")) {
                 std::string file = cci_get<std::string>(name + ".bin_file");
@@ -249,7 +249,7 @@ protected:
                 std::string param = cci_get<std::string>(name + ".param");
                 cci::cci_param_typed_handle<std::string> data(m_broker.get_param_handle(param));
                 if (!data.is_valid()) {
-                    SC_REPORT_ERROR("Loader", ("Unable to find valid source param " + param).c_str());
+                    SC_REPORT_FATAL("Loader", ("Unable to find valid source param " + param).c_str());
                 }
                 SC_REPORT_INFO("Loader", ("Loading string parameter " + param).c_str());
                 str_load(data.get_value(), addr);
@@ -266,7 +266,7 @@ protected:
             }
         }
         if (!read) {
-            //            SC_REPORT_ERROR("Loader","Unknown loader type");
+            SC_REPORT_FATAL("Loader","Unknown loader type");
         }
     }
     void end_of_elaboration()
@@ -315,7 +315,7 @@ public:
 
         CSVRow row;
         if (!(file >> row)) {
-            SC_REPORT_ERROR("Loader", ("Unable to find " + filename).c_str());
+            SC_REPORT_FATAL("Loader", ("Unable to find " + filename).c_str());
         }
         int addr_i = -1;
         int value_i = -1;
@@ -328,7 +328,7 @@ public:
             }
         }
         if (addr_i == -1 || value_i == -1) {
-            SC_REPORT_ERROR("Loader", ("Unable to find " + filename).c_str());
+            SC_REPORT_FATAL("Loader", ("Unable to find " + filename).c_str());
         }
         while (file >> row) {
             const std::string addr = std::string(row[addr_i]);
@@ -357,7 +357,7 @@ private:
                 }
                 send(addr + (stoi(s) * 0x4), &(data.b[0]), 4);
             } else {
-                SC_REPORT_ERROR("Loader", "unknown format for parameter load");
+                SC_REPORT_FATAL("Loader", "unknown format for parameter load");
                 break;
             }
         }
@@ -489,7 +489,7 @@ private:
             size_t count = 0;
             int err = elf_getphdrnum(elf, &count);
             if (err)
-                SC_REPORT_ERROR("Loader", ("elf_begin failed: " + std::string(elf_errmsg(err))).c_str());
+                SC_REPORT_FATAL("Loader", ("elf_begin failed: " + std::string(elf_errmsg(err))).c_str());
 
             std::vector<elf_segment> segments;
             typename T::Elf_Phdr* hdr = T::elf_getphdr(elf);
@@ -553,18 +553,18 @@ private:
             , m_endian(ENDIAN_UNKNOWN)
         {
             if (elf_version(EV_CURRENT) == EV_NONE)
-                SC_REPORT_ERROR("Loader", "failed to read libelf version");
+                SC_REPORT_FATAL("Loader", "failed to read libelf version");
 
             m_fd = open(filename(), O_RDONLY, 0);
             if (m_fd < 0)
-                SC_REPORT_ERROR("Loader", ("cannot open elf file " + std::string(filename())).c_str());
+                SC_REPORT_FATAL("Loader", ("cannot open elf file " + std::string(filename())).c_str());
 
             Elf* elf = elf_begin(m_fd, ELF_C_READ, nullptr);
             if (elf == nullptr)
-                SC_REPORT_ERROR("Loader", ("error reading " + std::string(filename()) + " : " + std::string(elf_errmsg(-1))).c_str());
+                SC_REPORT_FATAL("Loader", ("error reading " + std::string(filename()) + " : " + std::string(elf_errmsg(-1))).c_str());
 
             if (elf_kind(elf) != ELF_K_ELF)
-                SC_REPORT_ERROR("Loader", ("ELF version error in " + std::string(filename())).c_str());
+                SC_REPORT_FATAL("Loader", ("ELF version error in " + std::string(filename())).c_str());
 
             Elf32_Ehdr* ehdr32 = elf32_getehdr(elf);
             Elf64_Ehdr* ehdr64 = elf64_getehdr(elf);
@@ -600,10 +600,10 @@ private:
         uint64_t read_segment(const elf_segment& segment)
         {
             if (m_fd < 0)
-                SC_REPORT_ERROR("Loader", ("ELF file '" + std::string(filename()) + "' not open").c_str());
+                SC_REPORT_FATAL("Loader", ("ELF file '" + std::string(filename()) + "' not open").c_str());
 
             if (lseek(m_fd, segment.offset, SEEK_SET) != (ssize_t)segment.offset)
-                SC_REPORT_ERROR("Loader", ("cannot seek within ELF file " + std::string(filename())).c_str());
+                SC_REPORT_FATAL("Loader", ("cannot seek within ELF file " + std::string(filename())).c_str());
 
             uint8_t buff[1024];
             size_t sz = segment.filesz;
@@ -612,14 +612,14 @@ private:
                 int s = read(m_fd, buff, (sz < sizeof(buff) ? sz : sizeof(buff)));
                 sz -= s;
                 if (!s) {
-                    SC_REPORT_ERROR("Loader", ("cannot read ELF file " + std::string(filename())).c_str());
+                    SC_REPORT_FATAL("Loader", ("cannot read ELF file " + std::string(filename())).c_str());
                     exit(0);
                 }
                 m_send(segment.phys + offset, buff, s);
                 offset += s;
             }
             if (lseek(m_fd, 0, SEEK_SET) != 0)
-                SC_REPORT_ERROR("Loader", ("cannot seek within ELF file " + std::string(filename())).c_str());
+                SC_REPORT_FATAL("Loader", ("cannot seek within ELF file " + std::string(filename())).c_str());
 
             return segment.size;
         }

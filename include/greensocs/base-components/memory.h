@@ -107,7 +107,7 @@ protected:
         unsigned int bel = txn.get_byte_enable_length();
 
         if (txn.get_streaming_width() < len) {
-            SC_REPORT_ERROR("Memory", "not supported.\n");
+            SC_REPORT_FATAL("Memory", "not supported.\n");
         }
 
         if (p_verbose) {
@@ -166,7 +166,7 @@ protected:
             }
             break;
         default:
-            SC_REPORT_ERROR("Memory", "TLM command not supported\n");
+            SC_REPORT_FATAL("Memory", "TLM command not supported\n");
             break;
         }
 
@@ -223,7 +223,7 @@ protected:
 #ifndef _WIN32
         int fd = open(filename.c_str(), O_RDWR);
         if (fd < 0) {
-            SC_REPORT_ERROR("Memory", "Unable to find backing file\n");
+            SC_REPORT_FATAL("Memory", "Unable to find backing file\n");
         }
         if (m_ptr && !m_mapped) {
             delete[] m_ptr;
@@ -232,10 +232,10 @@ protected:
         m_ptr = (uint8_t*)mmap(m_ptr, m_size, PROT_READ | PROT_WRITE,
             MAP_SHARED, fd, 0);
         if (m_ptr == MAP_FAILED) {
-            SC_REPORT_ERROR("Memory", "Unable to map backing file\n");
+            SC_REPORT_FATAL("Memory", "Unable to map backing file\n");
         }
 #else
-        SC_REPORT_ERROR("Memory", "Backing files only supported on UNIX platforms\n");
+        SC_REPORT_FATAL("Memory", "Backing files only supported on UNIX platforms\n");
 #endif
     }
 
@@ -329,7 +329,7 @@ public:
             auto m_broker = cci::cci_get_broker();
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
             if (!m_broker.has_preset_value(ts_name + ".size")) {
-                SC_REPORT_ERROR("Memory",
+                SC_REPORT_FATAL("Memory",
                     ("Can't find " + ts_name + ".size").c_str());
             }
             m_size = m_broker.get_preset_cci_value(ts_name + ".size").get_uint64();

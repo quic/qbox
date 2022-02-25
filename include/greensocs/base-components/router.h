@@ -272,7 +272,7 @@ protected:
 
         for (auto& ti : targets) {
             if (!m_broker.has_preset_value(ti.name + ".address")) {
-                SC_REPORT_ERROR("Router",
+                SC_REPORT_FATAL("Router",
                     ("Can't find " + ti.name + ".address").c_str());
             }
             uint64_t address = m_broker.get_preset_cci_value(ti.name + ".address").get_uint64();
@@ -280,7 +280,7 @@ protected:
             m_broker.ignore_unconsumed_preset_values(
                 [ti](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first==(ti.name + ".address"); });
             if (!m_broker.has_preset_value(ti.name + ".size")) {
-                SC_REPORT_ERROR("Router",
+                SC_REPORT_FATAL("Router",
                     ("Can't find " + ti.name + ".size").c_str());
             }
             uint64_t size = m_broker.get_preset_cci_value(ti.name + ".size").get_uint64();
