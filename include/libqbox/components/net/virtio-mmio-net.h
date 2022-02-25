@@ -45,15 +45,7 @@ public:
     void before_end_of_elaboration() override
     {
         QemuVirtioMMIO::before_end_of_elaboration();
-        QemuDevice::before_end_of_elaboration();
-        m_dev.set_prop_str("netdev", netdev_id.c_str());
-    }
 
-    void end_of_elaboration() override
-    {
-        QemuVirtioMMIO::end_of_elaboration();
-        qemu::Device virtio_net_dev(m_dev);
-        virtio_net_dev.set_parent_bus(QemuVirtioMMIO::get_bus());
-        QemuDevice::end_of_elaboration();
+        m_dev.set_prop_str("netdev", netdev_id.c_str());
     }
 };
