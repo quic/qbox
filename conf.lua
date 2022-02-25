@@ -58,7 +58,6 @@ platform = {
     hexagon_num_clusters = 1;
     hexagon_cluster_0 = hexagon_cluster;
     --hexagon_cluster_1 = hexagon_cluster;
-
     smmu = { mem = {address=0x15000000, size=0x100000};
              num_tbu=2;
              upstream_socket_0 = {address=0x0, size=0xd81e0000, relative_addresses=false};
