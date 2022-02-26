@@ -22,6 +22,9 @@
 #include <systemc>
 #include <cci_configuration>
 
+#include <tlm_utils/simple_initiator_socket.h>
+#include <tlm_utils/simple_target_socket.h>
+
 #include <greensocs/gsutils/luafile_tool.h>
 #include <greensocs/gsutils/cciutils.h>
 
@@ -193,25 +196,129 @@ uint32_t hexagon_bootstrap[] = {
 #define ARCH_TIMER_NS_EL1_IRQ (16+14)
 #define ARCH_TIMER_NS_EL2_IRQ (16+10)
 
+template <unsigned int BUSWIDTH = 32>
+class fake_tbu : public sc_core::sc_module {
+public:
+    tlm_utils::simple_initiator_socket<fake_tbu<BUSWIDTH>> initiator_socket;
+    tlm_utils::simple_target_socket<fake_tbu, BUSWIDTH> target_socket;
+
+private:
+    void b_transport(tlm::tlm_generic_payload& trans,
+        sc_core::sc_time& delay)
+    {
+        initiator_socket->b_transport(trans, delay);
+    }
+
+    unsigned int transport_dbg(tlm::tlm_generic_payload& trans)
+    {
+        return initiator_socket->transport_dbg(trans);
+    }
+
+    bool get_direct_mem_ptr(tlm::tlm_generic_payload& trans,
+        tlm::tlm_dmi& dmi_data)
+    {
+        return  initiator_socket->get_direct_mem_ptr(trans, dmi_data);
+    }
+
+    void invalidate_direct_mem_ptr(sc_dt::uint64 start,
+        sc_dt::uint64 end)
+    {
+        target_socket->invalidate_direct_mem_ptr(start, end);
+    }
+
+public:
+    explicit fake_tbu(const sc_core::sc_module_name& nm)
+        : sc_core::sc_module(nm)
+        , initiator_socket("initiator_socket")
+        , target_socket("target_socket")
+    {
+        target_socket.register_b_transport(this, &fake_tbu::b_transport);
+        target_socket.register_transport_dbg(this, &fake_tbu::transport_dbg);
+        target_socket.register_get_direct_mem_ptr(this, &fake_tbu::get_direct_mem_ptr);
+        initiator_socket.register_invalidate_direct_mem_ptr(this, &fake_tbu::invalidate_direct_mem_ptr);
+    }
+    fake_tbu() = delete;
+    fake_tbu(const fake_tbu&) = delete;
+    ~fake_tbu() {}
+};
+
+class hexagon_cluster : public sc_core::sc_module {
+public:
+    cci::cci_param<unsigned> p_hexagon_num_threads;
+    cci::cci_param<uint32_t> p_hexagon_start_addr;
+private:
+    QemuInstance &m_qemu_hex_inst;
+    QemuHexagonL2vic m_l2vic;
+    QemuHexagonQtimer m_qtimer;
+
+    sc_core::sc_vector<QemuCpuHexagon> m_hexagon_threads;
+    gs::Router<> m_router;
+    fake_tbu<> m_fake_tbu;
+
+
+public:
+    tlm::tlm_initiator_socket<> initiator_socket;
+
+    hexagon_cluster(const sc_core::sc_module_name& n, QemuInstanceManager &m_inst_mgr)
+        : sc_core::sc_module(n)
+        , p_hexagon_num_threads("hexagon_num_threads", 8, "Number of Hexagon threads")
+        , p_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
+
+        , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
+        , m_l2vic("l2vic", m_qemu_hex_inst)
+        , m_qtimer("qtimer", m_qemu_hex_inst) // are we sure it's in the hex cluster?????
+        , m_hexagon_threads("hexagon_thread", p_hexagon_num_threads, [this] (const char *n, size_t i) {
+            /* here n is already "hexagon-cpu_<vector-index>" */
+            return new QemuCpuHexagon(n, m_qemu_hex_inst,
+                                      v68n_1024_extensions.cfgbase,
+                                      QemuCpuHexagon::v68_rev,
+                                      v68n_1024_extensions.l2vic_base,
+                                      v68n_1024_extensions.qtmr_rg0,
+                                      p_hexagon_start_addr);
+        })
+        , m_router("router")
+        , m_fake_tbu("tbu")
+    {
+        m_router.initiator_socket.bind(m_l2vic.socket);
+        m_router.initiator_socket.bind(m_l2vic.socket_fast);
+        m_router.initiator_socket.bind(m_qtimer.socket);
+        m_router.initiator_socket.bind(m_qtimer.timer0_socket);
+        m_router.initiator_socket.bind(m_qtimer.timer1_socket);
+
+        for (auto& cpu : m_hexagon_threads) {
+            cpu.socket.bind(m_router.target_socket);
+        }
+        m_router.initiator_socket.bind(m_fake_tbu.target_socket);
+
+        m_fake_tbu.initiator_socket.bind(initiator_socket);
+
+        for(int i = 0; i < m_l2vic.p_num_outputs; ++i) {
+            m_l2vic.irq_out[i].bind(m_hexagon_threads[0].irq_in[i]);
+        }
+
+        m_qtimer.timer0_irq.bind(m_l2vic.irq_in[3]); // FIXME: Depends on static boolean syscfg_is_linux, may be 2
+        m_qtimer.timer1_irq.bind(m_l2vic.irq_in[4]);
+
+//        m_global_peripheral_initiator = new GlobalPeripheralInitiator("glob-per-init", m_qemu_hex_inst, m_hexagon_cpus[0]);
+
+    }
+};
+
 class GreenSocsPlatform : public sc_core::sc_module {
 protected:
+    gs::ConfigurableBroker m_broker;
     gs::async_event event;   // this is only present for debug, and should be removed for CI (once the ARM is re-instated)
 
     cci::cci_param<unsigned> p_arm_num_cpus;
-    cci::cci_param<unsigned> p_hexagon_num_cpus;
+    cci::cci_param<unsigned> p_hexagon_num_clusters;
 
     cci::cci_param<int> m_quantum_ns;
 
-    cci::cci_param<uint32_t> m_hexagon_start_addr;
-
     QemuInstanceManager m_inst_mgr;
     QemuInstance &m_qemu_inst;
-    QemuInstance &m_qemu_hex_inst;
 
     sc_core::sc_vector<QemuCpuArmMax> m_cpus;
-    sc_core::sc_vector<QemuCpuHexagon> m_hexagon_cpus;
-    QemuHexagonL2vic m_l2vic;
-    QemuHexagonQtimer m_qtimer;
+    sc_core::sc_vector<hexagon_cluster> m_hexagon_clusters;
     QemuArmGicv3* m_gic;
     gs::Router<> m_router;
     gs::Memory<> m_ram;
@@ -240,22 +347,16 @@ protected:
             m_router.initiator_socket.bind(m_gic->redist_iface[0]);
         }
 
-        if (p_hexagon_num_cpus) {
-            for (auto &cpu: m_hexagon_cpus) {
-                cpu.socket.bind(m_router.target_socket);
+        if (p_hexagon_num_clusters) {
+            for (auto &cpu: m_hexagon_clusters) {
+                cpu.initiator_socket.bind(m_router.target_socket);
             }
-            m_global_peripheral_initiator->m_initiator.bind(m_router.target_socket);
         }
 
 
         m_router.initiator_socket.bind(m_ram.socket);
         m_router.initiator_socket.bind(m_hexagon_ram.socket);
         m_router.initiator_socket.bind(m_rom.socket);
-        m_router.initiator_socket.bind(m_l2vic.socket);
-        m_router.initiator_socket.bind(m_l2vic.socket_fast);
-        m_router.initiator_socket.bind(m_qtimer.socket);
-        m_router.initiator_socket.bind(m_qtimer.timer0_socket);
-        m_router.initiator_socket.bind(m_qtimer.timer1_socket);
         m_router.initiator_socket.bind(m_uart.socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
 
@@ -270,14 +371,6 @@ protected:
     }
 
      void setup_irq_mapping() {
-
-        if (p_hexagon_num_cpus) {
-            for(int i = 0; i < m_l2vic.p_num_outputs; ++i) {
-                m_l2vic.irq_out[i].bind(m_hexagon_cpus[0].irq_in[i]);
-            }
-        }
-        m_qtimer.timer0_irq.bind(m_l2vic.irq_in[3]); // FIXME: Depends on static boolean syscfg_is_linux, may be 2
-        m_qtimer.timer1_irq.bind(m_l2vic.irq_in[4]);
 
         if (p_arm_num_cpus) {
             m_uart.irq_out.bind(m_gic->spi_in[1]);
@@ -298,60 +391,37 @@ protected:
         }
      }
 
-    void cci_get_int(std::string name, uint32_t &dst) {
-        auto m_broker = cci::cci_get_broker();
-        std::string fullname=std::string(sc_module::name()) + "." + name;
-        if (m_broker.has_preset_value(fullname)) {
-            dst = m_broker.get_preset_cci_value(fullname).get_uint();
-            m_broker.ignore_unconsumed_preset_values(
-                [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == fullname;});
-        }
-    }
-
     void hexagon_config_setup()
     {
         cfgTable = &v68n_1024_cfgtable;
         cfgExtensions = &v68n_1024_extensions;
-
-        cci_get_int("cfgTable.fastl2vic_base", (cfgTable->fastl2vic_base));
-        cci_get_int("cfgExtensions.cfgtable_size", (cfgExtensions->cfgtable_size));
-        cci_get_int("cfgExtensions.l2vic_base", (cfgExtensions->l2vic_base));
-        cci_get_int("cfgExtensions.qtmr_rg0", (cfgExtensions->qtmr_rg0));
-        cci_get_int("cfgExtensions.qtmr_rg1", (cfgExtensions->qtmr_rg1));
-
+        std::string n=name();
+        cfgTable->fastl2vic_base = gs::cci_get<uint64_t>(n+".cfgTable.fastl2vic_base");
+        cfgExtensions->cfgtable_size = gs::cci_get<uint64_t>(n+".cfgExtensions.cfgtable_size");
+        cfgExtensions->l2vic_base = gs::cci_get<uint64_t>(n+".cfgExtensions.l2vic_base");
+        cfgExtensions->qtmr_rg0 = gs::cci_get<uint64_t>(n+".cfgExtensions.qtmr_rg0");
+        cfgExtensions->qtmr_rg1 = gs::cci_get<uint64_t>(n+".cfgExtensions.qtmr_rg1");
     }
 
 public:
     GreenSocsPlatform(const sc_core::sc_module_name &n)
         : sc_core::sc_module(n)
-        /* Need to patch CCI's broker...*/
-        /*, m_broker({
+        , m_broker({
             {"gic.num_spi", cci::cci_value(64)},
             {"gic.redist_region", cci::cci_value(std::vector<unsigned int>({32}))},
-        })*/
-        , p_hexagon_num_cpus("hexagon_num_cpus", 8, "Number of Hexagon threads")
+        })
+        , p_hexagon_num_clusters("hexagon_num_clusters", 2, "Number of Hexagon cluster")
         , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
         , m_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
 
-        , m_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
-
         , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
-        , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_cpus("cpu", p_arm_num_cpus, [this] (const char *n, size_t i) {
             /* here n is already "cpu_<vector-index>" */
             return new QemuCpuArmMax(n, m_qemu_inst);
         })
-        , m_hexagon_cpus("hexagon_cpu", p_hexagon_num_cpus, [this] (const char *n, size_t i) {
-            /* here n is already "hexagon-cpu_<vector-index>" */
-            return new QemuCpuHexagon(n, m_qemu_hex_inst,
-                                      v68n_1024_extensions.cfgbase,
-                                      QemuCpuHexagon::v68_rev,
-                                      v68n_1024_extensions.l2vic_base,
-                                      v68n_1024_extensions.qtmr_rg0,
-                                      m_hexagon_start_addr);
+        , m_hexagon_clusters("hexagon_cluster", p_hexagon_num_clusters, [this] (const char *n, size_t i) {
+            return new hexagon_cluster(n, m_inst_mgr);
         })
-        , m_l2vic("l2vic", m_qemu_hex_inst)
-        , m_qtimer("qtimer", m_qemu_hex_inst)
         , m_router("router")
         , m_ram("ram")
         , m_hexagon_ram("hexagon_ram")
@@ -368,16 +438,12 @@ public:
         sc_core::sc_time global_quantum(m_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);
 
-        if (p_hexagon_num_cpus) {
-            m_global_peripheral_initiator = new GlobalPeripheralInitiator("glob-per-init", m_qemu_hex_inst, m_hexagon_cpus[0]);
-        }
-
         if (p_arm_num_cpus) {
             m_gic = new QemuArmGicv3("gic", m_qemu_inst, p_arm_num_cpus);
         }
 
-        hexagon_config_setup();
-        //setup_cpus();
+        if (p_hexagon_num_clusters) hexagon_config_setup();
+
         do_bus_binding();
         setup_irq_mapping();
 
@@ -404,29 +470,11 @@ public:
         config_table->fastl2vic_base = HEXAGON_CFG_ADDR_BASE(cfgTable->fastl2vic_base);
         m_loader.ptr_load(reinterpret_cast<uint8_t*>(cfgTable), m_hexagon_ram.base(), sizeof(hexagon_config_table));
     }
-
-    void start_of_simulation()
-    {
-
-        auto m_broker = cci::cci_get_broker();
-
-        m_broker.ignore_unconsumed_preset_values(
-            [](const std::pair<std::string, cci::cci_value>& iv) -> bool { return ((iv.first)[0]=='_' || iv.first == "math.maxinteger") || (iv.first == "math.mininteger") || (iv.first == "utf8.charpattern"); });
-
-        auto uncon = m_broker.get_unconsumed_preset_values();
-        for (auto p : uncon) {
-            SC_REPORT_INFO("Params", ("WARNING: Unconsumed parameter : " + p.first + " = " + p.second.to_json()).c_str());
-        }
-    }
 };
 
 int sc_main(int argc, char *argv[])
 {
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
-
-/* should be moved to an internal broker when thats fixed */
-    m_broker->set_preset_cci_value("platform.gic.num_spi", cci::cci_value(64), cci::cci_originator("sc_main"));
-    m_broker->set_preset_cci_value("platform.gic.redist_region", cci::cci_value(std::vector<unsigned int>({32})), cci::cci_originator("sc_main"));
 
     GreenSocsPlatform platform("platform");
 
