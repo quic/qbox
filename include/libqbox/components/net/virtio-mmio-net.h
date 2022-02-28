@@ -28,11 +28,11 @@
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/components/virtio/virtio-mmio.h"
 
-class QemuVirtioNet : public QemuVirtioMMIO {
+class QemuVirtioMMIONet : public QemuVirtioMMIO {
 private:
     std::string netdev_id;
 public:
-    QemuVirtioNet(sc_core::sc_module_name nm, QemuInstance &inst)
+    QemuVirtioMMIONet(sc_core::sc_module_name nm, QemuInstance &inst)
             : QemuVirtioMMIO(nm, inst, "virtio-net-device")
             , netdev_id(std::string(name()) + "-id")
     {
