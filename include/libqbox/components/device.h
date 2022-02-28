@@ -55,6 +55,7 @@ protected:
     bool m_instanciated = false;
     bool m_realized = false;
 
+public:
     void instantiate()
     {
         if (m_instanciated) {
@@ -75,7 +76,6 @@ protected:
         m_realized = true;
     }
 
-public:
     /**
      * @brief Construct a QEMU device
      *
