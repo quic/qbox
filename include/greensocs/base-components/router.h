@@ -71,7 +71,7 @@ private:
 
         void bind(base_target_socket_type& socket)
         {
-            tlm_utils::multi_passthrough_initiator_socket<MOD>::bind(socket);
+            tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>::bind(socket);
             register_cb(socket.get_base_export().name());
         }
     };

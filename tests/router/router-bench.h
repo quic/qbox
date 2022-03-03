@@ -1,4 +1,5 @@
 #include "router.h"
+#include "connectors.h"
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/target-tester.h>
 #include <greensocs/gsutils/tests/test-bench.h>
@@ -24,6 +25,7 @@ private:
     InitiatorTester m_initiator;
     gs::Router<> m_router;
     std::vector<TargetTester*> m_target;
+    gs::pass<> m_pass;
 
     bool m_overlap_address = false;
     bool m_overlap_size = false;
@@ -231,6 +233,7 @@ public:
         : TestBench(n)
         , m_initiator("initiator")
         , m_router("router")
+        , m_pass("pass", true)
         , m_target()
     {
         int id = 0;
@@ -256,7 +259,8 @@ public:
             id++;
         }
 
-        m_router.add_initiator(m_initiator.socket);
+        m_initiator.socket.bind(m_pass.target_socket);
+        m_pass.initiator_socket(m_router.target_socket);
         for (int i = 0; i < NB_TARGETS; i++) {
             m_router.add_target(m_target[i]->socket, address[i], size[i]);
         }
