@@ -165,6 +165,37 @@ public:
 #include <sys/stat.h>
 #include <unistd.h>
 
+
+const char* dlpath(void* handle)
+{
+    const char* path = NULL;
+#ifdef __APPLE__
+    for (int32_t i = _dyld_image_count(); i >= 0; i--) {
+
+        bool found = FALSE;
+        const char* probe_path = _dyld_get_image_name(i);
+        void* probe_handle = dlopen(probe_path, RTLD_NOW | RTLD_LOCAL | RTLD_NOLOAD);
+
+        if (handle == probe_handle) {
+            found = TRUE;
+            path = probe_path;
+        }
+
+        dlclose(probe_handle);
+
+        if (found)
+            break;
+    }
+#else // Linux
+    struct link_map* map;
+    dlinfo(handle, RTLD_DI_LINKMAP, &map);
+
+    if (map)
+        path = map->l_name;
+#endif
+    return path;
+}
+
 class Library : public qemu::LibraryIface {
 private:
     void* m_lib;
@@ -195,31 +226,22 @@ public:
     qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name)
     {
         if (!m_base) {
+            std::cout << "Loading " << lib_name <<"\n";
             void* handle = dlopen(lib_name, RTLD_LOCAL | RTLD_NOW);
             if (handle == nullptr) {
                 m_last_error = dlerror();
                 return nullptr;
             }
-
-#if defined(__APPLE__)
-                  m_base = strdup(lib_name);//map.dli_fname);
-#else
-            struct link_map* map;
-            dlinfo(handle, RTLD_DI_LINKMAP, &map);
-
-            if (map) {
-                m_base = strdup(map->l_name);
-            }
-#endif
+            m_base = dlpath(handle);
             return std::make_shared<Library>(handle);
         }
-
+        std::cout << "RE Loading " << m_base <<"\n";
         char tmp[] = "/tmp/qbox_lib.XXXXXX";
         if (mkstemp(tmp) < 0) {
             m_last_error = "Unable to create temp file";
             return nullptr;
         }
-        copy_file(lib_name, tmp);
+        copy_file(m_base,tmp);
 
         void* handle = dlopen(tmp, RTLD_LOCAL | RTLD_NOW);
         if (handle == nullptr) {

@@ -48,7 +48,7 @@ set(srcs
 )
 
 
-add_library(qemu-cxx SHARED ${srcs})
+add_library(qemu-cxx STATIC ${srcs})
 
 foreach(target ${LIBQEMU_TARGETS})
     # The quite complex generator expressions does the followings:
