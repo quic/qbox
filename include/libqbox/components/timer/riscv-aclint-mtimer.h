@@ -1,8 +1,6 @@
 /*
  *  This file is part of libqbox
- *  Copyright (c) 2021 Greensocs
- *
- *  Author: Lukas Jünger
+ *  Copyright (c) 2022 Greensocs
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -28,33 +26,28 @@
 #include <libqemu-cxx/target/riscv.h>
 
 #include "libqbox/ports/target.h"
+#include "libqbox/components/device.h"
 
-class QemuRiscvSifiveClint : public QemuDevice {
-protected:
-    uint64_t m_aperture_size;
-    int m_num_harts;
-
+class QemuRiscvAclintMtimer : public QemuDevice {
 public:
     cci::cci_param<unsigned int> p_num_harts;
-    cci::cci_param<uint64_t> p_sip_base;
     cci::cci_param<uint64_t> p_timecmp_base;
     cci::cci_param<uint64_t> p_time_base;
-    cci::cci_param<bool> p_provide_rdtime;
     cci::cci_param<uint64_t> p_aperture_size;
     cci::cci_param<uint32_t> p_timebase_freq;
+    cci::cci_param<bool> p_provide_rdtime;
 
     QemuTargetSocket<> socket;
 
-    QemuRiscvSifiveClint(sc_core::sc_module_name nm, QemuInstance &inst)
-            : QemuDevice(nm, inst, "riscv.sifive.clint")
+    QemuRiscvAclintMtimer(sc_core::sc_module_name nm, QemuInstance &inst)
+            : QemuDevice(nm, inst, "riscv.aclint.mtimer")
             , p_num_harts("num_harts", 0, "Number of HARTS this CLINT is connected to")
-            , p_sip_base("sip_base", 0, "Base address for the SIP registers")
             , p_timecmp_base("timecmp_base", 0, "Base address for the TIMECMP registers")
             , p_time_base("time_base", 0, "Base address for the TIME registers")
-            , p_provide_rdtime("provide_rdtime", false, "If true, provide the CPU with "
-                                                        "a rdtime register")
             , p_aperture_size("aperture_size", 0, "Size of the whole CLINT address space")
             , p_timebase_freq("timebase_freq", 10000000, "")
+            , p_provide_rdtime("provide_rdtime", false, "If true, provide the CPU with "
+                                                        "a rdtime register")
             , socket("mem", inst)
     {}
 
@@ -62,11 +55,10 @@ public:
     {
         QemuDevice::before_end_of_elaboration();
 
-        m_dev.set_prop_int("aperture-size", p_aperture_size);
         m_dev.set_prop_int("num-harts", p_num_harts);
-        m_dev.set_prop_int("sip-base", p_sip_base);
         m_dev.set_prop_int("timecmp-base", p_timecmp_base);
         m_dev.set_prop_int("time-base", p_time_base);
+        m_dev.set_prop_int("aperture-size", p_aperture_size);
         m_dev.set_prop_int("timebase-freq", p_timebase_freq);
         m_dev.set_prop_bool("provide-rdtime", p_provide_rdtime);
     }
