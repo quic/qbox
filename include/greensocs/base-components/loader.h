@@ -149,7 +149,10 @@ private:
             trans.set_streaming_width(len);
             trans.set_byte_enable_length(0);
             if (initiator_socket->transport_dbg(trans) != len) {
-                SC_REPORT_FATAL("Loader", "Error loading data to memory");
+                std::stringstream info;
+                info << name() << " : Error loading data to memory @ "
+                     << "0x" << std::hex << addr;
+                SC_REPORT_FATAL("Loader", info.str().c_str());
             }
         }
     }

@@ -78,6 +78,12 @@ protected:
             txn.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return false;
         }
+        if (p_verbose) {
+            std::stringstream info;
+            info << name() << " : DMI access to address "
+                 << "0x" << std::hex << addr;
+            SC_REPORT_INFO("Memory", info.str().c_str());
+        }
 
         if (p_rom)
             dmi_data.allow_read();
