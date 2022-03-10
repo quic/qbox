@@ -152,7 +152,7 @@ protected:
         case tlm::TLM_READ_COMMAND:
             if (byt) {
                 for (unsigned int i = 0; i < len; i++)
-                    if (byt[i & bel] == TLM_BYTE_ENABLED)
+                    if (byt[i % bel] == TLM_BYTE_ENABLED)
                         ptr[i] = m_ptr[addr + i];
             } else {
                 read(ptr, addr, len);
@@ -165,7 +165,7 @@ protected:
             }
             if (byt) {
                 for (unsigned int i = 0; i < len; i++)
-                    if (byt[i & bel] == TLM_BYTE_ENABLED)
+                    if (byt[i % bel] == TLM_BYTE_ENABLED)
                         m_ptr[addr + i] = ptr[i];
             } else {
                 write(ptr, addr, len);
