@@ -36,6 +36,8 @@
 #include <sys/ioctl.h>
 #include <signal.h>
 #include <netdb.h>
+
+#include <greensocs/libgssync/async_event.h>
 #endif
 
 #undef MLOG
@@ -54,7 +56,7 @@
 
 class CharBackendSocket : public CharBackend, public sc_core::sc_module {
 private:
-    AsyncEvent m_event;
+    gs::async_event m_event;
     std::queue<unsigned char> m_queue;
     std::mutex m_mutex;
 
@@ -200,8 +202,8 @@ public:
                 m_receive(m_opaque, &c, 1);
             }
             else {
-                /* notify myself later, hopefully the queue drains */
-                m_event.notify(1, sc_core::SC_MS);
+                /* notify myself, hopefully the queue drains */
+                m_event.notify();
                 return;
             }
         }
