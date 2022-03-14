@@ -308,7 +308,7 @@ public:
             map(p_mapfile);
         } else {
             sc_assert(m_size > 0);
-            m_ptr = new uint8_t[m_size]();
+            m_ptr = static_cast<uint8_t*>(aligned_alloc(m_size, m_size));
         }
     }
 
