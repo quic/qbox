@@ -296,14 +296,16 @@ protected:
                     [ti](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first==(ti.name + ".relative_addresses"); });
             }
 
-            std::stringstream info;
-            info << "Address map " << ti.name + " at"
-                 << " address "
-                 << "0x" << std::hex << address
-                 << " size "
-                 << "0x" << std::hex << size
-                 << (mask ? " (with relative address) " : "");
-            SC_REPORT_INFO("Router", info.str().c_str());
+            if (gs::router::log_enabled) {
+                std::stringstream info;
+                info << "Address map " << ti.name + " at"
+                    << " address "
+                    << "0x" << std::hex << address
+                    << " size "
+                    << "0x" << std::hex << size
+                    << (mask ? " (with relative address) " : "");
+                SC_REPORT_INFO("Router", info.str().c_str());
+            }
             ti.address = address;
             ti.size = size;
             ti.mask_addr = mask;

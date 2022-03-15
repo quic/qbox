@@ -87,6 +87,10 @@ std::istream& operator>>(std::istream& str, CSVRow& data)
     return str;
 }
 
+namespace loader {
+    static const char* log_enabled = std::getenv("GS_LOG");
+}
+
 template <unsigned int BUSWIDTH = 32>
 class Loader : public sc_core::sc_module {
 
@@ -232,7 +236,9 @@ protected:
             }
             if (m_broker.has_preset_value(name + ".bin_file")) {
                 std::string file = cci_get<std::string>(name + ".bin_file");
-                SC_REPORT_INFO("Loader", ("Loading binary file " + file).c_str());
+                if (gs::loader::log_enabled) {
+                    SC_REPORT_INFO("Loader", ("Loading binary file " + file).c_str());
+                }
                 file_load(file, addr);
                 read = true;
             }
@@ -244,7 +250,9 @@ protected:
                 if (m_broker.has_preset_value(name + ".byte_swap")) {
                     byte_swap = cci_get<bool>(name + ".byte_swap");
                 }
-                SC_REPORT_INFO("Loader", ("Loading csv file " + file).c_str());
+                if (gs::loader::log_enabled) {
+                    SC_REPORT_INFO("Loader", ("Loading csv file " + file).c_str());
+                }
                 csv_load(file, addr, addr_str, val_str, byte_swap);
                 read = true;
             }
@@ -254,7 +262,9 @@ protected:
                 if (!data.is_valid()) {
                     SC_REPORT_FATAL("Loader", ("Unable to find valid source param " + param).c_str());
                 }
-                SC_REPORT_INFO("Loader", ("Loading string parameter " + param).c_str());
+                if (gs::loader::log_enabled) {
+                    SC_REPORT_INFO("Loader", ("Loading string parameter " + param).c_str());
+                }
                 str_load(data.get_value(), addr);
                 read = true;
             }
@@ -263,7 +273,9 @@ protected:
                 if (m_broker.has_preset_value(name + ".byte_swap")) {
                     byte_swap = cci_get<bool>(name + ".byte_swap");
                 }
-                SC_REPORT_INFO("Loader", "Loading config data ");
+                if (gs::loader::log_enabled) {
+                    SC_REPORT_INFO("Loader", "Loading config data ");
+                }
                 data_load(name + ".data", addr, byte_swap);
                 read = true;
             }
