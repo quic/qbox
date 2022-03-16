@@ -60,7 +60,7 @@ public:
             /* here n is already "cpu_<vector-index>" */
             return new QemuTargetSocket<>(n, m_inst);
         })
-        , register_socket("mem", inst)
+        , register_socket("mem", m_inst)
         , irq_global("irq_global")
         , irq_context("irq_context", p_num_cb, [this] (const char *n, size_t i) {
             /* here n is already "cpu_<vector-index>" */

@@ -37,6 +37,7 @@ function(qbox_add_cpu_test target timeout_s)
     endif()
 
     add_executable(${target} ${ARGN})
+    install(TARGETS ${target} DESTINATION bin)
 
     target_include_directories(${target} PRIVATE ${CMAKE_SOURCE_DIR}/tests/include ${keystone_SOURCE_DIR}/include)
 
