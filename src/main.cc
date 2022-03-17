@@ -318,6 +318,7 @@ protected:
     cci::cci_param<int> m_quantum_ns;
 
     QemuInstanceManager m_inst_mgr;
+    QemuInstanceManager m_inst_mgr_h;
     QemuInstance &m_qemu_inst;
 
     sc_core::sc_vector<QemuCpuArmMax> m_cpus;
@@ -422,7 +423,7 @@ public:
         : sc_core::sc_module(n)
         , m_broker({
             {"gic.num_spi", cci::cci_value(64)},
-            {"gic.redist_region", cci::cci_value(std::vector<unsigned int>({32}))},
+            {"gic.redist_region", cci::cci_value(std::vector<unsigned int>({8}))},
         })
         , p_hexagon_num_clusters("hexagon_num_clusters", 2, "Number of Hexagon cluster")
         , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
@@ -434,7 +435,7 @@ public:
             return new QemuCpuArmMax(n, m_qemu_inst);
         })
         , m_hexagon_clusters("hexagon_cluster", p_hexagon_num_clusters, [this] (const char *n, size_t i) {
-            return new hexagon_cluster(n, m_inst_mgr);
+            return new hexagon_cluster(n, m_inst_mgr_h);
         })
         , m_router("router")
         , m_ram("ram")
