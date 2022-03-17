@@ -63,57 +63,63 @@ TEST_BENCH(RouterMemoryTestBench, SimpleCrossesBoundary)
 // Simple write and read into the memory with the Debug Transport Interface
 TEST_BENCH(RouterMemoryTestBench, SimpleWriteReadDebug)
 {
-    uint64_t data;
+    uint8_t data8=0;
+    uint16_t data16=0;
+    uint32_t data32=0;
+    uint64_t data64=0;
+
+    // set some data so that we are sure we only get the right amount below
+    ASSERT_EQ(m_initiator.do_write<uint64_t>(0, -1, true), tlm ::TLM_OK_RESPONSE);
 
     /* Target 1 */
     ASSERT_EQ(m_initiator.do_write<uint8_t>(0, 0x04, true), tlm ::TLM_OK_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(uint8_t));
-    ASSERT_EQ(m_initiator.do_read(0, data, true), tlm ::TLM_OK_RESPONSE);
-    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data));
-    ASSERT_EQ(data, 0x04);
+    ASSERT_EQ(m_initiator.do_read(0, data8, true), tlm ::TLM_OK_RESPONSE);
+    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data8));
+    ASSERT_EQ(data8, 0x04);
 
     ASSERT_EQ(m_initiator.do_write<uint16_t>(0, 0x04, true), tlm ::TLM_OK_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(uint16_t));
-    ASSERT_EQ(m_initiator.do_read(0, data, true), tlm ::TLM_OK_RESPONSE);
-    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data));
-    ASSERT_EQ(data, 0x04);
+    ASSERT_EQ(m_initiator.do_read(0, data16, true), tlm ::TLM_OK_RESPONSE);
+    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data16));
+    ASSERT_EQ(data16, 0x04);
 
     ASSERT_EQ(m_initiator.do_write<uint32_t>(0, 0x04, true), tlm ::TLM_OK_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(uint32_t));
-    ASSERT_EQ(m_initiator.do_read(0, data, true), tlm ::TLM_OK_RESPONSE);
-    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data));
-    ASSERT_EQ(data, 0x04);
+    ASSERT_EQ(m_initiator.do_read(0, data32, true), tlm ::TLM_OK_RESPONSE);
+    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data32));
+    ASSERT_EQ(data32, 0x04);
 
     ASSERT_EQ(m_initiator.do_write<uint64_t>(0, 0x04, true), tlm ::TLM_OK_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(uint64_t));
-    ASSERT_EQ(m_initiator.do_read(0, data, true), tlm ::TLM_OK_RESPONSE);
-    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data));
-    ASSERT_EQ(data, 0x04);
+    ASSERT_EQ(m_initiator.do_read(0, data64, true), tlm ::TLM_OK_RESPONSE);
+    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data64));
+    ASSERT_EQ(data64, 0x04);
 
     /* Target 2 */
     ASSERT_EQ(m_initiator.do_write<uint8_t>(address[1], 0x04, true), tlm ::TLM_OK_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(uint8_t));
-    ASSERT_EQ(m_initiator.do_read(0, data, true), tlm ::TLM_OK_RESPONSE);
-    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data));
-    ASSERT_EQ(data, 0x04);
+    ASSERT_EQ(m_initiator.do_read(0, data8, true), tlm ::TLM_OK_RESPONSE);
+    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data8));
+    ASSERT_EQ(data8, 0x04);
 
     ASSERT_EQ(m_initiator.do_write<uint16_t>(address[1], 0x04, true), tlm ::TLM_OK_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(uint16_t));
-    ASSERT_EQ(m_initiator.do_read(0, data, true), tlm ::TLM_OK_RESPONSE);
-    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data));
-    ASSERT_EQ(data, 0x04);
+    ASSERT_EQ(m_initiator.do_read(0, data16, true), tlm ::TLM_OK_RESPONSE);
+    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data16));
+    ASSERT_EQ(data16, 0x04);
 
     ASSERT_EQ(m_initiator.do_write<uint32_t>(address[1], 0x04, true), tlm ::TLM_OK_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(uint32_t));
-    ASSERT_EQ(m_initiator.do_read(0, data, true), tlm ::TLM_OK_RESPONSE);
-    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data));
-    ASSERT_EQ(data, 0x04);
+    ASSERT_EQ(m_initiator.do_read(0, data32, true), tlm ::TLM_OK_RESPONSE);
+    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data32));
+    ASSERT_EQ(data32, 0x04);
 
     ASSERT_EQ(m_initiator.do_write<uint64_t>(address[1], 0x04, true), tlm ::TLM_OK_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(uint64_t));
-    ASSERT_EQ(m_initiator.do_read(0, data, true), tlm ::TLM_OK_RESPONSE);
-    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data));
-    ASSERT_EQ(data, 0x04);
+    ASSERT_EQ(m_initiator.do_read(0, data64, true), tlm ::TLM_OK_RESPONSE);
+    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data64));
+    ASSERT_EQ(data64, 0x04);
 }
 
 // Debug Transport Interface transaction outside of the target address space
