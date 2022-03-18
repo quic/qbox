@@ -22,9 +22,9 @@ dofile (top().."fw/arm64_bootloader.lua")
 local hexagon_cluster= {
     hexagon_num_threads = 1;
     hexagon_thread_0={start_powered_off = false};
-    hexagon_thread_1={start_powered_off = true};
-    hexagon_thread_2={start_powered_off = true};
-    hexagon_thread_3={start_powered_off = true};
+    -- hexagon_thread_1={start_powered_off = true};
+    -- hexagon_thread_2={start_powered_off = true};
+    -- hexagon_thread_3={start_powered_off = true};
     HexagonQemuInstance = { tcg_mode="SINGLE", sync_policy = "multithread-unconstrained"};
     hexagon_start_addr = 0x8B500000;
     l2vic={  mem           = {address=0xfc910000, size=0x1000};
@@ -49,6 +49,7 @@ platform = {
     uart= {  simple_target_socket_0           = {address= 0x9000000, size=0x1000}, irq=1};
     ipcc= {  socket        = {address=  0x410000, size=0xfc000}};
     virtionet0= { mem    =   {address=0x0a003e00, size=0x2000}, irq=2}; -- netdev_str="type=tap"};
+    virtioblk0= { mem    =   {address=0x0a003c00, size=0x2000}, irq=3, blkdev_str="file="..top().."fw/fastrpc-images/images/disk.bin,format=raw,if=none"};
 
     system_imem={ target_socket = {address=0x14680000, size=0x40000}};
 

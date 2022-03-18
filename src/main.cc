@@ -35,6 +35,7 @@
 #include <libqbox/components/irq-ctrl/hexagon-l2vic.h>
 #include <libqbox/components/timer/hexagon-qtimer.h>
 #include <libqbox/components/net/virtio-mmio-net.h>
+#include <libqbox/components/blk/virtio-mmio-blk.h>
 #include <libqbox/components/mmu/arm-smmu.h>
 
 #include <libqbox-extra/components/meta/global_peripheral_initiator.h>
@@ -295,6 +296,7 @@ protected:
     IPCC m_ipcc;
 
     QemuVirtioMMIONet m_virtio_net_0;
+    QemuVirtioMMIOBlk m_virtio_blk_0;
 
     gs::Memory<> m_fallback_mem;
 
@@ -323,6 +325,7 @@ protected:
         m_router.initiator_socket.bind(m_uart.socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
         m_router.initiator_socket.bind(m_virtio_net_0.socket);
+        m_router.initiator_socket.bind(m_virtio_blk_0.socket);
 
         m_router.initiator_socket.bind(m_system_imem.socket);
 
@@ -338,12 +341,13 @@ protected:
         if (p_arm_num_cpus) {
             {
                 int irq=gs::cci_get<int>(std::string(m_uart.name())+".irq");
-//                m_uart.irq_out.bind(m_gic->spi_in[irq]);
                 m_uart.irq.bind(m_gic->spi_in[irq]);
             }
             {
                 int irq=gs::cci_get<int>(std::string(m_virtio_net_0.name())+".irq");
                 m_virtio_net_0.irq_out.bind(m_gic->spi_in[irq]);
+                irq=gs::cci_get<int>(std::string(m_virtio_blk_0.name())+".irq");
+                m_virtio_blk_0.irq_out.bind(m_gic->spi_in[irq]);
             }
 
             for (int i = 0; i < m_cpus.size(); i++) {
@@ -404,6 +408,7 @@ public:
         , m_uart("uart")
         , m_ipcc("ipcc")
         , m_virtio_net_0("virtionet0", m_qemu_inst)
+        , m_virtio_blk_0("virtioblk0", m_qemu_inst)
         , m_fallback_mem("fallback_memory")
         , m_loader("load")
     {

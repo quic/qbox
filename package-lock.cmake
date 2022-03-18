@@ -4,7 +4,7 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG v5.1.1
+  GIT_TAG 052da099382394b782dc8f8782d74a67ea51204b
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
@@ -49,7 +49,7 @@ CPMDeclarePackage(libqemu
 # base-components
 CPMDeclarePackage(base-components
   NAME base-components
-  GIT_TAG f77cab4912ba61789067b2eb2918099778f64864
+  GIT_TAG v3.1.0
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/base-components.git
 #  GIT_SHALLOW on
 )
