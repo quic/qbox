@@ -65,15 +65,11 @@ platform = {
     rom=  {  target_socket = {address=UNLIKELY_TO_BE_USED+0xde000000, size=0x400 },read_only=true};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
              redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0xf60000}};
-    virtionet0= { mem    =   {address=0x1c120000, size=0x10000}, irq=76, netdev_str="type=user,ipv6=off"};
-    virtioblk0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=41, blkdev_str="file="..top().."fw/fastrpc-images/images/disk.bin,format=raw,if=none"};
---p tcpip timertol=1000,stacksize=65536,mclbytes=81920,pagesize=65536,pkt_cache=1024,mbuf_cache=1024 -ppf-v6 -dvirtio smem=0x1c120000,irq=76
+    virtionet0= { mem    =   {address=0x1c120000, size=0x10000}, irq=18, netdev_str="type=user,hostfwd=tcp::2222-:22"};
+    virtioblk0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..top().."fw/fastrpc-images/images/disk.bin,format=raw,if=none"};
     uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=1};
 
     ipcc= {  socket        = {address=0x410000, size=0xfc000}};
-
-
-    system_imem={ target_socket = {address=0x14680000, size=0x40000}, verbose=true, dmi_allow=false};
 
     smmu = { mem = {address=0x15000000, size=0x100000};
         num_tbu=2;
@@ -88,7 +84,9 @@ platform = {
         {bin_file=top().."fw/makena/images/smem_v3.bin", address=INITIAL_DDR_SPACE_14GB + OFFSET_SMEM_DDR_SPACE };
         -- Entry point for bl31.elf should be set to INITIAL_DDR_SPACE_14GB:
         {elf_file=top().."fw/makena/images/bl31.elf"};
-    }
+    };
+
+    --uart_backend_port=4001;
 };
 
 

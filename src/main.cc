@@ -290,14 +290,13 @@ protected:
     gs::Memory<> m_ram;
     gs::Memory<> m_hexagon_ram;
     gs::Memory<> m_rom;
-    gs::Memory<> m_system_imem;
+//    gs::Memory<> m_system_imem;
     GlobalPeripheralInitiator* m_global_peripheral_initiator_arm;
     Uart m_uart;
     IPCC m_ipcc;
 
     QemuVirtioMMIONet m_virtio_net_0;
     QemuVirtioMMIOBlk m_virtio_blk_0;
-    gs::pass<> vp1;
 
     gs::Memory<> m_fallback_mem;
 
@@ -325,11 +324,10 @@ protected:
         m_router.initiator_socket.bind(m_rom.socket);
         m_router.initiator_socket.bind(m_uart.socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
-        m_router.initiator_socket.bind(vp1.target_socket);
-                vp1.initiator_socket(m_virtio_net_0.socket);
+        m_router.initiator_socket.bind(m_virtio_net_0.socket);
         m_router.initiator_socket.bind(m_virtio_blk_0.socket);
 
-        m_router.initiator_socket.bind(m_system_imem.socket);
+//        m_router.initiator_socket.bind(m_system_imem.socket);
 
         // General loader
         m_loader.initiator_socket.bind(m_router.target_socket);
@@ -388,7 +386,7 @@ public:
         , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
         , p_num_redists("num_redists", 1, "Number of redistribution regions")
         , m_broker({
-            {"gic.num_spi", cci::cci_value(608)}, // 64 seems reasonable, but can be up to 960 or 987 depending on how the gic is used
+            {"gic.num_spi", cci::cci_value(960)}, // 64 seems reasonable, but can be up to 960 or 987 depending on how the gic is used
                                                   // MUST be a multiple of 32
             {"gic.redist_region", cci::cci_value(std::vector<unsigned int>(p_num_redists, p_arm_num_cpus/p_num_redists)) },
         })
@@ -407,12 +405,11 @@ public:
         , m_ram("ram")
         , m_hexagon_ram("hexagon_ram")
         , m_rom("rom")
-        , m_system_imem("system_imem")
+//        , m_system_imem("system_imem")
         , m_uart("uart")
         , m_ipcc("ipcc")
         , m_virtio_net_0("virtionet0", m_qemu_inst)
         , m_virtio_blk_0("virtioblk0", m_qemu_inst)
-        , vp1("vp1", true)
         , m_fallback_mem("fallback_memory")
         , m_loader("load")
     {
