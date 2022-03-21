@@ -48,7 +48,7 @@ platform = {
              redist_iface_0= {address=0x171a0000, size=0xf60000}};
     uart= {  simple_target_socket_0           = {address= 0x9000000, size=0x1000}, irq=1};
     ipcc= {  socket        = {address=  0x410000, size=0xfc000}};
-    virtionet0= { mem    =   {address=0x0a003e00, size=0x2000}, irq=2}; -- netdev_str="type=tap"};
+    virtionet0= { mem    =   {address=0x0a003e00, size=0x2000}, irq=76}; -- netdev_str="type=tap"};
     virtioblk0= { mem    =   {address=0x0a003c00, size=0x2000}, irq=3, blkdev_str="file="..top().."fw/fastrpc-images/images/disk.bin,format=raw,if=none"};
 
     system_imem={ target_socket = {address=0x14680000, size=0x40000}};
@@ -66,6 +66,10 @@ platform = {
     qtb = { control_socket = {address=0x15180000, size=0x4000}}; -- + 0x4000*tbu number
 
     load={
+        -- for virtio image
+        -- {bin_file=top().."fw/fastrpc-images/images/Image_virtio",    address=_KERNEL64_LOAD_ADDR};
+        -- {bin_file=top().."fw/fastrpc-images/images/rumi_virtio.dtb", address=_DTB_LOAD_ADDR};
+
         {bin_file=top().."fw/fastrpc-images/images/Image",    address=_KERNEL64_LOAD_ADDR};
         {bin_file=top().."fw/fastrpc-images/images/rumi.dtb", address=_DTB_LOAD_ADDR};
         {data=_bootloader_aarch64, address = 0x40000000};
