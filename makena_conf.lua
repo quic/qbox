@@ -36,11 +36,11 @@ _KERNEL64_LOAD_ADDR = INITIAL_DDR_SPACE_14GB
 dofile (top().."fw/arm64_bootloader.lua")
 
 local hexagon_cluster= {
-    hexagon_num_threads = 4;
+    hexagon_num_threads = 1;
     hexagon_thread_0={start_powered_off = false};
-    hexagon_thread_1={start_powered_off = true};
-    hexagon_thread_2={start_powered_off = true};
-    hexagon_thread_3={start_powered_off = true};
+--    hexagon_thread_1={start_powered_off = true};
+--    hexagon_thread_2={start_powered_off = true};
+--    hexagon_thread_3={start_powered_off = true};
     HexagonQemuInstance = { tcg_mode="SINGLE", sync_policy = "multithread-unconstrained"};
     hexagon_start_addr = 0x8B500000;
     l2vic={  mem           = {address=0xfc910000, size=0x1000};
@@ -52,7 +52,7 @@ local hexagon_cluster= {
 };
 
 platform = {
-    arm_num_cpus = 8;
+    arm_num_cpus = 1;
     num_redists=1;
     hexagon_num_clusters = 0;
     quantum_ns = 100000000;
@@ -65,11 +65,9 @@ platform = {
     rom=  {  target_socket = {address=UNLIKELY_TO_BE_USED+0xde000000, size=0x400 },read_only=true};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
              redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0xf60000}};
-    virtionet0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=76};-- netdev_str="type=tap"};
--- shoudl be 76?
---devb-virtio disk name=system blk "alloc=demand,cache=10M,noatime,ra=128k:128k,devdir=/dev/disk" cam "quiet,cache" virtio "smem=0x1c0d0000,irq=41"
+    virtionet0= { mem    =   {address=0x1c120000, size=0x10000}, irq=76, netdev_str="type=user,ipv6=off"};
+    virtioblk0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=41, blkdev_str="file="..top().."fw/fastrpc-images/images/disk.bin,format=raw,if=none"};
 --p tcpip timertol=1000,stacksize=65536,mclbytes=81920,pagesize=65536,pkt_cache=1024,mbuf_cache=1024 -ppf-v6 -dvirtio smem=0x1c120000,irq=76
-
     uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=1};
 
     ipcc= {  socket        = {address=0x410000, size=0xfc000}};
@@ -86,7 +84,6 @@ platform = {
 
     fallback_memory = { target_socket={address=0x0, size=0x40000000}, dmi_allow=false, verbose=true, load={csv_file=top().."fw/makena/SA8540P_MakenaAU_v2_Registers.csv", offset=0, addr_str="Address", value_str="Reset Value", byte_swap=true}};
     load={
---        {bin_file=top().."fw/makena/images/mifs_qdrive.img", address=INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE };
         {bin_file=top().."fw/makena/images/mifs_qdrive.img", address=INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE };
         {bin_file=top().."fw/makena/images/smem_v3.bin", address=INITIAL_DDR_SPACE_14GB + OFFSET_SMEM_DDR_SPACE };
         -- Entry point for bl31.elf should be set to INITIAL_DDR_SPACE_14GB:

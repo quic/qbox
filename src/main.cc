@@ -248,10 +248,10 @@ public:
         m_router.initiator_socket.bind(m_qtimer.socket);
         m_router.initiator_socket.bind(m_qtimer.timer0_socket);
         m_router.initiator_socket.bind(m_qtimer.timer1_socket);
-        p1= new gs::pass<>("p1", true);
+//        p1= new gs::pass<>("p1", false);
         for (auto& cpu : m_hexagon_threads) {
-            cpu.socket.bind(p1->target_socket);
-                p1->initiator_socket(m_router.target_socket);
+            cpu.socket.bind(/*p1->target_socket);
+                p1->initiator_socket(*/m_router.target_socket);
         }
 
         for(int i = 0; i < m_l2vic.p_num_outputs; ++i) {
@@ -297,6 +297,7 @@ protected:
 
     QemuVirtioMMIONet m_virtio_net_0;
     QemuVirtioMMIOBlk m_virtio_blk_0;
+    gs::pass<> vp1;
 
     gs::Memory<> m_fallback_mem;
 
@@ -324,7 +325,8 @@ protected:
         m_router.initiator_socket.bind(m_rom.socket);
         m_router.initiator_socket.bind(m_uart.socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
-        m_router.initiator_socket.bind(m_virtio_net_0.socket);
+        m_router.initiator_socket.bind(vp1.target_socket);
+                vp1.initiator_socket(m_virtio_net_0.socket);
         m_router.initiator_socket.bind(m_virtio_blk_0.socket);
 
         m_router.initiator_socket.bind(m_system_imem.socket);
@@ -386,7 +388,8 @@ public:
         , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
         , p_num_redists("num_redists", 1, "Number of redistribution regions")
         , m_broker({
-            {"gic.num_spi", cci::cci_value(128)}, // 64 seems reasonable, but can be up to 960 or 987 depending on how the gic is used
+            {"gic.num_spi", cci::cci_value(608)}, // 64 seems reasonable, but can be up to 960 or 987 depending on how the gic is used
+                                                  // MUST be a multiple of 32
             {"gic.redist_region", cci::cci_value(std::vector<unsigned int>(p_num_redists, p_arm_num_cpus/p_num_redists)) },
         })
         , p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
@@ -409,6 +412,7 @@ public:
         , m_ipcc("ipcc")
         , m_virtio_net_0("virtionet0", m_qemu_inst)
         , m_virtio_blk_0("virtioblk0", m_qemu_inst)
+        , vp1("vp1", true)
         , m_fallback_mem("fallback_memory")
         , m_loader("load")
     {
