@@ -188,4 +188,8 @@ To do this, you must run the following command in the build directoty `build/`:
 make test
 ```
 
+###  marking values as consumed
+Use cci_get to both get a CCI preset value and mark the param as 'consumed':
+ `` template <typename T> T cci_get(std::string name) ``
+
 [//]: # (PROCESSED BY doc_merge.pl)
