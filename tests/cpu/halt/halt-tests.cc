@@ -26,8 +26,10 @@
 #include "libqbox/components/cpu/arm/cortex-a53.h"
 #include "libqbox/qemu-instance.h"
 
+using namespace sc_core;
+using namespace std;
 /*
- * Simple ARM Cortex-A53 reset.
+ * Simple ARM Cortex-A53 halt.
  *
  * The CPU starts by fetching its SMP affinity number, then writes ten times to
  * the address (i * 8) of the tester, with i == affinity num, incrementing the
@@ -71,16 +73,27 @@ public:
 
 protected:
     std::vector<int> m_writes;
+    std::vector<bool> im_halted;
     sc_core::sc_vector<sc_core::sc_out<bool>> halt;
 
-
 public:
+    SC_HAS_PROCESS(CpuArmCortexA53SimpleHalt);
     CpuArmCortexA53SimpleHalt(const sc_core::sc_module_name &n)
         : CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>(n)
         , halt("halt", p_num_cpu)
     {
         char buf[1024];
+
         map_halt_to_cpus(halt);
+
+        im_halted.resize(p_num_cpu);
+
+        for (int i = 0; i < m_cpus.size(); i++) {
+            auto& cpu = m_cpus[i];
+            cpu.p_start_powered_off = false;
+            cpu.p_start_halted = true;
+            im_halted[i] = true;
+            }
 
         std::snprintf(buf, sizeof(buf), FIRMWARE,
                       CpuTesterMmio::MMIO_ADDR,
@@ -90,6 +103,22 @@ public:
         m_writes.resize(p_num_cpu);
         for (int i = 0; i < p_num_cpu; i++) {
             m_writes[i] = 0;
+        }
+
+        SC_THREAD(halt_ctrl)
+
+    }
+
+    void halt_ctrl(){
+        for (int t = 0; t < 5; t++){
+            wait(100000000000, SC_NS);
+            sleep(1);
+            for (int i = 0; i < m_cpus.size(); i++) {
+                if (im_halted[i]){
+                    halt[i].write(0);
+                    im_halted[i] = false;
+                }
+            }
         }
     }
 
@@ -109,6 +138,13 @@ public:
         m_writes[cpuid]++;
         std::cout<<"m_writes (mmio_write) = "<<m_writes[cpuid]<<std::endl;
 
+        TEST_ASSERT(im_halted[cpuid] == false);
+
+        if(m_writes[cpuid] == 5){
+            halt[cpuid].write(1);
+            im_halted[cpuid] = true;
+        }
+
         if (m_writes[cpuid] == NUM_WRITES){
             halt[cpuid].write(1);
         }
@@ -118,7 +154,6 @@ public:
     virtual void end_of_simulation() override
     {
         CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>::end_of_simulation();
-
         for (int i = 0; i < p_num_cpu; i++) {
             std::cout<<"m_writes (end_of_simulation) = "<<m_writes[i]<<std::endl;
             TEST_ASSERT(m_writes[i] == NUM_WRITES);

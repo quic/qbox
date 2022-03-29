@@ -299,6 +299,7 @@ protected:
 
 public:
     cci::cci_param<unsigned int> p_gdb_port;
+    cci::cci_param<bool> p_start_halted;
 
     /* The default memory socket. Mapped to the default CPU address space in QEMU */
     QemuInitiatorSocket<> socket;
@@ -312,6 +313,7 @@ public:
         , halt("halt")
         , m_qemu_kick_ev(false)
         , m_signaled(false)
+        , p_start_halted("start_halted", false, "Start halted by default is false")
         , p_gdb_port("gdb_port", 0, "Wait for gdb connection on TCP port <gdb_port>")
         , socket("mem", *this, inst)
     {
@@ -437,6 +439,8 @@ public:
     {
         QemuDevice::start_of_simulation();
         m_cpu.reset();
+        /* By default, we set the halt to release */
+        m_cpu.halt(p_start_halted);
         if (!m_coroutines) {
             /* Prepare the CPU for its first run and release it */
             m_cpu.set_soft_stopped(false);
