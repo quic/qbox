@@ -351,6 +351,8 @@ CAUTION:
 This will only print the parameters at the begining of simulation.
 
 [//]: # (SECTION 100)
+## Halt Interface
 
+The libqbox library allows to manage the halt state of the different CPUs that are used. The halt will allow a cpu to be in "standby".
 
-[//]: # (PROCESSED BY doc_merge.pl)
+Indeed, by default the halt state is released (state 0). It is important to note that the halt does not work with the power_off set (parameter p_power_off set to true).

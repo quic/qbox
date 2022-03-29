@@ -10,7 +10,9 @@ Libqbox encapsulates QEMU in SystemC such that it can be instanced as a SystemC 
 The greensocs Qbox library depends on the libraries : base-components, libgssync, libqemu-cxx, libgsutils, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
 
 [//]: # (SECTION 50)
-## Instanciate Qemu
+Instanciate Qemu
+----------------
+
 A QemuManager is required in order to instantiate a Qemu instance. A QemuManager will hold, and maintain the instance until the end of execution. The QemuInstance can contain one or many CPU's and other devices.
 To create a new instance you can do this:
 ```c++
@@ -36,7 +38,8 @@ Interrupt Controllers and others devices also need a QEMU instance and can be se
     QemuUartPl011 m_uart("uart", m_qemu_inst)
 ```
 
-## QEMU Arguments
+QEMU Arguments
+--------------
 
 The QEMU instance provides the following default arguments :
 ```
@@ -171,3 +174,10 @@ The GreenSocs synchronization library supports a number of synchronization polic
 _NB, none of the `multithread` based syncronisation policies can be used with COROUTINES, and this will generate an error_
 
 _For deterministic execution enable BOTH `tlm2` synchronisation _and_ `icount` mode._
+
+[//]: # (SECTION 100)
+## Halt Interface
+
+The libqbox library allows to manage the halt state of the different CPUs that are used. The halt will allow a cpu to be in "standby".
+
+Indeed, by default the halt state is released (state 0). It is important to note that the halt does not work with the power_off set (parameter p_power_off set to true).
