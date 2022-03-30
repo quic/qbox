@@ -611,7 +611,7 @@ SC_MODULE(tests)
         std::vector<Model *> allModels;
         std::vector<gs::InLineSync *> inlinesyncs;
         std::vector<sc_process_handle> handles;
-        Router<> r;
+        gs::Router<> r;
     public:
         cci::cci_param<int> ns_run;
         cci::cci_param<int> ns_quantum;
