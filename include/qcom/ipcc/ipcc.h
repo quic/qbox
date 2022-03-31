@@ -10,6 +10,7 @@
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
 
+#define LOG if(0) std::cout
 /* registers as extracted
 
 IPC_PROTOCOLp_CLIENTc_VERSION, 0x400000, Read, Yes, 0x10200
@@ -181,7 +182,7 @@ protected:
                     send(src, c, s);
                 }
             } else {
-                int c = data >> 16 & 0x8fff;
+                int c = (data >> 16) & 0x8fff;
                 send(src, c, s);
             }
             break;
@@ -241,9 +242,9 @@ protected:
                             // there is an active signal s from p/sc to p/c
                             if ((client[p][c].regs[CONFIG] & 0x80000000) == 0) {
                                 if (client[p][c].enable(sc, s)) {
-                                    int p = client[p][c].regs[RECV_CLIENT_PRIORITY_n + sc];
-                                    if (irqcount == 0 || p > prio) {
-                                        prio = p;
+                                    int pr = client[p][c].regs[RECV_CLIENT_PRIORITY_n + sc];
+                                    if (irqcount == 0 || pr > prio) {
+                                        prio = pr;
                                         sig = s;
                                         cli = sc;
                                     }
@@ -258,6 +259,7 @@ protected:
                     client[p][c].regs[RECV_ID] = (cli << 16) + sig;
             }
             if (allirqcount >= 1) {
+                LOG << "IPCC : SEND IRQ\n";
                 irq[c]->write(1);
             }
         }
@@ -267,7 +269,6 @@ protected:
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
-
         if (len > sizeof(client)) {
             txn.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return;
@@ -280,11 +281,13 @@ protected:
         case tlm::TLM_READ_COMMAND: {
             uint32_t data = read(client[p][c], addr & 0xfff);
             memcpy(ptr, &data, len);
+            LOG << "IPCC : b_transport read "<<std::hex<<addr<<" "<<data<<"\n";
             break;
         }
         case tlm::TLM_WRITE_COMMAND: {
             uint32_t data;
-            memcpy(ptr, &data, len);
+            memcpy(&data, ptr, len);
+            LOG << "IPCC : b_transport write "<<std::hex<<addr<<" "<<data<<"\n";
             write(client[p][c], addr & 0xfff, data);
             break;
         }
