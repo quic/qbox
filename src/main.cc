@@ -369,6 +369,14 @@ protected:
                 m_cpus[i].irq_maintenance_out.bind(m_gic->ppi_in[i][25]);
                 m_cpus[i].irq_pmu_out.bind(m_gic->ppi_in[i][23]);
             }
+
+            for (int i=0; i<64; i++) {
+                std::string irq_str=std::string(m_ipcc.name())+".irq_"+std::to_string(i);
+                if (cci::cci_get_broker().has_preset_value(irq_str)) {
+                    int irq=gs::cci_get<int>(irq_str);
+                    m_ipcc.irq[i].bind(m_gic->spi_in[irq]);
+                }
+            }
         }
      }
 
