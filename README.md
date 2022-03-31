@@ -42,7 +42,6 @@ cd $HOME/qualcomm_vp
 mkdir build && cd build
 cmake .. [OPTIONS]
 ```
-
 It is possible that during the recovery of the sources of the libraries the branch of the repo of one of the libraries is not good in these cases it is necessary to add the option `-DGIT_BRANCH=next`.
 As mentioned above, it is also possible to get the sources of a library locally with the option `-DCPM_<package>_SOURCE=/path/to/your/library`.
 
@@ -151,6 +150,7 @@ NB, CMake holds a cache of compiled modules in ~/.cmake/ Sometimes this can conf
 `CMAKE_INSTALL_PREFIX` : Install directory for the package and binaries.
 `CMAKE_BUILD_TYPE`     : DEBUG or RELEASE
 
+By default the value of the `CMAKE_INSTALL_PREFIX` variable is the `install/` directory located in the top level directory.
 
 The library assumes the use of C++14, and is compatible with SystemC versions from SystemC 2.3.1a.
 
@@ -191,9 +191,18 @@ It also includes some basic tlm port types
 ## LIBQEMU-CXX 
 
 Libqemu-cxx encapsulates QEMU as a C++ object, such that it can be instanced (for instance) within a SystemC simulation framework.
+
+The GreenSocs extra components library
+--------------------------------------
+
+This library support PCI devices - specifically NVME
+
 ## LIBQBOX 
 
 Libqbox encapsulates QEMU in SystemC such that it can be instanced as a SystemC TLM-2.0 model.
+## The GreenSocs SystemC Generic UART components.
+
+This includes simple Generic UART models. The components are "Loosely timed" only.
 
 [//]: # (SECTION 10)
 
@@ -254,6 +263,8 @@ ytab=nil
 ## Information about building and using the libqemu-cxx library
 
 The libgsutils library does not depend on any library.
+## Information about building and using the extra-components library
+The extra-components library depends on the libraries : base-components, libgssync, libqemu-cxx, libqbox, libgsutils, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
 ## Information about building and using the greensocs Qbox library
 The greensocs Qbox library depends on the libraries : base-components, libgssync, libqemu-cxx, libgsutils, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
 
@@ -287,7 +298,7 @@ void sc_suspendable()
 ```
 
 **suspend_all/unsuspend_all :**
-This pair of functions requests the kernel to ‘atomically suspend’ all processes (using the same semantics as the thread suspend() call). This is atomic in that the kernel will only suspend all the processes together, such that they can be suspended and unsuspended without any side effects. Calling suspend_all(), and subsiquently calling unsuspend_all() will have no effect on the suspended status of an individual process.
+This pair of functions requests the kernel to ‘atomically suspend’ all processes (using the same semantics as the thread suspend() call). This is atomic in that the kernel will only suspend all the processes together, such that they can be suspended and unsuspended without any side effects. Calling suspend_all(), and subsiquently calling unsuspend_all() will have no effect on the suspended status of an individual process. 
 A process may call suspend_all() followed by unsuspend_all, the calls should be ‘paired’, (multiple calls to either suspend_all() or unsuspend_all() will be ignored).
 Outside of the context of a process, it is the programmers responsibility to ensure that the calls are paired.
 As a consequence, multiple calls to suspend_all() may be made (within separate process, or from within sc_main). So long as there have been more calls to suspend_all() than to unsuspend_all(), the kernel will suspend all processes.
@@ -295,7 +306,7 @@ As a consequence, multiple calls to suspend_all() may be made (within separate p
 _[note, this patch set does not add convenience functions, including those to find out if suspension has happened, these are expected to be layered ontop]_
 
 **unsusbendable()/suspendable():**
-This pair of functions provides an ‘opt-out’ for specific process to the suspend_all(). The consequence is that if there is a process that has opted out, the kernel will not be able to suspend_all (as it would no longer be atomic).
+This pair of functions provides an ‘opt-out’ for specific process to the suspend_all(). The consequence is that if there is a process that has opted out, the kernel will not be able to suspend_all (as it would no longer be atomic). 
 These functions can only be called from within a process.
 A process should only call suspendable/unsuspendable in pairs (multiple calls to either will be ignored).
 _Note that the default is that a process is marked as suspendable._
@@ -306,7 +317,7 @@ _1 : Save and Restore_
 For Save and Restore, the expectation is that when a save is requested, ‘suspend_all’ will be called. If there are models that are in an unsuspendable state, the entire simulation will be allowed to continue until such a time that there are no unsuspendable processes.
 
 _2 : External sync_
-When an external model injects events into a SystemC model (for instance, using an ‘async_request_update()’), time can drift between the two simulators. In order to maintain time, SystemC can be prevented from advancing by calling suspend_all(). If there are process in an unsuspendable state (for instance, processing on behalf of the external model), then the simulation will be allowed to continue.
+When an external model injects events into a SystemC model (for instance, using an ‘async_request_update()’), time can drift between the two simulators. In order to maintain time, SystemC can be prevented from advancing by calling suspend_all(). If there are process in an unsuspendable state (for instance, processing on behalf of the external model), then the simulation will be allowed to continue. 
 NOTE, an event injected into the kernel by an async_request_update will cause the kernel to execute the associated update() function (leaving the suspended state). The update function should arrange to mark any processes that it requires as unsuspendable before the end of the current delta cycle, to ensure that they are scheduled.
 ## Using the ConfigurableBroker
 
@@ -316,7 +327,7 @@ These brokers can be used as global brokers.
 
 The `gs::ConfigurableBroker` can be instanced in 3 ways:
 1. `ConfigurableBroker()`
-    This will instance a 'Private broker' and will hide **ALL** parameters held within this broker.
+    This will instance a 'Private broker' and will hide **ALL** parameters held within this broker. 
     
     A local `lua_file` can be read and will set parameters in the private broker. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(false)`).
 
@@ -337,7 +348,91 @@ The `gs::ConfigurableBroker` can be instanced in 3 ways:
     A ``{{key,value}}`` list can also be provided, otherwise it is assumed to be empty. Such a list will set parameter values within this broker. These values will be read and used **BEFORE** the command line is read.
 
     Finally **AFTER** the command line is read, if the `lua_file` parameter has been set, the configuration file that it indicates will also be read. This can be prevented by passing 'false' as a construction parameter (`ConfigurableBroker(argc, argv, false)`). The `lua_file` will be read **AFTER** the construction key-value list, and after the command like, so it can be used to over-right default values in either.
-    
+
+## Print out the available params
+
+It is possible to display the list of available cci parameters with the `-h` option when launching the virtual platform.
+
+CAUTION:
+
+This will only print the parameters at the begining of simulation.
+The GreenSocs extra-component library 
+-------------------------------------
+
+The extra-component library contains complex components. 
+
+Components available:
+
+ * GPEX : The extra-component Gpex allow you to add devices with the method `add_device(Device &dev)`, you can add for example an NVME disk:
+```c++
+    m_gpex.add_device(m_disk1);
+```
+ * NVME : This allows an NVME disk to be added. Initialise `QemuNvmeDisk` with a qemu instance from the libqbox library (see the libqbox section to initiate a qemu instance):
+
+```c++
+    QemuNvmeDisk m_disk1("disk1", m_qemu_inst)
+```
+The class `QemuNvmeDisk` has 3 parameters:
+The constructor : `QemuNvmeDisk(const sc_core::sc_module_name &name, QemuInstance &inst)`
+- "name" : name of the disk
+- "inst" : instance Qemu
+
+The parameters :
+- "serial" : Serial name of the nvme disk
+- "bloc-file" : Blob file to load as data storage
+- "drive-id"
+
+## How to add QEMU OpenCores Eth MAC
+### SystemC Code
+Here there is an example of SystemC Code:
+Create an address map cci parameter
+```
+cci::cci_param<cci::uint64> m_addr_map_eth;
+```
+
+Declare an instance of the qemu ethernet itself and a 'global initiator port' that can be used by any QEMU 'SysBus' initiator.
+```
+QemuOpencoresEth m_eth;
+GlobalPeripheralInitiator m_global_peripheral_initiator;
+```
+
+Bind them to the router
+```
+m_router.add_initiator(m_global_peripheral_initiator.m_initiator);
+m_router.add_target(m_eth.regs_socket, m_addr_map_eth, 0x54);
+m_router.add_target(m_eth.desc_socket, m_addr_map_eth + 0x400, 0x400);
+```
+
+And bind the qemu ethernet at the Generic Interrup Controller
+```
+m_eth.irq_out.bind(m_gic.spi_in[2]);
+```
+
+Then in a constructor initialize them
+```
+m_addr_map_eth("addr_map_eth", 0xc7000000, "")
+m_eth("ethoc", m_qemu_inst)
+m_global_peripheral_initiator("glob-per-init", m_qemu_inst, m_eth)
+```
+
+### Linux Kernel
+Add driver
+```
+CONFIG_ETHOC=y
+Location:
+  │     -> Device Drivers
+  │       -> Network device support (NETDEVICES [=y])
+  │         -> Ethernet driver support (ETHERNET [=y])
+  │           -> OpenCores 10/100 Mbps Ethernet MAC support
+```
+Add device tree entry
+```
+ethoc: ethernet@c7000000 {
+    compatible = "opencores,ethoc";
+    reg = <0x00 0xc7000000 0x2000>;
+    interrupts = <0x00 0x02 0x04>;
+};
+```
 ## Instanciate Qemu
 A QemuManager is required in order to instantiate a Qemu instance. A QemuManager will hold, and maintain the instance until the end of execution. The QemuInstance can contain one or many CPU's and other devices.
 To create a new instance you can do this:
@@ -364,6 +459,58 @@ Interrupt Controllers and others devices also need a QEMU instance and can be se
     QemuUartPl011 m_uart("uart", m_qemu_inst)
 ```
 
+## QEMU Arguments
+
+QEMU arguments can be added to an entire instance using the configuration mechanism. The argument name should be in a form `"name.of.your.qemu.instance.args.-ARG" = "value"`.
+
+The QEMU instance provides the following default arguments :
+```
+    "-M", "none", /* no machine */
+    "-m", "2048", /* used by QEMU to set some interal buffer sizes */
+    "-monitor", "null", /* no monitor */
+    "-serial", "null", /* no serial backend */
+    "-display", "none", /* no GUI */
+```
+
+Example :
+Using the lua file configuration mechanism to set `-monitor` to enable telnet communication with QEMU, with the QEMU instance "platform.QemuInstance" the lua file should contain :
+
+```lua
+["platform.QemuInstance.args.-monitor"] = "tcp:127.0.0.1:55555,server,nowait",
+```
+To check that the QEMU argument has been added QEMU will report :
+`Added QEMU argument: "name of the argument" "value of the argument"`
+
+In the example it's :
+`Added QEMU argument : -monitor tcp:127.0.0.1:55555,server,nowait`
+
+Telnet can be used to connector to the monitor as follows:
+```bash
+$ telnet 127.0.0.1 55555
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+QEMU 5.1.0 monitor - type 'help' for more information
+(qemu) quit
+quit
+Connection closed by foreign host.
+```
+
+NOTE :
+
+This should not be used to enable GDB.
+
+Enabling GDB per CPU
+--------------------
+
+In order to connect a GDB the CCI parameter `name.of.cpu.gdb-port` must be set a none zero value.
+
+For instance 
+```bash
+$ ./build/vp --gs_luafile conf.lua -p platform.cpu_1.gdb-port=1234
+```
+Will open a gdb server on port 1234, for `cpu_1`, and the virtual platform will wait for GDB to connect.
+
 ## The components of libqbox
 ### CPU
 The libqbox library supports several CPU architectures such as ARM and RISCV.
@@ -373,17 +520,17 @@ The libqbox library supports several CPU architectures such as ARM and RISCV.
 ### IRQ-CTRL
 The library also manages interrupts by providing :
 - ARM GICv2
-- ARM GICv3
+- ARM GICv3 
 which are Arm Generic Interrupt Controller.
 
 Then :
 - SiFive CLINT
-- SiFive PLIC
+- SiFive PLIC 
 which are also Interrupt controller but for SiFive.
 
 ### UART
-Finally, it has 2 uarts:
-- pl011 for ARM
+Finally, it has 2 uarts: 
+- pl011 for ARM 
 - 16550 for more general use
 
 ### PORTS

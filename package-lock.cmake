@@ -72,7 +72,7 @@ CPMDeclarePackage(extra-components
 # IPCC
 CPMDeclarePackage(ipcc
   NAME ipcc
-  GIT_TAG 491836963e3b4eada8005df098fcf4d15e18c591
+  GIT_TAG dc511537422dd6bdb775807661874907931089ad
   GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/ipcc.git
 #  GIT_SHALLOW on
 )

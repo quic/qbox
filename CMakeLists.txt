@@ -18,6 +18,8 @@ endif()
 include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 ##############################################
 
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 gs_systemc()
 
 set(LIBQEMU_TARGETS aarch64 hexagon)
@@ -32,6 +34,11 @@ gs_addpackage(customers/qualcomm/qtb)
 add_executable(vp
     src/main.cc
 )
+if(APPLE)
+    target_link_options(vp PRIVATE "LINKER:-dead_strip_dylibs")
+else()
+    target_link_options(vp PRIVATE "LINKER:-as-needed")
+endif()
 
 target_link_libraries(vp
     SystemC::systemc
