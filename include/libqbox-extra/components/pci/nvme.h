@@ -37,7 +37,7 @@ public:
     QemuNvmeDisk(const sc_core::sc_module_name &name, QemuInstance &inst)
         : QemuGPEX::Device(name, inst, "nvme")
         , p_serial("serial", basename(), "Serial name of the nvme disk")
-        , p_blob_file("blob-file", "", "Blob file to load as data storage")
+        , p_blob_file("blob_file", "", "Blob file to load as data storage")
         , m_drive_id(basename())
     {
         m_drive_id += "_drive";
