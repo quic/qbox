@@ -104,12 +104,12 @@ public:
              uint64_t mmio_addr, uint64_t mmio_size,
              uint64_t mmio_high_addr, uint64_t mmio_high_size)
         : QemuDevice(name, inst, "gpex-pcihost")
-        , bus_master("bus-master", *this, inst)
-        , ecam_iface("ecam-iface", inst)
-        , mmio_iface("mmio-iface", inst)
-        , mmio_iface_high("mmio-iface-high", inst)
-        , pio_iface("pio-iface", inst)
-        , irq_out("irq-out", 4)
+        , bus_master("bus_master", *this, inst)
+        , ecam_iface("ecam_iface", inst)
+        , mmio_iface("mmio_iface", inst)
+        , mmio_iface_high("mmio_iface_high", inst)
+        , pio_iface("pio_iface", inst)
+        , irq_out("irq_out", 4)
         , irq_num{-1, -1, -1, -1}
         , m_mmio_addr(mmio_addr)
         , m_mmio_size(mmio_size)
