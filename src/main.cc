@@ -505,7 +505,16 @@ int sc_main(int argc, char *argv[])
     GreenSocsPlatform platform("platform");
 
     auto start = std::chrono::system_clock::now();
-    sc_core::sc_start();
+    try {
+        sc_core::sc_start();
+    } catch (std::runtime_error const &e) {
+        std::cerr << "Error: '" << e.what() << "'\n";
+        exit(1);
+    } catch (...) {
+        std::cerr << "Unknown error!\n";
+        exit(2);
+    }
+
     auto end = std::chrono::system_clock::now();
 
     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start);
