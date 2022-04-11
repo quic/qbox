@@ -40,7 +40,7 @@ public:
     QemuInitiatorSocket<> m_initiator;
 
     GlobalPeripheralInitiator(const sc_core::sc_module_name &nm, QemuInstance &inst, QemuDevice &owner)
-        : m_initiator("global-initiator", *this, inst)
+        : m_initiator("global_initiator", *this, inst)
         , m_owner(owner) {
     }
 
