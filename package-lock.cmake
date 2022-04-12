@@ -4,13 +4,13 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG 052da099382394b782dc8f8782d74a67ea51204b
+  GIT_TAG v5.1.3
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
 CPMDeclarePackage(libgsutils
   NAME libgsutils
-  GIT_TAG v2.2.0
+  GIT_TAG v2.2.1
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgsutils.git
   GIT_SHALLOW on
 )
@@ -29,7 +29,7 @@ CPMDeclarePackage(googletest
 # libgssync
 CPMDeclarePackage(libgssync
   NAME libgssync
-  GIT_TAG v2.1.0
+  GIT_TAG v2.1.1
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgssync.git
   GIT_SHALLOW on
 )
@@ -49,7 +49,7 @@ CPMDeclarePackage(libqemu
 # base-components
 CPMDeclarePackage(base-components
   NAME base-components
-  GIT_TAG v3.1.0
+  GIT_TAG v3.1.2
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/base-components.git
 #  GIT_SHALLOW on
 )
@@ -64,7 +64,7 @@ CPMDeclarePackage(systemc-uarts
 # extra-components
 CPMDeclarePackage(extra-components
   NAME extra-components
-  GIT_TAG v3.1.1
+  GIT_TAG v3.1.3
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/extra-components.git
   GIT_SHALLOW on
 )
@@ -72,14 +72,14 @@ CPMDeclarePackage(extra-components
 # IPCC
 CPMDeclarePackage(ipcc
   NAME ipcc
-  GIT_TAG dc511537422dd6bdb775807661874907931089ad
+  GIT_TAG master
   GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/ipcc.git
 #  GIT_SHALLOW on
 )
 # QTB
 CPMDeclarePackage(qtb
   NAME qtb
-  GIT_TAG 09a336d254d6bab8e3593d399a365d87e5ee6a38
+  GIT_TAG master
   GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/qtb.git
 #  GIT_SHALLOW on
 )

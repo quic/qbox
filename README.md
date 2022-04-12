@@ -273,16 +273,87 @@ The greensocs Qbox library depends on the libraries : base-components, libgssync
 
 [//]: # (SECTION 50 AUTOADDED)
 
-## The GreenSocs component library memory
-The memory component allows you to add memory when creating an object of type `Memory("name",size)`.
+## The GreenSocs component library loader
+The loader components exposes a single initiator socket (`initiator_socket`) which should be bound to the bus fabric through which it's intended to load memory components.
+The loader can be confgured to load the following:
+ * elf files\
+Configure parameter: `elf_file`\
+function: `void elf_load(const std::string& path)`\
+ _Note, no address or offset is possible, as they are built into the elf file. If this is specified within the context of a memory, the addresses will be offset within the memory, this is probably NOT what is desired._
 
-The memory component consists of a simple target socket :`tlm_utils::simple_target_socket<Memory> socket`
+ * bin_file\
+  Configure parameter `bin_file`\
+  options: `address` (absolute address), or `offset` (relative address)\
+  function: `void file_load(std::string filename, uint64_t addr)`
+
+ * csv_file (32 bit data)\
+ Configure parameter `csv_file`\
+ options: `address` (absolute address), or `offset` (relative address)\
+        `addr_str` : header in the CSV file for the column used for addresses\
+        `value_str`: header in the CSV file for the column used for values\
+        `byte_swap`: whether bytes should be swapped\
+  function: `void csv_load(std::string filename, uint64_t offset, std::string addr_str std::string value_str, bool byte_swap)`
+
+* param\
+Configurable parameter `param`\
+A configuration paramter that must be of type `std::string` is loaded into memory. The parameter must be realized such that a typed handled can be obtained.\
+options: `address` (absolute address), or `offset` (relative address)\
+function: `void str_load(std::string data, uint64_t addr)`
+
+* data (32 bit data)\
+Configure parameter `data`\
+options: `byte_swap`: whether bytes should be swapped\
+The data parameter is expected to be an array with index's numbered. The indexes will be used to address the memory.\
+No function access is provided.
+
+* ptr\
+No config parameter is provided.\
+function `void ptr_load(uint8_t *data, uint64_t addr, uint64_t len)`
+
+as an example, a configuration may look like
+`loader = {{elf_file="my_elf.elf"}, {data={0x1,0x2}, address = 0x30}}`
+
+## The GreenSocs component library memory
+The memory component allows you to add memory when creating an object of type `Memory("name")`.
+The memory should be bound with it's tarket socket:
+`tlm_utils::simple_target_socket<Memory> socket`
+
+The memory accepts the following configuration options:
+`read_only`: Read Only Memory (default false)\
+`dmi_allow`: DMI allowed (default true)\
+`verbose`: Switch on verbose logging (default false)\
+`latency`: Latency reported for DMI access (default 10 NS)\
+`map_file`: file used to map this memory (such that it can be preserved through runs) (default,none)
+
+The memory's size is set by the address space allocated to it on it's target socket.
+An optional size can be provided to the constructor.
+The size set by the configurator will take precedence. The size given to the constructor will take precedence over that set on the target socket at bind time.
+
+The memory has a 'loader' built in. configuration can be applied to `memory_name.load`. In this case, all addresses are assumed to be offsets.
+
 
 ## The GreenSocs component library router
-The router offers `add_target(socket, base_address, size)` as an API to add components into the address map for routing. (It is recommended that the addresses and size are CCI parameters).
+The  router is a simple device, the expectation is that initiators and targets are directly bound to the router's `target_socket` and `initiator_socket` directly (both are multi-sockets).
+The router will use CCI param's to discover the addresses and size of target devices as follows:
+ * `<target_name>.<socket_name>.address`
+ * `<target_name>.<socket_name>.size`
+ * `<target_name>.<socket_name>.relative_addresses`
 
-It also allows to bind multiple initiators with `add_initiator(socket)` to send multiple transactions.
-So there is no need for the bind() method offered by sockets because the add_initiator method already takes care of that.
+A default tlm2 "simple target socket" will have the name `simple_target_socket_0` by default (this can be changed in the target).
+The `relative_addresses` flag is a boolean - targets which opt to have the router mask their address will receive addresses based from the IP base "address". Otherwise they will receive full addresses. The defaut is to receive relative addresses.
+
+The router also offers `add_target(socket, base_address, size)` as a convenience, this will set appropriate param's (if they are not already set), and will set `relative_addresses` to be `true`.
+
+Likewise the convenience function `add_initiator(socket)` allows multiple initiators to be connected to the router. Both `add_target` and `add_initiator` take care of binding.
+
+__NB Routing is perfromed in _BIND_ order. In other words, overlapping addresses are allowed, and the first to match (in bind order) will be used. This allows 'fallback' routing.__
+
+Also note that the router will add an extension called gs::PathIDExtension. This extension holds a std::vector of port index's (collectively a unique 'ID'). 
+
+The ID is meant to be composed by all the routers on the path that
+support this extension. This ID field can be used (for instance) to ascertain a unique ID for the issuing initiator.
+
+The ID extension is held in a (thread safe) pool. Thread safety can be switched of in the code.
 ## Functionality of the synchronization library
 In addition the library contains utilities such as an thread safe event (async_event) and a real time speed limited for SystemC.
 
@@ -319,6 +390,17 @@ For Save and Restore, the expectation is that when a save is requested, ‘suspe
 _2 : External sync_
 When an external model injects events into a SystemC model (for instance, using an ‘async_request_update()’), time can drift between the two simulators. In order to maintain time, SystemC can be prevented from advancing by calling suspend_all(). If there are process in an unsuspendable state (for instance, processing on behalf of the external model), then the simulation will be allowed to continue. 
 NOTE, an event injected into the kernel by an async_request_update will cause the kernel to execute the associated update() function (leaving the suspended state). The update function should arrange to mark any processes that it requires as unsuspendable before the end of the current delta cycle, to ensure that they are scheduled.
+
+## List of options of sync policy parameter
+
+The libgssync library allows you to set several values to the `p_sync_policy` parameter :
+- `tlm2`
+- `multithread`
+- `multithread-quantum`
+- `multithread-rolling`
+- `multithread-unconstrained`
+
+By default the parameter is set to `multithread-quantum`.
 ## Using the ConfigurableBroker
 
 The broker will self register in the SystemC CCI hierarchy. All brokers have a parameter `lua_file` which will be read and used to configure parameters held within the broker. This file is read at the *local* level, and paths are *relative* to the location where the ConfigurableBroker is instanced.
@@ -410,7 +492,7 @@ m_eth.irq_out.bind(m_gic.spi_in[2]);
 
 Then in a constructor initialize them
 ```
-m_addr_map_eth("addr_map_eth", 0xc7000000, "")
+m_addr_map_eth("addr_map_eth", 0xc7000000, "Ethernet MAC base address")
 m_eth("ethoc", m_qemu_inst)
 m_global_peripheral_initiator("glob-per-init", m_qemu_inst, m_eth)
 ```
@@ -433,7 +515,9 @@ ethoc: ethernet@c7000000 {
     interrupts = <0x00 0x02 0x04>;
 };
 ```
-## Instanciate Qemu
+Instanciate Qemu
+----------------
+
 A QemuManager is required in order to instantiate a Qemu instance. A QemuManager will hold, and maintain the instance until the end of execution. The QemuInstance can contain one or many CPU's and other devices.
 To create a new instance you can do this:
 ```c++
@@ -459,9 +543,8 @@ Interrupt Controllers and others devices also need a QEMU instance and can be se
     QemuUartPl011 m_uart("uart", m_qemu_inst)
 ```
 
-## QEMU Arguments
-
-QEMU arguments can be added to an entire instance using the configuration mechanism. The argument name should be in a form `"name.of.your.qemu.instance.args.-ARG" = "value"`.
+QEMU Arguments
+--------------
 
 The QEMU instance provides the following default arguments :
 ```
@@ -471,6 +554,15 @@ The QEMU instance provides the following default arguments :
     "-serial", "null", /* no serial backend */
     "-display", "none", /* no GUI */
 ```
+
+QEMU arguments can be added to an entire instance using the configuration
+mechanism. The instance has one parameter `args` that can be used to append a
+whitespace separated list of arguments. To enable some qemu traces, one can
+set `"qemu-instance-name.args" = "-D file.log -trace pattern1 -trace pattern2"`.
+
+To append a specific QEMU option value you can also use the form
+`"qemu-instance-name.args.-OPTION" = "value"`.
+The latter cannot be used to append several time the same option, as a parameter definition will override any previous one.
 
 Example :
 Using the lua file configuration mechanism to set `-monitor` to enable telnet communication with QEMU, with the QEMU instance "platform.QemuInstance" the lua file should contain :
@@ -503,13 +595,14 @@ This should not be used to enable GDB.
 Enabling GDB per CPU
 --------------------
 
-In order to connect a GDB the CCI parameter `name.of.cpu.gdb-port` must be set a none zero value.
+In order to connect a GDB the CCI parameter `name.of.cpu.gdb_port` must be set a none zero value.
 
 For instance 
 ```bash
-$ ./build/vp --gs_luafile conf.lua -p platform.cpu_1.gdb-port=1234
+$ ./build/vp --gs_luafile conf.lua -p platform.cpu_1.gdb_port=1234
 ```
 Will open a gdb server on port 1234, for `cpu_1`, and the virtual platform will wait for GDB to connect.
+
 
 ## The components of libqbox
 ### CPU
@@ -535,6 +628,57 @@ Finally, it has 2 uarts:
 
 ### PORTS
 The library also provides socket initiators and targets for Qemu
+
+## QEMU/SystemC parallelism
+### QEMU TCG threading mode
+
+QEMU/SystemC integration support 3 threading mechanisms. They determine the threading mode used within the qemu tcg.
+This is selected using the QEMU instance parameter `"tcg_mode"` which can take the following three values:
+
+- `coroutine`
+      - qemu uses the single thread tcg mode
+      - qemu tcg code does not run in parallel of systemC engine
+      - useful for determinism (with icount enabled, see below)
+
+- `singlethread`
+      - qemu use single thread tcg mode
+      - qemu tcg code run in a separate thread of systemc engine
+
+
+- `multithread` (this is the default)
+      - qemu use mutiples threads tcg mode
+      - qemu tcg threads run in parallel of systemc engine
+      - not every qemu architecture support multithread
+
+To select a threading mode, set the param `"tcg_mode"` on the QEMU instance to one of `"COROUTINE"`, `"SINGLE"` or `"MULTI"`
+(The defualt is `"MULTI"`)
+
+QEMU also supports `icount` mode, where timing is based on the number of instructions executed.
+Two parameters control icount mode
+- `"icount"` enables or disables icount mode
+- `"icount_mips_shift"` is the MIPS shift value for icount mode (1 insn = 2^(mips) ns). If this is set to anything other than 0, icount mode is also enabled.
+
+If icount is not selected, QEMU will use 'wall clock' time internally. This is (clearly) non deterministic.
+
+The default is that icount mode is disabled.
+
+_NB icount mode should not be enabled with multi-threading as this is not possible within QEMU. Doing so will cause an error._
+
+### TLM2 Quantum keeper synchronization mode
+
+The GreenSocs synchronization library supports a number of synchronization policies:
+- `tlm2`
+ - This is standard TLM2 mode, there is no attempt in the quantum keeper to handle multiple threads. This mode should only be used with `COROUTINES` (This will be assumed and does not need to be set).
+- `multithread`
+ - This is a basic multi-threaded quantum keeper, it will attempt, by default, to keep everything within 2 quantums (+- a quantum).
+- `multithread-quantum`
+ - This mode attempts to replicate a closer to tlm behaviour, in that things should not advance until everybody has reached the quantum boundry.
+- `multithread-unconstrained`
+ - This mode allows QEMU to run at it's own pace. This is the _DEFAULT_
+
+_NB, none of the `multithread` based syncronisation policies can be used with COROUTINES, and this will generate an error_
+
+_For deterministic execution enable BOTH `tlm2` synchronisation _and_ `icount` mode._
 
 [//]: # (SECTION 100)
 
