@@ -45,7 +45,7 @@ public:
     sc_core::sc_vector<QemuInitiatorSignalSocket> irq_context;
     QemuInitiatorSignalSocket irq_global;
     sc_core::sc_vector<QemuInitiatorSocket<>> downstream_socket;
-
+    QemuInitiatorSocket<> dma_socket;
 
     QemuArmSmmu(sc_core::sc_module_name nm, QemuInstance &inst)
         : QemuDevice(nm, inst, "arm.mmu-500")
@@ -57,18 +57,17 @@ public:
         , p_version("version", 0x21, "")
         , p_num_tbu("num_tbu", 1, "")
         , upstream_socket("upstream_socket", p_num_tbu, [this] (const char *n, size_t i) {
-            /* here n is already "cpu_<vector-index>" */
             return new QemuTargetSocket<>(n, m_inst);
         })
         , register_socket("mem", m_inst)
         , irq_global("irq_global")
         , irq_context("irq_context", p_num_cb, [this] (const char *n, size_t i) {
-            /* here n is already "cpu_<vector-index>" */
             return new QemuInitiatorSignalSocket(n);
         })
         , downstream_socket("downstream_socket",p_num_tbu,  [this] (const char *n, size_t i) {
             return new QemuInitiatorSocket<>(n, *this, m_inst);
         })
+        , dma_socket("dma", *this, m_inst)
     {}
 
     void before_end_of_elaboration() override
@@ -84,9 +83,22 @@ public:
         m_dev.set_prop_int("num-tbu", p_num_tbu);
 
         std::string base_string = "mr-";
+        cci::cci_broker_handle m_broker=cci::cci_get_broker();
         for(uint32_t i = 0; i< p_num_tbu; ++i) {
             downstream_socket[i].init(m_dev, (base_string + std::to_string(i)).c_str());
+
+            std::string tbuname=std::string(name())+".tbu_sid_"+ std::to_string(i);
+            if (m_broker.has_preset_value(tbuname.c_str())) {
+                uint64_t sid = (m_broker.get_preset_cci_value(tbuname.c_str())).get_uint64();
+                m_broker.lock_preset_value(tbuname);
+                m_broker.ignore_unconsumed_preset_values(
+                    [tbuname](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first==tbuname; });
+
+                m_dev.set_prop_int(("tbu-sid-" + std::to_string(i)).c_str(), sid);
+            }
         }
+
+        dma_socket.init(m_dev, "dma");
     }
 
     void end_of_elaboration() override
