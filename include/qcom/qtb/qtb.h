@@ -15,17 +15,16 @@ template <unsigned int BUSWIDTH = 32>
 class qtb : public sc_core::sc_module {
 private:
     enum {
-        QTB_OVR_ECATS_INFLD0 = 0x430,
-     QTB_OVR_ECATS_INFLD1 = 0x438,
-
-     QTB_OVR_ECATS_INFLD2 = 0x440,
-     QTB_OVR_ECATS_TRIGGER = 0x448,
-     QTB_OVR_ECATS_STATUS = 0x450,
-     QTB_OVR_ECATS_OUTFLD0 = 0x458,
-     QTB_OVR_ECATS_OUTFLD1 = 0x460
+        QTB_OVR_ECATS_INFLD0 = 0x0, // APPS_SMMU_CLIENT_DEBUG_SID_HALT
+        QTB_OVR_ECATS_INFLD1 = 0x8, // APPS_SMMU_CLIENT_DEBUG_VA_ADDR
+        QTB_OVR_ECATS_INFLD2 = 0x10, // APPS_SMMU_CLIENT_DEBUG_SSD_INDEX
+        QTB_OVR_ECATS_TRIGGER = 0x18, // APPS_SMMU_CLIENT_DEBUG_TRANSCATION_TRIGG
+        QTB_OVR_ECATS_STATUS = 0x20, // APPS_SMMU_CLIENT_DEBUG_STATUS_HALT_ACK
+        QTB_OVR_ECATS_OUTFLD0 = 0x28, // APPS_SMMU_CLIENT_DEBUG_PAR
+        QTB_OVR_ECATS_OUTFLD1 = 0x2C, // APPS_SMMU_CLIENT_DEBUG_PAR
     };
-    uint64_t infld[3];
-    uint64_t outfld[2];
+    uint32_t infld[3];
+    uint32_t outfld[2];
     bool triggered = false;
 
 public:
@@ -39,17 +38,20 @@ private:
     {
         unsigned char* ptr = trans.get_data_ptr();
         sc_dt::uint64 addr = trans.get_address();
+
+        trans.set_response_status(tlm::TLM_OK_RESPONSE);
+
         switch (trans.get_command()) {
         case tlm::TLM_WRITE_COMMAND:
-            switch (addr) {
+            switch (addr & 0xff) {
             case QTB_OVR_ECATS_INFLD0:
-                infld[0] = *ptr;
+                memcpy(&infld[0], ptr, 4);
                 break;
             case QTB_OVR_ECATS_INFLD1:
-                infld[0] = *ptr;
+                memcpy(&infld[1], ptr, 4);
                 break;
             case QTB_OVR_ECATS_INFLD2:
-                infld[0] = *ptr;
+                memcpy(&infld[2], ptr, 4);
                 break;
             case QTB_OVR_ECATS_TRIGGER:
                 if (*ptr) {
@@ -58,35 +60,41 @@ private:
                     tlm::tlm_generic_payload trans;
 
                     trans.set_command(tlm::TLM_WRITE_COMMAND);
-                    trans.set_address(infld[2]);
+                    trans.set_address(infld[1]);
                     trans.set_data_ptr(&data[0]);
                     trans.set_data_length(sizeof(data));
                     trans.set_streaming_width(sizeof(data));
                     trans.set_byte_enable_length(0);
+
+                    //                    set SID
+                    std::cout << "Sending to TBU: " << std::hex << infld[2] << "\n";
                     initiator_socket->b_transport(trans, time);
                 } else {
                     triggered = false;
                 }
                 break;
             default:
+                trans.set_response_status(tlm::TLM_COMMAND_ERROR_RESPONSE);
                 SC_REPORT_FATAL("qtb", "Unknown write");
             }
             break;
         case tlm::TLM_READ_COMMAND:
-            switch (addr) {
+            switch (addr & 0xff) {
             case QTB_OVR_ECATS_STATUS:
-                *ptr = triggered;
+                memcpy(ptr, &triggered, 4);
                 break;
             case QTB_OVR_ECATS_OUTFLD0:
-                *ptr = outfld[0];
+                memcpy(ptr, &outfld[0], 4);
                 break;
             case QTB_OVR_ECATS_OUTFLD1:
-                *ptr = outfld[1];
+                memcpy(ptr, &outfld[1], 4);
                 break;
             default:
+                trans.set_response_status(tlm::TLM_COMMAND_ERROR_RESPONSE);
                 SC_REPORT_FATAL("qtb", "Unknown read");
                 break;
             }
+            break;
         default:
             SC_REPORT_FATAL("qtb", "Unknown tlm command");
         }
@@ -97,8 +105,9 @@ private:
     {
         triggered = true;
         sc_dt::uint64 addr = trans.get_address();
+        std::cout << "received from TBU: " << std::hex << addr << "\n";
         outfld[0] = addr << 12;
-        outfld[1] = infld[1]; // hack.
+        outfld[1] = addr >> (32 - 12);
     }
 
 public:
@@ -106,7 +115,7 @@ public:
         : sc_core::sc_module(nm)
         , initiator_socket("initiator_socket")
         , target_socket("target_socket")
-        , control_socket("control_socket")        
+        , control_socket("control_socket")
     {
         control_socket.register_b_transport(this, &qtb::b_transport_control);
         target_socket.register_b_transport(this, &qtb::b_transport);
