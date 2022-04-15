@@ -6,10 +6,7 @@ CLANG=`find prebuilts -name clang-$CLANG_VERSION`
 if [ -z $CLANG ]
 then
   echo "clang not found"
-  exit 1
 fi
 
 echo $CLANG
-P=$PWD/$CLANG/bin
-echo $P
-export PATH=$P:$PATH
+export PATH=$PWD/$CLANG/bin:$PATH

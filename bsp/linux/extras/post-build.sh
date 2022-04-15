@@ -18,6 +18,6 @@ chmod +x $1/var/www/data/index.cgi
 
 echo "
 /sbin/ip link set eth0 up
-/sbin/udhcpc -i eth0 -s /etc/udhcp/simple.script
+/sbin/udhcpc -i eth0 -n -s /etc/udhcp/simple.script
 /sbin/ifconfig eth0 10.0.2.15/8" > $1/etc/init.d/S00.hack
 chmod +x $1/etc/init.d/S00.hack
