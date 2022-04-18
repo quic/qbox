@@ -1,4 +1,8 @@
 docs/
+examples/
+msvc10/
+config/
+cmake/
 tests/
 fw/
 README*.md
