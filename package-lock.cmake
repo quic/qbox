@@ -4,7 +4,7 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG v5.1.3
+  GIT_TAG v5.2.0
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
@@ -42,14 +42,14 @@ CPMDeclarePackage(libqemu-cxx
 # libqemu
 CPMDeclarePackage(libqemu
   NAME libqemu
-  GIT_TAG libqemu/v6.2.0
+  GIT_TAG v1.0.0
   GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/qualcomm-qemu/qemu-hexagon.git
   GIT_SUBMODULES CMakeLists.txt
 )
 # base-components
 CPMDeclarePackage(base-components
   NAME base-components
-  GIT_TAG v3.1.2
+  GIT_TAG v3.1.3
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/base-components.git
 #  GIT_SHALLOW on
 )

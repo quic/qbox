@@ -449,6 +449,7 @@ public:
                 m_qtb->initiator_socket(m_smmu->upstream_socket[1]);
                 m_smmu->downstream_socket[1](m_qtb->target_socket);
 
+                m_smmu->dma_socket.bind(m_router.target_socket);
 
             } else {
                 for (auto &cpu: m_hexagon_clusters) {
