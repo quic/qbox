@@ -16,7 +16,13 @@ You can build this release natively on Ubuntu 18.04.
 Install dependencies:
 ```bash
 apt update && apt upgrade -y
-apt install -y make cmake g++ wget flex bison unzip python pkg-config libpixman-1-dev libglib2.0-dev libelf-dev
+apt install -y make build-essential cmake g++ wget flex bison unzip python python3-pip iproute2 ninja-build pkg-config libpixman-1-dev libglib2.0-dev git wget curl libelf-dev
+```
+
+_NOTE for Ubuntu 18, you will need a newer version of cmake._
+```bash
+ curl -L https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
+ ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake
 ```
 
 ## 3. Fetch the qbox sources
@@ -24,16 +30,19 @@ apt install -y make cmake g++ wget flex bison unzip python pkg-config libpixman-
 If you have an SSH key:
 ```bash
 cd $HOME
-git@git.greensocs.com:customers/qualcomm/qualcomm_vp.git
+git clone git@git.greensocs.com:customers/qualcomm/qualcomm_vp.git
+git lfs pull
 ```
 
 otherwise:
 ```bash
 cd $HOME
-https://git.greensocs.com/customers/qualcomm/qualcomm_vp.git
+git clone https://git.greensocs.com/customers/qualcomm/qualcomm_vp.git
+git lfs pull
 ```
 
 this will extract the platform in $HOME/qualcomm_vp
+(See below for more options to handle passwords)
 
 ## 4. Build the platform
 
@@ -41,15 +50,19 @@ this will extract the platform in $HOME/qualcomm_vp
 cd $HOME/qualcomm_vp
 mkdir build && cd build
 cmake .. [OPTIONS]
-```
-It is possible that during the recovery of the sources of the libraries the branch of the repo of one of the libraries is not good in these cases it is necessary to add the option `-DGIT_BRANCH=next`.
-As mentioned above, it is also possible to get the sources of a library locally with the option `-DCPM_<package>_SOURCE=/path/to/your/library`.
 
+make -j
+```
+
+_NB. on ubuntu use the cmake you downloaded previously, e.g._
 ```bash
+../cmake-3.20.0-rc4-linux-x86_64/bin/cmake -B build
+cd build
 make -j
 ```
 
 This will take some time.
+For other build and make options, please see below.
 
 ## 5. Run
 ```bash
@@ -83,8 +96,6 @@ init          media         root          tmp
 
 Once the kernel has booted, you can log in with the 'root' account (no password required).
 
-If the virtual platform crashes and doesn't work, it may be due to the LFS files that make up the repo.
-You might want to run the 'git lfs pull' command to get all the LFS files.
 
 ### 6. Explore Sources
 
@@ -211,10 +222,8 @@ This includes simple Generic UART models. The components are "Loosely timed" onl
 
 ## Information about building and using the base-components library
 The base-components library depends on the libraries : Libgsutls, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
-
 ## Information about building and using the libgssync library
 The libgssync library depends on the libraries : base-components, libgsutils, SystemC, RapidJSON, SystemCCI, Lua and GoogleTest.
-
 Information about building and using the libgsutils library
 -----------------------------------------------------------
 
