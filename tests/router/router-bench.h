@@ -53,6 +53,8 @@ private:
     bool m_overlap_address = false;
     bool m_overlap_size = false;
 
+    uint8_t emptydata[1000] = { 0xDE, 0xAD, 0xBE, 0xEF };
+
     /* Initiator callback */
     void invalidate_direct_mem_ptr(uint64_t start_range, uint64_t end_range)
     {
@@ -158,9 +160,9 @@ private:
             std::cout << "An overlap of address or size was detected during the test" << std::endl;
         } else {
             if (is_load) {
-                ret = m_initiator.do_read_with_ptr(addr, nullptr, len, debug);
+                ret = m_initiator.do_read_with_ptr(addr, emptydata, len, debug);
             } else {
-                ret = m_initiator.do_write_with_ptr(addr, nullptr, len, debug);
+                ret = m_initiator.do_write_with_ptr(addr, emptydata, len, debug);
             }
             check_txn(id, is_load, addr, len, ret);
         }
@@ -175,9 +177,9 @@ private:
             std::cout << "An overlap of address or size was detected during the test" << std::endl;
         } else {
             if (is_load) {
-                ret = m_initiator.do_read_with_ptr(addr, nullptr, len, debug);
+                ret = m_initiator.do_read_with_ptr(addr, emptydata, len, debug);
             } else {
-                ret = m_initiator.do_write_with_ptr(addr, nullptr, len, debug);
+                ret = m_initiator.do_write_with_ptr(addr, emptydata, len, debug);
             }
 
             check_txn_debug(id, is_load, addr, len, ret);

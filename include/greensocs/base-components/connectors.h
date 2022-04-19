@@ -30,6 +30,8 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
 
+#include <iomanip>
+
 namespace gs {
 template <unsigned int BUSWIDTH = 32>
 class pass : public sc_core::sc_module {
@@ -94,14 +96,42 @@ private:
     void b_transport(tlm::tlm_generic_payload& trans,
         sc_core::sc_time& delay)
     {
+        initiator_socket->b_transport(trans, delay);
         if (p_verbose) {
             std::stringstream info;
+
+            const char* cmd = "unknown";
+            switch (trans.get_command()) {
+            case tlm::TLM_IGNORE_COMMAND:
+                cmd = "ignore";
+                break;
+            case tlm::TLM_WRITE_COMMAND:
+                cmd = "write";
+                break;
+            case tlm::TLM_READ_COMMAND:
+                cmd = "read";
+                break;
+            }
+
             info << " " << name()
-                 << " b_transport to address "
+                 << " b_transport " << cmd << " to address "
                  << "0x" << std::hex << trans.get_address();
+
+            info << " len:" << trans.get_data_length();
+            unsigned char* ptr = trans.get_data_ptr();
+            info << " returned with data 0x";
+            for (int i = 0; i < trans.get_data_length(); i++) {
+                info << std::setw(2) << std::setfill('0') << std::hex << (unsigned int)(ptr[i]);
+            }
+
+            for (int i = 0; i < tlm::max_num_extensions(); i++) {
+                if (trans.get_extension(i)) {
+                    info << " extn " << i;
+                }
+            }
+
             SC_REPORT_INFO("pass", info.str().c_str());
         }
-        initiator_socket->b_transport(trans, delay);
     }
 
     unsigned int transport_dbg(tlm::tlm_generic_payload& trans)
