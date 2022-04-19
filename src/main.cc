@@ -219,7 +219,7 @@ public:
 private:
     QemuHexagonL2vic m_l2vic;
     QemuHexagonQtimer m_qtimer;
-    gs::pass<> *p1;
+    gs::pass<> m_pass;
 
     sc_core::sc_vector<QemuCpuHexagon> m_hexagon_threads;
     GlobalPeripheralInitiator m_global_peripheral_initiator_hex;
@@ -228,7 +228,7 @@ public:
     // otherwise we would need a 'bridge' to bind to the router and an initiator socket.
     gs::Router<> m_router;
 
-    hexagon_cluster(const sc_core::sc_module_name& n, QemuInstanceManager &m_inst_mgr)
+    hexagon_cluster(const sc_core::sc_module_name& n, QemuInstanceManager &m_inst_mgr, gs::Router<> &parent_router)
         : sc_core::sc_module(n)
         , p_hexagon_num_threads("hexagon_num_threads", 8, "Number of Hexagon threads")
         , p_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
@@ -236,6 +236,7 @@ public:
         , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer", m_qemu_hex_inst) // are we sure it's in the hex cluster?????
+        , m_pass("pass", false)
         , m_hexagon_threads("hexagon_thread", p_hexagon_num_threads, [this] (const char *n, size_t i) {
             /* here n is already "hexagon-cpu_<vector-index>" */
             return new QemuCpuHexagon(n, m_qemu_hex_inst,
@@ -248,15 +249,18 @@ public:
         , m_router("router")
         , m_global_peripheral_initiator_hex("glob-per-init-hex", m_qemu_hex_inst, m_hexagon_threads[0])
     {
-        m_router.initiator_socket.bind(m_l2vic.socket);
-        m_router.initiator_socket.bind(m_l2vic.socket_fast);
-        m_router.initiator_socket.bind(m_qtimer.socket);
-        m_router.initiator_socket.bind(m_qtimer.timer0_socket);
-        m_router.initiator_socket.bind(m_qtimer.timer1_socket);
-//        p1= new gs::pass<>("p1", false);
+        parent_router.initiator_socket.bind(m_l2vic.socket);
+        parent_router.initiator_socket.bind(m_l2vic.socket_fast);
+        parent_router.initiator_socket.bind(m_qtimer.socket);
+        parent_router.initiator_socket.bind(m_qtimer.timer0_socket);
+        parent_router.initiator_socket.bind(m_qtimer.timer1_socket);
+
+        // pass through transactions.
+        m_router.initiator_socket.bind(m_pass.target_socket);
+        m_pass.initiator_socket.bind(parent_router.target_socket);
+
         for (auto& cpu : m_hexagon_threads) {
-            cpu.socket.bind(/*p1->target_socket);
-                p1->initiator_socket(*/m_router.target_socket);
+            cpu.socket.bind(m_router.target_socket);
         }
 
         for(int i = 0; i < m_l2vic.p_num_outputs; ++i) {
@@ -288,10 +292,10 @@ protected:
     QemuInstanceManager m_inst_mgr_h;
     QemuInstance &m_qemu_inst;
 
+    gs::Router<> m_router;
     sc_core::sc_vector<QemuCpuArmMax> m_cpus;
     sc_core::sc_vector<hexagon_cluster> m_hexagon_clusters;
     QemuArmGicv3* m_gic;
-    gs::Router<> m_router;
     gs::Memory<> m_ram;
     gs::Memory<> m_hexagon_ram;
     gs::Memory<> m_rom;
@@ -406,15 +410,16 @@ public:
         , p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
         , p_uart_backend("uart_backend_port", 0, "uart backend port number, either 0 for 'stdio' or a port number (e.g. 4001)")
 
+        , m_router("router")
+
         , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
         , m_cpus("cpu", p_arm_num_cpus, [this] (const char *n, size_t i) {
             /* here n is already "cpu_<vector-index>" */
             return new QemuCpuArmMax(n, m_qemu_inst);
         })
         , m_hexagon_clusters("hexagon_cluster", p_hexagon_num_clusters, [this] (const char *n, size_t i) {
-            return new hexagon_cluster(n, m_inst_mgr_h);
+            return new hexagon_cluster(n, m_inst_mgr_h, m_router);
         })
-        , m_router("router")
         , m_ram("ram")
         , m_hexagon_ram("hexagon_ram")
         , m_rom("rom")
