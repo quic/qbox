@@ -1,4 +1,3 @@
-
 [//]: # DONT EDIT THIS FILE
 
 [//]: # (SECTION 0)
@@ -234,10 +233,10 @@ Add driver
 ```
 CONFIG_ETHOC=y
 Location:
-  │     -> Device Drivers
-  │       -> Network device support (NETDEVICES [=y])
-  │         -> Ethernet driver support (ETHERNET [=y])
-  │           -> OpenCores 10/100 Mbps Ethernet MAC support
+  |     -> Device Drivers
+  |       -> Network device support (NETDEVICES [=y])
+  |         -> Ethernet driver support (ETHERNET [=y])
+  |           -> OpenCores 10/100 Mbps Ethernet MAC support
 ```
 Add device tree entry
 ```
