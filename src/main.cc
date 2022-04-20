@@ -456,6 +456,14 @@ public:
 
                 m_smmu->dma_socket.bind(m_router.target_socket);
 
+                {
+                    int irq=gs::cci_get<int>(std::string(m_smmu->name())+".irq_context");
+                    int girq=gs::cci_get<int>(std::string(m_smmu->name())+".irq_global");
+                    for (int i=0; i<m_smmu->p_num_cb;i++) {
+                        m_smmu->irq_context[i].bind(m_gic->spi_in[irq+i]);
+                    }
+                    m_smmu->irq_global.bind(m_gic->spi_in[girq]);
+                }
             } else {
                 for (auto &cpu: m_hexagon_clusters) {
                     cpu.m_router.initiator_socket.bind(m_router.target_socket);
