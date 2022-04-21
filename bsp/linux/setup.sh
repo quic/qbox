@@ -30,7 +30,7 @@ getmanifest() {
       return
   fi
   android-tools/repo init -u  https://android.googlesource.com/kernel/manifest -b common-android-mainline
-  android-tools/repo sync -j8
+  android-tools/repo sync -j16
 }
 
 getbuildroot() {
@@ -103,6 +103,15 @@ buildsrc() {
     build/build.sh -j24 V=1
 }
 
+mkdtb() {
+    cd extras/dts && make
+    cd -
+}
+
+mksamplefs() {
+    cd extras/fs && make
+    cd -
+}
 #
 # Once the source is built it can be rebuilt like this:
 #
@@ -153,3 +162,5 @@ getbuildroot
 buildroot $runlevel
 patchsrc
 buildsrc 2>&1 | tee kbuild.log
+mkdtb
+mksamplefs
