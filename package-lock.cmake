@@ -8,7 +8,7 @@
 # qemu (unversioned)
 CPMDeclarePackage(qemu
     NAME libqemu
-    GIT_TAG v3.1.0
+    GIT_TAG libqemu/v6.2.0
     GIT_REPOSITORY git@git.greensocs.com:qemu/qemu.git
     GIT_SUBMODULES "CMakeLists.txt"
     GIT_SHALLOW on
