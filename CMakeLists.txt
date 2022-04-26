@@ -41,9 +41,6 @@ if (APPLE)
 endif (APPLE)
 # using main branch as it has fixes for cmake
 CPMAddPackage("gh:google/googletest#main")
-if (googletest_ADDED)
-  target_link_libraries(${PROJECT_NAME} INTERFACE gtest gmock)
-endif()
 
 target_include_directories(
    ${PROJECT_NAME} INTERFACE
