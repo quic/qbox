@@ -14,8 +14,7 @@ function top()
 
 print ("Lua config running. . . ");
 function installdir(filename)
-    -- local install_dir = "/prj/qct/llvm/release/internal/QEMU-VP/branch-1.0/linux64/latest"
-    local install_dir = "/tmp/latest"
+    local install_dir = "/prj/qct/llvm/release/internal/QEMU-VP/branch-1.0/linux64/latest"
     _dir = io.open(install_dir..filename, "r")
     if _dir then
         return install_dir
