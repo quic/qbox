@@ -277,7 +277,6 @@ public:
 
 class GreenSocsPlatform : public sc_core::sc_module {
 protected:
-    gs::async_event event;   // this is only present for debug, and should be removed for CI (once the ARM is re-instated)
 
     cci::cci_param<unsigned> p_arm_num_cpus;
     cci::cci_param<unsigned> p_num_redists;

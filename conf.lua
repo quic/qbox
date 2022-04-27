@@ -132,10 +132,16 @@ platform = {
     hexagon_num_clusters = 1;
     hexagon_cluster_0 = hexagon_cluster;
     smmu = { mem = {address=0x15000000, size=0x100000};
-             num_tbu=2;
-             upstream_socket_0 = {address=0x0, size=0xd81e0000, relative_addresses=false};
-             upstream_socket_1 = {address=0x0, size=0xd81e0000, relative_addresses=false};
-            };
+            num_tbu=2;
+            num_pages=128;
+            num_cb=128;
+            tbu_sid_0 = 0x1234;
+            upstream_socket_0 = {address=0x0, size=0xd81e0000, relative_addresses=false};
+            tbu_sid_1 = 0;
+            upstream_socket_1 = {address=0x0, size=0x100000000, relative_addresses=false};
+            irq_context = 103;
+            irq_global = 65;
+    };
     qtb = { control_socket = {address=0x15180000, size=0x4000}}; -- + 0x4000*tbu number
 
         -- for virtio image
