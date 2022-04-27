@@ -86,6 +86,7 @@ local hexagon_cluster= {
     qtimer={ mem           = {address=0xfab20000, size=0x1000};
              timer0_mem    = {address=0xfc921000, size=0x1000};
              timer1_mem    = {address=0xfc922000, size=0x1000}};
+    pass = {target_socket   = {address=0x0       , size=0x40000000}};
 };
 
 platform = {
