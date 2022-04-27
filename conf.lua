@@ -13,6 +13,7 @@ function top()
  end
 
 print ("Lua config running. . . ");
+
 function installdir(filename)
     local install_dir = "/prj/qct/llvm/release/internal/QEMU-VP/branch-1.0/linux64/latest"
     _dir = io.open(install_dir..filename, "r")
@@ -24,6 +25,14 @@ function installdir(filename)
 end
 
 --
+-- Set the pre-installed image dir here.
+--   - This can point to the location of externally built images.
+--
+function image_install_dir()
+    return "/prj/qct/llvm/target/vp_qemu_llvm/images/gki/"
+end
+
+--
 -- Find the images, either one that has been installed or a locally
 -- built image.
 --
@@ -32,11 +41,7 @@ function get_image(local_path, install_path, base_name)
     if io.open(target_image, "r") then
         target_image = target_image
     else
-        target_image = installdir(install_path)
-        if target_image then
-            target_image = target_image .. install_path
-        end
-    
+        target_image = install_path
         if (target_image == nil or io.open(target_image, "r") == nil) then
           print ("ERROR: File \"" .. base_name .."\" not found")
           return nil
@@ -47,21 +52,20 @@ end
 
 
 filesystem_image = get_image("bsp/linux/extras/fs/filesystem.bin",
-                             "/fw/fastrpc-images/images/filesystem.bin",
+                             image_install_dir().."filesystem.bin",
                              "filesystem.bin")
 
 linux_image = get_image ("bsp/linux/out/android-mainline/common/arch/arm64/boot/Image",
-                         "/fw/fastrpc-images/images/Image",
+                         image_install_dir().."Image",
                          "Image");
 
 device_tree = get_image ("bsp/linux/extras/dts/vp.dtb",
-                         "/fw/fastrpc-images/images/vp.dtb",
+                         image_install_dir().."vp.dtb",
                          "vp.dtb");
 
---print (linux_image)
---print (device_tree)
---print (filesystem_image)
---io.stdin:read'*l'
+-- print (linux_image)
+-- print (device_tree)
+-- print (filesystem_image)
 
 if (linux_image == nil or device_tree == nil or filesystem_image == nil) then
     return
