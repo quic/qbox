@@ -251,7 +251,7 @@ private:
     {
         for (unsigned int i = 0; i < targets.size(); i++) {
             struct target_info& ti = targets.at(i);
-            if (addr >= ti.address && addr < (ti.address + ti.size)) {
+            if (addr >= ti.address && (addr - ti.address) < ti.size ) {
                 return &ti;
             }
         }
@@ -265,6 +265,14 @@ private:
         return targets[index].address + address;
     }
 
+    inline uint64_t get_uint64(std::string s) {
+        auto v=m_broker.get_preset_cci_value(s);
+        if (v.is_uint64()) {
+            return v.get_uint64();
+        } else {
+            return v.get_int64();
+        }
+    }
 protected:
     virtual void before_end_of_elaboration()
     {
@@ -279,7 +287,7 @@ protected:
                 SC_REPORT_FATAL("Router",
                     ("Can't find " + ti.name + ".address").c_str());
             }
-            uint64_t address = m_broker.get_preset_cci_value(ti.name + ".address").get_uint64();
+            uint64_t address = get_uint64(ti.name + ".address");
             m_broker.lock_preset_value(ti.name + ".address");
             m_broker.ignore_unconsumed_preset_values(
                 [ti](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first==(ti.name + ".address"); });
@@ -287,7 +295,7 @@ protected:
                 SC_REPORT_FATAL("Router",
                     ("Can't find " + ti.name + ".size").c_str());
             }
-            uint64_t size = m_broker.get_preset_cci_value(ti.name + ".size").get_uint64();
+            uint64_t size = get_uint64(ti.name + ".size");
             m_broker.lock_preset_value(ti.name + ".size");
             m_broker.ignore_unconsumed_preset_values(
                 [ti](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first==(ti.name + ".size"); });
