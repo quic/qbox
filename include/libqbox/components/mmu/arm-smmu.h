@@ -31,6 +31,22 @@
 #include "libqbox/ports/target-signal-socket.h"
 
 class QemuArmSmmu : public QemuDevice, public QemuInitiatorIface {
+
+    inline uint64_t get_uint64(std::string s)
+    {
+        cci::cci_broker_handle m_broker = cci::cci_get_broker();
+
+        m_broker.lock_preset_value(s);
+        m_broker.ignore_unconsumed_preset_values(
+            [s](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == s; });
+        auto v = m_broker.get_preset_cci_value(s);
+        if (v.is_uint64()) {
+            return v.get_uint64();
+        } else {
+            return v.get_int64();
+        }
+    }
+
 public:
     cci::cci_param<uint32_t> p_pamax;
     cci::cci_param<uint16_t> p_num_smr;
@@ -87,14 +103,23 @@ public:
         for(uint32_t i = 0; i< p_num_tbu; ++i) {
             downstream_socket[i].init(m_dev, (base_string + std::to_string(i)).c_str());
 
-            std::string tbuname=std::string(name())+".tbu_sid_"+ std::to_string(i);
-            if (m_broker.has_preset_value(tbuname.c_str())) {
-                uint64_t sid = (m_broker.get_preset_cci_value(tbuname.c_str())).get_uint64();
-                m_broker.lock_preset_value(tbuname);
-                m_broker.ignore_unconsumed_preset_values(
-                    [tbuname](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first==tbuname; });
-
-                m_dev.set_prop_int(("tbu-sid-" + std::to_string(i)).c_str(), sid);
+            {
+                std::string s = std::string(name()) + ".upstream_socket_" + std::to_string(i) + ".address";
+                if (m_broker.has_preset_value(s)) {
+                    m_dev.set_prop_int(("tbu-offset-" + std::to_string(i)).c_str(), get_uint64(s));
+                }
+            }
+            {
+                std::string s = std::string(name()) + ".upstream_socket_" + std::to_string(i) + ".size";
+                if (m_broker.has_preset_value(s)) {
+                    m_dev.set_prop_int(("tbu-size-" + std::to_string(i)).c_str(), get_uint64(s));
+                }
+            }
+            {
+                std::string s = std::string(name()) + ".tbu_sid_" + std::to_string(i);
+                if (m_broker.has_preset_value(s)) {
+                    m_dev.set_prop_int(("tbu-sid-" + std::to_string(i)).c_str(), get_uint64(s));
+                }
             }
         }
 
