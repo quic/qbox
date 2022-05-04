@@ -40,14 +40,24 @@
 namespace gs {
 using namespace cci;
 
-/* return the leaf name of the given module name */
+/**
+ * @brief return the leaf name of the given systemc hierarchical name
+ *
+ * @param name
+ * @return std::string
+ */
 static std::string sc_cci_leaf_name(std::string name)
 {
     return name.substr(name.find_last_of(".") + 1);
 }
 
-/* return a list of children from the given module name, can be used inside
- * or outside the heirarchy */
+/**
+ * @brief return a list of 'unconsumed' children from the given module name, can be used inside
+ * or outside the heirarchy
+ *
+ * @param name
+ * @return std::list<std::string>
+ */
 static std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
 {
     cci_broker_handle m_broker = (sc_core::sc_get_current_object())
@@ -78,6 +88,12 @@ T cci_get(std::string name)
     return ret;
 }
 
+/**
+ * @brief Configurable Broker class, inherits from the 'standard' cci_utils broker, but adds
+ * 1/ The ability to be instanced in the constructor
+ * 2/ The ability to automatically load a configuration file
+ * 3/ Explicitly set parameters (from the constructor) are 'hidden' from the parent broker
+ */
 class ConfigurableBroker : public cci_utils::consuming_broker {
 
 public:
@@ -122,18 +138,20 @@ private:
             return cci_originator();
         }
     }
-    /*
-     * private function to determine if we send to the parent broker or not
+    /**
+     * @brief private function to determine if we send to the parent broker or not
+     *
      */
     bool sendToParent(const std::string& parname) const
     {
         return ((expose.find(parname) != expose.end()) && (!is_global_broker()));
     }
 
-    /*
-     * Expose all params that have not been configured
+    /**
+     * @brief Expose all params that have not been configured
+     *
+     * @param list
      */
-
     void
     initialize_params(const std::initializer_list<cci_name_value_pair>& list)
     {
@@ -321,11 +339,14 @@ public:
             //            exit(0);
         }
     }
-/*
- * default constructor:
- * When constructed with no initialised parameters, it is assumed that ALL
- * parameters are to be treated as private
- */
+    /**
+     * @brief Construct a new Configurable Broker object
+     * default constructor:
+     * When constructed with no initialised parameters, it is assumed that ALL
+     * parameters are to be treated as private
+     * @param name Broker name (Default provided)
+     * @param load_conf_file : request that configuration file is loaded (default true)
+     */
 #define BROKERNAME "gs::ConfigurableBroker"
     ConfigurableBroker(const std::string& name = BROKERNAME,
         bool load_conf_file = true)
@@ -355,18 +376,21 @@ public:
         }
     }
 
-    /*
-     * Constructor with just boolean, for convenience
+    /**
+     * @brief Construct a new Configurable Broker object
+     *
+     * @param load_conf_file request that configuration file is loaded
      */
     ConfigurableBroker(bool load_conf_file)
         : ConfigurableBroker(BROKERNAME, load_conf_file)
     {
     }
-
-    /*
-     * initialised list constructor:
-     * When constructed with a list of initialised parameters, all other params
-     * will be exported to the parent broker
+    /**
+     * @brief Construct a new Configurable Broker object from list.
+     *  When constructed with a list of initialised parameters, all other params
+     *  will be exported to the parent broker
+     * @param list
+     * @param load_conf_file
      */
     ConfigurableBroker(std::initializer_list<cci_name_value_pair> list,
         std::initializer_list<std::pair<std::string, std::string>> alias_list = {},
@@ -380,11 +404,16 @@ public:
             lua.config(std::string(conf_file).c_str());
         }
     }
-    /*
+    /**
+     * @brief Construct a new Configurable Broker object, all arguments have default options.
      * in this case, the expectation is that this is being used at (or near) the
      * top level of the design, and this broker will act as a global broker. A
      * list of values will be used to set default values, but will be overwritten
      * by configuration passed on the command line
+     * @param argc argc and argv provided, such that they can be scanned for configuration commands
+     * @param argv
+     * @param list list of pre-configred values (to be hidden)
+     * @param load_conf_file
      */
     ConfigurableBroker(const int argc, char* const argv[],
         std::initializer_list<cci_name_value_pair> list = {},
