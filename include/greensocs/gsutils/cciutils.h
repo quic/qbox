@@ -1,25 +1,25 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #ifndef CCIUTILS_H
 #define CCIUTILS_H
@@ -123,16 +123,16 @@ private:
         }
     }
     /*
-   * private function to determine if we send to the parent broker or not
-   */
+     * private function to determine if we send to the parent broker or not
+     */
     bool sendToParent(const std::string& parname) const
     {
         return ((expose.find(parname) != expose.end()) && (!is_global_broker()));
     }
 
     /*
-   * Expose all params that have not been configured
-   */
+     * Expose all params that have not been configured
+     */
 
     void
     initialize_params(const std::initializer_list<cci_name_value_pair>& list)
@@ -150,123 +150,126 @@ private:
         }
     }
 
-  void alias_params(const std::initializer_list<std::pair<std::string, std::string>> &list) {
+    void alias_params(const std::initializer_list<std::pair<std::string, std::string>>& list)
+    {
         // handle aliases
-    for (auto &p : list) {
-        std::string aliasname = relname(p.second);
-        set_preset_cci_value(relname(p.first), get_preset_cci_value(aliasname), m_originator);
-        alias_param(relname(p.first), aliasname);
+        for (auto& p : list) {
+            std::string aliasname = relname(p.second);
+            set_preset_cci_value(relname(p.first), get_preset_cci_value(aliasname), m_originator);
+            alias_param(relname(p.first), aliasname);
+        }
     }
-  }
-/**
-   *  @fn     void typed_post_write_callback(const cci::cci_param_write_event<int> & ev)
-   *  @brief  Post Callback function to sync ongoing written parameter value with synced_handle value
-   *  @return void
-   */
-  void untyped_post_write_callback(const cci::cci_param_write_event<> & ev ,
-                                   cci::cci_param_handle synced_handle) {
-     synced_handle.set_cci_value(ev.new_value);
-  }
- /**
-   *  @fn     void sync_values(cci::cci_param_handle _param_handle_1, cci::cci_param_handle _param_handle_2)
-   *  @brief  Function for synchronizing the values of cci_parameter of OWNER
-   *          modules via the PARAM_VALUE_SYNC
-   *  @param  _param_handle_1 The first parameter to be synced
-   *  @param  _param_handle_2 The second parameter to be synced
-   *  @return void
-   */
-  void sync_values(cci::cci_param_handle _param_handle_1,
-                   cci::cci_param_handle _param_handle_2) {
-    // In order to synchronize even the default values of the owner modules,
-    // use cci_base_param of one parameter as reference, write the same value
-    // to the other pararmeter's cci_base_param using JSON
-    _param_handle_1.set_cci_value(_param_handle_2.get_cci_value());
-
-    post_write_cb_vec.push_back(_param_handle_1.register_post_write_callback(
-            sc_bind(&ConfigurableBroker::untyped_post_write_callback,
-                    this, sc_unnamed::_1, _param_handle_2)));
-
-    post_write_cb_vec.push_back(_param_handle_2.register_post_write_callback(
-            sc_bind(&ConfigurableBroker::untyped_post_write_callback,
-                    this, sc_unnamed::_1, _param_handle_1)));
-  }
-
-   std::vector<cci::cci_callback_untyped_handle> post_write_cb_vec; ///< Callback Adaptor Objects
-
-   cci_param_create_callback_handle register_cb;
-   std::vector<std::pair<std::string, std::string>> alias_list;
-
-   void alias_param(std::string a, std::string b) {
-       alias_list.push_back(std::make_pair(a, b));
-       if (register_cb==cci_param_create_callback_handle()) {
-          register_cb = register_create_callback(sc_bind(&ConfigurableBroker::alias_param_callback, this , sc_unnamed::_1), m_originator);
-       }
-       alias_param_callback(cci::cci_param_handle());
-   }
-
-  void alias_param_callback(const cci_param_untyped_handle &ph)
-  {
-    alias_list.erase(
-    std::remove_if(alias_list.begin(), alias_list.end(),
-      [&](auto a) { 
-
-            cci_param_untyped_handle h_a =
-                get_param_handle(a.first, m_originator);
-            if (h_a.is_valid() && h_a.get_mutable_type()==cci::CCI_IMMUTABLE_PARAM) {
-              return true;
-            }
-            cci_param_untyped_handle h_b =
-                    get_param_handle(a.second, m_originator);
-            if (h_b.is_valid() && !h_a.is_valid()) {
-                set_preset_cci_value(a.first, h_b.get_cci_value(), m_originator);
-                return false; // maybe it'll be mutable when it arrives?
-            }
-            if (h_a.is_valid() && h_b.is_valid()) {
-                sync_values(h_a, h_b);
-                return true;
-            }
-            return false;
-      } ),
-    alias_list.end());
-
-  if (alias_list.size()==0) {
-      unregister_create_callback(register_cb, m_originator);
-  }  
-}
-
-class help_helper : public sc_core::sc_module {
-public:
-    help_helper(sc_core::sc_module_name name) { }
-    std::function<void()> help_cb;
-    void register_cb (std::function<void()> cb) {help_cb=cb;}
-    void end_of_elaboration()
+    /**
+     *  @fn     void typed_post_write_callback(const cci::cci_param_write_event<int> & ev)
+     *  @brief  Post Callback function to sync ongoing written parameter value with synced_handle value
+     *  @return void
+     */
+    void untyped_post_write_callback(const cci::cci_param_write_event<>& ev,
+        cci::cci_param_handle synced_handle)
     {
-        if (help_cb) help_cb();
+        synced_handle.set_cci_value(ev.new_value);
+    }
+    /**
+     *  @fn     void sync_values(cci::cci_param_handle _param_handle_1, cci::cci_param_handle _param_handle_2)
+     *  @brief  Function for synchronizing the values of cci_parameter of OWNER
+     *          modules via the PARAM_VALUE_SYNC
+     *  @param  _param_handle_1 The first parameter to be synced
+     *  @param  _param_handle_2 The second parameter to be synced
+     *  @return void
+     */
+    void sync_values(cci::cci_param_handle _param_handle_1,
+        cci::cci_param_handle _param_handle_2)
+    {
+        // In order to synchronize even the default values of the owner modules,
+        // use cci_base_param of one parameter as reference, write the same value
+        // to the other pararmeter's cci_base_param using JSON
+        _param_handle_1.set_cci_value(_param_handle_2.get_cci_value());
+
+        post_write_cb_vec.push_back(_param_handle_1.register_post_write_callback(
+            sc_bind(&ConfigurableBroker::untyped_post_write_callback,
+                this, sc_unnamed::_1, _param_handle_2)));
+
+        post_write_cb_vec.push_back(_param_handle_2.register_post_write_callback(
+            sc_bind(&ConfigurableBroker::untyped_post_write_callback,
+                this, sc_unnamed::_1, _param_handle_1)));
     }
 
-    void start_of_simulation()
-    {
-        auto m_broker = cci::cci_get_broker();
-        // remove lua builtins
-        m_broker.ignore_unconsumed_preset_values(
-            [](const std::pair<std::string, cci::cci_value>& iv) -> bool { return ((iv.first)[0]=='_' || iv.first == "math.maxinteger") || (iv.first == "math.mininteger") || (iv.first == "utf8.charpattern"); });
+    std::vector<cci::cci_callback_untyped_handle> post_write_cb_vec; ///< Callback Adaptor Objects
 
-        auto uncon = m_broker.get_unconsumed_preset_values();
-        for (auto p : uncon) {
-            SC_REPORT_INFO("Params", ("WARNING: Unconsumed parameter : " + p.first + " = " + p.second.to_json()).c_str());
+    cci_param_create_callback_handle register_cb;
+    std::vector<std::pair<std::string, std::string>> alias_list;
+
+    void alias_param(std::string a, std::string b)
+    {
+        alias_list.push_back(std::make_pair(a, b));
+        if (register_cb == cci_param_create_callback_handle()) {
+            register_cb = register_create_callback(sc_bind(&ConfigurableBroker::alias_param_callback, this, sc_unnamed::_1), m_originator);
+        }
+        alias_param_callback(cci::cci_param_handle());
+    }
+
+    void alias_param_callback(const cci_param_untyped_handle& ph)
+    {
+        alias_list.erase(
+            std::remove_if(alias_list.begin(), alias_list.end(),
+                [&](auto a) {
+                    cci_param_untyped_handle h_a = get_param_handle(a.first, m_originator);
+                    if (h_a.is_valid() && h_a.get_mutable_type() == cci::CCI_IMMUTABLE_PARAM) {
+                        return true;
+                    }
+                    cci_param_untyped_handle h_b = get_param_handle(a.second, m_originator);
+                    if (h_b.is_valid() && !h_a.is_valid()) {
+                        set_preset_cci_value(a.first, h_b.get_cci_value(), m_originator);
+                        return false; // maybe it'll be mutable when it arrives?
+                    }
+                    if (h_a.is_valid() && h_b.is_valid()) {
+                        sync_values(h_a, h_b);
+                        return true;
+                    }
+                    return false;
+                }),
+            alias_list.end());
+
+        if (alias_list.size() == 0) {
+            unregister_create_callback(register_cb, m_originator);
+        }
+    }
+
+    class help_helper : public sc_core::sc_module {
+    public:
+        help_helper(sc_core::sc_module_name name) { }
+        std::function<void()> help_cb;
+        void register_cb(std::function<void()> cb) { help_cb = cb; }
+        void end_of_elaboration()
+        {
+            if (help_cb)
+                help_cb();
         }
 
-        if (help_cb) exit(0);
-    }
-};
-help_helper m_help_helper;
+        void start_of_simulation()
+        {
+            auto m_broker = cci::cci_get_broker();
+            // remove lua builtins
+            m_broker.ignore_unconsumed_preset_values(
+                [](const std::pair<std::string, cci::cci_value>& iv) -> bool { return ((iv.first)[0] == '_' || iv.first == "math.maxinteger") || (iv.first == "math.mininteger") || (iv.first == "utf8.charpattern"); });
+
+            auto uncon = m_broker.get_unconsumed_preset_values();
+            for (auto p : uncon) {
+                SC_REPORT_INFO("Params", ("WARNING: Unconsumed parameter : " + p.first + " = " + p.second.to_json()).c_str());
+            }
+
+            if (help_cb)
+                exit(0);
+        }
+    };
+    help_helper m_help_helper;
 
 public:
     /*
- * public interface functions
- */
+     * public interface functions
+     */
 
-     std::vector<cci_name_value_pair> get_consumed_preset_values() const
+    std::vector<cci_name_value_pair> get_consumed_preset_values() const
     {
         std::vector<cci_name_value_pair> consumed_preset_cci_values;
         std::map<std::string, cci_value>::const_iterator iter;
@@ -288,7 +291,7 @@ public:
 
     void print_help(bool top = true)
     {
-        /* NB there is a race condition between this and the QEMU uart which 
+        /* NB there is a race condition between this and the QEMU uart which
          * has a tendency to wipe the buffer. We will use cerr here */
 
         if (top) {
@@ -297,9 +300,8 @@ public:
                       << "===================================" << std::endl;
         }
 
-        for (auto p : get_consumed_preset_values()) 
-        {
-            std::cerr << "Consumed parameter : "<< p.first << " (with value 0x"<<std::hex << p.second<<")"<<std::endl;
+        for (auto p : get_consumed_preset_values()) {
+            std::cerr << "Consumed parameter : " << p.first << " (with value 0x" << std::hex << p.second << ")" << std::endl;
         }
 
         std::string ending = "childbroker";
@@ -316,7 +318,7 @@ public:
         }
         if (top) {
             std::cerr << "---" << std::endl;
-//            exit(0);
+            //            exit(0);
         }
     }
 /*
@@ -354,18 +356,18 @@ public:
     }
 
     /*
-   * Constructor with just boolean, for convenience
-   */
+     * Constructor with just boolean, for convenience
+     */
     ConfigurableBroker(bool load_conf_file)
         : ConfigurableBroker(BROKERNAME, load_conf_file)
     {
     }
 
     /*
-   * initialised list constructor:
-   * When constructed with a list of initialised parameters, all other params
-   * will be exported to the parent broker
-   */
+     * initialised list constructor:
+     * When constructed with a list of initialised parameters, all other params
+     * will be exported to the parent broker
+     */
     ConfigurableBroker(std::initializer_list<cci_name_value_pair> list,
         std::initializer_list<std::pair<std::string, std::string>> alias_list = {},
         bool load_conf_file = true)
@@ -379,11 +381,11 @@ public:
         }
     }
     /*
-   * in this case, the expectation is that this is being used at (or near) the
-   * top level of the design, and this broker will act as a global broker. A
-   * list of values will be used to set default values, but will be overwritten
-   * by configuration passed on the command line
-   */
+     * in this case, the expectation is that this is being used at (or near) the
+     * top level of the design, and this broker will act as a global broker. A
+     * list of values will be used to set default values, but will be overwritten
+     * by configuration passed on the command line
+     */
     ConfigurableBroker(const int argc, char* const argv[],
         std::initializer_list<cci_name_value_pair> list = {},
         bool load_conf_file = true)
@@ -410,7 +412,7 @@ public:
             switch (c) {
             case 'h': // -h and --help
                 sc_core::sc_spawn_options opts;
-                m_help_helper.register_cb([&]() -> void { print_help();});
+                m_help_helper.register_cb([&]() -> void { print_help(); });
                 break;
             }
         }
@@ -445,7 +447,7 @@ public:
     }
 
     /* NB  missing from upstream CCI 'broker' see
-   * https://github.com/OSCI-WG/cci/issues/258 */
+     * https://github.com/OSCI-WG/cci/issues/258 */
     bool has_preset_value(const std::string& parname) const
     {
         if (sendToParent(parname)) {
