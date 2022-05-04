@@ -41,6 +41,44 @@ namespace gs {
 using namespace cci;
 
 /**
+ * @brief Helper function to find a sc_object by fully qualified name
+ *  throws SC_REPORT_ERROR if nothing found.
+ * @param m     current parent object (use null to start from the top)
+ * @param name  name being searched for
+ * @return sc_core::sc_object* return object if found
+ */
+static sc_core::sc_object* find_sc_obj(sc_core::sc_object* m, std::string name, bool test=false)
+{
+    if (m && name == m->name()) {
+        return m;
+    }
+
+    std::vector<sc_core::sc_object*> children;
+    if (m) {
+        children = m->get_child_objects();
+    } else {
+        children = sc_core::sc_get_top_level_objects();
+    }
+
+    auto ip_it = std::find_if(
+        begin(children), end(children), [&name](sc_core::sc_object* o) {
+            return (name.compare(0, strlen(o->name()), o->name()) == 0) && find_sc_obj(o,name, true);
+        });
+    if (ip_it != end(children)) {
+        return find_sc_obj(*ip_it, name);
+    } else {
+        if (!test) {
+            if (m) {
+                SC_REPORT_ERROR("find sc_object", (std::string("Unable to find ") + name + " in sc_object " + m->name()).c_str());
+            } else {
+                SC_REPORT_ERROR("find sc_object", (std::string("Unable to find ") + name).c_str());
+            }
+        }
+    }
+    return nullptr;
+}
+
+/**
  * @brief return the leaf name of the given systemc hierarchical name
  *
  * @param name
