@@ -373,12 +373,14 @@ protected:
                 m_cpus[i].irq_pmu_out.bind(m_gic->ppi_in[i][23]);
             }
 
-            for (int i=0; i<64; i++) {
-                std::string irq_str=std::string(m_ipcc.name())+".irq_"+std::to_string(i);
-                if (cci::cci_get_broker().has_preset_value(irq_str)) {
-                    int irq=gs::cci_get<int>(irq_str);
-                    m_ipcc.irq[i].bind(m_gic->spi_in[irq]);
-                }
+            for (auto irqnum : gs::sc_cci_children((std::string(m_ipcc.name())+".irqs").c_str())) {
+                std::string irqss=(std::string(m_ipcc.name())+".irqs."+irqnum);
+                int irq=gs::cci_get<int>(irqss+".irq");
+                std::string dstname=gs::cci_get<std::string>(irqss+".dst");
+                sc_core::sc_object* dst_obj=gs::find_sc_obj(nullptr, dstname);
+                auto dst = dynamic_cast<QemuTargetSignalSocket*>(dst_obj);
+                m_ipcc.irq[irq].bind((*dst));
+//                std::cout << "BINDING IRQ : "<< dstname<<" to ipcc["<<irq<<"]\n";
             }
         }
      }

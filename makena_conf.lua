@@ -44,8 +44,10 @@ local NSP0_AHBS_BASE= 0x1B300000 -- TURING_SS_0TURING_QDSP6V68SS
 
 local NSP0_AHB_LOW  = NSP0_BASE
 local NSP0_TCM_BASE = NSP0_BASE
-local NSP0_AHB_SIZE = 0x00500000
+local NSP0_AHB_SIZE = 0x05000000
 local NSP0_AHB_HIGH = NSP0_BASE + NSP0_AHB_SIZE
+
+local IPC_ROUTER_TOP = 0x00400000
 
 -- TURING_SS_0TURING_QDSP6SS_BOOT_CORE_START:
 local NSP0_BOOT_CORE_START=NSP0_AHBS_BASE+0x400
@@ -61,11 +63,11 @@ local OFFSET_APSS_ALIAS0_GICR_CTLR = 0x60000
 -- Makena VBSP, system UART addr: reallocated space at
 --   PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO:
 local PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO = 0x40000000
-local UART0 = PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO
+local UART0 = 0x10000000
 
 local nsp0ss = {
     hexagon_num_threads = 1;
-    hexagon_thread_0={start_powered_off = true};
+    hexagon_thread_0={start_powered_off = false};
 --    hexagon_thread_1={start_powered_off = true};
 --    hexagon_thread_2={start_powered_off = true};
 --    hexagon_thread_3={start_powered_off = true};
@@ -76,7 +78,7 @@ local nsp0ss = {
     qtimer={ mem           = {address=NSP0_AHBS_BASE + 0xA0000, size=0x1000};
              timer0_mem    = {address=NSP0_AHBS_BASE + 0xA1000, size=0x1000};
              timer1_mem    = {address=NSP0_AHBS_BASE + 0xA2000, size=0x1000}};
-    pass = {target_socket  = {address=NSP0_AHB_LOW, size=NSP0_AHB_SIZE}};
+    pass = {target_socket  = {address=0x0 , size=NSP0_AHB_HIGH, relative_addresses=false}};
 };
 
 platform = {
@@ -98,14 +100,19 @@ platform = {
 
     uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=1};
 
-    ipcc= {  socket        = {address=0x410000, size=0xfc000}, irq_8=229};
+    ipcc= {  socket        = {address=IPC_ROUTER_TOP, size=0xfc000},
+             irqs = {
+                {irq=8, dst = "platform.gic.spi_in_229"},
+                {irq=6, dst = "platform.hexagon_cluster_0.l2vic.irq_in_30"},
+            }
+        };
 
     smmu = { mem = {address=0x15000000, size=0x100000};
         num_tbu=2;
         num_pages=128;
         num_cb=128;
         tbu_sid_0 = 0x0;
-        upstream_socket_0 = {address=0x0, size=0x100000000, relative_addresses=false};
+        upstream_socket_0 = {address=NSP0_AHB_HIGH, size= - NSP0_AHB_HIGH, relative_addresses=true};
         tbu_sid_1 = 0;
         upstream_socket_1 = {address=0x0, size=0xd81e0000, relative_addresses=false};
         irq_context = 103;
@@ -122,6 +129,7 @@ platform = {
         {bin_file=top().."fw/makena/images/smem_v3.bin",
          address=INITIAL_DDR_SPACE_14GB + OFFSET_SMEM_DDR_SPACE };
         {elf_file=top().."fw/hexagon-images/bootimage_makena.cdsp0.prodQ.pbn"};
+--      {elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg_makena.cdsp0.coreQ.pbn"};
     };
     --uart_backend_port=4001;
 };
