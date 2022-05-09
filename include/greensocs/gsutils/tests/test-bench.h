@@ -122,7 +122,7 @@ static inline void run_test_bench()
     ASSERT_NE(pid, -1);
 
     if (!pid) {
-        T test_bench("test-bench");
+        T test_bench("test_bench");
         sc_core::sc_start();
         exit(::testing::Test::HasFatalFailure());
     } else {
