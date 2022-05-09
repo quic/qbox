@@ -35,6 +35,7 @@
 #include <cci_configuration>
 #include <systemc>
 #include <tlm>
+#include <list>
 
 #include <tlm_utils/multi_passthrough_initiator_socket.h>
 #include <tlm_utils/multi_passthrough_target_socket.h>
@@ -223,10 +224,9 @@ private:
 
         bool status = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
         if (ti->mask_addr) {
-            dmi_data.set_start_address(
-                compose_address(ti->index, dmi_data.get_start_address()));
-            dmi_data.set_end_address(
-                compose_address(ti->index, dmi_data.get_end_address()));
+            assert(dmi_data.get_start_address() < ti->size);
+            dmi_data.set_start_address(ti->address + dmi_data.get_start_address());
+            dmi_data.set_end_address(ti->address + dmi_data.get_end_address());
             trans.set_address(addr);
         }
         return status;
@@ -281,6 +281,7 @@ protected:
         target_socket.register_get_direct_mem_ptr(this,
             &Router::get_direct_mem_ptr);
         initiator_socket.register_invalidate_direct_mem_ptr(this, &Router::invalidate_direct_mem_ptr);
+        std::vector<target_info>final_list = {};
 
         for (auto& ti : targets) {
             if (!m_broker.has_preset_value(ti.name + ".address")) {
@@ -321,7 +322,35 @@ protected:
             ti.address = address;
             ti.size = size;
             ti.mask_addr = mask;
+            final_list.push_back(ti);
+            if (m_broker.has_preset_value(ti.name + ".aliases.0.address")) {
+                int l = ti.name.length() + 8 +1;
+                /*-----------------------------------------------------*/
+                std::list<std::string> children;
+                auto uncon = m_broker.get_unconsumed_preset_values([&ti](const std::pair<std::string, cci::cci_value>& iv) { return iv.first.find(std::string(ti.name) + ".aliases.") == 0; });
+                for (auto p : uncon) {
+                    children.push_back(p.first.substr(l, p.first.find(".", l) - l));
+                }
+                children.sort();
+                children.unique();
+                /*-----------------------------------------------------*/
+                for (int t=0; t < children.size(); t++){
+                    std::string name=(ti.name + ".aliases." + std::to_string(t));
+                    uint64_t address = get_uint64(name + ".address");
+                    uint64_t size = get_uint64(name + ".size");
+                    m_broker.lock_preset_value(name);
+                    m_broker.ignore_unconsumed_preset_values(
+                        [name](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first==(name); });
+
+                    struct target_info ati = ti;
+                    ati.address = address;
+                    ati.size = size;
+
+                    final_list.push_back(ati);
+                }
+            }
         }
+        targets = final_list;
     }
 
 public:
