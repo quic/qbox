@@ -65,6 +65,12 @@ local OFFSET_APSS_ALIAS0_GICR_CTLR = 0x60000
 local PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO = 0x40000000
 local UART0 = 0x10000000
 
+local CFGTABLE_BASE  = NSP0_BASE + 0x180000;
+
+dofile (top().."fw/hex_cfgtables.lua")  -- defines _v68n_1024_cfgtable
+_v68n_1024_cfgtable[4]=0;    -- DISABLE ETM
+
+
 local nsp0ss = {
     hexagon_num_threads = 1;
     hexagon_thread_0={start_powered_off = false};
@@ -79,6 +85,7 @@ local nsp0ss = {
              timer0_mem    = {address=NSP0_AHBS_BASE + 0xA1000, size=0x1000};
              timer1_mem    = {address=NSP0_AHBS_BASE + 0xA2000, size=0x1000}};
     pass = {target_socket  = {address=0x0 , size=NSP0_AHB_HIGH, relative_addresses=false}};
+    cfgtable_base = CFGTABLE_BASE;
 };
 
 platform = {
@@ -92,7 +99,7 @@ platform = {
 
     ram=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE}};
     hexagon_ram={target_socket={address=UNLIKELY_TO_BE_USED+0x0, size=0x08000000}};
-    rom=  {  target_socket = {address=UNLIKELY_TO_BE_USED+0xde000000, size=0x400 },read_only=true};
+    rom=  {  target_socket = {address=CFGTABLE_BASE, size=0x400 },read_only=true, load={data=_v68n_1024_cfgtable, offset=0}};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
              redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0xf60000}};
     virtionet0= { mem    =   {address=0x1c120000, size=0x10000}, irq=18, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21"};
