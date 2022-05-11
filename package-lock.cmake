@@ -4,13 +4,13 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG 20352c91ae30619f2550834a5e5ec0bf55f62e03
+  GIT_TAG v5.3.0
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
 CPMDeclarePackage(libgsutils
   NAME libgsutils
-  GIT_TAG 7684941e6fe6aefc3f6693117cc6502e14b384a7
+  GIT_TAG v2.3.0
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgsutils.git
   GIT_SHALLOW on
 )
@@ -42,14 +42,14 @@ CPMDeclarePackage(libqemu-cxx
 # libqemu
 CPMDeclarePackage(libqemu
   NAME libqemu
-  GIT_TAG d61c2c00caf7a9406a31512f0282587306346609
+  GIT_TAG v1.1.0
   GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/qualcomm-qemu/qemu-hexagon.git
   GIT_SUBMODULES CMakeLists.txt
 )
 # base-components
 CPMDeclarePackage(base-components
   NAME base-components
-  GIT_TAG 1d308962aeb5db9c8e72a75d9e993b2bdacf1aeb
+  GIT_TAG v3.2.0
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/base-components.git
 #  GIT_SHALLOW on
 )
