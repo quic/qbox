@@ -72,6 +72,13 @@ class pass : public sc_core::sc_module {
             tlm_utils::simple_initiator_socket<MOD, BUSWIDTH>::bind(socket);
             register_cb(socket.get_base_export().name());
         }
+
+        // hierarchial binding
+        void bind(tlm::tlm_initiator_socket<BUSWIDTH> &socket)
+        {
+            tlm_utils::simple_initiator_socket<MOD, BUSWIDTH>::bind(socket);
+            register_cb( socket.get_base_port().name());
+        }
     };
 
     /* NB use the EXPORT name, so as not to be hassled by the _port_0*/
@@ -120,8 +127,8 @@ private:
             info << " len:" << trans.get_data_length();
             unsigned char* ptr = trans.get_data_ptr();
             info << " returned with data 0x";
-            for (int i = 0; i < trans.get_data_length(); i++) {
-                info << std::setw(2) << std::setfill('0') << std::hex << (unsigned int)(ptr[i]);
+            for (int i = trans.get_data_length(); i; i--) {
+                info << std::setw(2) << std::setfill('0') << std::hex << (unsigned int)(ptr[i-1]);
             }
 
             for (int i = 0; i < tlm::max_num_extensions(); i++) {
