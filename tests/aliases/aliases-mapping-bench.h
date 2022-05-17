@@ -12,7 +12,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-class AliasesMappingTest : /*public sc_core::sc_module {*/ public TestBench {
+class AliasesMappingTest : public TestBench {
 protected:
 
     InitiatorTester m_initiator;
