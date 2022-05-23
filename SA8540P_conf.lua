@@ -36,9 +36,16 @@ local DDR_SPACE_SIZE = 32*1024*1024*1024
 local UNLIKELY_TO_BE_USED = INITIAL_DDR_SPACE_14GB + DDR_SPACE_SIZE
 local DTB_LOAD_ADDR = UNLIKELY_TO_BE_USED + 512
 
+-- local TURING_SS_0TURING_QDSP6SS_STRAP_TCM_BASE = 0x01A00000 << 4
+-- local TURING_SS_0TURING_QDSP6SS_STRAP_AHBUPPER = 0x01B80000 << 4
+-- local TURING_SS_0TURING_QDSP6SS_STRAP_AHBLOWER = 0x01A00000 << 4
+-- local TURING_SS_0TURING_QDSP6SS_STRAP_AHBS_BASE = 0x01B30000 << 4
 local NSP0_BASE     = 0x1A000000 -- TURING_SS_0TURING
+   -- ^^ This val is also described as 'TCM_BASE_ADDRESS' in
+   -- Sys arch spec "TCM region memory map"
 local NSP0_AHBS_BASE= 0x1B300000 -- TURING_SS_0TURING_QDSP6V68SS
                            -- TURING_SS_0TURING_QDSP6V68SS_PUB
+local TURING_SS_0TURING_QDSP6V68SS_CSR= 0x1B380000
 -- The QDSP6v67SS private registers include CSR, L2VIC, QTMR registers.
 -- The address base is determined by parameter QDSP6SS_PRIV_BASEADDR
 
@@ -63,20 +70,25 @@ local OFFSET_APSS_ALIAS0_GICR_CTLR = 0x60000
 -- Makena VBSP, system UART addr: reallocated space at
 --   PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO:
 local PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO = 0x40000000
+-- local UART0 = PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO
 local UART0 = 0x10000000
 
 local CFGTABLE_BASE  = NSP0_BASE + 0x180000;
 
-dofile (top().."fw/hex_cfgtables.lua")  -- defines _v68n_1024_cfgtable
-_v68n_1024_cfgtable[4]=0;    -- DISABLE ETM
+local TCSR_SOC_HW_VERSION_ADDR = 0x1FC8000;
+local TCSR_SOC_EMULATION_TYPE_ADDR = TCSR_SOC_HW_VERSION_ADDR+4;
+
+dofile (top().."fw/hex_cfgtables.lua")
 
 
 local nsp0ss = {
-    hexagon_num_threads = 1;
+    hexagon_num_threads = 6;
     hexagon_thread_0={start_powered_off = false};
---    hexagon_thread_1={start_powered_off = true};
---    hexagon_thread_2={start_powered_off = true};
---    hexagon_thread_3={start_powered_off = true};
+    hexagon_thread_1={start_powered_off = true};
+    hexagon_thread_2={start_powered_off = true};
+    hexagon_thread_3={start_powered_off = true};
+    hexagon_thread_4={start_powered_off = true};
+    hexagon_thread_5={start_powered_off = true};
     HexagonQemuInstance = { tcg_mode="SINGLE", sync_policy = "multithread-unconstrained"};
     hexagon_start_addr = 0x89F00000; -- entry point address from bootimage_makena.cdsp0.prodQ.pbn
     l2vic={  mem           = {address=NSP0_AHBS_BASE + 0x90000, size=0x1000};
@@ -86,7 +98,15 @@ local nsp0ss = {
              timer1_mem    = {address=NSP0_AHBS_BASE + 0xA2000, size=0x1000}};
     pass = {target_socket  = {address=0x0 , size=NSP0_AHB_HIGH, relative_addresses=false}};
     cfgtable_base = CFGTABLE_BASE;
+    SA8540P_nsp0_config_table=get_SA8540P_nsp0_config_table();
 };
+
+-- nsp0ss.SA8540P_nsp0_config_table[4]=0;    -- DISABLE ETM
+
+assert((nsp0ss.SA8540P_nsp0_config_table[11] << 16) == nsp0ss.l2vic.fastmem.address)
+-- So far, nothing depends on _csr, but a good sanity check:
+assert((nsp0ss.SA8540P_nsp0_config_table[3] << 16) == TURING_SS_0TURING_QDSP6V68SS_CSR)
+
 
 platform = {
     arm_num_cpus = 8;
@@ -99,7 +119,7 @@ platform = {
 
     ram=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE}};
     hexagon_ram={target_socket={address=UNLIKELY_TO_BE_USED+0x0, size=0x08000000}};
-    rom=  {  target_socket = {address=CFGTABLE_BASE, size=0x400 },read_only=true, load={data=_v68n_1024_cfgtable, offset=0}};
+    rom=  {  target_socket = {address=CFGTABLE_BASE, size=0x100 },read_only=true, load={data=nsp0ss.SA8540P_nsp0_config_table, offset=0}};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
              redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0xf60000}};
     virtionet0= { mem    =   {address=0x1c120000, size=0x10000}, irq=18, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21"};
@@ -137,6 +157,8 @@ platform = {
          address=INITIAL_DDR_SPACE_14GB + OFFSET_SMEM_DDR_SPACE };
         {elf_file=top().."fw/hexagon-images/bootimage_makena.cdsp0.prodQ.pbn"};
 --      {elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg_makena.cdsp0.coreQ.pbn"};
+--      {data={0x60140200}, offset=TCSR_SOC_HW_VERSION_ADDR};
+--      {data={0x5}, offset=TCSR_SOC_EMULATION_TYPE_ADDR};
     };
     --uart_backend_port=4001;
 };
@@ -157,20 +179,6 @@ if (platform.arm_num_cpus > 0) then
         end
         platform["cpu_"..tostring(i)]=cpu;
     end
-end
-
-
-if (platform.hexagon_num_clusters > 0) then
-    platform["cfgTable"] = {
-        fastl2vic_base = platform.hexagon_cluster_0.l2vic.fastmem.address,
-    };
-
-    platform["cfgExtensions"] = {
-        cfgtable_size = platform.rom.target_socket.size,
-        l2vic_base = platform.hexagon_cluster_0.l2vic.mem.address,
-        qtmr_rg0 = platform.hexagon_cluster_0.qtimer.timer0_mem.address,
-        qtmr_rg1 = platform.hexagon_cluster_0.qtimer.timer1_mem.address,
-    };
 end
 
 print ("Lua config run. . . ");
