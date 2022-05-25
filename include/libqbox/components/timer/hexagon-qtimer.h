@@ -42,8 +42,10 @@ public:
     /* timers mem/irq */
     QemuTargetSocket<> timer0_socket;
     QemuTargetSocket<> timer1_socket;
+    QemuTargetSocket<> timer2_socket;
     QemuInitiatorSignalSocket timer0_irq;
     QemuInitiatorSignalSocket timer1_irq;
+    QemuInitiatorSignalSocket timer2_irq;
 
 public:
     QemuHexagonQtimer(sc_core::sc_module_name nm, QemuInstance &inst)
@@ -51,8 +53,10 @@ public:
         , socket("mem", inst)
         , timer0_socket("timer0_mem", inst)
         , timer1_socket("timer1_mem", inst)
+        , timer2_socket("timer2_mem", inst)
         , timer0_irq("timer0_irq")
         , timer1_irq("timer1_irq")
+        , timer2_irq("timer2_irq")
     {}
 
     void before_end_of_elaboration() override
@@ -73,11 +77,18 @@ public:
         qemu::SysBusDevice tim_sbd(obj);
         timer0_socket.init(tim_sbd, 0);
         timer0_irq.init_sbd(tim_sbd, 0);
+
         std::snprintf(buffer, 15, "timer[1]");
         obj = sbd.get_prop_link(buffer);
         qemu::SysBusDevice tim_sbd1(obj);
         timer1_socket.init(tim_sbd1, 0);
         timer1_irq.init_sbd(tim_sbd1, 0);
+
+        std::snprintf(buffer, 15, "timer[2]");
+        obj = sbd.get_prop_link(buffer);
+        qemu::SysBusDevice tim_sbd2(obj);
+        timer2_socket.init(tim_sbd2, 0);
+        timer2_irq.init_sbd(tim_sbd2, 0);
     }
 };
 
