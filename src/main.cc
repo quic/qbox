@@ -55,6 +55,7 @@
 
 #include <qcom/ipcc/ipcc.h>
 #include <qcom/qtb/qtb.h>
+#include "pll.h"
 
 #define HEXAGON_CFGSPACE_ENTRIES (128)
 #define HEXAGON_CFG_ADDR_BASE(addr) ((addr >> 16) & 0x0fffff)
@@ -75,6 +76,8 @@ public:
 private:
     QemuHexagonL2vic m_l2vic;
     QemuHexagonQtimer m_qtimer;
+    pll<> m_pll1;
+    pll<> m_pll2;
     gs::pass<> m_pass;
 
     sc_core::sc_vector<QemuCpuHexagon> m_hexagon_threads;
@@ -92,6 +95,8 @@ public:
         , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer", m_qemu_hex_inst) // are we sure it's in the hex cluster?????
+        , m_pll1("pll1")
+        , m_pll2("pll2")
         , m_pass("pass", false)
         , m_hexagon_threads("hexagon_thread", p_hexagon_num_threads, [this] (const char *n, size_t i) {
             /* here n is already "hexagon-cpu_<vector-index>" */
@@ -112,6 +117,9 @@ public:
         parent_router.initiator_socket.bind(m_qtimer.socket);
         parent_router.initiator_socket.bind(m_qtimer.timer0_socket);
         parent_router.initiator_socket.bind(m_qtimer.timer1_socket);
+        parent_router.initiator_socket.bind(m_pll1.socket);
+        parent_router.initiator_socket.bind(m_pll2.socket);
+
 
         // pass through transactions.
         m_router.initiator_socket.bind(m_pass.target_socket);
