@@ -36,6 +36,8 @@ local DDR_SPACE_SIZE = 32*1024*1024*1024
 local UNLIKELY_TO_BE_USED = INITIAL_DDR_SPACE_14GB + DDR_SPACE_SIZE
 local DTB_LOAD_ADDR = UNLIKELY_TO_BE_USED + 512
 
+local RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRV0 = 0xb2c1004;
+
 -- local TURING_SS_0TURING_QDSP6SS_STRAP_TCM_BASE = 0x01A00000 << 4
 -- local TURING_SS_0TURING_QDSP6SS_STRAP_AHBUPPER = 0x01B80000 << 4
 -- local TURING_SS_0TURING_QDSP6SS_STRAP_AHBLOWER = 0x01A00000 << 4
@@ -70,13 +72,19 @@ local OFFSET_APSS_ALIAS0_GICR_CTLR = 0x60000
 -- Makena VBSP, system UART addr: reallocated space at
 --   PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO:
 local PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO = 0x40000000
--- local UART0 = PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO
-local UART0 = 0x10000000
+local UART0 = PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO
+-- local UART0 = 0x10000000
 
 local CFGTABLE_BASE  = NSP0_BASE + 0x180000;
 
 local TCSR_SOC_HW_VERSION_ADDR = 0x1FC8000;
 local TCSR_SOC_EMULATION_TYPE_ADDR = TCSR_SOC_HW_VERSION_ADDR+4;
+local SMEM_TCSR_TZ_WONCE_ADDR=0x01fd4000;
+local SMEM_TARG_INFO_ADDR=0x80aff2c0; -- must correspond to smem_v3.bin
+local RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRVd = 0xb2c1004;
+local RPMH_PDC_COMPUTE_PDC_PARAM_SEQ_CONFIG_DRVd = 0xb2c1008;
+local TURING_SS_0TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x1b3b0008;
+local TURING_SS_0TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x1b0a4008;
 
 dofile (top().."fw/hex_cfgtables.lua")
 
@@ -99,6 +107,10 @@ local nsp0ss = {
     pass = {target_socket  = {address=0x0 , size=NSP0_AHB_HIGH, relative_addresses=false}};
     cfgtable_base = CFGTABLE_BASE;
     SA8540P_nsp0_config_table=get_SA8540P_nsp0_config_table();
+--  wdog = { socket        = {address=NSP0_AHBS_BASE + 0x84000, size=0x1000}};
+    pll1 = { socket        = {address=NSP0_AHBS_BASE + 0x40000, size=0x10000}};
+    pll2 = { socket        = {address=0x1b001000, size=0x10000}};
+--  rom=  {  target_socket = {address=UNLIKELY_TO_BE_USED+CFGTABLE_BASE, size=0x100 },read_only=true};
 };
 
 -- nsp0ss.SA8540P_nsp0_config_table[4]=0;    -- DISABLE ETM
@@ -147,18 +159,30 @@ platform = {
     };
     qtb = { control_socket = {address=0x15180000, size=0x80000}};
 
-    fallback_memory = { target_socket={address=0x0, size=0x40000000}, dmi_allow=false, verbose=true, load={csv_file=top().."fw/makena/SA8540P_MakenaAU_v2_Registers.csv", offset=0, addr_str="Address", value_str="Reset Value", byte_swap=true}};
+    fallback_memory = { target_socket={address=0x0, size=0x40000000}, dmi_allow=false, verbose=false, load={csv_file=top().."fw/makena/SA8540P_MakenaAU_v2_Registers.csv", offset=0, addr_str="Address", value_str="Reset Value", byte_swap=true}};
     load={
         {bin_file=top().."fw/makena/images/bl31.bin",
          address=INITIAL_DDR_SPACE_14GB};
-        {bin_file=top().."fw/makena/images/mifs_qdrive_qvp.img",
+        {bin_file=top().."fw/makena/images/mifs_qdrive_pil.img",
          address=INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE };
-        {bin_file=top().."fw/makena/images/smem_v3.bin",
+        {bin_file=top().."fw/makena/images/smem_v3_pil.bin",
          address=INITIAL_DDR_SPACE_14GB + OFFSET_SMEM_DDR_SPACE };
-        {elf_file=top().."fw/hexagon-images/bootimage_makena.cdsp0.prodQ.pbn"};
---      {elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg_makena.cdsp0.coreQ.pbn"};
---      {data={0x60140200}, offset=TCSR_SOC_HW_VERSION_ADDR};
---      {data={0x5}, offset=TCSR_SOC_EMULATION_TYPE_ADDR};
+        {bin_file=top().."fw/makena/images/cmd_db_header.bin",
+         address= 0x0C3F0000};
+        {bin_file=top().."fw/makena/images/cmd_db.bin",
+         address= 0x80860000};
+        {elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg_makena.cdsp0.coreQ.pbn"};
+        {data={0x60140200}, address=TCSR_SOC_HW_VERSION_ADDR};
+        {data={SMEM_TARG_INFO_ADDR}, address=SMEM_TCSR_TZ_WONCE_ADDR};
+        {data={0x00005381}, address=RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRV0};
+        {data={0x00005381}, address=RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRVd};
+        {data={0x00180411}, address=RPMH_PDC_COMPUTE_PDC_PARAM_SEQ_CONFIG_DRVd};
+        {data={0x01300214}, address=TURING_SS_0TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
+        {data={0x01180214}, address=TURING_SS_0TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
+--      {data={0x00020400}, address=0x10E0000};
+--      {data={0x60000003}, address=0x10E000C};
+--      {data={0x0}, address=TCSR_SOC_EMULATION_TYPE_ADDR}; -- 0=silicon
+--      {data={0x1}, address=TCSR_SOC_EMULATION_TYPE_ADDR}; -- 1=RUMI
     };
     --uart_backend_port=4001;
 };
