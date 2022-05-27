@@ -33,7 +33,7 @@
 #include <greensocs/gsutils/luafile_tool.h>
 #include <greensocs/gsutils/cciutils.h>
 
-#include <libqbox/components/cpu/arm/max.h>
+#include <libqbox/components/cpu/arm/cortex-a76.h>
 #include <libqbox/components/cpu/hexagon/hexagon.h>
 #include <libqbox/components/irq-ctrl/arm-gicv3.h>
 #include <libqbox/components/uart/pl011.h>
@@ -158,7 +158,7 @@ protected:
     QemuInstance &m_qemu_inst;
 
     gs::Router<> m_router;
-    sc_core::sc_vector<QemuCpuArmMax> m_cpus;
+    sc_core::sc_vector<QemuCpuArmCortexA76> m_cpus;
     sc_core::sc_vector<hexagon_cluster> m_hexagon_clusters;
     QemuArmGicv3* m_gic;
     gs::Memory<> m_ram;
@@ -268,7 +268,7 @@ public:
         , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
         , m_cpus("cpu", p_arm_num_cpus, [this] (const char *n, size_t i) {
             /* here n is already "cpu_<vector-index>" */
-            return new QemuCpuArmMax(n, m_qemu_inst);
+            return new QemuCpuArmCortexA76(n, m_qemu_inst);
         })
         , m_hexagon_clusters("hexagon_cluster", p_hexagon_num_clusters, [this] (const char *n, size_t i) {
             return new hexagon_cluster(n, m_inst_mgr_h, m_router);
