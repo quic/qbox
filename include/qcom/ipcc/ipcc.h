@@ -10,7 +10,7 @@
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
 
-#define LOG if(0) std::cout
+#define LOG if(std::getenv("GS_LOG")) std::cout
 /* registers as extracted
 
 IPC_PROTOCOLp_CLIENTc_VERSION, 0x400000, Read, Yes, 0x10200
@@ -162,10 +162,14 @@ protected:
         case RECV_ID:
             if (src.regs[CONFIG] & 0x1) {
                 int sc = (src.regs[ID] >> 16) & 0x3f;
-                src.clear_status(ret>>16, ret&0xffff);
-                irq[sc]->write(0);
-                //update_irq(); done anyway
+                src.clear_status(ret >> 16, ret & 0xffff);
+                if (irq_status[sc]) {
+                    irq[sc]->write(0);
+                    irq_status[sc] = false;
+                    LOG << "IPCC : CLEAR IRQ (on read) " << sc << "\n";
+                }
             }
+            break;
         }
 
         return ret;
@@ -204,7 +208,11 @@ protected:
             int s = (data & 0xffff);
             src.clear_status(c,s);
             int sc = (src.regs[ID] >> 16) & 0x3f;
-            irq[sc]->write(0);
+            if (irq_status[sc]) {
+                irq[sc]->write(0);
+                irq_status[sc] = false;
+                LOG << "IPCC : CLEAR IRQ " << sc << "\n";
+            }
             break;
         }
         case CLIENT_CLEAR: {
@@ -255,12 +263,24 @@ protected:
                     }
                 }
                 allirqcount += irqcount;
-                if (irqcount)
+                if (irqcount) {
                     client[p][c].regs[RECV_ID] = (cli << 16) + sig;
+                } else {
+                    client[p][c].regs[RECV_ID] = 0xffffffff;
+                }
             }
             if (allirqcount >= 1) {
-                LOG << "IPCC : SEND IRQ\n";
-                irq[c]->write(1);
+                if (!irq_status[c]) {
+                    LOG << "IPCC : SEND IRQ " << c << "\n";
+                    irq[c]->write(1);
+                    irq_status[c] = true;
+                }
+            } else {
+                if (irq_status[c]) {
+                    LOG << "IPCC : CLEAR IRQ " << c << "\n";
+                    irq[c]->write(0);
+                    irq_status[c] = false;
+                }
             }
         }
     }
@@ -304,6 +324,7 @@ protected:
 public:
     tlm_utils::simple_target_socket<IPCC> socket;
     InitiatorSignalSocket<bool> irq[64];
+    bool irq_status[64]={false};
 
     IPCC(sc_core::sc_module_name name)
         : socket("socket")
