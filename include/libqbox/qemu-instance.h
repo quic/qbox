@@ -362,6 +362,11 @@ public:
     {
         return LockedQemuInstanceDmiManager(m_dmi_mgr);
     }
+
+private:
+    void start_of_simulation(void) {
+        get().finish_qemu_init();
+    }
 };
 
 /**
