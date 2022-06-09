@@ -63,6 +63,7 @@ public:
          * we realize virtio_mmio_device first because
          * it creates the "virtio-mmio-bus" we need below
          */
+        virtio_mmio_device.set_sysbus_as_parent_bus();
         virtio_mmio_device.realize();
 
         /*

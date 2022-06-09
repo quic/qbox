@@ -60,6 +60,7 @@ public:
 
     void end_of_elaboration() override
     {
+        QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 
         qemu::SysBusDevice sbd(m_dev);

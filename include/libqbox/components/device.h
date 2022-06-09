@@ -116,6 +116,10 @@ public:
     {
         return m_inst;
     }
+
+    void set_sysbus_as_parent_bus(void) {
+         m_dev.set_parent_bus(m_inst.get().sysbus_get_default());
+    }
 };
 
 #endif
