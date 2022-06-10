@@ -224,4 +224,12 @@ void LibQemu::finish_qemu_init()
     m_int->exports().finish_qemu_init();
 }
 
+Bus LibQemu::sysbus_get_default()
+{
+    QemuBus *qemu_bus = m_int->exports().sysbus_get_default();
+    Object obj(reinterpret_cast<QemuObject *>(qemu_bus), m_int);
+
+    return Bus(obj);
+}
+
 }

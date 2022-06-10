@@ -88,6 +88,7 @@ public:
     void unlock_iothread();
 
     void finish_qemu_init();
+    Bus sysbus_get_default();
 
     void coroutine_yield();
 
