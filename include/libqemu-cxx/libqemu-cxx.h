@@ -87,6 +87,8 @@ public:
     void lock_iothread();
     void unlock_iothread();
 
+    void finish_qemu_init();
+
     void coroutine_yield();
 
     template <class T>

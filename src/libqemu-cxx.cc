@@ -219,4 +219,9 @@ void LibQemu::coroutine_yield()
     m_int->exports().coroutine_yield();
 }
 
+void LibQemu::finish_qemu_init()
+{
+    m_int->exports().finish_qemu_init();
+}
+
 }
