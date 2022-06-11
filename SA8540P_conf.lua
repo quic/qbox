@@ -31,7 +31,7 @@ print ("Lua config running. . . ");
 local INITIAL_DDR_SPACE_14GB = 0x80000000
 local OFFSET_MIFS_DDR_SPACE  = 0x20000000
 local OFFSET_SMEM_DDR_SPACE  = 0x00900000
-local DDR_SPACE_SIZE = 32*1024*1024*1024
+local DDR_SPACE_SIZE = 16*1024*1024*1024
 
 local UNLIKELY_TO_BE_USED = INITIAL_DDR_SPACE_14GB + DDR_SPACE_SIZE
 local DTB_LOAD_ADDR = UNLIKELY_TO_BE_USED + 512
@@ -146,32 +146,57 @@ platform = {
             }
         };
 
-    smmu = { mem = {address=0x15000000, size=0x100000};
-        num_tbu=2;
+smmu = { mem = {address=0x15000000, size=0x100000};
+        num_tbu=9;
         num_pages=128;
         num_cb=128;
-        tbu_sid_0 = 0x0;
-        upstream_socket_0 = {address=NSP0_AHB_HIGH, size= - NSP0_AHB_HIGH, relative_addresses=true};
-        tbu_sid_1 = 0;
-        upstream_socket_1 = {address=0x0, size=0xd81e0000, relative_addresses=false};
+
+        tbu_sid_0 = 0x31a0;
+        upstream_socket_0 = {address=NSP0_AHB_HIGH, size=0x100000000-NSP0_AHB_HIGH, relative_addresses=true};
+
+        tbu_sid_1 = 0x31a1;
+        upstream_socket_1 = {address=0x100000000, size=0x100000000, relative_addresses=true};
+
+        tbu_sid_2 = 0x31a2;
+        upstream_socket_2 = {address=0x200000000, size=0x100000000, relative_addresses=true};
+
+        tbu_sid_3 = 0x31a3;
+        upstream_socket_3 = {address=0x300000000, size=0x100000000, relative_addresses=true};
+
+        tbu_sid_4 = 0x31a4;
+        upstream_socket_4 = {address=0x400000000, size=0x100000000, relative_addresses=true};
+
+        tbu_sid_5 = 0x31a5;
+        upstream_socket_5 = {address=0x500000000, size=0x100000000, relative_addresses=true};
+
+        tbu_sid_6 = 0x31a6;
+        upstream_socket_6 = {address=0x600000000, size=0x100000000, relative_addresses=true};
+
+        tbu_sid_7 = 0x31a7;
+        upstream_socket_7 = {address=0x700000000, size=0x100000000, relative_addresses=true};
+
+        tbu_sid_8 = 0x31a8;
+        upstream_socket_8 = {address=0x800000000, size=0x100000000, relative_addresses=true};
+
         irq_context = 103;
         irq_global = 65;
     };
+
     qtb = { control_socket = {address=0x15180000, size=0x80000}};
 
     fallback_memory = { target_socket={address=0x0, size=0x40000000}, dmi_allow=false, verbose=false, load={csv_file=top().."fw/makena/SA8540P_MakenaAU_v2_Registers.csv", offset=0, addr_str="Address", value_str="Reset Value", byte_swap=true}};
     load={
         {bin_file=top().."fw/makena/images/bl31.bin",
          address=INITIAL_DDR_SPACE_14GB};
-        {bin_file=top().."fw/makena/images/mifs_qdrive_pil.img",
+        {bin_file=top().."fw/makena/images/mifs_qdrive_6_1.img",
          address=INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE };
-        {bin_file=top().."fw/makena/images/smem_v3_pil.bin",
+        {bin_file=top().."fw/makena/images/smem_makena.bin",
          address=INITIAL_DDR_SPACE_14GB + OFFSET_SMEM_DDR_SPACE };
         {bin_file=top().."fw/makena/images/cmd_db_header.bin",
          address= 0x0C3F0000};
         {bin_file=top().."fw/makena/images/cmd_db.bin",
          address= 0x80860000};
-        {elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg_makena.cdsp0.coreQ.pbn"};
+        {elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg_makena.cdsp0.prodQ.pbn"};
         {data={0x60140200}, address=TCSR_SOC_HW_VERSION_ADDR};
         {data={SMEM_TARG_INFO_ADDR}, address=SMEM_TCSR_TZ_WONCE_ADDR};
         {data={0x00005381}, address=RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRV0};
