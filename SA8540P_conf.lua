@@ -31,7 +31,7 @@ print ("Lua config running. . . ");
 local INITIAL_DDR_SPACE_14GB = 0x80000000
 local OFFSET_MIFS_DDR_SPACE  = 0x20000000
 local OFFSET_SMEM_DDR_SPACE  = 0x00900000
-local DDR_SPACE_SIZE = 32*1024*1024*1024
+local DDR_SPACE_SIZE = 16*1024*1024*1024
 
 local UNLIKELY_TO_BE_USED = INITIAL_DDR_SPACE_14GB + DDR_SPACE_SIZE
 local DTB_LOAD_ADDR = UNLIKELY_TO_BE_USED + 512
@@ -150,8 +150,8 @@ platform = {
         num_tbu=2;
         num_pages=128;
         num_cb=128;
-        tbu_sid_0 = 0x0;
-        upstream_socket_0 = {address=NSP0_AHB_HIGH, size= - NSP0_AHB_HIGH, relative_addresses=true};
+        tbu_sid_0 = 0x31a0;
+        upstream_socket_0 = {address=NSP0_AHB_HIGH, size=0xF00000000-NSP0_AHB_HIGH, relative_addresses=true};
         tbu_sid_1 = 0;
         upstream_socket_1 = {address=0x0, size=0xd81e0000, relative_addresses=false};
         irq_context = 103;
