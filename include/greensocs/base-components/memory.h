@@ -313,7 +313,7 @@ public:
             map(p_mapfile);
         } else {
             sc_assert(m_size > 0);
-            m_ptr = static_cast<uint8_t*>(aligned_alloc(m_size, m_size));
+            m_ptr = static_cast<uint8_t*>(aligned_alloc(0x1000, m_size));
             if (!m_ptr) {
                 SC_REPORT_INFO("Memory", "Aligned allocation failed, using normal allocation");
                 m_ptr = new uint8_t[m_size]();
