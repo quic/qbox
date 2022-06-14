@@ -44,6 +44,9 @@
 #include <libqbox/components/mmu/arm-smmu.h>
 
 #include <libqbox-extra/components/meta/global_peripheral_initiator.h>
+#include <libqbox-extra/components/pci/gpex.h>
+#include <libqbox-extra/components/pci/virtio-gpu-gl-pci.h>
+#include <libqbox-extra/components/pci/nvme.h>
 
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/memory.h>
@@ -162,6 +165,9 @@ protected:
     cci::cci_param<unsigned> p_num_redists;
     cci::cci_param<unsigned> p_hexagon_num_clusters;
 
+    cci::cci_param<bool> p_with_gpu;
+
+
     gs::ConfigurableBroker m_broker;
 
     cci::cci_param<int> p_quantum_ns;
@@ -184,6 +190,9 @@ protected:
 
     QemuVirtioMMIONet m_virtio_net_0;
     QemuVirtioMMIOBlk m_virtio_blk_0;
+
+    QemuGPEX* m_gpex;
+    QemuVirtioGpuGlPci* m_gpu;
 
     gs::Memory<> m_fallback_mem;
 
@@ -212,6 +221,15 @@ protected:
         m_router.initiator_socket.bind(m_virtio_net_0.socket);
         m_router.initiator_socket.bind(m_virtio_blk_0.socket);
 
+        if (p_with_gpu.get_value()) {
+            m_router.initiator_socket.bind(m_gpex->ecam_iface);
+            m_router.initiator_socket.bind(m_gpex->mmio_iface);
+            m_router.initiator_socket.bind(m_gpex->mmio_iface_high);
+            m_router.initiator_socket.bind(m_gpex->pio_iface);
+
+            m_router.add_initiator(m_gpex->bus_master);
+        }
+
 //        m_router.initiator_socket.bind(m_system_imem.socket);
 
     }
@@ -228,6 +246,24 @@ protected:
                 m_virtio_net_0.irq_out.bind(m_gic->spi_in[irq]);
                 irq=gs::cci_get<int>(std::string(m_virtio_blk_0.name())+".irq");
                 m_virtio_blk_0.irq_out.bind(m_gic->spi_in[irq]);
+            }
+
+            if (p_with_gpu.get_value()) {
+                int irq=gs::cci_get<int>(std::string(m_gpex->name())+".irq_0");
+                m_gpex->irq_out[0].bind(m_gic->spi_in[irq]);
+                m_gpex->irq_num[0] = irq;
+
+                irq=gs::cci_get<int>(std::string(m_gpex->name())+".irq_1");
+                m_gpex->irq_out[1].bind(m_gic->spi_in[irq]);
+                m_gpex->irq_num[1] = irq;
+
+                irq=gs::cci_get<int>(std::string(m_gpex->name())+".irq_2");
+                m_gpex->irq_out[2].bind(m_gic->spi_in[irq]);
+                m_gpex->irq_num[2] = irq;
+
+                irq=gs::cci_get<int>(std::string(m_gpex->name())+".irq_3");
+                m_gpex->irq_out[3].bind(m_gic->spi_in[irq]);
+                m_gpex->irq_num[3] = irq;
             }
 
             for (int i = 0; i < m_cpus.size(); i++) {
@@ -264,6 +300,7 @@ public:
         , p_hexagon_num_clusters("hexagon_num_clusters", 2, "Number of Hexagon cluster")
         , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
         , p_num_redists("num_redists", 1, "Number of redistribution regions")
+        , p_with_gpu("with_gpu", false, "Build platform with GPU")
         , m_broker({
             {"gic.num_spi", cci::cci_value(960)}, // 64 seems reasonable, but can be up to 960 or 987 depending on how the gic is used
                                                   // MUST be a multiple of 32
@@ -300,6 +337,17 @@ public:
         if (p_arm_num_cpus) {
             m_gic = new QemuArmGicv3("gic", m_qemu_inst, p_arm_num_cpus);
             m_global_peripheral_initiator_arm = new GlobalPeripheralInitiator("glob-per-init-arm", m_qemu_inst, m_cpus[0]);
+        }
+
+        if (p_with_gpu.get_value()) {
+            uint64_t mmio_addr=gs::cci_get<uint64_t>(std::string(this->name())+".gpex.mmio_iface.address");
+            uint64_t mmio_size=gs::cci_get<uint64_t>(std::string(this->name())+".gpex.mmio_iface.size");
+            uint64_t mmio_iface_high_addr=gs::cci_get<uint64_t>(std::string(this->name())+".gpex.mmio_iface_high.address");
+            uint64_t mmio_iface_high_size=gs::cci_get<uint64_t>(std::string(this->name())+".gpex.mmio_iface_high.size");
+
+            m_gpex = new QemuGPEX("gpex", m_qemu_inst, mmio_addr, mmio_size, mmio_iface_high_addr, mmio_iface_high_size);
+            m_gpu = new QemuVirtioGpuGlPci("gpu", m_qemu_inst);
+            m_gpex->add_device(*m_gpu);
         }
 
         if (m_rams.size()<=0) {
@@ -369,6 +417,10 @@ public:
         }
         if (m_smmu) {
             delete m_smmu;
+        }
+        if (p_with_gpu.get_value()) {
+            delete m_gpu;
+            delete m_gpex;
         }
     }
 

@@ -63,6 +63,14 @@ device_tree = get_image ("bsp/linux/extras/dts/vp.dtb",
                          image_install_dir().."vp.dtb",
                          "vp.dtb");
 
+linux_image = get_image ("fw/fastrpc-images/images/Image_opengl",
+                         nil,
+                         "Image_opengl");
+
+device_tree = get_image ("fw/fastrpc-images/images/rumi_opengl.dtb",
+                         nil,
+                         "rumi_opengl.dtb");
+
 -- print (linux_image)
 -- print (device_tree)
 -- print (filesystem_image)
@@ -97,30 +105,30 @@ platform = {
     arm_num_cpus = 8;
     num_redists  = 1;
     quantum_ns   = 100000000;
+    with_gpu = true;
 
     ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
 
-    ram =         {target_socket  = {address=0x40000000, size=0x981E0000}};
-    hexagon_ram = {target_socket  = {address=0x00000000, size=0x08000000}};
-    rom =         {target_socket  = {address=0xde000000, size=0x400 },read_only=true};
-    gic =         {dist_iface     = {address=0x17100000, size=0x10000 };
-                   redist_iface_0 = {address=0x171a0000, size=0xf60000}};
-    uart =        {simple_target_socket_0 = {address= 0x9000000, size=0x1000}, irq=1};
-    ipcc =        {socket        = {address=  0x410000, size=0xfc000}};
+    hexagon_ram={ target_socket         = {address=0x0000000000, size=0x0008000000}};
+    ipcc=       { socket                = {address=0x0000410000, size=0x00000fc000}};
+    uart=       { simple_target_socket_0= {address=0x0009000000, size=0x0000001000}, irq=1};
+    virtioblk0= { mem                   = {address=0x000a003c00, size=0x0000002000}, irq=0x2e, blkdev_str = "file=" .. filesystem_image};
+    virtionet0= { mem                   = {address=0x000a003e00, size=0x0000002000}, irq=0x2d, netdev_str = "type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2280-:80"};
+    system_imem={ target_socket         = {address=0x0014680000, size=0x0000040000}};
+ -- smmu=       { mem                   = {address=0x0015000000, size=0x0000100000};
+    qtb=        { control_socket        = {address=0x0015180000, size=0x0000004000}}; -- + 0x4000*tbu number
+    gic=        { dist_iface            = {address=0x0017100000, size=0x0000010000};
+                  redist_iface_0        = {address=0x00171a0000, size=0x0000f60000}};
+ -- gpex=       { pio_iface             = {address=0x003eff0000, size=0x0000010000};
+    ram_0=      { target_socket         = {address=0x0040000000, size=0x0020000000}};
+ -- gpex=       { mmio_iface            = {address=0x0060000000, size=0x002B500000};
+    rom=        { target_socket         = {address=0x00de000000, size=0x0000000400},read_only=true};
 
-    virtionet0 = {
-        mem = {address=0x0a003e00, size=0x2000},
-        irq = 47,
-        netdev_str = "type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2280-:80"
-    };
-
-    virtioblk0 = {
-        mem = {address=0x0a003c00, size=0x2000},
-        irq = 0x2e,
-        blkdev_str = "file=" .. filesystem_image
-    };
-
-    system_imem={ target_socket = {address=0x14680000, size=0x40000}};
+    gpex=       { pio_iface             = {address=0x003eff0000, size=0x0000010000};
+                  mmio_iface            = {address=0x0060000000, size=0x002B500000};
+                  ecam_iface            = {address=0x4010000000, size=0x0010000000};
+                  mmio_iface_high       = {address=0x8000000000, size=0x8000000000},
+                  irq_0=3, irq_1=4, irq_2=5, irq_3=6};
 
     fallback_memory = { target_socket = { address=0x00000000, size=0x40000000},
                         dmi_allow = false,
@@ -146,7 +154,6 @@ platform = {
             irq_context = 103;
             irq_global = 65;
     };
-    qtb = { control_socket = {address=0x15180000, size=0x4000}}; -- + 0x4000*tbu number
 
         -- for virtio image
     load = {
