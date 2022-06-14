@@ -111,6 +111,7 @@ protected:
     cci::cci_param<int> p_icount_mips;
 
     cci::cci_param<std::string> p_args;
+    bool p_display_argument_set;
 
     void push_default_args()
     {
@@ -123,7 +124,6 @@ protected:
             "-m", "2048", /* used by QEMU to set some interal buffer sizes */
             "-monitor", "null", /* no monitor */
             "-serial", "null", /* no serial backend */
-            "-display", "none", /* no GUI */
         });
 
         const char* args = "args.";
@@ -201,6 +201,7 @@ public:
         , m_tcg_mode(StringToTcgMode(p_tcg_mode))
         , p_icount("icount", false, "Enable virtual instruction counter")
         , p_icount_mips("icount_mips_shift", 0, "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
+        , p_display_argument_set(false)
     {
         p_tcg_mode.lock();
         push_default_args();
@@ -227,6 +228,18 @@ public:
      */
     void add_arg(const char* arg)
     {
+        m_inst.push_qemu_arg(arg);
+    }
+
+    /**
+     * @brief Add a the display command line argument to the qemu instance.
+     *
+     * This method may only be called before the instance is initialized.
+     */
+    void set_display_arg(const char* arg)
+    {
+        p_display_argument_set = true;
+        m_inst.push_qemu_arg("-display");
         m_inst.push_qemu_arg(arg);
     }
 
@@ -298,6 +311,12 @@ public:
 
         push_tcg_mode_args();
         push_icount_mode_args();
+
+        if(!p_display_argument_set) {
+            m_inst.push_qemu_arg({
+            "-display", "none", /* no GUI */
+            });
+        }
 
         GS_LOG("Initializing QEMU instance with args:");
 
