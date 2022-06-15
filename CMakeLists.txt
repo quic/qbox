@@ -21,8 +21,7 @@ add_library(${PROJECT_NAME} INTERFACE)
 gs_systemc()
 
 # Other Dependencies
-
-CPMAddPackage("gh:lua/lua#v5.4.2")
+gs_addexpackage("gh:lua/lua#v5.4.2")
 if (lua_ADDED)
   # lua has no CMake support, so we create our own target
   FILE(GLOB lua_sources ${lua_SOURCE_DIR}/*.c)
@@ -40,7 +39,7 @@ if (APPLE)
        set(CMAKE_MACOSX_RPATH ON)
 endif (APPLE)
 # using main branch as it has fixes for cmake
-CPMAddPackage("gh:google/googletest#main")
+gs_addexpackage("gh:google/googletest#main")
 
 target_include_directories(
    ${PROJECT_NAME} INTERFACE
