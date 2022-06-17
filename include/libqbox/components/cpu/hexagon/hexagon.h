@@ -55,6 +55,7 @@ public:
         , m_exec_start_addr(exec_start_addr)
         , p_start_powered_off("start_powered_off", false, "Start and reset the CPU "
                                                     "in powered-off state")
+        , p_sched_limit("sched_limit", true, "use sched limit")
 
           /*
            * We have no choice but to attach-suspend here. This is fixable but
@@ -80,6 +81,7 @@ public:
         cpu.set_prop_bool("start-powered-off", p_start_powered_off);
         //in case of additional reset, this value will be loaded for PC
         cpu.set_prop_int("start-evb", m_exec_start_addr);
+        cpu.set_prop_bool("sched-limit", p_sched_limit);
     }
 
     void end_of_elaboration() override
@@ -99,4 +101,5 @@ protected:
     uint32_t m_exec_start_addr;
 public:
     cci::cci_param<bool> p_start_powered_off;
+    cci::cci_param<bool> p_sched_limit;
 };
