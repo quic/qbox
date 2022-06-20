@@ -297,34 +297,14 @@ public:
         if (p_hexagon_num_clusters) {
             if (p_hexagon_num_clusters==1) {
                 m_smmu = new QemuArmSmmu("smmu", m_hexagon_clusters[0].m_qemu_hex_inst);
-
                 m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[0]);
                 m_smmu->downstream_socket[0].bind(m_router.target_socket);
                 m_router.initiator_socket.bind(m_smmu->register_socket);
 
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[1]);
-                m_smmu->downstream_socket[1].bind(m_router.target_socket);
-
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[2]);
-                m_smmu->downstream_socket[2].bind(m_router.target_socket);
-
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[3]);
-                m_smmu->downstream_socket[3].bind(m_router.target_socket);
-
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[4]);
-                m_smmu->downstream_socket[4].bind(m_router.target_socket);
-
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[5]);
-                m_smmu->downstream_socket[5].bind(m_router.target_socket);
-
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[6]);
-                m_smmu->downstream_socket[6].bind(m_router.target_socket);
-
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[7]);
-                m_smmu->downstream_socket[7].bind(m_router.target_socket);
-
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[8]);
-                m_smmu->downstream_socket[8].bind(m_router.target_socket);
+                m_qtb= new qtb<>("qtb");
+                m_router.initiator_socket(m_qtb->control_socket);
+                m_qtb->initiator_socket(m_smmu->upstream_socket[1]);
+                m_smmu->downstream_socket[1](m_qtb->target_socket);
 
                 m_smmu->dma_socket.bind(m_router.target_socket);
 
