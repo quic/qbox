@@ -48,7 +48,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    INTERFACE SystemC::systemc SystemC::cci
+    INTERFACE ${TARGET_LIBS}
     INTERFACE ${LIBELF_LIBRARIES}
 )
 gs_export()
