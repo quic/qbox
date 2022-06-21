@@ -30,7 +30,7 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-target_link_libraries(${PROJECT_NAME} INTERFACE qbox)
+target_link_libraries(${PROJECT_NAME} INTERFACE ${TARGET_LIBS})
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox-extra" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
