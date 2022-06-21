@@ -37,10 +37,10 @@ target_include_directories(
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE GreenSocs::gsutils)
-target_link_libraries(${PROJECT_NAME} PRIVATE SystemC::systemc SystemC::cci)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LIBS})
 
 gs_enable_testing()
 gs_export()
