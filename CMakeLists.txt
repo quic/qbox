@@ -36,10 +36,9 @@ target_include_directories(${PROJECT_NAME}
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 target_link_libraries(${PROJECT_NAME} INTERFACE
-    SystemC::systemc SystemC::cci
+    ${TARGET_LIBS}
     qemu-cxx
-    GreenSocs::libgsutils GreenSocs::libgssync
-    GreenSocs::base-components)
+    )
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
