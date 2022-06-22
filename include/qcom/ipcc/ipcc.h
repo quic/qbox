@@ -164,8 +164,8 @@ protected:
                 int sc = (src.regs[ID] >> 16) & 0x3f;
                 src.clear_status(ret >> 16, ret & 0xffff);
                 if (irq_status[sc]) {
-                    irq[sc]->write(0);
                     irq_status[sc] = false;
+                    irq[sc]->write(0);
                     LOG << "IPCC : CLEAR IRQ (on read) " << sc << "\n";
                 }
             }
@@ -272,14 +272,14 @@ protected:
             if (allirqcount >= 1) {
                 if (!irq_status[c]) {
                     LOG << "IPCC : SEND IRQ " << c << "\n";
-                    irq[c]->write(1);
                     irq_status[c] = true;
+                    irq[c]->write(1);
                 }
             } else {
                 if (irq_status[c]) {
                     LOG << "IPCC : CLEAR IRQ " << c << "\n";
-                    irq[c]->write(0);
                     irq_status[c] = false;
+                    irq[c]->write(0);
                 }
             }
         }
