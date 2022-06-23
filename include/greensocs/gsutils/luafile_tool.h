@@ -324,10 +324,6 @@ protected:
           std::cout << "parameter value not found!" << std::endl;
           exit(-1);
         }
-        if (value[0] != '"' && value.find_first_not_of("0123456789.") != value.npos) {
-          // Seems like an unadorned string;
-          value = '"' + value + '"';
-        }
         DEBUG(name(), "Setting param " << rel(key) << " to value " << value);
         m_broker.set_preset_cci_value(
             rel(key), cci::cci_value(cci::cci_value::from_json(value)));
