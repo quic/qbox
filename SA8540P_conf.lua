@@ -130,7 +130,7 @@ platform = {
     ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
 
     ram=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE}};
-    hexagon_ram={target_socket={address=UNLIKELY_TO_BE_USED+0x0, size=0x08000000}};
+    hexagon_ram={target_socket={address=NSP0_BASE + 0x800000, size=0x7fffff}};
     rom=  {  target_socket = {address=CFGTABLE_BASE, size=0x100 },read_only=true, load={data=nsp0ss.SA8540P_nsp0_config_table, offset=0}};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
              redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0xf60000}};
