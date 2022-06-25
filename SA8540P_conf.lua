@@ -118,7 +118,8 @@ local nsp0ss = {
 assert((nsp0ss.SA8540P_nsp0_config_table[11] << 16) == nsp0ss.l2vic.fastmem.address)
 -- So far, nothing depends on _csr, but a good sanity check:
 assert((nsp0ss.SA8540P_nsp0_config_table[3] << 16) == TURING_SS_0TURING_QDSP6V68SS_CSR)
-
+local NSP_VTCM_BASE_ADDR = (nsp0ss.SA8540P_nsp0_config_table[15] << 16)
+local NSP_VTCM_SIZE_BYTES = (nsp0ss.SA8540P_nsp0_config_table[16] * 1024)
 
 platform = {
     arm_num_cpus = 8;
@@ -130,7 +131,7 @@ platform = {
     ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
 
     ram=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE}};
-    hexagon_ram={target_socket={address=UNLIKELY_TO_BE_USED+0x0, size=0x08000000}};
+    hexagon_ram={target_socket={address=NSP_VTCM_BASE_ADDR, size=NSP_VTCM_SIZE_BYTES}};
     rom=  {  target_socket = {address=CFGTABLE_BASE, size=0x100 },read_only=true, load={data=nsp0ss.SA8540P_nsp0_config_table, offset=0}};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
              redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0xf60000}};
