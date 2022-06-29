@@ -46,7 +46,7 @@ CPMDeclarePackage(libqemu
 # GIT_TAG v1.1.0
 # GIT_TAG 8d78a9711597c96484e50288f6958a1c885483bd
   GIT_TAG 50314558169f9ef1acb80d20093783907393ca99
-  GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/qualcomm-qemu/qemu-hexagon.git
+  GIT_REPOSITORY ${GREENSOCS_GIT}qemu/qemu.git
   GIT_SUBMODULES CMakeLists.txt
 )
 # base-components
@@ -76,13 +76,13 @@ CPMDeclarePackage(extra-components
 CPMDeclarePackage(ipcc
   NAME ipcc
   GIT_TAG master
-  GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/ipcc.git
+  GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/ipcc.git
 #  GIT_SHALLOW on
 )
 # QTB
 CPMDeclarePackage(qtb
   NAME qtb
   GIT_TAG master
-  GIT_REPOSITORY ${GREENSOCS_GIT}customers/qualcomm/qtb.git
+  GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/qtb.git
 #  GIT_SHALLOW on
 )
