@@ -41,14 +41,7 @@ else()
 endif()
 
 target_link_libraries(vp
-    SystemC::systemc
-    SystemC::cci
-    GreenSocs::qbox
-    GreenSocs::qbox-extra
-    GreenSocs::base-components
-    GreenSocs::systemc-uarts
-    GreenSocs::qcom-ipcc
-    GreenSocs::qcom-qtb
+    ${TARGET_LIBS}
 )
 
 install (TARGETS vp DESTINATION ${CMAKE_INSTALL_BINDIR})

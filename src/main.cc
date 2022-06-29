@@ -55,6 +55,8 @@
 
 #include <qcom/ipcc/ipcc.h>
 #include <qcom/qtb/qtb.h>
+
+#include "wdog.h"
 #include "pll.h"
 
 #define HEXAGON_CFGSPACE_ENTRIES (128)
@@ -76,9 +78,11 @@ public:
 private:
     QemuHexagonL2vic m_l2vic;
     QemuHexagonQtimer m_qtimer;
-    pll<> m_pll1;
-    pll<> m_pll2;
+    WDog<> m_wdog;
+    sc_core::sc_vector<pll<>> m_plls;
+//    pll<> m_pll2;
     gs::pass<> m_pass;
+    gs::Memory<> m_rom;
 
     sc_core::sc_vector<QemuCpuHexagon> m_hexagon_threads;
     GlobalPeripheralInitiator m_global_peripheral_initiator_hex;
@@ -95,8 +99,10 @@ public:
         , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer", m_qemu_hex_inst) // are we sure it's in the hex cluster?????
-        , m_pll1("pll1")
-        , m_pll2("pll2")
+        , m_wdog("wdog")
+        , m_plls("pll",4)
+//        , m_pll2("pll2")
+        , m_rom("rom")
         , m_pass("pass", false)
         , m_hexagon_threads("hexagon_thread", p_hexagon_num_threads, [this] (const char *n, size_t i) {
             /* here n is already "hexagon-cpu_<vector-index>" */
@@ -117,9 +123,11 @@ public:
         parent_router.initiator_socket.bind(m_qtimer.socket);
         parent_router.initiator_socket.bind(m_qtimer.timer0_socket);
         parent_router.initiator_socket.bind(m_qtimer.timer1_socket);
-        parent_router.initiator_socket.bind(m_pll1.socket);
-        parent_router.initiator_socket.bind(m_pll2.socket);
-
+        parent_router.initiator_socket.bind(m_wdog.socket);
+        for (auto &pll : m_plls) {
+            parent_router.initiator_socket.bind(pll.socket);
+        }
+        parent_router.initiator_socket.bind(m_rom.socket);
 
         // pass through transactions.
         m_router.initiator_socket.bind(m_pass.target_socket);
@@ -163,7 +171,6 @@ protected:
     QemuArmGicv3* m_gic;
     gs::Memory<> m_ram;
     gs::Memory<> m_hexagon_ram;
-    gs::Memory<> m_rom;
 //    gs::Memory<> m_system_imem;
     GlobalPeripheralInitiator* m_global_peripheral_initiator_arm;
     Uart m_uart;
@@ -192,7 +199,6 @@ protected:
 
         m_router.initiator_socket.bind(m_ram.socket);
         m_router.initiator_socket.bind(m_hexagon_ram.socket);
-        m_router.initiator_socket.bind(m_rom.socket);
         m_router.initiator_socket.bind(m_uart.socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
         m_router.initiator_socket.bind(m_virtio_net_0.socket);
@@ -200,11 +206,6 @@ protected:
 
 //        m_router.initiator_socket.bind(m_system_imem.socket);
 
-        // General loader
-        m_loader.initiator_socket.bind(m_router.target_socket);
-
-        // MUST be added last
-        m_router.initiator_socket.bind(m_fallback_mem.socket);
     }
 
      void setup_irq_mapping() {
@@ -275,7 +276,6 @@ public:
         })
         , m_ram("ram")
         , m_hexagon_ram("hexagon_ram")
-        , m_rom("rom")
 //        , m_system_imem("system_imem")
         , m_uart("uart")
         , m_ipcc("ipcc")
@@ -294,18 +294,24 @@ public:
             m_global_peripheral_initiator_arm = new GlobalPeripheralInitiator("glob-per-init-arm", m_qemu_inst, m_cpus[0]);
         }
 
+        do_bus_binding();
+
         if (p_hexagon_num_clusters) {
             if (p_hexagon_num_clusters==1) {
                 m_smmu = new QemuArmSmmu("smmu", m_hexagon_clusters[0].m_qemu_hex_inst);
                 m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[0]);
                 m_smmu->downstream_socket[0].bind(m_router.target_socket);
                 m_router.initiator_socket.bind(m_smmu->register_socket);
+#ifdef ENABLE_QTB
+                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[1]);
+                m_smmu->downstream_socket[1].bind(m_router.target_socket);
+
 
                 m_qtb= new qtb<>("qtb");
                 m_router.initiator_socket(m_qtb->control_socket);
-                m_qtb->initiator_socket(m_smmu->upstream_socket[1]);
-                m_smmu->downstream_socket[1](m_qtb->target_socket);
-
+                m_qtb->initiator_socket(m_smmu->upstream_socket[10]);
+                m_smmu->downstream_socket[10](m_qtb->target_socket);
+#endif
                 m_smmu->dma_socket.bind(m_router.target_socket);
 
                 {
@@ -323,7 +329,13 @@ public:
             }
         }
 
-        do_bus_binding();
+        // General loader
+        m_loader.initiator_socket.bind(m_router.target_socket);
+
+        // MUST be added last
+        m_router.initiator_socket.bind(m_fallback_mem.socket);
+
+
         setup_irq_mapping();
 
         CharBackend *backend;
