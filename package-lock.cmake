@@ -38,7 +38,7 @@
 CPMDeclarePackage(libgsutils
  NAME libgsutils
  GIT_TAG master
- GIT_REPOSITORY git@git.greensocs.com:greensocs/libgsutils.git
+ GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgsutils.git
  GIT_SHALLOW on
 )
 
@@ -60,7 +60,7 @@ CPMDeclarePackage(lua
 CPMDeclarePackage(libgssync
  NAME libgssync
  GIT_TAG master
- GIT_REPOSITORY git@git.greensocs.com:greensocs/libgssync.git
+ GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgssync.git
  GIT_SHALLOW on
 )
 
@@ -68,24 +68,24 @@ CPMDeclarePackage(libgssync
 CPMDeclarePackage(libqemu-cxx
  NAME libqemu-cxx
  GIT_TAG master
- GIT_REPOSITORY git@git.greensocs.com:qemu/libqemu-cxx.git
+ GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqemu-cxx.git
  GIT_SHALLOW on
 )
 
 # libqemu
 CPMDeclarePackage(libqemu
   NAME libqemu
-  GIT_TAG libqemu/v6.2.0
-  GIT_REPOSITORY git@git.greensocs.com:qemu/qemu.git
+  GIT_TAG libqemu/v7.0.50
+  GIT_REPOSITORY ${GREENSOCS_GIT}qemu/qemu.git
+  GIT_SUBMODULES "CMakeLists.txt"
   GIT_SHALLOW on
-  GIT_SUBMODULES CMakeLists.txt
 )
 
 # base-components (unversioned)
 CPMDeclarePackage(base-components
  NAME base-components
  GIT_TAG master
- GIT_REPOSITORY git@git.greensocs.com:greensocs/components/base-components.git
+ GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/base-components.git
  GIT_SHALLOW on
 )
 

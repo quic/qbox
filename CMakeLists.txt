@@ -8,7 +8,7 @@ project(qbox VERSION 1.0)
 if (NOT gs-cmake_SOURCE_DIR)
    include(FetchContent)
    FetchContent_Declare(gs-cmake
-      GIT_REPOSITORY git@git.greensocs.com:greensocs/cmake-boilerplate.git
+      GIT_REPOSITORY git@gitlab.qualcomm.com:qqvp/greensocs/components/cmake-boilerplate.git
       GIT_TAG master
    )
    FetchContent_MakeAvailable(gs-cmake)
