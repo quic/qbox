@@ -55,6 +55,11 @@ private:
     std::mutex m_lock;
     std::list<QemuDeviceBaseIF *> devices;
 public:
+    // these will be used by wait_for_work when it needs a global lock
+    std::mutex g_signaled_lock;
+    std::condition_variable g_signaled_cond;
+    bool g_signaled=false;
+
     void add_dev(QemuDeviceBaseIF *d) {
         std::lock_guard<std::mutex> lock(m_lock);
         devices.push_back(d);
