@@ -24,7 +24,7 @@
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
 
-#define LOG                    \
+#define CSR_LOG                    \
     if (std::getenv("GS_LOG")) \
     std::cout
 
@@ -69,30 +69,30 @@
 class csr : public sc_core::sc_module
 {
 private:
-    bool nmi_gen;
-    bool nmi_clear_status;
-    bool nmi_triggered_csr;
-    bool boot_core;
-
-    InitiatorSignalSocket<bool> irq;
+    bool nmi_gen=false;
+    bool nmi_clear_status=false;
+    bool nmi_triggered_csr=false;
+    bool boot_core=false;
+    sc_core::sc_event update_ev;
+public:
+    InitiatorSignalSocket<bool> hex_halt;
+    InitiatorSignalSocket<bool> nmi;
     tlm_utils::simple_target_socket<csr> socket;
-
+private:
     void csr_update()
     {
         if (nmi_gen)
         {
             nmi_triggered_csr = true;
-            irq->write(1);
-            irq->write(0);
+            nmi->write(1);
+            nmi->write(0);
         }
         if (nmi_clear_status)
         {
             nmi_triggered_csr = false;
         }
-        if (boot_core)
-        {
-            boot_cb();
-        }
+
+        hex_halt->write(!boot_core);
     }
 
     void csr_write(uint64_t offset, uint64_t val, unsigned size)
@@ -114,7 +114,7 @@ private:
             break;
         }
 
-        csr_update();
+        update_ev.notify();
     }
 
 
@@ -207,14 +207,14 @@ private:
         {
             uint32_t data = csr_read(addr & 0xfff, len);
             memcpy(ptr, &data, len);
-            LOG << "csr : b_transport read " << std::hex << addr << " " << data << "\n";
+            CSR_LOG << "csr : b_transport read " << std::hex << addr << " " << data << "\n";
             break;
         }
         case tlm::TLM_WRITE_COMMAND:
         {
             uint32_t data;
             memcpy(&data, ptr, len);
-            LOG << "csr : b_transport write " << std::hex << addr << " " << data << "\n";
+            CSR_LOG << "csr : b_transport write " << std::hex << addr << " " << data << "\n";
             csr_write(addr & 0xfff, data, len);
             break;
         }
@@ -227,13 +227,14 @@ private:
     }
 
 public:
-    std::function<void()> boot_cb;
-
-    csr(sc_core::sc_module_name name,     std::function<void()> _boot_cb)
+    SC_HAS_PROCESS(csr);
+    csr(sc_core::sc_module_name name)
         : socket("socket")
-        , boot_cb(_boot_cb)
     {
-        csr_reset();
         socket.register_b_transport(this, &csr::b_transport);
+        SC_THREAD(csr_reset);
+
+        SC_METHOD(csr_update);
+        sensitive << update_ev;
     }
 };
