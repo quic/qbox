@@ -88,10 +88,10 @@ local TURING_SS_0TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x1b0a4008;
 
 dofile (top().."fw/hex_cfgtables.lua")
 
-
+local SA8540P_nsp0_config_table=get_SA8540P_nsp0_config_table();
 local nsp0ss = {
     hexagon_num_threads = 6;
-    hexagon_thread_0={start_powered_off = false};
+    hexagon_thread_0={start_powered_off = false, start_halted=true};
     hexagon_thread_1={start_powered_off = true};
     hexagon_thread_2={start_powered_off = true};
     hexagon_thread_3={start_powered_off = true};
@@ -106,33 +106,43 @@ local nsp0ss = {
              timer1_mem    = {address=NSP0_AHBS_BASE + 0xA2000, size=0x1000}};
     pass = {target_socket  = {address=0x0 , size=NSP0_AHB_HIGH, relative_addresses=false}};
     cfgtable_base = CFGTABLE_BASE;
-    SA8540P_nsp0_config_table=get_SA8540P_nsp0_config_table();
+--    SA8540P_nsp0_config_table=get_SA8540P_nsp0_config_table();
 --  wdog = { socket        = {address=NSP0_AHBS_BASE + 0x84000, size=0x1000}};
-    pll1 = { socket        = {address=NSP0_AHBS_BASE + 0x40000, size=0x10000}};
-    pll2 = { socket        = {address=0x1b001000, size=0x10000}};
+--    pll1 = { socket        = {address=NSP0_AHBS_BASE + 0x40000, size=0x10000}};
+--    pll2 = { socket        = {address=0x1b001000, size=0x10000}};
 --  rom=  {  target_socket = {address=UNLIKELY_TO_BE_USED+CFGTABLE_BASE, size=0x100 },read_only=true};
+
+wdog = { socket        = {address=NSP0_AHBS_BASE + 0x84000, size=0x1000}};
+pll_0 = { socket        =  {address=NSP0_AHBS_BASE + 0x40000, size=0x10000}};
+pll_1 = { socket        =  {address=0x1b001000, size=0x10000}};
+pll_2 = { socket        =  {address=0x1b020000, size=0x10000}};
+pll_3 = { socket        =  {address=0x1b021000, size=0x10000}};
+rom=  {  target_socket = {address=CFGTABLE_BASE, size=0x100 },read_only=true, load={data=SA8540P_nsp0_config_table, offset=0}};
+csr = { socket = {address=0x1B300000, size=0x1000}};
 };
 
 -- nsp0ss.SA8540P_nsp0_config_table[4]=0;    -- DISABLE ETM
 
-assert((nsp0ss.SA8540P_nsp0_config_table[11] << 16) == nsp0ss.l2vic.fastmem.address)
+--assert((nsp0ss.SA8540P_nsp0_config_table[11] << 16) == nsp0ss.l2vic.fastmem.address)
 -- So far, nothing depends on _csr, but a good sanity check:
-assert((nsp0ss.SA8540P_nsp0_config_table[3] << 16) == TURING_SS_0TURING_QDSP6V68SS_CSR)
-local NSP_VTCM_BASE_ADDR = (nsp0ss.SA8540P_nsp0_config_table[15] << 16)
-local NSP_VTCM_SIZE_BYTES = (nsp0ss.SA8540P_nsp0_config_table[16] * 1024)
+--assert((nsp0ss.SA8540P_nsp0_config_table[3] << 16) == TURING_SS_0TURING_QDSP6V68SS_CSR)
+local NSP_VTCM_BASE_ADDR = (SA8540P_nsp0_config_table[15] << 16)
+local NSP_VTCM_SIZE_BYTES = (SA8540P_nsp0_config_table[16] * 1024)
+
 
 platform = {
     arm_num_cpus = 8;
     num_redists = 1;
     hexagon_num_clusters = 1;
     hexagon_cluster_0 = nsp0ss;
-    quantum_ns = 100000000;
+    quantum_ns = 10000000;
 
     ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
 
-    ram=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE}};
+    ram_0=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE}};
+    ram_1=  {  target_socket = {address=0x3000000000+INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE}};
     hexagon_ram={target_socket={address=NSP_VTCM_BASE_ADDR, size=NSP_VTCM_SIZE_BYTES}};
-    rom=  {  target_socket = {address=CFGTABLE_BASE, size=0x100 },read_only=true, load={data=nsp0ss.SA8540P_nsp0_config_table, offset=0}};
+--    rom=  {  target_socket = {address=CFGTABLE_BASE, size=0x100 },read_only=true, load={data=nsp0ss.SA8540P_nsp0_config_table, offset=0}};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
              redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0xf60000}};
     virtionet0= { mem    =   {address=0x1c120000, size=0x10000}, irq=18, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21"};
@@ -151,28 +161,31 @@ platform = {
         num_tbu=2;
         num_pages=128;
         num_cb=128;
-        tbu_sid_0 = 0x31a0;
+        tbu_sid_0 = 0x31A0;
         upstream_socket_0 = {address=NSP0_AHB_HIGH, size=0xF00000000-NSP0_AHB_HIGH, relative_addresses=true};
-        tbu_sid_1 = 0;
-        upstream_socket_1 = {address=0x0, size=0xd81e0000, relative_addresses=false};
+--        tbu_sid_1 = 0;
+--        upstream_socket_1 = {address=0x0, size=0xd81e0000, relative_addresses=false};
         irq_context = 103;
         irq_global = 65;
     };
+
     qtb = { control_socket = {address=0x15180000, size=0x80000}};
 
     fallback_memory = { target_socket={address=0x0, size=0x40000000}, dmi_allow=false, verbose=false, load={csv_file=top().."fw/makena/SA8540P_MakenaAU_v2_Registers.csv", offset=0, addr_str="Address", value_str="Reset Value", byte_swap=true}};
     load={
         {bin_file=top().."fw/makena/images/bl31.bin",
          address=INITIAL_DDR_SPACE_14GB};
-        {bin_file=top().."fw/makena/images/mifs_qdrive_pil.img",
+        {bin_file=top().."fw/makena/images/mifs_qdrive_6_1.img",
          address=INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE };
-        {bin_file=top().."fw/makena/images/smem_v3_pil.bin",
+        {bin_file=top().."fw/makena/images/smem_makena.bin",
          address=INITIAL_DDR_SPACE_14GB + OFFSET_SMEM_DDR_SPACE };
         {bin_file=top().."fw/makena/images/cmd_db_header.bin",
          address= 0x0C3F0000};
         {bin_file=top().."fw/makena/images/cmd_db.bin",
          address= 0x80860000};
-        {elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg_makena.cdsp0.coreQ.pbn"};
+        --{elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg_makena.cdsp0.prodQ.pbn"};
+        --{elf_file="/local/mnt/workspace/dsp/220603_sidneym_CDSP.HT.2.6.c1-00335-MAKENA-1_02/cdsp_proc/build/ms/bootimage_relocflag_withdummyseg_makena.cdsp0.prodQ.pbn"};
+        {elf_file=top().."bootimage_relocflag_withdummyseg_makena.cdsp0.prodQ.pbn"};
         {data={0x60140200}, address=TCSR_SOC_HW_VERSION_ADDR};
         {data={SMEM_TARG_INFO_ADDR}, address=SMEM_TCSR_TZ_WONCE_ADDR};
         {data={0x00005381}, address=RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRV0};
