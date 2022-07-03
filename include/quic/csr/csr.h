@@ -35,6 +35,7 @@
 #define NMI_CLEAR_STATUS_MASK 0x02
 #define NMI_SET_MASK 0x01
 #define BOOT_CORE_MASK 0x01
+#define BOOT_CMD_MASK 0x01
 
 #define QDSP6SS_VERSION 0x00000
 #define QDSP6SS_NMI_STATUS 0x00044
@@ -72,7 +73,8 @@ private:
     bool nmi_gen=false;
     bool nmi_clear_status=false;
     bool nmi_triggered_csr=false;
-    bool boot_core=false;
+    bool boot_core_start=false;
+    bool boot_status=false;
     sc_core::sc_event update_ev;
 public:
     InitiatorSignalSocket<bool> hex_halt;
@@ -92,7 +94,7 @@ private:
             nmi_triggered_csr = false;
         }
 
-        hex_halt->write(!boot_core);
+        hex_halt->write(!boot_status);
     }
 
     void csr_write(uint64_t offset, uint64_t val, unsigned size)
@@ -104,10 +106,10 @@ private:
             nmi_gen = (val & NMI_SET_MASK);
             break;
         case QDSP6SS_BOOT_CORE_START:
-            boot_core = (val & BOOT_CORE_MASK);
+            boot_core_start = (val & BOOT_CORE_MASK);
             break;
         case QDSP6SS_BOOT_CMD:
-            SC_REPORT_ERROR("CSR", "FIXME: handle boot FSM\n");
+            boot_status = (val & BOOT_CMD_MASK);
             break;
         default:
             SC_REPORT_ERROR("CSR", "invalid write");
@@ -144,7 +146,7 @@ private:
         case QDSP6SS_DBG_NMI_PWR_STATUS:
             return 0x0;
         case QDSP6SS_BOOT_STATUS:
-            return 0x0;
+            return boot_status?0x1:0x0;
         case QDSP6SS_MEM_STATUS:
             return 0x1F001F;
         case QDSP6SS_L2MEM_EFUSE_STATUS:
@@ -189,7 +191,8 @@ private:
         nmi_gen = false;
         nmi_clear_status = false;
         nmi_triggered_csr = false;
-        boot_core = false;
+        boot_core_start = false;
+        boot_status = false;
 
         csr_update();
     }
