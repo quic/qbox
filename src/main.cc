@@ -175,7 +175,7 @@ protected:
     sc_core::sc_vector<QemuCpuArmCortexA76> m_cpus;
     sc_core::sc_vector<hexagon_cluster> m_hexagon_clusters;
     QemuArmGicv3* m_gic;
-    gs::Memory<> m_ram;
+    sc_core::sc_vector<gs::Memory<>> m_rams;
     gs::Memory<> m_hexagon_ram;
 //    gs::Memory<> m_system_imem;
     GlobalPeripheralInitiator* m_global_peripheral_initiator_arm;
@@ -203,7 +203,9 @@ protected:
             m_global_peripheral_initiator_arm->m_initiator.bind(m_router.target_socket);
         }
 
-        m_router.initiator_socket.bind(m_ram.socket);
+        for (auto &ram: m_rams) {
+            m_router.initiator_socket.bind(ram.socket);
+        }
         m_router.initiator_socket.bind(m_hexagon_ram.socket);
         m_router.initiator_socket.bind(m_uart.socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
@@ -280,7 +282,7 @@ public:
         , m_hexagon_clusters("hexagon_cluster", p_hexagon_num_clusters, [this] (const char *n, size_t i) {
             return new hexagon_cluster(n, m_inst_mgr_h, m_router);
         })
-        , m_ram("ram")
+        , m_rams("ram", gs::sc_cci_list_items(sc_module::name(),"ram").size(), [this] (const char *n, size_t i) {return new gs::Memory<>(n);})
         , m_hexagon_ram("hexagon_ram")
 //        , m_system_imem("system_imem")
         , m_uart("uart")
@@ -298,6 +300,10 @@ public:
         if (p_arm_num_cpus) {
             m_gic = new QemuArmGicv3("gic", m_qemu_inst, p_arm_num_cpus);
             m_global_peripheral_initiator_arm = new GlobalPeripheralInitiator("glob-per-init-arm", m_qemu_inst, m_cpus[0]);
+        }
+
+        if (m_rams.size()<=0) {
+            SC_REPORT_ERROR("GreenSocsPlatform","Please specify at least one memory (ram_0)");
         }
 
         do_bus_binding();
