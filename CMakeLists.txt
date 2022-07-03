@@ -30,6 +30,7 @@ gs_addpackage(greensocs/components/systemc-uarts)
 gs_addpackage(qemu/extra-components)
 gs_addpackage(quic/components/ipcc)
 gs_addpackage(quic/components/qtb)
+gs_addpackage(quic/components/csr)
 
 add_executable(vp
     src/main.cc

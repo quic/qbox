@@ -55,6 +55,7 @@
 
 #include <qcom/ipcc/ipcc.h>
 #include <qcom/qtb/qtb.h>
+#include <quic/csr/csr.h>
 
 #include "wdog.h"
 #include "pll.h"
@@ -81,6 +82,7 @@ private:
     WDog<> m_wdog;
     sc_core::sc_vector<pll<>> m_plls;
 //    pll<> m_pll2;
+    csr m_csr;
     gs::pass<> m_pass;
     gs::Memory<> m_rom;
 
@@ -102,6 +104,7 @@ public:
         , m_wdog("wdog")
         , m_plls("pll",4)
 //        , m_pll2("pll2")
+        , m_csr("csr")
         , m_rom("rom")
         , m_pass("pass", false)
         , m_hexagon_threads("hexagon_thread", p_hexagon_num_threads, [this] (const char *n, size_t i) {
@@ -128,6 +131,9 @@ public:
             parent_router.initiator_socket.bind(pll.socket);
         }
         parent_router.initiator_socket.bind(m_rom.socket);
+
+        parent_router.initiator_socket.bind(m_csr.socket);
+        m_csr.hex_halt.bind(m_hexagon_threads[0].halt);
 
         // pass through transactions.
         m_router.initiator_socket.bind(m_pass.target_socket);

@@ -74,12 +74,19 @@ CPMDeclarePackage(ipcc
   NAME ipcc
   GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/ipcc.git
   GIT_TAG v1.0.0
-#  GIT_SHALLOW on
+  GIT_SHALLOW on
 )
 # QTB
 CPMDeclarePackage(qtb
   NAME qtb
   GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/qtb.git
   GIT_TAG v1.0.0
-#  GIT_SHALLOW on
+  GIT_SHALLOW on
+)
+# CSR
+CPMDeclarePackage(csr
+  NAME csr
+  GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/csr.git
+  GIT_TAG v1.0.0
+  GIT_SHALLOW on
 )
