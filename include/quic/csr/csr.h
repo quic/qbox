@@ -38,6 +38,7 @@
 #define BOOT_CMD_MASK 0x01
 
 #define QDSP6SS_VERSION 0x00000
+#define QDSP6SS_RET_CFG 0x0001C
 #define QDSP6SS_NMI_STATUS 0x00044
 #define QDSP6SS_STRAP_TCM_BASE_STATUS 0x00100
 #define QDSP6SS_STRAP_AHBUPPER_STATUS 0x00104
@@ -76,6 +77,8 @@ private:
     bool boot_core_start=false;
     bool boot_status=false;
     sc_core::sc_event update_ev;
+    uint64_t ret_cfg;
+
 public:
     InitiatorSignalSocket<bool> hex_halt;
     InitiatorSignalSocket<bool> nmi;
@@ -111,6 +114,9 @@ private:
         case QDSP6SS_BOOT_CMD:
             boot_status = (val & BOOT_CMD_MASK);
             break;
+        case QDSP6SS_RET_CFG:
+            ret_cfg=val;
+            break;
         default:
             SC_REPORT_ERROR("CSR", "invalid write");
             break;
@@ -127,6 +133,8 @@ private:
             /* RO registers: */
         case QDSP6SS_VERSION:
             return 0x10020000;
+        case QDSP6SS_RET_CFG:
+            return ret_cfg;
         case QDSP6SS_NMI_STATUS:
             return nmi_triggered_csr ? PUBCSR_TRIG_MASK : 0x0;
         case QDSP6SS_STRAP_TCM_BASE_STATUS:
