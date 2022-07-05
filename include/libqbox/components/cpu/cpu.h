@@ -116,10 +116,15 @@ protected:
     void set_signaled()
     {
         assert(!m_coroutines);
-
-        std::lock_guard<std::mutex> lock(m_signaled_lock);
-        m_signaled = true;
-        m_signaled_cond.notify_all();
+        if (m_inst.get_tcg_mode() != QemuInstance::TCG_SINGLE) {
+            std::lock_guard<std::mutex> lock(m_signaled_lock);
+            m_signaled = true;
+            m_signaled_cond.notify_all();
+        } else {
+            std::lock_guard<std::mutex> lock(m_inst.g_signaled_lock);
+            m_inst.g_signaled = true;
+            m_inst.g_signaled_cond.notify_all();
+        }
     }
 
     /*
@@ -171,9 +176,15 @@ protected:
         if (m_coroutines) {
             m_on_sysc.run_on_sysc([this] () { wait(m_external_ev); });
         } else {
-            std::unique_lock<std::mutex> lock(m_signaled_lock);
-            m_signaled_cond.wait(lock, [this] { return m_signaled; });
-            m_signaled = false;
+            if (m_inst.get_tcg_mode() != QemuInstance::TCG_SINGLE) {
+                std::unique_lock<std::mutex> lock(m_signaled_lock);
+                m_signaled_cond.wait(lock, [this] { return m_signaled; });
+                m_signaled = false;
+            } else{
+                std::unique_lock<std::mutex> lock(m_inst.g_signaled_lock);
+                m_inst.g_signaled_cond.wait(lock, [this] { return m_inst.g_signaled; });
+                m_inst.g_signaled = false; 
+            }
             if (finished) return;
         }
         m_qk->start();
@@ -210,11 +221,13 @@ protected:
          */
         m_inst.get().lock_iothread();
 
-        bool can_run=false;
         if (m_inst.get_tcg_mode()==QemuInstance::TCG_SINGLE) {
-            can_run=m_inst.can_run();
-        }
-        if (!can_run) {
+            while (!m_inst.can_run()) {
+                m_inst.get().unlock_iothread();
+                wait_for_work();
+                m_inst.get().lock_iothread();
+            }
+        } else {
             while (!m_cpu.can_run()) {
                 m_inst.get().unlock_iothread();
                 wait_for_work();
@@ -381,6 +394,9 @@ public:
 
     }
 
+    /* NB this is usd to determin if this cpu can run in SINGLE mode
+     * for the m_inst.can_run calculation
+     */
     bool can_run() override
     {
         return m_cpu.can_run();
