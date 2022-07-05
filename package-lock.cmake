@@ -4,13 +4,13 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG v5.4.1
+  GIT_TAG v5.5.0
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
 CPMDeclarePackage(libgsutils
   NAME libgsutils
-  GIT_TAG v2.3.1
+  GIT_TAG v2.4.0
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgsutils.git
   GIT_SHALLOW on
 )
@@ -29,21 +29,21 @@ CPMDeclarePackage(googletest
 # libgssync
 CPMDeclarePackage(libgssync
   NAME libgssync
-  GIT_TAG v2.1.2
+  GIT_TAG v2.2.0
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgssync.git
   GIT_SHALLOW on
 )
 # libqemu-cxx
 CPMDeclarePackage(libqemu-cxx
   NAME libqemu-cxx
-  GIT_TAG v3.6.0
+  GIT_TAG v3.6.1
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqemu-cxx.git
 )
 # libqemu
 CPMDeclarePackage(libqemu
   NAME libqemu
-  GIT_REPOSITORY ${GREENSOCS_GIT}qemu/qemu.git
   GIT_TAG v2.1.0
+  GIT_REPOSITORY ${GREENSOCS_GIT}qemu/qemu.git
   GIT_SUBMODULES CMakeLists.txt
 )
 # base-components
@@ -87,6 +87,6 @@ CPMDeclarePackage(qtb
 CPMDeclarePackage(csr
   NAME csr
   GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/csr.git
-  GIT_TAG v1.0.0
+  GIT_TAG v1.0.1
   GIT_SHALLOW on
 )

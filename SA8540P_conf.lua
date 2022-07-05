@@ -123,9 +123,9 @@ csr = { socket = {address=0x1B300000, size=0x1000}};
 
 -- nsp0ss.SA8540P_nsp0_config_table[4]=0;    -- DISABLE ETM
 
---assert((nsp0ss.SA8540P_nsp0_config_table[11] << 16) == nsp0ss.l2vic.fastmem.address)
+assert((SA8540P_nsp0_config_table[11] << 16) == nsp0ss.l2vic.fastmem.address)
 -- So far, nothing depends on _csr, but a good sanity check:
---assert((nsp0ss.SA8540P_nsp0_config_table[3] << 16) == TURING_SS_0TURING_QDSP6V68SS_CSR)
+assert((SA8540P_nsp0_config_table[3] << 16) == TURING_SS_0TURING_QDSP6V68SS_CSR)
 local NSP_VTCM_BASE_ADDR = (SA8540P_nsp0_config_table[15] << 16)
 local NSP_VTCM_SIZE_BYTES = (SA8540P_nsp0_config_table[16] * 1024)
 
@@ -139,8 +139,8 @@ platform = {
 
     ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
 
-    ram_0=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE}};
-    ram_1=  {  target_socket = {address=0x3000000000+INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE}};
+    ram_0=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE/2}};
+    ram_1=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB+(DDR_SPACE_SIZE/2), size=DDR_SPACE_SIZE/2}};
     hexagon_ram={target_socket={address=NSP_VTCM_BASE_ADDR, size=NSP_VTCM_SIZE_BYTES}};
 --    rom=  {  target_socket = {address=CFGTABLE_BASE, size=0x100 },read_only=true, load={data=nsp0ss.SA8540P_nsp0_config_table, offset=0}};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
