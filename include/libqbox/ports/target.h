@@ -159,8 +159,13 @@ public:
 
     virtual unsigned int transport_dbg(TlmPayload& trans)
     {
-        /* TODO: implement this as a standard QEMU transaction */
-        return 0;
+        unsigned int size = trans.get_data_length();
+        sc_core::sc_time delay = sc_core::SC_ZERO_TIME;
+        b_transport(trans, delay);
+        if (trans.get_response_status() == tlm::TLM_OK_RESPONSE)
+            return size;
+        else
+            return 0;
     }
 };
 
