@@ -26,6 +26,7 @@
 
 #include <iostream>
 #include <list>
+#include <regex>
 
 #include "luafile_tool.h"
 #include <cci_configuration>
@@ -106,6 +107,38 @@ static std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
     auto uncon = m_broker.get_unconsumed_preset_values([&name](const std::pair<std::string, cci_value>& iv) { return iv.first.find(std::string(name) + ".") == 0; });
     for (auto p : uncon) {
         children.push_back(p.first.substr(l, p.first.find(".", l) - l));
+    }
+    children.sort();
+    children.unique();
+    return children;
+}
+
+/**
+ * @brief return a list of 'unconsumed' items in the module matching the base name given, plus '_' and a numeric value
+ * typically this would be a list of items from an sc_vector
+ * Can be used inside or outside the heirarchy
+ *
+ * @param module_name : name of the module
+ * @param list_name : base name of the list (e.g. name of the sc_vector)
+ * @return std::list<std::string>
+ */
+static std::list<std::string> sc_cci_list_items(sc_core::sc_module_name module_name, std::string list_name)
+{
+    cci_broker_handle m_broker = (sc_core::sc_get_current_object())
+        ? cci_get_broker()
+        : cci_get_global_broker(cci_originator("gs__sc_cci_children"));
+    std::string name=std::string(module_name)+"."+list_name;
+    std::regex search(name+"_[0-9]+\\.");
+    std::list<std::string> children;
+    int l = strlen(module_name) + 1;
+    auto uncon = m_broker.get_unconsumed_preset_values(
+        [&search](const std::pair<std::string, cci::cci_value>& iv) {
+            return std::regex_search(iv.first, search);
+        });
+    for (auto p : uncon) {
+        std::smatch match;
+        std::regex_search(p.first, match, search);
+        children.push_back(p.first.substr(l, (match.length() - l)-1));
     }
     children.sort();
     children.unique();
