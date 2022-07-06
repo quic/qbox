@@ -7,11 +7,23 @@ project(greensocs-base-vp)
 if(EXISTS "${PROJECT_SOURCE_DIR}/Packages" AND EXISTS "${PROJECT_SOURCE_DIR}/Packages/cmake-boilerplate")
     set (gs-cmake_SOURCE_DIR  "${PROJECT_SOURCE_DIR}/Packages/cmake-boilerplate")
 endif()
+
+set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositoies")
+
+if ( "${GREENSOCS_GIT}" STREQUAL "")
+    execute_process(COMMAND git config --get remote.origin.url
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE GIT_URL)
+
+    string(REGEX REPLACE "(.*)/[^/]*.git$" "\\1/" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
+    set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
+endif()
+
 if (NOT gs-cmake_SOURCE_DIR)
    include(FetchContent)
    FetchContent_Declare(gs-cmake
-      GIT_REPOSITORY git@gitlab.qualcomm.com:qqvp/greensocs/cmake-boilerplate.git
-      GIT_TAG master
+        GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/cmake-boilerplate.git
+        GIT_TAG master
    )
    FetchContent_MakeAvailable(gs-cmake)
 endif()
@@ -30,6 +42,7 @@ gs_addpackage(greensocs/components/systemc-uarts)
 gs_addpackage(qemu/extra-components)
 gs_addpackage(quic/components/ipcc)
 gs_addpackage(quic/components/qtb)
+gs_addpackage(quic/components/csr)
 
 add_executable(vp
     src/main.cc
@@ -41,14 +54,7 @@ else()
 endif()
 
 target_link_libraries(vp
-    SystemC::systemc
-    SystemC::cci
-    GreenSocs::qbox
-    GreenSocs::qbox-extra
-    GreenSocs::base-components
-    GreenSocs::systemc-uarts
-    GreenSocs::qcom-ipcc
-    GreenSocs::qcom-qtb
+    ${TARGET_LIBS}
 )
 
 install (TARGETS vp DESTINATION ${CMAKE_INSTALL_BINDIR})

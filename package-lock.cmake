@@ -4,14 +4,13 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-# GIT_TAG v5.4.0
-  GIT_TAG 5a364acc862deb8dea5943f0cc7d5e7cf1fe5ecd
+  GIT_TAG v5.5.0
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
 CPMDeclarePackage(libgsutils
   NAME libgsutils
-  GIT_TAG v2.3.0
+  GIT_TAG v2.4.0
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgsutils.git
   GIT_SHALLOW on
 )
@@ -30,36 +29,34 @@ CPMDeclarePackage(googletest
 # libgssync
 CPMDeclarePackage(libgssync
   NAME libgssync
-  GIT_TAG v2.1.1
+  GIT_TAG v2.2.0
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgssync.git
   GIT_SHALLOW on
 )
 # libqemu-cxx
 CPMDeclarePackage(libqemu-cxx
   NAME libqemu-cxx
-  GIT_TAG v3.6.0
+  GIT_TAG v3.6.1
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqemu-cxx.git
 )
 # libqemu
 CPMDeclarePackage(libqemu
   NAME libqemu
-# GIT_TAG v1.1.0
-# GIT_TAG 8d78a9711597c96484e50288f6958a1c885483bd
-  GIT_TAG ab142bc4547edff3387e05b21197c803a5b836b0
+  GIT_TAG v2.1.0
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/qemu.git
   GIT_SUBMODULES CMakeLists.txt
 )
 # base-components
 CPMDeclarePackage(base-components
   NAME base-components
-  GIT_TAG v3.2.0
+  GIT_TAG v3.3.2
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/base-components.git
 #  GIT_SHALLOW on
 )
 
 CPMDeclarePackage(systemc-uarts
   NAME systemc-uarts
-  GIT_TAG v2.1.1
+  GIT_TAG v2.1.2
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/systemc-uarts.git
   GIT_SHALLOW on
 )
@@ -67,7 +64,7 @@ CPMDeclarePackage(systemc-uarts
 # extra-components
 CPMDeclarePackage(extra-components
   NAME extra-components
-  GIT_TAG v3.1.3
+  GIT_TAG v3.2.0
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/extra-components.git
   GIT_SHALLOW on
 )
@@ -75,14 +72,21 @@ CPMDeclarePackage(extra-components
 # IPCC
 CPMDeclarePackage(ipcc
   NAME ipcc
-  GIT_TAG master
   GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/ipcc.git
-#  GIT_SHALLOW on
+  GIT_TAG v1.0.0
+  GIT_SHALLOW on
 )
 # QTB
 CPMDeclarePackage(qtb
   NAME qtb
-  GIT_TAG master
   GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/qtb.git
-#  GIT_SHALLOW on
+  GIT_TAG v1.0.0
+  GIT_SHALLOW on
+)
+# CSR
+CPMDeclarePackage(csr
+  NAME csr
+  GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/csr.git
+  GIT_TAG v1.0.1
+  GIT_SHALLOW on
 )

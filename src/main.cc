@@ -55,6 +55,9 @@
 
 #include <qcom/ipcc/ipcc.h>
 #include <qcom/qtb/qtb.h>
+#include <quic/csr/csr.h>
+
+#include "wdog.h"
 #include "pll.h"
 
 #define HEXAGON_CFGSPACE_ENTRIES (128)
@@ -76,9 +79,12 @@ public:
 private:
     QemuHexagonL2vic m_l2vic;
     QemuHexagonQtimer m_qtimer;
-    pll<> m_pll1;
-    pll<> m_pll2;
+    WDog<> m_wdog;
+    sc_core::sc_vector<pll<>> m_plls;
+//    pll<> m_pll2;
+    csr m_csr;
     gs::pass<> m_pass;
+    gs::Memory<> m_rom;
 
     sc_core::sc_vector<QemuCpuHexagon> m_hexagon_threads;
     GlobalPeripheralInitiator m_global_peripheral_initiator_hex;
@@ -95,8 +101,11 @@ public:
         , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer", m_qemu_hex_inst) // are we sure it's in the hex cluster?????
-        , m_pll1("pll1")
-        , m_pll2("pll2")
+        , m_wdog("wdog")
+        , m_plls("pll",4)
+//        , m_pll2("pll2")
+        , m_csr("csr")
+        , m_rom("rom")
         , m_pass("pass", false)
         , m_hexagon_threads("hexagon_thread", p_hexagon_num_threads, [this] (const char *n, size_t i) {
             /* here n is already "hexagon-cpu_<vector-index>" */
@@ -117,9 +126,14 @@ public:
         parent_router.initiator_socket.bind(m_qtimer.socket);
         parent_router.initiator_socket.bind(m_qtimer.timer0_socket);
         parent_router.initiator_socket.bind(m_qtimer.timer1_socket);
-        parent_router.initiator_socket.bind(m_pll1.socket);
-        parent_router.initiator_socket.bind(m_pll2.socket);
+        parent_router.initiator_socket.bind(m_wdog.socket);
+        for (auto &pll : m_plls) {
+            parent_router.initiator_socket.bind(pll.socket);
+        }
+        parent_router.initiator_socket.bind(m_rom.socket);
 
+        parent_router.initiator_socket.bind(m_csr.socket);
+        m_csr.hex_halt.bind(m_hexagon_threads[0].halt);
 
         // pass through transactions.
         m_router.initiator_socket.bind(m_pass.target_socket);
@@ -161,9 +175,8 @@ protected:
     sc_core::sc_vector<QemuCpuArmCortexA76> m_cpus;
     sc_core::sc_vector<hexagon_cluster> m_hexagon_clusters;
     QemuArmGicv3* m_gic;
-    gs::Memory<> m_ram;
+    sc_core::sc_vector<gs::Memory<>> m_rams;
     gs::Memory<> m_hexagon_ram;
-    gs::Memory<> m_rom;
 //    gs::Memory<> m_system_imem;
     GlobalPeripheralInitiator* m_global_peripheral_initiator_arm;
     Uart m_uart;
@@ -190,9 +203,10 @@ protected:
             m_global_peripheral_initiator_arm->m_initiator.bind(m_router.target_socket);
         }
 
-        m_router.initiator_socket.bind(m_ram.socket);
+        for (auto &ram: m_rams) {
+            m_router.initiator_socket.bind(ram.socket);
+        }
         m_router.initiator_socket.bind(m_hexagon_ram.socket);
-        m_router.initiator_socket.bind(m_rom.socket);
         m_router.initiator_socket.bind(m_uart.socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
         m_router.initiator_socket.bind(m_virtio_net_0.socket);
@@ -200,11 +214,6 @@ protected:
 
 //        m_router.initiator_socket.bind(m_system_imem.socket);
 
-        // General loader
-        m_loader.initiator_socket.bind(m_router.target_socket);
-
-        // MUST be added last
-        m_router.initiator_socket.bind(m_fallback_mem.socket);
     }
 
      void setup_irq_mapping() {
@@ -273,9 +282,8 @@ public:
         , m_hexagon_clusters("hexagon_cluster", p_hexagon_num_clusters, [this] (const char *n, size_t i) {
             return new hexagon_cluster(n, m_inst_mgr_h, m_router);
         })
-        , m_ram("ram")
+        , m_rams("ram", gs::sc_cci_list_items(sc_module::name(),"ram").size(), [this] (const char *n, size_t i) {return new gs::Memory<>(n);})
         , m_hexagon_ram("hexagon_ram")
-        , m_rom("rom")
 //        , m_system_imem("system_imem")
         , m_uart("uart")
         , m_ipcc("ipcc")
@@ -294,18 +302,28 @@ public:
             m_global_peripheral_initiator_arm = new GlobalPeripheralInitiator("glob-per-init-arm", m_qemu_inst, m_cpus[0]);
         }
 
+        if (m_rams.size()<=0) {
+            SC_REPORT_ERROR("GreenSocsPlatform","Please specify at least one memory (ram_0)");
+        }
+
+        do_bus_binding();
+
         if (p_hexagon_num_clusters) {
             if (p_hexagon_num_clusters==1) {
                 m_smmu = new QemuArmSmmu("smmu", m_hexagon_clusters[0].m_qemu_hex_inst);
                 m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[0]);
                 m_smmu->downstream_socket[0].bind(m_router.target_socket);
                 m_router.initiator_socket.bind(m_smmu->register_socket);
+#ifdef ENABLE_QTB
+                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[1]);
+                m_smmu->downstream_socket[1].bind(m_router.target_socket);
+
 
                 m_qtb= new qtb<>("qtb");
                 m_router.initiator_socket(m_qtb->control_socket);
-                m_qtb->initiator_socket(m_smmu->upstream_socket[1]);
-                m_smmu->downstream_socket[1](m_qtb->target_socket);
-
+                m_qtb->initiator_socket(m_smmu->upstream_socket[10]);
+                m_smmu->downstream_socket[10](m_qtb->target_socket);
+#endif
                 m_smmu->dma_socket.bind(m_router.target_socket);
 
                 {
@@ -323,7 +341,13 @@ public:
             }
         }
 
-        do_bus_binding();
+        // General loader
+        m_loader.initiator_socket.bind(m_router.target_socket);
+
+        // MUST be added last
+        m_router.initiator_socket.bind(m_fallback_mem.socket);
+
+
         setup_irq_mapping();
 
         CharBackend *backend;
