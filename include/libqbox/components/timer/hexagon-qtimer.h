@@ -30,8 +30,14 @@
 #include "libqbox/ports/initiator-signal-socket.h"
 
 class QemuHexagonQtimer : public QemuDevice {
+protected:
+    cci::cci_param<unsigned int> p_nr_frames;
+    cci::cci_param<unsigned int> p_nr_views;
+    cci::cci_param<unsigned int> p_cnttid;
+
 public:
     QemuTargetSocket<> socket;
+
     /*
      * FIXME:
      * the irq is not really declared as a gpio in qemu, so we cannot
@@ -40,28 +46,30 @@ public:
      */
 
     /* timers mem/irq */
-    QemuTargetSocket<> timer0_socket;
-    QemuTargetSocket<> timer1_socket;
-    QemuTargetSocket<> timer2_socket;
-    QemuInitiatorSignalSocket timer0_irq;
-    QemuInitiatorSignalSocket timer1_irq;
-    QemuInitiatorSignalSocket timer2_irq;
+    QemuTargetSocket<> view_socket;
+    sc_core::sc_vector<QemuInitiatorSignalSocket> irq;
 
 public:
     QemuHexagonQtimer(sc_core::sc_module_name nm, QemuInstance &inst)
         : QemuDevice(nm, inst, "qct-qtimer")
+        , p_nr_frames("nr_frames", 2, "Number of frames")
+        , p_nr_views("nr_views", 1, "Number of views")
+        , p_cnttid("cnttid", 0x11, "Value of cnttid")
         , socket("mem", inst)
-        , timer0_socket("timer0_mem", inst)
-        , timer1_socket("timer1_mem", inst)
-        , timer2_socket("timer2_mem", inst)
-        , timer0_irq("timer0_irq")
-        , timer1_irq("timer1_irq")
-        , timer2_irq("timer2_irq")
+        , view_socket("mem_view", inst)
+        , irq("irq", p_nr_frames.get_value(), [] (const char *n, size_t i) {
+                     return new QemuInitiatorSignalSocket(n);
+                 })
     {}
 
     void before_end_of_elaboration() override
     {
         QemuDevice::before_end_of_elaboration();
+
+        m_dev.set_prop_int("nr_frames", p_nr_frames);
+        m_dev.set_prop_int("nr_views", p_nr_views);
+        m_dev.set_prop_int("cnttid", p_cnttid);
+
     }
 
     void end_of_elaboration() override
@@ -71,25 +79,11 @@ public:
 
         qemu::SysBusDevice sbd(m_dev);
         socket.init(sbd, 0);
+        view_socket.init(sbd, 1);
 
-        char buffer[16];
-        std::snprintf(buffer, 15, "timer[0]");
-        qemu::Object obj = sbd.get_prop_link(buffer);
-        qemu::SysBusDevice tim_sbd(obj);
-        timer0_socket.init(tim_sbd, 0);
-        timer0_irq.init_sbd(tim_sbd, 0);
-
-        std::snprintf(buffer, 15, "timer[1]");
-        obj = sbd.get_prop_link(buffer);
-        qemu::SysBusDevice tim_sbd1(obj);
-        timer1_socket.init(tim_sbd1, 0);
-        timer1_irq.init_sbd(tim_sbd1, 0);
-
-        std::snprintf(buffer, 15, "timer[2]");
-        obj = sbd.get_prop_link(buffer);
-        qemu::SysBusDevice tim_sbd2(obj);
-        timer2_socket.init(tim_sbd2, 0);
-        timer2_irq.init_sbd(tim_sbd2, 0);
+        for (uint32_t i = 0; i < p_nr_frames.get_value(); ++i) {
+            irq[i].init_sbd(sbd, i);
+        }
     }
 };
 
