@@ -55,14 +55,6 @@ filesystem_image = get_image("bsp/linux/extras/fs/filesystem.bin",
                              image_install_dir().."filesystem.bin",
                              "filesystem.bin")
 
-linux_image = get_image ("bsp/linux/out/android-mainline/common/arch/arm64/boot/Image",
-                         image_install_dir().."Image",
-                         "Image");
-
-device_tree = get_image ("bsp/linux/extras/dts/vp.dtb",
-                         image_install_dir().."vp.dtb",
-                         "vp.dtb");
-
 linux_image = get_image ("fw/fastrpc-images/images/Image_opengl",
                          nil,
                          "Image_opengl");
@@ -84,6 +76,63 @@ _KERNEL64_LOAD_ADDR =0x41080000
 _DTB_LOAD_ADDR =     0x44200000
 dofile (top().."fw/arm64_bootloader.lua")
 
+local NSP0_AHBS_BASE= 0x1B300000 -- TURING_SS_0TURING_QDSP6V68SS
+local NSP0_BASE     = 0x1A000000 -- TURING_SS_0TURING
+local CFGTABLE_BASE  = NSP0_BASE + 0x180000;
+
+local SA8540P_nsp0_config_table =  {
+    --/* captured from an SA840P-NSP0 via T32 */
+        0x00001a00,   -- .l2tcm_base
+        0x00000000,   -- .reserved
+        0x00001b38,   -- .subsystem_base
+        0x00001a19,   -- .etm_base
+        0x00001a1a,   -- .l2cfg_base
+        0x00001a1b,   -- .reserved2
+        0x00001a80,   -- .l1s0_base
+        0x00000000,   -- .axi2_lowaddr
+        0x00001a1c,   -- .streamer_base
+        0x00001a1d,   -- .clade_base
+        0x00001a1e,   -- .fastl2vic_base
+        0x00000080,   -- .jtlb_size_entries
+        0x00000001,   -- .coproc_present
+        0x00000004,   -- .ext_contexts
+        0x00001a80,   -- .vtcm_base
+        0x00002000,   -- .vtcm_size_kb
+        0x00000400,   -- .l2tag_size
+        0x00000400,   -- .l2ecomem_size
+        0x0000003f,   -- .thread_enable_mask
+        0x00001a1f,   -- .eccreg_base
+        0x00000080,   -- .l2line_size
+        0x00000000,   -- .tiny_core
+        0x00000000,   -- .l2itcm_size
+        0x00001a00,   -- .l2itcm_base
+        0x00000000,   -- .clade2_base
+        0x00000000,   -- .dtm_present
+        0x00000001,   -- .dma_version
+        0x00000007,   -- .hvx_vec_log_length
+        0x00000000,   -- .core_id
+        0x00000000,   -- .core_count
+        0x00000040,   -- .hmx_int8_spatial
+        0x00000020,   -- .hmx_int8_depth
+        0x00000001,   -- .v2x_mode
+        0x00000004,   -- .hmx_int8_rate
+        0x00000020,   -- .hmx_fp16_spatial
+        0x00000020,   -- .hmx_fp16_depth
+        0x00000002,   -- .hmx_fp16_rate
+        0x0000002e,   -- .hmx_fp16_acc_frac
+        0x00000012,   -- .hmx_fp16_acc_int
+        0x00000001,   -- .acd_preset
+        0x00000001,   -- .mnd_preset
+        0x00000010,   -- .l1d_size_kb
+        0x00000020,   -- .l1i_size_kb
+        0x00000002,   -- .l1d_write_policy
+        0x00000040,   -- .vtcm_bank_width
+        0x00000001,   -- .reserved3
+        0x00000001,   -- .reserved4
+        0x00000000,   -- .reserved5
+        0x0000000a,   -- .hmx_cvt_mpy_size
+        0x00000000,   -- .axi3_lowaddr
+   };
 
 local hexagon_cluster= {
     hexagon_num_threads = 1;
@@ -99,6 +148,13 @@ local hexagon_cluster= {
              timer0_mem    = {address=0xfc921000, size=0x1000};
              timer1_mem    = {address=0xfc922000, size=0x1000}};
     pass = {target_socket   = {address=0x0       , size=0x40000000}};
+    wdog = { socket        = {address=NSP0_AHBS_BASE + 0x84000, size=0x1000}};
+    pll_0 = { socket        =  {address=NSP0_AHBS_BASE + 0x40000, size=0x10000}};
+    pll_1 = { socket        =  {address=0x1b001000, size=0x10000}};
+    pll_2 = { socket        =  {address=0x1b020000, size=0x10000}};
+    pll_3 = { socket        =  {address=0x1b021000, size=0x10000}};
+    rom=  {  target_socket = {address=CFGTABLE_BASE, size=0x100 },read_only=true, load={data=SA8540P_nsp0_config_table, offset=0}};
+    csr = { socket = {address=0x1B300000, size=0x1000}};
 };
 
 platform = {
