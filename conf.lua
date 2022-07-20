@@ -145,8 +145,8 @@ local hexagon_cluster= {
     l2vic={  mem           = {address=0xfc910000, size=0x1000};
              fastmem       = {address=0xd81e0000, size=0x10000}};
     qtimer={ mem           = {address=0xfab20000, size=0x1000};
-             timer0_mem    = {address=0xfc921000, size=0x1000};
-             timer1_mem    = {address=0xfc922000, size=0x1000}};
+             mem_view      = {address=0xfc921000, size=0x2000};
+            nr_frames=2;nr_views=1};
     pass = {target_socket   = {address=0x0       , size=0x40000000}};
     wdog = { socket        = {address=NSP0_AHBS_BASE + 0x84000, size=0x1000}};
     pll_0 = { socket        =  {address=NSP0_AHBS_BASE + 0x40000, size=0x10000}};
@@ -260,7 +260,7 @@ if (platform.hexagon_num_clusters > 0) then
     platform["cfgExtensions"] = {
         cfgtable_size = platform.rom.target_socket.size,
         l2vic_base = platform.hexagon_cluster_0.l2vic.mem.address,
-        qtmr_rg0 = platform.hexagon_cluster_0.qtimer.timer0_mem.address,
-        qtmr_rg1 = platform.hexagon_cluster_0.qtimer.timer1_mem.address,
+        qtmr_rg0 = platform.hexagon_cluster_0.qtimer.mem_view.address,
+        qtmr_rg1 = platform.hexagon_cluster_0.qtimer.mem_view.address + 0x1000,
     };
 end

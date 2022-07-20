@@ -113,7 +113,7 @@ public:
         , m_hexagon_threads("hexagon_thread", p_hexagon_num_threads, [this] (const char *n, size_t i) {
             /* here n is already "hexagon-cpu_<vector-index>" */
             uint64_t l2vic_base=gs::cci_get<uint64_t>(std::string(name())+".l2vic.mem.address");
-            uint64_t qtmr_rg0  =gs::cci_get<uint64_t>(std::string(name())+".qtimer.timer0_mem.address");
+            uint64_t qtmr_rg0  =gs::cci_get<uint64_t>(std::string(name())+".qtimer.mem_view.address");
             return new QemuCpuHexagon(n, m_qemu_hex_inst,
                                       p_cfgbase,
                                       QemuCpuHexagon::v68_rev,
@@ -127,8 +127,7 @@ public:
         parent_router.initiator_socket.bind(m_l2vic.socket);
         parent_router.initiator_socket.bind(m_l2vic.socket_fast);
         parent_router.initiator_socket.bind(m_qtimer.socket);
-        parent_router.initiator_socket.bind(m_qtimer.timer0_socket);
-        parent_router.initiator_socket.bind(m_qtimer.timer1_socket);
+        parent_router.initiator_socket.bind(m_qtimer.view_socket);
         parent_router.initiator_socket.bind(m_wdog.socket);
         for (auto &pll : m_plls) {
             parent_router.initiator_socket.bind(pll.socket);
@@ -150,8 +149,8 @@ public:
             m_l2vic.irq_out[i].bind(m_hexagon_threads[0].irq_in[i]);
         }
 
-        m_qtimer.timer0_irq.bind(m_l2vic.irq_in[3]); // FIXME: Depends on static boolean syscfg_is_linux, may be 2
-        m_qtimer.timer1_irq.bind(m_l2vic.irq_in[4]);
+        m_qtimer.irq[0].bind(m_l2vic.irq_in[3]); // FIXME: Depends on static boolean syscfg_is_linux, may be 2
+        m_qtimer.irq[1].bind(m_l2vic.irq_in[4]);
 
         m_global_peripheral_initiator_hex.m_initiator.bind(m_router.target_socket);
 
@@ -193,6 +192,7 @@ protected:
 
     QemuGPEX* m_gpex;
     QemuVirtioGpuGlPci* m_gpu;
+    sc_core::sc_vector<QemuHexagonQtimer> m_qtimers;
 
     gs::Memory<> m_fallback_mem;
 
@@ -230,6 +230,11 @@ protected:
             m_router.add_initiator(m_gpex->bus_master);
         }
 
+        for (auto &qt: m_qtimers) {
+            m_router.initiator_socket.bind(qt.socket);
+            m_router.initiator_socket.bind(qt.view_socket);
+        }
+
 //        m_router.initiator_socket.bind(m_system_imem.socket);
 
     }
@@ -246,6 +251,14 @@ protected:
                 m_virtio_net_0.irq_out.bind(m_gic->spi_in[irq]);
                 irq=gs::cci_get<int>(std::string(m_virtio_blk_0.name())+".irq");
                 m_virtio_blk_0.irq_out.bind(m_gic->spi_in[irq]);
+            }
+            for (auto& qt : m_qtimers) {
+                uint32_t nr_frames = gs::cci_get<int>(std::string(qt.name())+".nr_frames");
+                for (uint32_t i = 0; i < nr_frames; ++i) {
+                    int irq=gs::cci_get<int>(std::string(qt.name()) + ".irq" + std::to_string(i));
+                    qt.irq[i].bind(m_gic->spi_in[irq]);
+
+                }
             }
 
             if (p_with_gpu.get_value()) {
@@ -326,6 +339,7 @@ public:
         , m_ipcc("ipcc")
         , m_virtio_net_0("virtionet0", m_qemu_inst)
         , m_virtio_blk_0("virtioblk0", m_qemu_inst)
+        , m_qtimers("qtimer", gs::sc_cci_list_items(sc_module::name(),"qtimer").size(), [this] (const char *n, size_t i) {return new QemuHexagonQtimer(n,m_qemu_inst);})
         , m_fallback_mem("fallback_memory")
         , m_loader("load")
     {

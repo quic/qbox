@@ -102,8 +102,7 @@ local nsp0ss = {
     l2vic={  mem           = {address=NSP0_AHBS_BASE + 0x90000, size=0x1000};
              fastmem       = {address=NSP0_BASE     + 0x1e0000, size=0x10000}};
     qtimer={ mem           = {address=NSP0_AHBS_BASE + 0xA0000, size=0x1000};
-             timer0_mem    = {address=NSP0_AHBS_BASE + 0xA1000, size=0x1000};
-             timer1_mem    = {address=NSP0_AHBS_BASE + 0xA2000, size=0x1000}};
+             mem_view      = {address=NSP0_AHBS_BASE + 0xA1000, size=0x2000}};
     pass = {target_socket  = {address=0x0 , size=NSP0_AHB_HIGH, relative_addresses=false}};
     cfgtable_base = CFGTABLE_BASE;
 --    SA8540P_nsp0_config_table=get_SA8540P_nsp0_config_table();
@@ -144,9 +143,14 @@ platform = {
     hexagon_ram={target_socket={address=NSP_VTCM_BASE_ADDR, size=NSP_VTCM_SIZE_BYTES}};
 --    rom=  {  target_socket = {address=CFGTABLE_BASE, size=0x100 },read_only=true, load={data=nsp0ss.SA8540P_nsp0_config_table, offset=0}};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
-             redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0xf60000}};
+             redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0x1C0000}};
     virtionet0= { mem    =   {address=0x1c120000, size=0x10000}, irq=18, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21"};
     virtioblk0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..top().."fw/makena/images/system_qdrive_qvp.img,format=raw,if=none"};
+
+    qtimer_0=   { mem     =   {address=0x17c20000, size=0x1000};
+                  mem_view=   {address=0x17c21000, size=0x1000*2*7}; -- 0x1000*nr_frames*nr_views
+                  irq0=40;irq1=41;irq2=42;irq3=43;irq4=44;irq5=45;irq6=46;
+                  nr_frames=7;nr_views=2;cnttid=0x1111515};
     uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=1};
 
     ipcc= {  socket        = {address=IPC_ROUTER_TOP, size=0xfc000},
