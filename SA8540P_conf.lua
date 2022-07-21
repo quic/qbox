@@ -146,8 +146,7 @@ platform = {
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
              redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0xf60000}};
     virtionet0= { mem    =   {address=0x1c120000, size=0x10000}, irq=18, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21"};
-    virtioblk0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..top().."fw/makena/images/system_qdrive.img,format=raw,if=none"};
-
+    virtioblk0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..top().."fw/makena/images/system_qdrive_qvp.img,format=raw,if=none"};
     uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=1};
 
     ipcc= {  socket        = {address=IPC_ROUTER_TOP, size=0xfc000},
@@ -175,7 +174,7 @@ platform = {
     load={
         {bin_file=top().."fw/makena/images/bl31.bin",
          address=INITIAL_DDR_SPACE_14GB};
-        {bin_file=top().."fw/makena/images/mifs_qdrive_6_1.img",
+        {bin_file=top().."fw/makena/images/mifs_qdrive_qvp.img",
          address=INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE };
         {bin_file=top().."fw/makena/images/smem_makena.bin",
          address=INITIAL_DDR_SPACE_14GB + OFFSET_SMEM_DDR_SPACE };
@@ -183,9 +182,7 @@ platform = {
          address= 0x0C3F0000};
         {bin_file=top().."fw/makena/images/cmd_db.bin",
          address= 0x80860000};
-        --{elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg_makena.cdsp0.prodQ.pbn"};
-        --{elf_file="/local/mnt/workspace/dsp/220603_sidneym_CDSP.HT.2.6.c1-00335-MAKENA-1_02/cdsp_proc/build/ms/bootimage_relocflag_withdummyseg_makena.cdsp0.prodQ.pbn"};
-        {elf_file=top().."bootimage_relocflag_withdummyseg_makena.cdsp0.prodQ.pbn"};
+        {elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg.cdsp0.prodQ.pbn"};
         {data={0x60140200}, address=TCSR_SOC_HW_VERSION_ADDR};
         {data={SMEM_TARG_INFO_ADDR}, address=SMEM_TCSR_TZ_WONCE_ADDR};
         {data={0x00005381}, address=RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRV0};
