@@ -11,7 +11,7 @@ You can build this release natively on Ubuntu 18.04.
 Install dependencies:
 ```bash
 apt update && apt upgrade -y
-apt install -y make build-essential cmake g++ wget flex bison unzip python python3-pip iproute2 ninja-build pkg-config libpixman-1-dev libglib2.0-dev git wget curl libelf-dev
+apt install -y make build-essential cmake g++ wget flex bison unzip python python3-pip iproute2 ninja-build pkg-config libpixman-1-dev libglib2.0-dev git wget curl libelf-dev libvirglrenderer-dev libepoxy-dev libgtk-3-dev libsdl2-dev
 ```
 
 _NOTE for Ubuntu 18, you will need a newer version of cmake._
@@ -92,13 +92,32 @@ init          media         root          tmp
 Once the kernel has booted, you can log in with the 'root' account (no password required).
 
 
-### 6. Explore Sources
+### 6. Run with GPU
+1. Get the openGL linux image from [here](https://gitlab.qualcomm.com/qqvp/firmware-images) and put it in fw/fastrpc-images/images
+2. Copy the filesystem image:
+```
+    cp /prj/qct/llvm/target/vp_qemu_llvm/images/gki/filesystem.bin ./bsp/linux/extras/fs/filesystem.bin
+```
+3. Export the Xvfb display
+```
+    export DISPLAY=:1
+```
+4. Run the vp with the conf.lua
+5. Login with username root
+6. Set DISPLAY
+```
+    export DISPLAY=:0
+```
+7. Demo
+```
+    glxgears
+```
+### 7. Explore Sources
 
 The sc_main(), where the virtual platform is created is in `src/main.cc`.
 
 You can find all the recovered sources in the folder `build/_deps/<package>-src/`.
 
-### 7. Run the test
-
+### 8. Run the test
 You can run a test once you have compiled and built the project, just go to your build directory and run the `make test` command.
 To run this test you need to be in sudo.
