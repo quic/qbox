@@ -100,7 +100,7 @@ public:
         : sc_core::sc_module(n)
         , p_hexagon_num_threads("hexagon_num_threads", 8, "Number of Hexagon threads")
         , p_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
-        , p_cfgbase("cfgtable_base", 0x1A180000, "CFG extension base")
+        , p_cfgbase("cfgtable_base", 0, "config table base address")
         , m_qemu_hex_inst(m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer", m_qemu_hex_inst) // are we sure it's in the hex cluster?????
@@ -397,6 +397,9 @@ public:
                     m_smmu->irq_global.bind(m_gic->spi_in[girq]);
                 }
             } else {
+                SC_REPORT_ERROR(sc_core::SC_ID_NOT_IMPLEMENTED_,
+                        "multiple DSPs: not implemented");
+
                 for (auto &cpu: m_hexagon_clusters) {
                     cpu.m_router.initiator_socket.bind(m_router.target_socket);
                 }
