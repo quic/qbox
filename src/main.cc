@@ -59,6 +59,7 @@
 #include <qcom/ipcc/ipcc.h>
 #include <qcom/qtb/qtb.h>
 #include <quic/csr/csr.h>
+#include <quic/smmu500/smmu500.h>
 
 #include "wdog.h"
 #include "pll.h"
@@ -71,8 +72,9 @@
 #define ARCH_TIMER_NS_EL1_IRQ (16 + 14)
 #define ARCH_TIMER_NS_EL2_IRQ (16 + 10)
 
-class hexagon_cluster : public sc_core::sc_module
-{
+#define newsmmu
+
+class hexagon_cluster : public sc_core::sc_module {
 public:
     cci::cci_param<unsigned> p_hexagon_num_threads;
     cci::cci_param<uint32_t> p_hexagon_start_addr;
@@ -199,6 +201,10 @@ protected:
     GlobalPeripheralInitiator* m_global_peripheral_initiator_arm;
     Uart m_uart;
     IPCC m_ipcc;
+#ifdef newsmmu
+    smmu500<> m_smmu;
+    smmu500_tbu<> m_tbu;
+#endif
 
     QemuVirtioMMIONet m_virtio_net_0;
     QemuVirtioMMIOBlk m_virtio_blk_0;
@@ -210,9 +216,10 @@ protected:
     gs::Memory<> m_fallback_mem;
 
     gs::Loader<> m_loader;
-
-    QemuArmSmmu* m_smmu = nullptr;
-    qtb<>* m_qtb;
+#ifndef newsmmu
+    QemuArmSmmu *m_smmu=nullptr;
+#endif
+    qtb<> *m_qtb;
 
     void do_bus_binding() {
         if (p_arm_num_cpus) {
@@ -232,6 +239,9 @@ protected:
         m_router.initiator_socket.bind(m_hexagon_ram.socket);
         m_router.initiator_socket.bind(m_uart.socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
+#ifdef newsmmu
+        m_router.initiator_socket.bind(m_smmu.socket);
+#endif
         m_router.initiator_socket.bind(m_virtio_net_0.socket);
         m_router.initiator_socket.bind(m_virtio_blk_0.socket);
 
@@ -332,60 +342,45 @@ protected:
     }
 
 public:
-    GreenSocsPlatform(const sc_core::sc_module_name& n):
-        sc_core::sc_module(n),
-        p_hexagon_num_clusters("hexagon_num_clusters", 2,
-                               "Number of Hexagon cluster"),
-        p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores"),
-        p_num_redists("num_redists", 1, "Number of redistribution regions"),
-        p_with_gpu("with_gpu", false, "Build platform with GPU"),
-        m_broker({
-            { "gic.num_spi",
-              cci::cci_value(960) }, // 64 seems reasonable, but can be up to
-                                     // 960 or 987 depending on how the gic is
-                                     // used MUST be a multiple of 32
-            { "gic.redist_region",
-              cci::cci_value(std::vector<unsigned int>(
-                  p_num_redists, p_arm_num_cpus / p_num_redists)) },
-        }),
-        p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns"),
-        p_uart_backend("uart_backend_port", 0,
-                       "uart backend port number, either 0 for 'stdio' or a "
-                       "port number (e.g. 4001)")
+    GreenSocsPlatform(const sc_core::sc_module_name &n)
+        : sc_core::sc_module(n)
+        , p_hexagon_num_clusters("hexagon_num_clusters", 2, "Number of Hexagon cluster")
+        , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
+        , p_num_redists("num_redists", 1, "Number of redistribution regions")
+        , p_with_gpu("with_gpu", false, "Build platform with GPU")
+        , m_broker({
+            {"gic.num_spi", cci::cci_value(960)}, // 64 seems reasonable, but can be up to 960 or 987 depending on how the gic is used
+                                                  // MUST be a multiple of 32
+            {"gic.redist_region", cci::cci_value(std::vector<unsigned int>(p_num_redists, p_arm_num_cpus/p_num_redists)) },
+        })
+        , p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
+        , p_uart_backend("uart_backend_port", 0, "uart backend port number, either 0 for 'stdio' or a port number (e.g. 4001)")
 
-        ,
-        m_router("router")
+        , m_router("router")
 
-        ,
-        m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance",
-                                            QemuInstance::Target::AARCH64)),
-        m_cpus("cpu", p_arm_num_cpus,
-               [this](const char* n, size_t i) {
-                   /* here n is already "cpu_<vector-index>" */
-                   return new QemuCpuArmCortexA76(n, m_qemu_inst);
-               }),
-        m_hexagon_clusters("hexagon_cluster", p_hexagon_num_clusters,
-                           [this](const char* n, size_t i) {
-                               return new hexagon_cluster(n, m_inst_mgr_h,
-                                                          m_router);
-                           }),
-        m_rams(
-            "ram", gs::sc_cci_list_items(sc_module::name(), "ram").size(),
-            [this](const char* n, size_t i) { return new gs::Memory<>(n); }),
-        m_hexagon_ram("hexagon_ram")
-        //        , m_system_imem("system_imem")
-        ,
-        m_uart("uart"),
-        m_ipcc("ipcc"),
-        m_virtio_net_0("virtionet0", m_qemu_inst),
-        m_virtio_blk_0("virtioblk0", m_qemu_inst),
-        m_qtimers("qtimer",
-                  gs::sc_cci_list_items(sc_module::name(), "qtimer").size(),
-                  [this](const char* n, size_t i) {
-                      return new QemuHexagonQtimer(n, m_qemu_inst);
-                  }),
-        m_fallback_mem("fallback_memory"),
-        m_loader("load") {
+        , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
+        , m_cpus("cpu", p_arm_num_cpus, [this] (const char *n, size_t i) {
+            /* here n is already "cpu_<vector-index>" */
+            return new QemuCpuArmCortexA76(n, m_qemu_inst);
+        })
+        , m_hexagon_clusters("hexagon_cluster", p_hexagon_num_clusters, [this] (const char *n, size_t i) {
+            return new hexagon_cluster(n, m_inst_mgr_h, m_router);
+        })
+        , m_rams("ram", gs::sc_cci_list_items(sc_module::name(),"ram").size(), [this] (const char *n, size_t i) {return new gs::Memory<>(n);})
+        , m_hexagon_ram("hexagon_ram")
+//        , m_system_imem("system_imem")
+        , m_uart("uart")
+        , m_ipcc("ipcc")
+#ifdef newsmmu
+        , m_smmu("smmu")
+        , m_tbu("tbu", &m_smmu)
+#endif
+        , m_virtio_net_0("virtionet0", m_qemu_inst)
+        , m_virtio_blk_0("virtioblk0", m_qemu_inst)
+        , m_qtimers("qtimer", gs::sc_cci_list_items(sc_module::name(),"qtimer").size(), [this] (const char *n, size_t i) {return new QemuHexagonQtimer(n,m_qemu_inst);})
+        , m_fallback_mem("fallback_memory")
+        , m_loader("load")
+    {
         using tlm_utils::tlm_quantumkeeper;
 
         sc_core::sc_time global_quantum(p_quantum_ns, sc_core::SC_NS);
@@ -421,13 +416,16 @@ public:
         do_bus_binding();
 
         if (p_hexagon_num_clusters) {
-            if (p_hexagon_num_clusters == 1) {
-                m_smmu = new QemuArmSmmu(
-                    "smmu", m_hexagon_clusters[0].m_qemu_hex_inst);
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(
-                    m_smmu->upstream_socket[0]);
+            if (p_hexagon_num_clusters==1) {
+#ifndef newsmmu
+                m_smmu = new QemuArmSmmu("smmu", m_hexagon_clusters[0].m_qemu_hex_inst);
+                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_smmu->upstream_socket[0]);
                 m_smmu->downstream_socket[0].bind(m_router.target_socket);
                 m_router.initiator_socket.bind(m_smmu->register_socket);
+#else
+                m_hexagon_clusters[0].m_router.initiator_socket.bind(m_tbu.upstream_socket);
+                m_tbu.downstream_socket.bind(m_router.target_socket);
+#endif
 #ifdef ENABLE_QTB
                 m_hexagon_clusters[0].m_router.initiator_socket.bind(
                     m_smmu->upstream_socket[1]);
@@ -438,6 +436,17 @@ public:
                 m_qtb->initiator_socket(m_smmu->upstream_socket[10]);
                 m_smmu->downstream_socket[10](m_qtb->target_socket);
 #endif
+#ifdef newsmmu
+                m_smmu.dma_socket.bind(m_router.target_socket);
+                {
+                    int irq=gs::cci_get<int>(std::string(m_smmu.name())+".irq_context");
+                    int girq=gs::cci_get<int>(std::string(m_smmu.name())+".irq_global");
+                    for (int i=0; i<m_smmu.p_num_cb;i++) {
+                        m_smmu.irq_context[i].bind(m_gic->spi_in[irq+i]);
+                    }
+                    m_smmu.irq_global.bind(m_gic->spi_in[girq]);
+                }
+#else
                 m_smmu->dma_socket.bind(m_router.target_socket);
 
                 {
@@ -450,6 +459,7 @@ public:
                     }
                     m_smmu->irq_global.bind(m_gic->spi_in[girq]);
                 }
+#endif
             } else {
                 SC_REPORT_ERROR(sc_core::SC_ID_NOT_IMPLEMENTED_,
                                 "multiple DSPs: not implemented");
@@ -487,9 +497,11 @@ public:
         if (m_gic) {
             delete m_gic;
         }
+#ifndef newsmmu
         if (m_smmu) {
             delete m_smmu;
         }
+#endif
         if (p_with_gpu.get_value()) {
             delete m_gpu;
             delete m_gpex;
@@ -500,7 +512,7 @@ public:
 int sc_main(int argc, char* argv[]) {
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
 
-    GreenSocsPlatform platform("platform");
+    GreenSocsPlatform *platform = new GreenSocsPlatform("platform");
 
     auto start = std::chrono::system_clock::now();
     try {
@@ -522,5 +534,6 @@ int sc_main(int argc, char* argv[]) {
     std::cout << "Simulation Duration: " << elapsed.count() << "s (Wall Clock)"
               << std::endl;
 
+    free(platform);
     return 0;
 }
