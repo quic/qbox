@@ -13,6 +13,7 @@ execute_process(COMMAND git config --get remote.origin.url
     OUTPUT_VARIABLE GIT_URL)
 
 string(REGEX REPLACE "(.*)/${PACKAGE_PATH}.git$" "\\1/" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
+string(REGEX REPLACE "(.*)/sandboxes/[^\/]*/(.*)" "\\1/" GREENSOCS_GIT_ORIGIN "${GREENSOCS_GIT_ORIGIN}")
 
 if ( "${GREENSOCS_GIT}" STREQUAL "")
     set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
