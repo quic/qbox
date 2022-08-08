@@ -4,11 +4,24 @@ project(systemc-uarts VERSION 1.0)
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
+set(PACKAGE_PATH "greensocs/components/systemc-uarts")
+set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositoies")
+
+execute_process(COMMAND git config --get remote.origin.url
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    OUTPUT_VARIABLE GIT_URL)
+
+string(REGEX REPLACE "(.*)/${PACKAGE_PATH}.git$" "\\1/" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
+
+if ( "${GREENSOCS_GIT}" STREQUAL "")
+    set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
+endif()
+
 if (NOT gs-cmake_SOURCE_DIR)
    include(FetchContent)
    FetchContent_Declare(gs-cmake
-      GIT_REPOSITORY git@git.greensocs.com:greensocs/cmake-boilerplate.git
-      GIT_TAG master
+        GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/cmake-boilerplate.git
+        GIT_TAG master
    )
    FetchContent_MakeAvailable(gs-cmake)
 endif()
