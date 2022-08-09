@@ -63,7 +63,7 @@ protected:
     int64_t m_last_vclock;
 
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
-    bool finished=false;
+    bool m_finished=false;
     QemuCpuHintTlmExtension m_cpu_hint_ext;
 
     /*
@@ -172,6 +172,7 @@ protected:
      */
     void wait_for_work()
     {
+        if (m_finished) return;
         m_qk->stop();
         if (m_coroutines) {
             m_on_sysc.run_on_sysc([this] () { wait(m_external_ev); });
@@ -182,11 +183,11 @@ protected:
                 m_signaled = false;
             } else{
                 std::unique_lock<std::mutex> lock(m_inst.g_signaled_lock);
-                m_inst.g_signaled_cond.wait(lock, [this] { return m_inst.g_signaled; });
+                m_inst.g_signaled_cond.wait(lock, [this] { return m_inst.g_signaled | m_finished ; });
                 m_inst.g_signaled = false; 
             }
-            if (finished) return;
         }
+        if (m_finished) return;
         m_qk->start();
     }
 
@@ -237,7 +238,7 @@ protected:
         if (m_cpu.can_run()) {
             m_cpu.set_soft_stopped(false);
         }
-        if (!finished)
+        if (!m_finished)
             rearm_deadline_timer();
     }
 
@@ -365,7 +366,7 @@ public:
             return;
         }
 
-        finished=true; // assert before taking lock
+        m_finished=true; // assert before taking lock
 
         m_inst.get().lock_iothread();
 
