@@ -1,3 +1,4 @@
 include:
-  - project: 'GreenSocs/cmake-boilerplate'
+  - project: 'qqvp/greensocs/cmake-boilerplate'
     file: 'gitlab-ci-template.yml'
+    
