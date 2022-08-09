@@ -60,8 +60,8 @@
     do {                                 \
         if (DEBUG_DEV_SMMU) {            \
             char tmp[1000];              \
-            printf(/*tmp,*/ __VA_ARGS__);   \
-            /*SC_REPORT_INFO("smmu", tmp);*/ \
+            sprintf(tmp, __VA_ARGS__);   \
+            SC_REPORT_INFO("smmu", tmp); \
         }                                \
     } while (0);
 
@@ -69,8 +69,8 @@
     do {                                     \
         if (DEBUG_DEV_SMMU_PTW) {            \
             char tmp[1000];                  \
-            printf(/*tmp,*/ __VA_ARGS__);       \
-            /*SC_REPORT_INFO("smmu-ptw", tmp); */\
+            sprintf(tmp, __VA_ARGS__);       \
+            SC_REPORT_INFO("smmu-ptw", tmp); \
         }                                    \
     } while (0);
 
@@ -1104,40 +1104,6 @@ private:
 /* Maximum number of TBUs supported by this model.  */
 #define MAX_TBU 16
 
-    // typedef struct SMMU SMMU;
-    //    typedef struct TBU {
-    //    SMMU *smmu;
-    //    IOMMUMemoryRegion iommu;
-    //    AddressSpace *as;
-    //    MemoryRegion *mr;
-    //    } TBU;
-
-    // struct SMMU {
-    //     SysBusDevice parent_obj;
-    //     MemoryRegion iomem;
-
-    //    MemoryRegion *dma_mr;
-    //    AddressSpace dma_as;
-
-    //    TBU tbu[MAX_TBU];
-    //    uint8_t num_tbu;
-
-    //    struct {
-    //        qemu_irq global;
-    //        qemu_irq context[MAX_CB];
-    //    } irq;
-
-    //    struct {
-    //        uint32_t pamax;
-    //        uint16_t num_smr;
-    //        uint16_t num_cb;
-    //        uint16_t num_pages;
-    //        bool ato;
-    //        uint8_t version;
-    //    } cfg;
-
-    //    RegisterAccessInfo *rai_smr;
-    //    RegisterAccessInfo *rai_cb;
     uint32_t regs[R_MAX];
     RegisterAccessInfo* regs_access_info;
     //};
@@ -1372,7 +1338,6 @@ private:
         }
 
         if (epd) {
-            std::cout << "HERE1\n";
             /* We've already missed the TLB at this stage so fault.  */
             goto do_fault;
         }
@@ -1419,7 +1384,6 @@ private:
 
             if (inputsize < 25 || inputsize > 48 ||
                 extract64(req->va, inputsize, 64 - inputsize)) {
-                std::cout << "HERE2\n";
                 goto do_fault;
             }
         } else {
@@ -1434,7 +1398,6 @@ private:
             ok = check_s2_startlevel(true, outputsize, level, inputsize,
                                      stride);
             if (!ok) {
-                std::cout << "HERE3\n";
                 goto do_fault;
             }
         }
@@ -1444,7 +1407,6 @@ private:
         ttbr &= ~((1ULL << baselowerbound) - 1);
 
         if (!check_out_addr(ttbr, outputsize)) {
-            std::cout << "HERE4\n";
             goto do_fault;
         }
 
@@ -1469,7 +1431,6 @@ private:
                 if (req->err) {
                     regs[R_SMMU_CB0_IPAFAR_LOW] = descaddr;
                     regs[R_SMMU_CB0_IPAFAR_HIGH] = descaddr >> 32;
-                    std::cout << "HERE5\n";
                     goto do_fault;
                 }
                 descaddr = s2req.pa;
@@ -1477,7 +1438,6 @@ private:
 
             tlm::tlm_generic_payload txn;
             txn.set_command(tlm::TLM_READ_COMMAND);
-            std::cout << std::hex << " DESCADDR 0x" << descaddr/* << " stage " << stage */<< "\n";
             txn.set_address(descaddr);
             txn.set_data_ptr(reinterpret_cast<unsigned char*>(&desc));
             txn.set_data_length(sizeof(desc));
@@ -1524,14 +1484,12 @@ private:
             case 1:
                 blocktranslate = true;
                 if (level < firstblocklevel) {
-                    std::cout << "HERE6\n";
                     goto do_fault;
                 }
                 break;
             case 3:
                 tableattrs |= extract64(desc, 59, 5);
                 if (!check_out_addr(ttbr, outputsize)) {
-                    std::cout << "HERE7\n";
                     goto do_fault;
                 }
                 level++;
@@ -1540,7 +1498,6 @@ private:
         } while (!blocktranslate);
 
         if (!check_out_addr(ttbr, outputsize)) {
-            std::cout << "HERE8\n";
             goto do_fault;
         }
 
@@ -1549,7 +1506,6 @@ private:
             page_size = (1ULL << ((stride * (4 - level)) + 3));
             ttbr |= (req->va & (page_size - 1));
             req->page_size = ((stride * (4 - level)) + 3);
-            std::cout << "Page size " << req->page_size << "\n";
         }
 
         s2attrs = attrs = extract64(desc, 2, 10) |
@@ -1599,7 +1555,6 @@ private:
             /* RO.  */
             case 1:
                 if (req->access == IOMMU_WO) {
-                    std::cout << "HERE9\n";
                     goto do_fault;
                 }
                 req->prot &= ~IOMMU_WO;
@@ -1607,7 +1562,6 @@ private:
             /* WO.  */
             case 2:
                 if (req->access == IOMMU_RO) {
-                    std::cout << "HERE10\n";
                     goto do_fault;
                 }
                 req->prot &= ~IOMMU_RO;
@@ -1734,7 +1688,6 @@ private:
         uint64_t val = (*(uint64_t*)ptr);
 
         val <<= 32;
-        std::cout << "SMMU ***** HERE 1\n";
         val |= regs[(addr / 4)];
         smmu500_gat(val, false, false);
     }
@@ -1752,7 +1705,6 @@ private:
         uint64_t val = (*(uint64_t*)ptr);
 
         val <<= 32;
-        std::cout << "SMMU ***** HERE 2\n";
         val |= regs[(addr / 4)];
         smmu500_gat(val, true, false);
     }
@@ -1770,7 +1722,6 @@ private:
         uint64_t val = (*(uint64_t*)ptr);
 
         val <<= 32;
-        std::cout << "SMMU **** HERE 3\n";
         val |= regs[(addr / 4)];
         smmu500_gat(val, false, true);
     }
@@ -1788,7 +1739,6 @@ private:
         uint64_t val = (*(uint64_t*)ptr);
 
         val <<= 32;
-        std::cout << "SMMU **** HERE 4\n";
         val |= regs[(addr / 4)];
         smmu500_gat(val, true, true);
     }
@@ -1815,19 +1765,6 @@ private:
                 smmu_nscr0_pw_f(txn, delay);
             };
 
-    /*int smmu_attrs_to_index(IOMMUMemoryRegion *iommu, MemTxAttrs
-    attrs)
-    {
-        uint16_t master_id = attrs.requester_id & 0xffff;
-
-        return (master_id << 1) | attrs.secure;
-    }
-
-    int smmu_num_indexes(IOMMUMemoryRegion *iommu)
-    {
-        return (1 << 17) - 1;
-    }
-    */
     void smmu_fsr_pw_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
         unsigned int i;
 
@@ -1905,9 +1842,6 @@ protected:
             SC_REPORT_ERROR("SMMU", "only 4 or 8 byte transactions supported.\n");
         }
 
-        // for (int i=0;i<len/4;i++) { // need to do it like this to pick up the AC for each register...
-        //         RegisterAccessInfo* ac = &regs_access_info[(addr / 4)+i];
-        //         assert(ac->name);
         std::stringstream info;
         info << name();
         switch (txn.get_command()) {
@@ -1929,7 +1863,6 @@ protected:
 
                 info << "(" << std::hex << regs[(addr / 4) + i] << ")";
             }
-            //             info << " " << addr / 4 << " == " << ac->addr;
         } break;
         case tlm::TLM_WRITE_COMMAND: {
             /* Create the no write mask based on the read only, write to clear
@@ -1952,12 +1885,9 @@ protected:
                 uint32_t old_val = regs[(addr / 4) + i];
                 uint32_t no_w_mask = ac->ro | ac->w1c | ac->rsvd;
                 uint32_t val;
-                //            if (len==4) {
+
                 val = vals[i];
-                //            } else {
-                //                val = *(uint64_t*)ptr;
-                //                assert(no_w_mask == 0 && ac->w1c==0);
-                //            }
+
                 uint64_t new_val = (val & ~no_w_mask) | (old_val & no_w_mask);
                 new_val &= ~(val & ac->w1c);
 
@@ -1965,23 +1895,11 @@ protected:
                     ac->pre_write(txn, delay);
                 }
                 regs[(addr / 4) + i] = val;
-                //            if (len==8) {
-                //                regs[(addr/4)+1] = val>>32;
-                //            }
+
                 if (ac->post_write) {
                     ac->post_write(txn, delay);
                 }
 
-                /*                    std::stringstream info;
-                        info << name() << " : " << access << " access to "
-                             << ac->name
-                 //            << " bytes " << len
-                             << " at address "
-                             << "0x" << std::hex << addr << " value 0x" << val[i]
-                             << " " << addr / 4 << " == " << ac->addr
-                             << " (reg: 0x" << regs[(addr / 4)+i] << ")";
-                        SC_REPORT_INFO("SMMU", info.str().c_str());
-                        */
                 info << "(0x" << std::hex << regs[(addr / 4) + i] << ")";
             }
         } break;
@@ -2002,8 +1920,6 @@ protected:
 
         txn.set_dmi_allowed(false);
     }
-
-    // std::vector<RegisterAccessInfo> test = { { .name = "foo" } };
 
     std::vector<RegisterAccessInfo> smmu_regs_info = {
         /* Manually added.  */
@@ -2923,8 +2839,6 @@ public:
         for (int i = 0; i < p_num_smr; i++) {
             regs_access_info[A_SMMU_SMR0 / 4 + i].name = "SMMU_SMRn";
             regs_access_info[A_SMMU_S2CR0 / 4 + i].name = "SMMU_S2CRn";
-            std::cout << std::hex << "SMMU **** i" << i << " SMR Setup "
-                      << " 0x" << i + A_SMMU_SMR0 / 4 << " " << (A_SMMU_S2CR0 / 4 + i) * 4 << "\n";
         }
 
         for (int cb = 0; cb < p_num_cb; cb++) {
@@ -2933,7 +2847,6 @@ public:
                 regs_access_info[cb_base + ((smmu_cb_page_regs_info[i].addr) / 4)] = smmu_cb_page_regs_info[i];
             }
             for (int i = 0; i < smmu_cb_regs_info.size(); i++) {
-                std::cout << std::hex << "SMMU **** i" << i << " cb " << cb << "Setup " << smmu_cb_regs_info[i].name << " 0x" << cb + ((smmu_cb_regs_info[i].addr) / 4) << "\n";
                 regs_access_info[cb + (smmu_cb_regs_info[i].addr / 4)] = smmu_cb_regs_info[i];
             }
         }
@@ -2957,287 +2870,6 @@ public:
     }
 };
 
-#if 0
-void smmu500_reset(DeviceState* dev) {
-    SMMU* s = XILINX_SMMU500(dev);
-    unsigned int num_pages_log2 = 31 - clz32(p_num_cb);
-    unsigned int i;
-
-    for (i = 0; i < ARRAY_SIZE(regs_info); ++i) {
-        register_reset(&regs_info[i]);
-    }
-
-    ARRAY_FIELD_DP32(regs, SMMU_SIDR0, ATOSNS, p_ato);
-    ARRAY_FIELD_DP32(regs, SMMU_SIDR0, NUMSMRG, p_num_smr);
-    ARRAY_FIELD_DP32(regs, SMMU_SIDR1, NUMCB, p_num_cb);
-    ARRAY_FIELD_DP32(regs, SMMU_SIDR1, NUMPAGENDXB, num_pages_log2 - 1);
-    ARRAY_FIELD_DP32(regs, SMMU_SCR1, NSNUMCBO, p_num_cb);
-    ARRAY_FIELD_DP32(regs, SMMU_SCR1, NSNUMSMRGO, p_num_smr);
-    regs[R_SMMU_SIDR7] = p_version;
-    regs[R_SMMU_TBU_PWR_STATUS] = (1 << num_tbu) - 1;
-}
-
-const MemoryRegionOps smmu500_ops = {
-    .read = register_read_memory,
-    .write = register_write_memory,
-    .endianness = DEVICE_LITTLE_ENDIAN,
-    .valid =
-        {
-            .min_access_size = 4,
-            .max_access_size = 8,
-        },
-};
-
-int smmu_populate_regarray(SMMU* s, RegisterInfoArray* r_array, int pos,
-                           const RegisterAccessInfo* rae, int num_rae) {
-    int i;
-
-    for (i = 0; i < num_rae; i++) {
-        int index = rae[i].addr / 4;
-        RegisterInfo* r = &regs_info[index];
-
-        object_initialize((void*)r, sizeof(*r), TYPE_REGISTER);
-
-        *r = (RegisterInfo){
-            .data = &regs[index],
-            .data_size = sizeof(uint32_t),
-            .access = &rae[i],
-            .opaque = OBJECT(s),
-        };
-
-        r_array->r[i + pos] = r;
-    }
-
-    return i + pos;
-}
-
-void smmu_create_rai_smr(SMMU* s) {
-    int i;
-
-    rai_smr = g_new0(RegisterAccessInfo, p_num_smr * 2);
-    for (i = 0; i < p_num_smr; i++) {
-        rai_smr[i * 2].name = g_strdup_printf("SMMU_SMR%d", i);
-        rai_smr[i * 2].addr = A_SMMU_SMR0 + i * 4;
-        rai_smr[i * 2 + 1].name = g_strdup_printf("SMMU_S2CR%d", i);
-        rai_smr[i * 2 + 1].addr = A_SMMU_S2CR0 + i * 4;
-    }
-}
-
-void smmu_create_rai_cb(SMMU* s) {
-    int cb;
-
-    rai_cb = g_new0(RegisterAccessInfo, p_num_cb * NUM_REGS_PER_CB);
-
-    for (cb = 0; cb < p_num_cb; cb++) {
-        int pos = cb * NUM_REGS_PER_CB;
-        int i;
-
-        memcpy(rai_cb + pos, smmu_cb_regs_info, sizeof smmu_cb_regs_info);
-        for (i = 0; i < ARRAY_SIZE(smmu_cb_regs_info); i++) {
-            const char* name = smmu_cb_regs_info[i].name;
-            uint64_t addr = smmu_cb_regs_info[i].addr;
-
-            rai_cb[i + pos].name = g_strdup_printf("SMMU_CB%s%d", name, cb);
-            rai_cb[i + pos].addr = addr + cb * 4;
-        }
-        pos += 3;
-
-        /* Initialize with CB template.  */
-        memcpy(rai_cb + pos, smmu_cb_page_regs_info,
-               sizeof smmu_cb_page_regs_info);
-
-        /* Generate context specific names.  */
-        for (i = 0; i < ARRAY_SIZE(smmu_cb_page_regs_info); i++) {
-            const char* name = smmu_cb_page_regs_info[i].name;
-            uint64_t addr = smmu_cb_page_regs_info[i].addr;
-            unsigned int cb_base = smmu_cb_offset(cb) * 4;
-
-            rai_cb[i + pos].name = g_strdup_printf("SMMU_CB%d_%s", cb, name);
-            rai_cb[i + pos].addr = cb_base + addr;
-        }
-    }
-}
-
-RegisterInfoArray* smmu_create_regarray(SMMU* s) {
-    const char* device_prefix = object_get_typename(OBJECT(s));
-    uint64_t memory_size = R_MAX * 4;
-    RegisterInfoArray* r_array;
-    int num_regs;
-    int pos = 0;
-
-    if (p_num_smr < 1 || p_num_smr > 127) {
-        error_report("num-smr %d must be between 1 - 127", p_num_smr);
-        exit(EXIT_FAILURE);
-    }
-
-    if (p_num_cb < 4 || p_num_cb > MAX_CB || p_num_cb > p_num_pages) {
-        error_report("num-cb %d must be between 4 - 128 and <= num-pages %d",
-                     p_num_cb, p_num_pages);
-        exit(EXIT_FAILURE);
-    }
-
-    if (p_num_pages < 4 || !is_power_of_2(p_num_pages)) {
-        error_report("num-pages %d must be > 4 and a power of 2", p_num_pages);
-        exit(EXIT_FAILURE);
-    }
-
-    smmu_create_rai_smr(s);
-    smmu_create_rai_cb(s);
-
-    num_regs = ARRAY_SIZE(smmu500_regs_info);
-    num_regs += p_num_smr * 2;
-    num_regs += p_num_cb * NUM_REGS_PER_CB;
-
-    r_array = g_new0(RegisterInfoArray, 1);
-    r_array->r = g_new0(RegisterInfo*, num_regs);
-    r_array->num_elements = num_regs;
-    r_array->debug = XILINX_SMMU500_ERR_DEBUG;
-    r_array->prefix = device_prefix;
-
-    pos = smmu_populate_regarray(r_array, pos, smmu500_regs_info,
-                                 ARRAY_SIZE(smmu500_regs_info));
-
-    pos = smmu_populate_regarray(r_array, pos, rai_smr, p_num_smr * 2);
-
-    pos = smmu_populate_regarray(r_array, pos, rai_cb,
-                                 p_num_cb * NUM_REGS_PER_CB);
-
-    memory_region_init_io(&r_array->mem, OBJECT(s), &smmu500_ops, r_array,
-                          device_prefix, memory_size);
-    return r_array;
-}
-
-void smmu500_realize(DeviceState* dev, Error** errp) {
-    SMMU* s = XILINX_SMMU500(dev);
-    SysBusDevice* sbd = SYS_BUS_DEVICE(dev);
-    RegisterInfoArray* reg_array;
-    unsigned int i;
-
-    memory_region_init(&iomem, OBJECT(dev), TYPE_XILINX_SMMU500, R_MAX * 4);
-    reg_array = smmu_create_regarray(s);
-    memory_region_add_subregion(&iomem, 0x0, &reg_array->mem);
-    sysbus_init_mmio(sbd, &iomem);
-
-    address_space_init(&dma_as, dma_mr ? dma_mr : get_system_memory(), NULL);
-
-    for (i = 0; i < num_tbu; i++) {
-        char* name = g_strdup_printf("smmu-tbu%d", i);
-
-        assert(tbu[i].mr);
-        tbu[i].as = g_malloc0(sizeof(*(tbu[i].as)));
-        address_space_init(tbu[i].as, tbu[i].mr, NULL);
-        memory_region_init_iommu(&tbu[i].iommu, sizeof(tbu[i].iommu),
-                                 TYPE_XILINX_SMMU500_IOMMU_MEMORY_REGION,
-                                 OBJECT(sbd), name, UINT64_MAX - 1);
-        sysbus_init_mmio(sbd, MEMORY_REGION(&tbu[i].iommu));
-        g_free(name);
-    }
-
-    sysbus_init_irq(SYS_BUS_DEVICE(dev), &irq.global);
-    for (i = 0; i < p_num_cb; i++) {
-        sysbus_init_irq(SYS_BUS_DEVICE(dev), &irq.context[i]);
-    }
-}
-
-void smmu500_init(Object* obj) {
-    SMMU* s = XILINX_SMMU500(obj);
-    int i;
-
-    object_property_add_link(obj, "dma", TYPE_MEMORY_REGION, (Object**)&dma_mr,
-                             qdev_prop_allow_set_link_before_realize,
-                             OBJ_PROP_LINK_STRONG);
-
-    for (i = 0; i < MAX_TBU; i++) {
-        char* name = g_strdup_printf("mr-%d", i);
-        object_property_add_link(
-            obj, name, TYPE_MEMORY_REGION, (Object**)&tbu[i].mr,
-            qdev_prop_allow_set_link_before_realize, OBJ_PROP_LINK_STRONG);
-        g_free(name);
-        tbu[i].smmu = s;
-    }
-}
-
-void smmu_free_rai(RegisterAccessInfo* rai, int num) {
-    int i;
-
-    if (!rai) {
-        return;
-    }
-
-    for (i = 0; i < num; i++) {
-        g_free((void*)rai->name);
-    }
-    g_free(rai);
-}
-
-void smmu500_finalize(Object* obj) {
-    SMMU* s = XILINX_SMMU500(obj);
-
-    smmu_free_rai(rai_smr, p_num_smr * 2);
-    smmu_free_rai(rai_cb, p_num_cb * NUM_REGS_PER_CB);
-}
-
-Property smmu_properties[] = {
-    DEFINE_PROP_UINT32("pamax", SMMU, p_pamax, 48),
-    DEFINE_PROP_UINT16("num-smr", SMMU, p_num_smr, 48),
-    DEFINE_PROP_UINT16("num-cb", SMMU, p_num_cb, 16),
-    DEFINE_PROP_UINT16("num-pages", SMMU, p_num_pages, 16),
-    DEFINE_PROP_BOOL("ato", SMMU, p_ato, true),
-    DEFINE_PROP_UINT8("version", SMMU, p_version, 0x21),
-    DEFINE_PROP_UINT8("num-tbu", SMMU, num_tbu, 0),
-    DEFINE_PROP_END_OF_LIST(),
-};
-
-const VMStateDescription vmstate_smmu500 = { .name = TYPE_XILINX_SMMU500,
-                                             .version_id = 1,
-                                             .minimum_version_id = 1,
-                                             .minimum_version_id_old = 1,
-                                             .fields = (VMStateField[]){
-                                                 VMSTATE_UINT32_ARRAY(
-                                                     regs, SMMU, R_MAX),
-                                                 VMSTATE_END_OF_LIST(),
-                                             } };
-
-void smmu500_class_init(ObjectClass* klass, void* data) {
-    DeviceClass* dc = DEVICE_CLASS(klass);
-
-    dc->reset = smmu500_reset;
-    dc->realize = smmu500_realize;
-    dc->vmsd = &vmstate_smmu500;
-    device_class_set_props(dc, smmu_properties);
-}
-
-void smmu500_iommu_memory_region_class_init(ObjectClass* klass, void* data) {
-    IOMMUMemoryRegionClass* imrc = IOMMU_MEMORY_REGION_CLASS(klass);
-
-    imrc->translate = smmu_translate;
-    imrc->attrs_to_index = smmu_attrs_to_index;
-    imrc->num_indexes = smmu_num_indexes;
-}
-
-const TypeInfo smmu500_info = {
-    .name = TYPE_XILINX_SMMU500,
-    .parent = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(SMMU),
-    .class_init = smmu500_class_init,
-    .instance_init = smmu500_init,
-    .instance_finalize = smmu500_finalize,
-};
-
-const TypeInfo smmu500_iommu_memory_region_info = {
-    .name = TYPE_XILINX_SMMU500_IOMMU_MEMORY_REGION,
-    .parent = TYPE_IOMMU_MEMORY_REGION,
-    .class_init = smmu500_iommu_memory_region_class_init,
-};
-
-void smmu500_register_types(void) {
-    type_register_static(&smmu500_info);
-    type_register_static(&smmu500_iommu_memory_region_info);
-}
-
-type_init(smmu500_register_types)
-#endif
-
 template <unsigned int BUSWIDTH = 32>
 class smmu500_tbu : public sc_core::sc_module
 {
@@ -3256,12 +2888,10 @@ protected:
             (cmd == tlm::TLM_READ_COMMAND && te.perm == smmu500<BUSWIDTH>::IOMMU_WO)) {
             txn.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
         } else {
-//            uint64_t page_size = (te.addr_mask + 1);
+            //            uint64_t page_size = (te.addr_mask + 1);
             txn.set_address(te.translated_addr | (addr & te.addr_mask)); // FIX better handled in smmu_translate?
-            std::cout << std::hex << "SMMU ***** TBU translating 0x" << addr << " to 0x"
-                      << (te.translated_addr | (addr & te.addr_mask)) << " len " <<len<<"\n";
+            D("smmu TBU b_transport: translate 0x%" PRIx64 " to 0x%" PRIx64, addr, te.translated_addr);
             downstream_socket->b_transport(txn, delay);
-            //        std::cout << "Done " << txn.get_response_status() << "\n";
             txn.set_address(addr);
         }
     }
@@ -3275,8 +2905,6 @@ protected:
                                                            //                                      p_tbu_size);
         // ignore permissions, just attempt the access
         txn.set_address(te.translated_addr);
-        //        std::cout << std::hex << "TBU translating 0x" << addr << " to 0x"
-        //                  << te.translated_addr << "\n";
         int ret = downstream_socket->transport_dbg(txn);
         // NB, this may set the DMI !
         txn.set_address(addr);
@@ -3286,7 +2914,6 @@ protected:
     virtual bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data) {
         // We should only get here if the txn from downstream marked a possible DMI
         sc_dt::uint64 addr = txn.get_address();
-        std::cout << "SMMU ******  Doing a DMI...\n";
         typename smmu500<BUSWIDTH>::IOMMUTLBEntry
             te = smmu->smmu_translate(txn, p_topology_id); //, p_tbu_offset,
                                                            //                                      p_tbu_size);
@@ -3295,7 +2922,6 @@ protected:
             assert(te.translated_addr == addr);
             bool ret = downstream_socket->get_direct_mem_ptr(txn, dmi_data);
             dmi_data.set_end_address(0xffffffff); // FIX ??? (allow everything _up to next mapping_, but drop it when a new mapping is added)
-            std::cout << std::hex << "SMMU smmu **** (NO MATCH) start 0x" << dmi_data.get_start_address() << "end 0x" << dmi_data.get_end_address() << "\n";
             return ret;
         }
         // ignore permissions, just attempt the access
@@ -3311,7 +2937,6 @@ protected:
 
         int ret = downstream_socket->get_direct_mem_ptr(txn, dmi_data);
         if (!ret) {
-            std::cout << "FAILED\n";
             return ret;
         }
         uint64_t offset = page_base - dmi_data.get_start_address(); // start_address must be <= page_base, otherwise the DMI is meaningless
@@ -3319,15 +2944,15 @@ protected:
         assert(page_base + page_size <= dmi_data.get_end_address());
         dmi_data.set_dmi_ptr(dmi_data.get_dmi_ptr() + offset);
         dmi_data.set_start_address(addr & (~(page_size - 1)));
-        dmi_data.set_end_address(((addr & (~(page_size - 1))) + page_size)-1);
+        dmi_data.set_end_address(((addr & (~(page_size - 1))) + page_size) - 1);
         dmi_data.allow_read_write();
-        std::cout << "SMMU ***** " << std::hex << "TBU translating 0x" << addr << " "
-                  << "to 0x" << te.translated_addr << " "
-                  << "page size 0x" << page_size << " "
-                  << "page base 0x" << page_base << " "
-                  << "offset 0x" << offset << " "
-                  << "start address: "<< dmi_data.get_start_address() << " "
-                  << "end address: "<< dmi_data.get_end_address() << "\n";               
+
+        D("smmu TBU DMI: translate 0x%" PRIx64 " to 0x%" PRIx64
+          " pg size=%d pg base 0x%" PRIx64
+          " offset 0x" PRIx64
+          " start 0x" PRIx64
+          " end 0x" PRIx64,
+          addr, te.translated_addr, page_size, page_base, offset, dmi_data.get_start_address(), dmi_data.get_end_address());
 
         txn.set_address(addr);
         return ret;
@@ -3335,8 +2960,6 @@ protected:
 
 public:
     cci::cci_param<uint32_t> p_topology_id;
-    //    cci::cci_param<uint64_t> p_tbu_offset;
-    //    cci::cci_param<uint64_t> p_tbu_size;
 
     /* SystemC ports */
     tlm_utils::simple_target_socket<smmu500_tbu, BUSWIDTH> upstream_socket;
@@ -3344,13 +2967,10 @@ public:
         downstream_socket;
 
     smmu500_tbu(sc_core::sc_module_name name,
-                     smmu500<BUSWIDTH>* _smmu)
+                smmu500<BUSWIDTH>* _smmu)
         : p_topology_id("topology_id", 0x0, "Topology ID for this TBU")
-        //        , p_tbu_offset("offset", 0x0, "Address offset for this TBU")
-        //        , p_tbu_size("offset", 0x0, "Address size for this TBU")
         , upstream_socket("upstream_socket")
         , downstream_socket("downstream_socket") {
-        //, smmu(_smmu) {
         smmu = _smmu;
         upstream_socket.register_b_transport(this, &smmu500_tbu::b_transport);
         upstream_socket.register_transport_dbg(this, &smmu500_tbu::transport_dbg);
