@@ -1,4 +1,4 @@
-CPMAddPackage("gh:google/googletest#master")
+gs_addexpackage("gh:google/googletest#main")
 macro(gs_add_test test)
     add_executable(${test} ${test}.cc)
     target_include_directories(${test}
