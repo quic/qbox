@@ -8,14 +8,17 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/Packages" AND EXISTS "${PROJECT_SOURCE_DIR}/Pac
     set (gs-cmake_SOURCE_DIR  "${PROJECT_SOURCE_DIR}/Packages/cmake-boilerplate")
 endif()
 
+set(PACKAGE_PATH "quic-vp")
 set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositoies")
 
-if ( "${GREENSOCS_GIT}" STREQUAL "")
-    execute_process(COMMAND git config --get remote.origin.url
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        OUTPUT_VARIABLE GIT_URL)
+execute_process(COMMAND git config --get remote.origin.url
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    OUTPUT_VARIABLE GIT_URL)
 
-    string(REGEX REPLACE "(.*)/[^/]*.git$" "\\1/" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
+string(REGEX REPLACE "(.*)/${PACKAGE_PATH}.git$" "\\1/" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
+string(REGEX REPLACE "(.*)/sandboxes/[^\/]*/(.*)" "\\1/" GREENSOCS_GIT_ORIGIN "${GREENSOCS_GIT_ORIGIN}")
+
+if ( "${GREENSOCS_GIT}" STREQUAL "")
     set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
 endif()
 
@@ -28,6 +31,7 @@ if (NOT gs-cmake_SOURCE_DIR)
    FetchContent_MakeAvailable(gs-cmake)
 endif()
 include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
+
 ##############################################
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
