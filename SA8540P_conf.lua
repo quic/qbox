@@ -33,7 +33,6 @@ local OFFSET_MIFS_DDR_SPACE  = 0x20000000
 local OFFSET_SMEM_DDR_SPACE  = 0x00900000
 local DDR_SPACE_SIZE = 16*1024*1024*1024
 
-local RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRV0 = 0xb2c1004;
 
 -- local TURING_SS_0TURING_QDSP6SS_STRAP_TCM_BASE = 0x01A00000 << 4
 -- local TURING_SS_0TURING_QDSP6SS_STRAP_AHBUPPER = 0x01B80000 << 4
@@ -78,6 +77,12 @@ local SMEM_TCSR_TZ_WONCE_ADDR=0x01fd4000;
 local SMEM_TARG_INFO_ADDR=0x80aff2c0; -- must correspond to smem_v3.bin
 local RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRVd = 0xb2c1004;
 local RPMH_PDC_COMPUTE_PDC_PARAM_SEQ_CONFIG_DRVd = 0xb2c1008;
+local RPMH_PDC_NSP_PDC_PARAM_RESOURCE_DRVd = 0xb2d1004;
+local RPMH_PDC_NSP_PDC_PARAM_SEQ_CONFIG_DRVd = 0xb2d1008;
+local TURING_SS_0TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x1b3b0008;
+local TURING_SS_0TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x1b0a4008
+local TURING_SS_1TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x213b0008;
+local TURING_SS_1TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x210a4008;
 
 dofile (top().."fw/hex_cfgtables.lua")
 
@@ -134,7 +139,7 @@ local nsp1ss = get_nspss(
         0x20000000, -- TURING_SS_1TURING
         0x21300000, -- TURING_SS_1TURING_QDSP6V68SS
         SA8540P_nsp1_config_table,
-        0x00000000, -- entry point address from bootimage_makena.cdsp1.prodQ.pbn
+        0x8C600000, -- entry point address from bootimage_makena.cdsp1.prodQ.pbn
         0x05000000 -- AHB_SIZE
         );
 
@@ -144,6 +149,7 @@ platform = {
     arm_num_cpus = 8;
     num_redists = 1;
     hexagon_num_clusters = 1;
+-- nsp1ss for cdsp1, nsp0ss for cdsp0
     hexagon_cluster_0 = nsp0ss;
 --  hexagon_cluster_1 = nsp1ss;
     quantum_ns = 10000000;
@@ -167,9 +173,10 @@ platform = {
     ipcc= {  socket        = {address=IPC_ROUTER_TOP, size=0xfc000},
              irqs = {
                 {irq=8, dst = "platform.gic.spi_in_229"},
--- FIXME:
---              {irq=18, dst = "platform.hexagon_cluster_1.l2vic.irq_in_30"},
-                {irq=6, dst = "platform.hexagon_cluster_0.l2vic.irq_in_30"},
+-- FIXME: When other cluster is available switch irq18 to use cluster_1
+ --             {irq=18, dst = "platform.hexagon_cluster_1.l2vic.irq_in_30"},
+                {irq=6,  dst = "platform.hexagon_cluster_0.l2vic.irq_in_30"},
+                {irq=18, dst = "platform.hexagon_cluster_0.l2vic.irq_in_30"},
             }
         };
 
@@ -200,20 +207,29 @@ platform = {
         {bin_file=top().."fw/makena/images/cmd_db.bin",
          address= 0x80860000};
         {elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg.cdsp0.prodQ.pbn"};
+
+-- New for cdsp1 and cdsp0:
+        --{elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg_makena.cdsp0.prodQ.pbn"};
+        --{elf_file=top().."fw/hexagon-images/bootimage_relocflag_withdummyseg_makena.cdsp1.prodQ.pbn"};
         {data={0x60140200}, address=TCSR_SOC_HW_VERSION_ADDR};
         {data={SMEM_TARG_INFO_ADDR}, address=SMEM_TCSR_TZ_WONCE_ADDR};
-        {data={0x00005381}, address=RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRV0};
-        {data={0x00005381}, address=RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRVd};
-        {data={0x00180411}, address=RPMH_PDC_COMPUTE_PDC_PARAM_SEQ_CONFIG_DRVd};
+        {data={0x00005381},
+         address=RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRVd};
+        {data={0x00180411},
+         address=RPMH_PDC_COMPUTE_PDC_PARAM_SEQ_CONFIG_DRVd};
+        {data={0x00005381},
+         address=RPMH_PDC_NSP_PDC_PARAM_RESOURCE_DRVd};
+        {data={0x00180411},
+         address=RPMH_PDC_NSP_PDC_PARAM_SEQ_CONFIG_DRVd};
+        {data={0x01300214},
+         address=TURING_SS_0TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
+        {data={0x01180214},
+         address=TURING_SS_0TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
+        {data={0x01300214},
+         address=TURING_SS_1TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
+        {data={0x01180214},
+         address=TURING_SS_1TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
 
-        -- TURING_SS_0TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd:
-        {data={0x01300214}, address=0x1b3b0008};
-        -- TURING_SS_0TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd:
-        {data={0x01180214}, address=0x1b0a4008};
-        -- TURING_SS_1TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd:
-        {data={0x01300214}, address=0x213b0008};
-        -- TURING_SS_1TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd:
-        {data={0x01180214}, address=0x210a4008};
 
 --      {data={0x00020400}, address=0x10E0000};
 --      {data={0x60000003}, address=0x10E000C};
