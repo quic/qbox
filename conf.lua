@@ -189,7 +189,7 @@ platform = {
     fallback_memory = { target_socket = { address=0x00000000, size=0x40000000},
                         dmi_allow = false,
                         verbose = true,
-                        load = { csv_file=top().."fw/SM8450_Waipio.csv",
+                        load = { csv_file=top().."fw/waipio/SM8450_Waipio.csv",
                                  offset=0,
                                  addr_str="Address",
                                  value_str="Reset Value",
