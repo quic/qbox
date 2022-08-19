@@ -75,6 +75,9 @@
     } while (0);
 
 template <unsigned int BUSWIDTH = 32>
+class smmu500_tbu;
+
+template <unsigned int BUSWIDTH = 32>
 class smmu500 : public sc_core::sc_module
 {
 public:
@@ -109,6 +112,8 @@ public:
 
     InitiatorSignalSocket<bool> irq_global;
     sc_core::sc_vector<InitiatorSignalSocket<bool>> irq_context;
+
+    std::vector<smmu500_tbu<BUSWIDTH>*> tbus;
 
 private:
     /* Register definitions */
@@ -1104,6 +1109,9 @@ private:
 /* Maximum number of TBUs supported by this model.  */
 #define MAX_TBU 16
 
+/* max size in fits of a CB region */
+#define MAX_CB_SIZE 32
+
     uint32_t regs[R_MAX];
     RegisterAccessInfo* regs_access_info;
     //};
@@ -1666,7 +1674,7 @@ private:
 #define ADDRMASK ((1ULL << 12) - 1)
 
     void smmu500_gat(uint64_t v, bool wr, bool s2) {
-        uint64_t va = (v & ~ADDRMASK) & 0xffffffff; // FIX?
+        uint64_t va = (v & ~ADDRMASK) & ((1llu<<MAX_CB_SIZE)-1); // the VA is limited tothe max size of a CB region
         unsigned int cb = v & ADDRMASK;
         uint64_t pa;
         int prot;
@@ -1778,6 +1786,34 @@ private:
                 smmu_fsr_pw_f(txn, delay);
             };
 
+    void smmu_tlbflush_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+        sc_dt::uint64 addr = txn.get_address();
+        unsigned char* ptr = txn.get_data_ptr();
+        uint64_t val = (*(uint64_t*)ptr);
+
+        for (auto tbu : tbus) {
+            tbu->invalidate(val);
+        }
+    }
+    std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)>
+        smmu_tlbflush =
+            [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+                smmu_tlbflush_f(txn, delay);
+            };
+
+    void smmu_tlbflush_all_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+        for (int i = 0; i < MAX_CB; i++) {
+            for (auto tbu : tbus) {
+                tbu->invalidate(i);
+            }
+        }
+    }
+    std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)>
+        smmu_tlbflush_all =
+            [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+                smmu_tlbflush_all_f(txn, delay);
+            };
+
 public:
     IOMMUTLBEntry smmu_translate(tlm::tlm_generic_payload& txn, uint64_t sid) {
         //                                 uint64_t offset, uint64_t size) {
@@ -1796,7 +1832,7 @@ public:
             .perm = IOMMU_RW,
         };
         int cb;
-        uint64_t va = (addr & ~ADDRMASK) & 0xffffffff; // FIX
+        uint64_t va = (addr & ~ADDRMASK) & ((1llu<<MAX_CB_SIZE)-1);
         uint64_t pa = va;
         int prot;
         bool err = false;
@@ -1914,8 +1950,9 @@ protected:
         } else {
             info << " value 0x" << (*(uint64_t*)ptr);
         }
-        SC_REPORT_INFO("SMMU", info.str().c_str());
-
+        if (DEBUG_DEV_SMMU) {
+            SC_REPORT_INFO("SMMU", info.str().c_str());
+        }
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
 
         txn.set_dmi_allowed(false);
@@ -2683,10 +2720,12 @@ protected:
         {
             .name = "TLBIASID",
             .addr = A_SMMU_CB0_TLBIASID,
+            .post_write = smmu_tlbflush,
         },
         {
             .name = "TLBIALL",
             .addr = A_SMMU_CB0_TLBIALL,
+            .post_write = smmu_tlbflush_all,
         },
         {
             .name = "TLBIVAL_LOW",
@@ -2870,11 +2909,13 @@ public:
     }
 };
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH>
 class smmu500_tbu : public sc_core::sc_module
 {
     smmu500<BUSWIDTH>* smmu;
 
+    std::vector<std::pair<uint64_t, uint64_t>> dmi_entries[MAX_CB] = {};
+    std::vector<std::pair<uint64_t, uint64_t>> old = {};
 protected:
     void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
         unsigned int len = txn.get_data_length();
@@ -2910,7 +2951,7 @@ protected:
         txn.set_address(addr);
         return ret;
     }
-
+int ev=0;
     virtual bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data) {
         // We should only get here if the txn from downstream marked a possible DMI
         sc_dt::uint64 addr = txn.get_address();
@@ -2921,17 +2962,21 @@ protected:
         if (te.addr_mask == -1) {
             assert(te.translated_addr == addr);
             bool ret = downstream_socket->get_direct_mem_ptr(txn, dmi_data);
-            dmi_data.set_end_address(0xffffffff); // FIX ??? (allow everything _up to next mapping_, but drop it when a new mapping is added)
+            uint64_t end=dmi_data.get_end_address();
+            if (end >> MAX_CB_SIZE != addr >> MAX_CB_SIZE) {
+                dmi_data.set_end_address((((addr>>MAX_CB_SIZE)+1)<<MAX_CB_SIZE)-1);
+            }
+            uint64_t start=dmi_data.get_start_address();
+            if (start >> MAX_CB_SIZE != addr >> MAX_CB_SIZE) {
+                uint64_t newstart=(((addr>>MAX_CB_SIZE)+1)<<MAX_CB_SIZE)-1;
+                dmi_data.set_start_address(newstart);
+                dmi_data.set_dmi_ptr(dmi_data.get_dmi_ptr() + (newstart-start));
+            }
             return ret;
         }
         // ignore permissions, just attempt the access
         uint64_t page_size = (te.addr_mask + 1);
         uint64_t page_base = te.translated_addr & (~(page_size - 1));
-
-        if (te.addr_mask == -1) {
-            // WHAT FIX?
-            page_base = te.translated_addr;
-        }
 
         txn.set_address(page_base);
 
@@ -2942,11 +2987,13 @@ protected:
         uint64_t offset = page_base - dmi_data.get_start_address(); // start_address must be <= page_base, otherwise the DMI is meaningless
         assert(offset >= 0);
         assert(page_base + page_size <= dmi_data.get_end_address());
+        uint64_t start = addr & (~(page_size - 1));
+        uint64_t end = (start + page_size) - 1;
         dmi_data.set_dmi_ptr(dmi_data.get_dmi_ptr() + offset);
-        dmi_data.set_start_address(addr & (~(page_size - 1)));
-        dmi_data.set_end_address(((addr & (~(page_size - 1))) + page_size) - 1);
+        dmi_data.set_start_address(start);
+        dmi_data.set_end_address(end);
         dmi_data.allow_read_write();
-
+        dmi_entries[(addr >> 32) & 0xff].push_back(std::pair<uint64_t, uint64_t>(start, end));
         D("smmu TBU DMI: translate 0x%" PRIx64 " to 0x%" PRIx64
           " pg size=%d pg base 0x%" PRIx64
           " offset 0x" PRIx64
@@ -2972,8 +3019,18 @@ public:
         , upstream_socket("upstream_socket")
         , downstream_socket("downstream_socket") {
         smmu = _smmu;
+        smmu->tbus.push_back(this);
         upstream_socket.register_b_transport(this, &smmu500_tbu::b_transport);
         upstream_socket.register_transport_dbg(this, &smmu500_tbu::transport_dbg);
         upstream_socket.register_get_direct_mem_ptr(this, &smmu500_tbu::get_direct_mem_ptr);
+    }
+
+    void invalidate(uint32_t id) {
+        while (dmi_entries[id].size()) {
+            std::pair<uint64_t, uint64_t> d = dmi_entries[id].back();
+            dmi_entries[id].pop_back();
+            old.push_back(d);
+            upstream_socket->invalidate_direct_mem_ptr(d.first, d.second);
+        }
     }
 };
