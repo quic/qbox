@@ -126,14 +126,18 @@ void LibQemu::tb_invalidate_phys_range(uint64_t start, uint64_t end)
 {
     m_int->exports().tb_invalidate_phys_range(start, end);
 }
-
+QemuObject *LibQemu::object_new_unparented(const char *type_name)
+{
+    return m_int->exports().object_new(type_name);
+}
 QemuObject* LibQemu::object_new_internal(const char *type_name)
 {
-    QemuObject *o = m_int->exports().object_new(type_name);
+    QemuObject *o = object_new_unparented(type_name);
     QemuObject *root = m_int->exports().object_get_root();
     QemuError *err = nullptr;
-
-    m_int->exports().object_property_add_child(root, "libqemu-obj[*]", o);
+    char name[20];              // helpful for debugging.
+    sprintf(name,"qbox-%.10s[*]",type_name);
+    m_int->exports().object_property_add_child(root, name,o);
 
     if (err != nullptr) {
         throw LibQemuException("Error while parenting the new object");

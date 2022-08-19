@@ -60,6 +60,7 @@ private:
 
     LibraryLoaderIface::LibraryIfacePtr m_lib;
 
+    QemuObject *object_new_unparented(const char *type_name);
     QemuObject* object_new_internal(const char *type_name);
 
     void check_cast(Object &o, const char *type);
@@ -100,6 +101,14 @@ public:
         return o;
     }
 
+    template <class T>
+    T object_new_unparented()
+    {
+        T o(Object(object_new_unparented(T::TYPE), m_int));
+        check_cast(o, T::TYPE);
+
+        return o;
+    }
     int64_t get_virtual_clock();
 
     Object object_new(const char *type_name);
