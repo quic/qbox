@@ -85,7 +85,7 @@ protected:
         }
     };
     m_mem_obj *m_r=nullptr;
-    std::map<DmiRegionAliasKey, DmiRegionAlias> m_dmi_aliases;
+    std::map<DmiRegionAliasKey, DmiRegionAlias::Ptr> m_dmi_aliases;
 
     void init_payload(TlmPayload &trans, tlm::tlm_command command, uint64_t addr,
                       uint64_t *val, unsigned int size)
@@ -107,38 +107,36 @@ protected:
         return info.get_start_address();
     }
 
-    DmiRegionAliasKey get_dmi_region_alias_key(const DmiRegionAlias &alias)
+    DmiRegionAliasKey get_dmi_region_alias_key(const DmiRegionAlias::Ptr alias)
     {
-        return alias.get_start();
+        return alias->get_start();
     }
 
-    void add_dmi_mr_alias(DmiRegionAlias &alias)
+    void add_dmi_mr_alias(DmiRegionAlias::Ptr alias)
     {
-        qemu::MemoryRegion alias_mr = alias.get_alias_mr();
+        qemu::MemoryRegion alias_mr = alias->get_alias_mr();
 
         GS_LOG("Adding DMI alias for region [%08" PRIx64 ", %08" PRIx64"]",
-               alias.get_start(), alias.get_end());
+               alias->get_start(), alias->get_end());
 
         m_inst.get().lock_iothread();
-        m_r->m_root.add_subregion(alias_mr, alias.get_start());
+        m_r->m_root.add_subregion(alias_mr, alias->get_start());
         m_inst.get().unlock_iothread();
 
-        alias.set_installed();
+        alias->set_installed();
     }
 
-    void del_dmi_mr_alias(const DmiRegionAlias &alias)
+    void del_dmi_mr_alias(const DmiRegionAlias::Ptr alias)
     {
-        qemu::MemoryRegion alias_mr = alias.get_alias_mr();
-
-        if (!alias.is_installed()) {
+        if (!alias->is_installed()) {
             return;
         }
 
         GS_LOG("Removing DMI alias for region [%08" PRIx64 ", %08" PRIx64"]",
-               alias.get_start(), alias.get_end());
+               alias->get_start(), alias->get_end());
 
         m_inst.get().lock_iothread();
-        m_r->m_root.del_subregion(alias_mr);
+        m_r->m_root.del_subregion(alias->get_alias_mr());
         m_inst.get().unlock_iothread();
     }
 
@@ -146,7 +144,7 @@ protected:
      * Called on the SystemC thread. Returns a DMI region alias covering the
      * payload address.
      */
-    DmiRegionAlias* request_dmi_region(TlmPayload &trans)
+    DmiRegionAlias::Ptr request_dmi_region(TlmPayload &trans)
     {
         bool valid;
         tlm::tlm_dmi dmi_data;
@@ -171,10 +169,10 @@ protected:
         }
 
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
-        DmiRegionAlias alias(dmi_mgr.get_new_region_alias(dmi_data));
+        DmiRegionAlias::Ptr alias(dmi_mgr.get_new_region_alias(dmi_data));
 
         m_dmi_aliases[key] = alias;
-        return &m_dmi_aliases[key];
+        return m_dmi_aliases[key];
     }
 
     /*
@@ -208,7 +206,7 @@ protected:
     void check_dmi_hint(TlmPayload &trans)
     {
         DmiRegionAliasKey key;
-        DmiRegionAlias *alias;
+        DmiRegionAlias::Ptr alias;
 
         if (!trans.is_dmi_allowed()) {
             return;
@@ -223,7 +221,7 @@ protected:
 
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
 
-        key = get_dmi_region_alias_key(*alias);
+        key = get_dmi_region_alias_key(alias);
 
         if (!alias->is_valid()) {
             /* This DMI region has been invalidated since we requested it */
@@ -231,7 +229,7 @@ protected:
             return;
         }
 
-        add_dmi_mr_alias(*alias);
+        add_dmi_mr_alias(alias);
     }
 
     void check_qemu_mr_hint(TlmPayload &trans)
@@ -427,14 +425,14 @@ public:
         }
 
         while (it != m_dmi_aliases.end()) {
-            DmiRegionAlias &r = it->second;
+            DmiRegionAlias::Ptr r = it->second;
 
-            if (r.get_start() > end_range) {
+            if (r->get_start() > end_range) {
                 /* We've got out of the invalidation range */
                 break;
             }
 
-            if (r.get_end() < start_range) {
+            if (r->get_end() < start_range) {
                 /* We are not in yet */
                 it++;
                 continue;
@@ -454,9 +452,9 @@ public:
              * invalid before mapping it on the QEMU root MR (see
              * check_dmi_hint comment).
              */
-            r.invalidate_region();
+            r->invalidate_region();
 
-            if (!r.is_installed()) {
+            if (!r->is_installed()) {
                 /*
                  * The alias is not mapped onto the QEMU root MR yet. Simply
                  * skip it. It will be removed from m_dmi_aliases by
@@ -482,7 +480,7 @@ public:
             it = m_dmi_aliases.erase(it);
 
             GS_LOG("Invalidated region [%08" PRIx64 ", %08" PRIx64 "]",
-                   uint64_t(r.get_start()), uint64_t(r.get_end()));
+                   uint64_t(r->get_start()), uint64_t(r->get_end()));
         }
     }
 };

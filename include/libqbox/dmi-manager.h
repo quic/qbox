@@ -111,10 +111,11 @@ public:
         DmiRegion(const tlm::tlm_dmi &info, qemu::LibQemu &inst)
             : m_ptr(info.get_dmi_ptr())
             , m_valid(true)
-            , m_container(inst.object_new<QemuContainer>())
-            , m_mr(inst.object_new<qemu::MemoryRegion>())
+            , m_container(inst.object_new_unparented<QemuContainer>())
+            , m_mr(inst.object_new_unparented<qemu::MemoryRegion>())
         {
             set_size(info);
+//          This will parent the objects
             m_mr.init_ram_ptr(m_container, "dmi", get_size(), m_ptr);
         }
 
@@ -178,6 +179,8 @@ public:
         bool m_installed = false;
 
     public:
+        using Ptr = std::shared_ptr<DmiRegionAlias>;
+
         /* Construct an invalid alias */
         DmiRegionAlias()
         {}
@@ -186,13 +189,22 @@ public:
             : m_region(region)
             , m_start(info.get_start_address())
             , m_end(info.get_end_address())
-            , m_container(inst.object_new<QemuContainer>())
-            , m_alias(inst.object_new<qemu::MemoryRegion>())
+            , m_container(inst.object_new_unparented<QemuContainer>())
+            , m_alias(inst.object_new_unparented<qemu::MemoryRegion>())
         {
+//          This will parent the objects.
             m_alias.init_alias(m_container, "dmi-alias",
                                m_region->get_mr(), 0,
                                m_region->get_size());
         }
+
+        /* helpful for debugging */
+        ~DmiRegionAlias()
+        {
+            GS_LOG("Destroying DMI region Alias");
+        }
+
+        DmiRegionAlias(DmiRegionAlias &&)=delete;
 
         uint64_t get_start() const
         {
@@ -311,11 +323,11 @@ public:
     /**
      * @brief Create a new alias for the DMI region designated by `info`
      */
-    DmiRegionAlias get_new_region_alias(const tlm::tlm_dmi& info)
+    DmiRegionAlias::Ptr get_new_region_alias(const tlm::tlm_dmi& info)
     {
         DmiRegion::Ptr region(get_region(info));
 
-        return DmiRegionAlias(region, info, m_inst);
+        return std::make_shared<DmiRegionAlias>(region, info, m_inst);
     }
 
     friend class LockedQemuInstanceDmiManager;
@@ -352,7 +364,7 @@ public:
     /**
      * @see QemuInstanceDmiManager::get_new_region_alias
      */
-    QemuInstanceDmiManager::DmiRegionAlias get_new_region_alias(const tlm::tlm_dmi &info)
+    QemuInstanceDmiManager::DmiRegionAlias::Ptr get_new_region_alias(const tlm::tlm_dmi &info)
     {
         return m_inst.get_new_region_alias(info);
     }
