@@ -7,12 +7,11 @@
 #include <tlm_utils/simple_target_socket.h>
 
 template <unsigned int BUSWIDTH = 32>
-class WDog : public sc_core::sc_module {
-
+class WDog : public sc_core::sc_module
+{
 protected:
     uint32_t regs[0x100];
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
-    {
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
@@ -40,7 +39,8 @@ protected:
         if ((addr & 0xff) != 0x0) {
             std::stringstream info;
             info << name() << " : " << access << " access to address "
-                 << "0x" << std::hex << addr << " value 0x" << (*(uint32_t*)ptr) << " (reg: 0x" << regs[addr] << ")";
+                 << "0x" << std::hex << addr << " value 0x"
+                 << (*(uint32_t*)ptr) << " (reg: 0x" << regs[addr] << ")";
             SC_REPORT_INFO("WDog", info.str().c_str());
         }
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
@@ -51,9 +51,7 @@ protected:
 public:
     tlm_utils::simple_target_socket<WDog, BUSWIDTH> socket;
 
-    WDog(sc_core::sc_module_name name)
-        : socket("socket")
-    {
+    WDog(sc_core::sc_module_name name): socket("socket") {
         socket.register_b_transport(this, &WDog::b_transport);
         regs[0xc] = 0xdeadbeef;
     }
