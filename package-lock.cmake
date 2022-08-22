@@ -90,3 +90,10 @@ CPMDeclarePackage(csr
   GIT_TAG v1.1.0
   GIT_SHALLOW on
 )
+# smmu
+CPMDeclarePackage(smmu500
+  NAME smmu500
+  GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/smmu500.git
+  GIT_TAG main
+  GIT_SHALLOW on
+)
