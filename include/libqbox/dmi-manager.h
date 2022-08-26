@@ -139,6 +139,11 @@ public:
             return reinterpret_cast<Key>(m_ptr);
         }
 
+        void * get_ptr() const
+        {
+            return m_ptr;
+        }
+
         static Key key_from_tlm_dmi(const tlm::tlm_dmi &info)
         {
             return reinterpret_cast<Key>(info.get_dmi_ptr());
@@ -224,6 +229,16 @@ public:
         qemu::MemoryRegion get_alias_mr() const
         {
             return m_alias;
+        }
+
+        DmiRegion::Key get_key() const
+        {
+            return m_region->get_key();
+        }
+
+        unsigned char * get_dmi_ptr() const
+        {
+            return reinterpret_cast<unsigned char *>(m_region->get_ptr());
         }
 
         /**
