@@ -21,7 +21,7 @@ AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 
-BreakConstructorInitializers: AfterColon
+BreakConstructorInitializers: BeforeComma
 BreakBeforeBinaryOperators: None
 BreakStringLiterals: true
 BreakBeforeBraces: Custom
