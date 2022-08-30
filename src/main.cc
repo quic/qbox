@@ -195,14 +195,14 @@ protected:
     sc_core::sc_vector<hexagon_cluster> m_hexagon_clusters;
     QemuArmGicv3* m_gic;
     sc_core::sc_vector<gs::Memory<>> m_rams;
-    gs::Memory<> m_hexagon_ram;
+    sc_core::sc_vector<gs::Memory<>> m_hexagon_rams;
     //    gs::Memory<> m_system_imem;
     GlobalPeripheralInitiator* m_global_peripheral_initiator_arm;
     Uart m_uart;
     IPCC m_ipcc;
 #ifdef newsmmu
     smmu500<> m_smmu;
-    smmu500_tbu<> m_tbu;
+    sc_core::sc_vector<smmu500_tbu<>> m_tbus;
 #else
     QemuArmSmmu* m_smmu = nullptr;
 #endif
@@ -235,7 +235,9 @@ protected:
         for (auto& ram : m_rams) {
             m_router.initiator_socket.bind(ram.socket);
         }
-        m_router.initiator_socket.bind(m_hexagon_ram.socket);
+        for (auto& ram : m_hexagon_rams) {
+            m_router.initiator_socket.bind(ram.socket);
+        }
         m_router.initiator_socket.bind(m_uart.socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
 #ifdef newsmmu
@@ -344,7 +346,7 @@ public:
     GreenSocsPlatform(const sc_core::sc_module_name& n)
         : sc_core::sc_module(n)
         , p_hexagon_num_clusters("hexagon_num_clusters", 2,
-                                 "Number of Hexagon cluster")
+                                 "Number of Hexagon clusters")
         , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
         , p_num_redists("num_redists", 1, "Number of redistribution regions")
         , p_with_gpu("with_gpu", false, "Build platform with GPU")
@@ -379,13 +381,20 @@ public:
         , m_rams(
               "ram", gs::sc_cci_list_items(sc_module::name(), "ram").size(),
               [this](const char* n, size_t i) { return new gs::Memory<>(n); })
-        , m_hexagon_ram("hexagon_ram")
+
+        , m_hexagon_rams(
+              "hexagon_ram", gs::sc_cci_list_items(sc_module::name(), "hexagon_ram").size(),
+              [this](const char* n, size_t i) { return new gs::Memory<>(n); })
+
         //        , m_system_imem("system_imem")
         , m_uart("uart")
         , m_ipcc("ipcc")
 #ifdef newsmmu
         , m_smmu("smmu")
-        , m_tbu("tbu", &m_smmu)
+        , m_tbus("tbu", p_hexagon_num_clusters,
+                             [this](const char* n, size_t i) {
+                                 return new smmu500_tbu<> (n, &m_smmu);
+                             })
 #endif
         , m_virtio_net_0("virtionet0", m_qemu_inst)
         , m_virtio_blk_0("virtioblk0", m_qemu_inst)
@@ -431,63 +440,45 @@ public:
         do_bus_binding();
 
         if (p_hexagon_num_clusters) {
-            if (p_hexagon_num_clusters == 1) {
+            for (int N = 0; N < p_hexagon_num_clusters; N++) {
 #ifndef newsmmu
                 m_smmu = new QemuArmSmmu(
-                    "smmu", m_hexagon_clusters[0].m_qemu_hex_inst);
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(
-                    m_smmu->upstream_socket[0]);
-                m_smmu->downstream_socket[0].bind(m_router.target_socket);
+                    "smmu", m_hexagon_clusters[N].m_qemu_hex_inst);
+                m_hexagon_clusters[N].m_router.initiator_socket.bind(
+                    m_smmu->upstream_socket[N]);
+                m_smmu->downstream_socket[N].bind(m_router.target_socket);
                 m_router.initiator_socket.bind(m_smmu->register_socket);
 #else
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(
-                    m_tbu.upstream_socket);
-                m_tbu.downstream_socket.bind(m_router.target_socket);
+                m_hexagon_clusters[N].m_router.initiator_socket.bind(
+                    m_tbus[N].upstream_socket);
+                m_tbus[N].downstream_socket.bind(m_router.target_socket);
 #endif
-#ifdef ENABLE_QTB
-                m_hexagon_clusters[0].m_router.initiator_socket.bind(
-                    m_smmu->upstream_socket[1]);
-                m_smmu->downstream_socket[1].bind(m_router.target_socket);
-
-                m_qtb = new qtb<>("qtb");
-                m_router.initiator_socket(m_qtb->control_socket);
-                m_qtb->initiator_socket(m_smmu->upstream_socket[10]);
-                m_smmu->downstream_socket[10](m_qtb->target_socket);
-#endif
-#ifdef newsmmu
-                m_smmu.dma_socket.bind(m_router.target_socket);
-                {
-                    int irq = gs::cci_get<int>(std::string(m_smmu.name()) +
-                                               ".irq_context");
-                    int girq = gs::cci_get<int>(std::string(m_smmu.name()) +
-                                                ".irq_global");
-                    for (int i = 0; i < m_smmu.p_num_cb; i++) {
-                        m_smmu.irq_context[i].bind(m_gic->spi_in[irq + i]);
-                    }
-                    m_smmu.irq_global.bind(m_gic->spi_in[girq]);
-                }
-#else
-                m_smmu->dma_socket.bind(m_router.target_socket);
-
-                {
-                    int irq = gs::cci_get<int>(std::string(m_smmu->name()) +
-                                               ".irq_context");
-                    int girq = gs::cci_get<int>(std::string(m_smmu->name()) +
-                                                ".irq_global");
-                    for (int i = 0; i < m_smmu->p_num_cb; i++) {
-                        m_smmu->irq_context[i].bind(m_gic->spi_in[irq + i]);
-                    }
-                    m_smmu->irq_global.bind(m_gic->spi_in[girq]);
-                }
-#endif
-            } else {
-                SC_REPORT_ERROR(sc_core::SC_ID_NOT_IMPLEMENTED_,
-                                "multiple DSPs: not implemented");
-
-                for (auto& cpu : m_hexagon_clusters) {
-                    cpu.m_router.initiator_socket.bind(m_router.target_socket);
-                }
             }
+#ifdef newsmmu
+            m_smmu.dma_socket.bind(m_router.target_socket);
+            {
+                int irq = gs::cci_get<int>(std::string(m_smmu.name()) +
+                                           ".irq_context");
+                int girq = gs::cci_get<int>(std::string(m_smmu.name()) +
+                                            ".irq_global");
+                for (int i = 0; i < m_smmu.p_num_cb; i++) {
+                    m_smmu.irq_context[i].bind(m_gic->spi_in[irq + i]);
+                }
+                m_smmu.irq_global.bind(m_gic->spi_in[girq]);
+            }
+#else
+            m_smmu->dma_socket.bind(m_router.target_socket);
+            {
+                int irq = gs::cci_get<int>(std::string(m_smmu->name()) +
+                                           ".irq_context");
+                int girq = gs::cci_get<int>(std::string(m_smmu->name()) +
+                                            ".irq_global");
+                for (int i = 0; i < m_smmu->p_num_cb; i++) {
+                    m_smmu->irq_context[i].bind(m_gic->spi_in[irq + i]);
+                }
+                m_smmu->irq_global.bind(m_gic->spi_in[girq]);
+            }
+#endif
         }
 
         // General loader
