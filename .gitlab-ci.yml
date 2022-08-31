@@ -1,3 +1,18 @@
 include:
   - project: 'qqvp/GreenSocs/cmake-boilerplate'
     file: 'gitlab-ci-template.yml'
+
+build_tarball:
+  stage: build
+  only:
+      - schedules
+  script:
+    - cmake -Bbuild_src -DCPM_SOURCE_CACHE=Packages && rm -rf build_src
+    - cd Packages && git clone git@gitlab.qualcomm.com:qqvp/greensocs/cmake-boilerplate.git
+    - /bin/sh ./cmake-boilerplate/tar_builder.sh $CI_PROJECT_DIR
+    - cd ../../
+    - tar --exclude-vcs -zcf $CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA.tgz $CI_PROJECT_NAME
+    - mv $CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA.tgz $CI_PROJECT_NAME/
+  artifacts:
+    paths:
+      - $CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA.tgz
