@@ -15,6 +15,8 @@
  *  along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
+/* clang-format off */
+
 #include <assert.h>
 #include <float.h>
 #include <hexagon_sim_timer.h>
