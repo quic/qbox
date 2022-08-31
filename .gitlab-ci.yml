@@ -1,3 +1,7 @@
 include:
   - project: 'qqvp/greensocs/cmake-boilerplate'
     file: 'gitlab-ci-template.yml'
+
+.build_job_template:
+    variables:
+      REPO_CMAKE_ARGS: -DLIBQEMU_TARGETS=aarch64
