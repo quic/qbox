@@ -53,8 +53,8 @@
 
 #define XILINX_SMMU500(obj) OBJECT_CHECK(SMMU, (obj), TYPE_XILINX_SMMU500)
 
-#define DEBUG_DEV_SMMU     1
-#define DEBUG_DEV_SMMU_PTW 1
+#define DEBUG_DEV_SMMU     0
+#define DEBUG_DEV_SMMU_PTW 0
 
 #define D(...)                           \
     do {                                 \
@@ -2914,8 +2914,9 @@ class smmu500_tbu : public sc_core::sc_module
 {
     smmu500<BUSWIDTH>* smmu;
 
-    std::vector<std::pair<uint64_t, uint64_t>> dmi_entries[MAX_CB] = {};
-    std::vector<std::pair<uint64_t, uint64_t>> old = {};
+    std::pair<uint64_t, uint64_t> dmi_range[MAX_CB] = {};
+    bool dmi_range_valid[MAX_CB]={false};
+
 protected:
     void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
         unsigned int len = txn.get_data_length();
@@ -2951,7 +2952,7 @@ protected:
         txn.set_address(addr);
         return ret;
     }
-int ev=0;
+
     virtual bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data) {
         // We should only get here if the txn from downstream marked a possible DMI
         sc_dt::uint64 addr = txn.get_address();
@@ -2993,7 +2994,16 @@ int ev=0;
         dmi_data.set_start_address(start);
         dmi_data.set_end_address(end);
         dmi_data.allow_read_write();
-        dmi_entries[(addr >> 32) & 0xff].push_back(std::pair<uint64_t, uint64_t>(start, end));
+
+        int CB = (addr>> 32)&0xff;
+        if (!dmi_range_valid[CB] || dmi_range[CB].first > start) {
+            dmi_range[CB].first = start;
+        }
+        if (!dmi_range_valid[CB] || dmi_range[CB].second < end) {
+            dmi_range[CB].second = end;
+        }
+        dmi_range_valid[CB]=true;
+
         D("smmu TBU DMI: translate 0x%" PRIx64 " to 0x%" PRIx64
           " pg size=%d pg base 0x%" PRIx64
           " offset 0x" PRIx64
@@ -3025,12 +3035,10 @@ public:
         upstream_socket.register_get_direct_mem_ptr(this, &smmu500_tbu::get_direct_mem_ptr);
     }
 
-    void invalidate(uint32_t id) {
-        while (dmi_entries[id].size()) {
-            std::pair<uint64_t, uint64_t> d = dmi_entries[id].back();
-            dmi_entries[id].pop_back();
-            old.push_back(d);
-            upstream_socket->invalidate_direct_mem_ptr(d.first, d.second);
+    void invalidate(uint32_t CB) {
+        if (dmi_range_valid[CB]) {
+            upstream_socket->invalidate_direct_mem_ptr(dmi_range[CB].first, dmi_range[CB].second);
         }
+        dmi_range_valid[CB]=false;
     }
 };
