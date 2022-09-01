@@ -4,7 +4,7 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG v6.3.0
+  GIT_TAG v6.4.0
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
@@ -94,6 +94,6 @@ CPMDeclarePackage(csr
 CPMDeclarePackage(smmu500
   NAME smmu500
   GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/smmu500.git
-  GIT_TAG main
+  GIT_TAG v0.1.0
   GIT_SHALLOW on
 )

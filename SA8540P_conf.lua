@@ -180,7 +180,9 @@ platform = {
             }
         };
 
-    smmu = { mem = {address=0x15000000, size=0x100000};
+    smmu = {
+        socket = {address=0x15000000, size=0x100000};
+        mem = {address=0x15000000, size=0x100000};
         num_tbu=2;
         num_pages=128;
         num_cb=128;
@@ -191,6 +193,8 @@ platform = {
         irq_context = 103;
         irq_global = 65;
     };
+
+    tbu =  { topology_id=0x31A0, upstream_socket = {topology_id=0x31A0, address=NSP0_AHB_HIGH, size=0xF00000000-NSP0_AHB_HIGH, relative_addresses=false}};
 
     qtb = { control_socket = {address=0x15180000, size=0x80000}};
 
