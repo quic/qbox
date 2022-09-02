@@ -29,8 +29,8 @@ endif()
 include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 ##############################################
 
-find_path(LIBELF_INCLUDE_DIRS NAMES "libelf.h"
-          HINTS $ENV{LIBELF_HOME}/include /usr/include /usr/local/include/libelf)
+find_path(LIBELF_INCLUDE_DIRS NAMES "libelf.h" "libelf/libelf.h"
+          HINTS $ENV{LIBELF_HOME}/include /usr/include /usr/local/include)
 
 find_library(LIBELF_LIBRARIES NAMES elf "libelf.a"
           HINTS $ENV{LIBELF_HOME}/lib /usr/lib /lib /usr/local/lib)
@@ -39,7 +39,7 @@ find_library(LIBZ_LIBRARIES NAMES z "libz.a"
           HINTS $ENV{LIBZ_HOME}/lib /usr/lib /lib)
 
 list(APPEND LIBELF_LIBRARIES ${LIBZ_LIBRARIES})
-list(APPEND LIBELF_INCLUDE_DIRS "/usr/local/include")
+list(APPEND LIBELF_INCLUDE_DIRS ${LIBELF_INCLUDE_DIRS}/libelf)
 
 include(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibELF DEFAULT_MSG
