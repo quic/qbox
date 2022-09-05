@@ -43,7 +43,7 @@ using namespace cci;
 
 /**
  * @brief Helper function to find a sc_object by fully qualified name
- *  throws SC_REPORT_ERROR if nothing found.
+ *  throws SC_ERROR if nothing found.
  * @param m     current parent object (use null to start from the top)
  * @param name  name being searched for
  * @return sc_core::sc_object* return object if found
@@ -70,9 +70,9 @@ static sc_core::sc_object* find_sc_obj(sc_core::sc_object* m, std::string name, 
     } else {
         if (!test) {
             if (m) {
-                SC_REPORT_ERROR("find sc_object", (std::string("Unable to find ") + name + " in sc_object " + m->name()).c_str());
+                SCP_ERR("cciutils.find_sc_obj") << "Unable to find " << name << " in sc_object " << m->name();
             } else {
-                SC_REPORT_ERROR("find sc_object", (std::string("Unable to find ") + name).c_str());
+                SCP_ERR("cciutils.find_sc_obj") << "Unable to find " << name;
             }
         }
     }
@@ -154,7 +154,7 @@ T cci_get(std::string name)
     m_broker.lock_preset_value(name);
     T ret;
     if (!m_broker.get_preset_cci_value(name).template try_get<T>(ret)) {
-        SC_REPORT_ERROR("Loader", ("Unable to get parameter " + name).c_str());
+        SCP_ERR("cciutils.cci_get") << "Unable to get parameter " << name;
     };
     return ret;
 }
@@ -341,7 +341,7 @@ private:
 
             auto uncon = m_broker.get_unconsumed_preset_values();
             for (auto p : uncon) {
-                SC_REPORT_INFO("Params", ("WARNING: Unconsumed parameter : " + p.first + " = " + p.second.to_json()).c_str());
+                SCP_WARN("cciutils.help") <<"Params: Unconsumed parameter : "<< p.first << " = " << p.second.to_json();
             }
 
             if (help_cb)
@@ -404,9 +404,9 @@ public:
         }
         if (top) {
             std::cerr << "---" << std::endl;
-            //            exit(0);
         }
     }
+
     /**
      * @brief Construct a new Configurable Broker object
      * default constructor:
@@ -439,8 +439,7 @@ public:
         cci_register_broker(this);
 
         if (load_conf_file && !(std::string(conf_file).empty())) {
-            LuaFile_Tool lua("lua", m_orig_name);
-            lua.config(std::string(conf_file).c_str());
+            LuaFile_Tool lua("lua", std::string(conf_file).c_str() ,m_orig_name);
         }
     }
 
@@ -493,8 +492,7 @@ public:
             set_preset_cci_value(relname(p.first), p.second, m_originator);
         }
 
-        LuaFile_Tool lua("lua", m_orig_name);
-        lua.parseCommandLine(argc, argv);
+        LuaFile_Tool lua("lua", argc, argv);
 
         static const char* optstring = "h";
         static struct option long_options[] = {
@@ -517,8 +515,8 @@ public:
 
         /* check to see if the conf_file was set ! */
         if (load_conf_file && !(std::string(conf_file).empty())) {
-            LuaFile_Tool lua("lua", m_orig_name);
-            lua.config(std::string(conf_file).c_str());
+        LuaFile_Tool lua("lua", std::string(conf_file).c_str() ,m_orig_name);
+
         }
     }
 

@@ -25,6 +25,7 @@
 #include <greensocs/libgsutils.h>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <scp/report.h>
 
 using testing::AnyOf;
 using testing::Eq;
@@ -35,6 +36,7 @@ SC_MODULE(testA)
         std::cout << "(cout) test A" << std::endl;
         GS_LOG("(GS_LOG) test A");
         SC_REPORT_INFO("testA","(SC_REPORT_INFO) test A");
+        SCP_INFO() << "(SCP_INFO) test A";
     }
     SC_CTOR(testA)
     {
@@ -43,27 +45,31 @@ SC_MODULE(testA)
     }
 };
 
-int sc_main(int argc, char **argv)
-{
-    std::stringstream buffer;
-    std::streambuf * old = std::cout.rdbuf(buffer.rdbuf());
-    
-    std::cout << "(cout) Logger test" << std::endl;
-    GS_LOG("(GS_LOG) Logging test");
-    SC_REPORT_INFO("sc_main","(SC_REPORT_INFO) Logging test");
+int sc_main(int argc, char **argv){
+  scp::init_logging(
+      scp::LogConfig()
+          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+          .msgTypeFieldWidth(10)); // make the msg type column a bit tighter
 
-    GS_LOG("(GS_LOG) instance testA");
-    testA atest("TestA_Instance");
-    GS_LOG("(GS_LOG) testA instanced");
+  std::stringstream buffer;
+  std::streambuf *old = std::cout.rdbuf(buffer.rdbuf());
 
-    GS_LOG("(GS_LOG) running SC_START");
-    sc_core::sc_start();
-    GS_LOG("(GS_LOG) SC_START finished");
+  std::cout << "(cout) Logger test" << std::endl;
+  GS_LOG("(GS_LOG) Logging test");
+  SC_REPORT_INFO("sc_main", "(SC_REPORT_INFO) Logging test");
 
-    std::cout.rdbuf(old);
+  GS_LOG("(GS_LOG) instance testA");
+  testA atest("TestA_Instance");
+  GS_LOG("(GS_LOG) testA instanced");
 
-    std::string text = buffer.str(); // text will now contain "Bla\n"
-    std::cout << "Text found: " << std::endl << text << std::endl;
-    
-    return EXIT_SUCCESS;
+  GS_LOG("(GS_LOG) running SC_START");
+  sc_core::sc_start();
+  GS_LOG("(GS_LOG) SC_START finished");
+
+  std::cout.rdbuf(old);
+
+  std::string text = buffer.str(); // text will now contain "Bla\n"
+  std::cout << "Text found: " << std::endl << text << std::endl;
+
+  return EXIT_SUCCESS;
 }

@@ -26,7 +26,7 @@
 #include <greensocs/libgsutils.h>
 #include <gtest/gtest.h>
 #include <systemc>
-
+#include <scp/report.h>
 // global for test
 int set_value = 0;
 /*
@@ -40,12 +40,12 @@ public:
         : m_thing("thing", _thing)
     {
         set_value += m_thing;
-        std::cout << name() << " thing " << m_thing << std::endl;
+        SCP_INFO(SCMOD) << name() << " thing " << m_thing;
     }
 
     void end_of_elaboration()
     {
-      std::cout << name() << " EOE : thing " << m_thing << std::endl;
+      SCP_INFO(SCMOD) << name() << " EOE : thing " << m_thing;
     }
 };
 
@@ -57,7 +57,7 @@ public:
     Muty(const sc_core::sc_module_name& n, int _thing = 0)
         : m_thing_muty("thing_muty", _thing)        
     {
-        std::cout << name() << " thing " << m_thing_muty << std::endl;
+        SCP_INFO(SCMOD) << name() << " thing " << m_thing_muty;
     }
 
     void end_of_elaboration()
@@ -94,12 +94,16 @@ protected:
     void end_of_elaboration()
     {
       my_thing = 60;
-      std::cout << name() << " EOE : thing " << my_thing << std::endl;
+      SCP_INFO(SCMOD) << name() << " EOE : thing " << my_thing;
     }
 };
 
-int sc_main(int argc, char* argv[])
-{
+int sc_main(int argc, char *argv[]) {
+  scp::init_logging(
+      scp::LogConfig()
+          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+          .msgTypeFieldWidth(10)); // make the msg type column a bit tighter
+
   auto m_broker = new gs::ConfigurableBroker(argc, argv);
   cci::cci_originator m_originator("MyConfigTool");
   m_broker->set_preset_cci_value(
@@ -116,15 +120,13 @@ int sc_main(int argc, char* argv[])
 
   auto params = m_broker->get_param_handles(m_originator);
   for (auto v : params) {
-    std::cout << "config value: " << v.name() << " : " << v.get_cci_value()
-              << "\n";
-    }
+    SCP_INFO("sc_main") << "config value: " << v.name() << " : " << v.get_cci_value();
+  }
 
-    auto uncon = m_broker->get_unconsumed_preset_values();
-    for (auto v : uncon) {
-        std::cout << "Unconsumed config value: " << v.first << " : " << v.second
-                  << "\n";
-    }
+  auto uncon = m_broker->get_unconsumed_preset_values();
+  for (auto v : uncon) {
+    SCP_INFO("sc_main") << "Unconsumed config value: " << v.first << " : " << v.second;
+  }
 
     return status;
 }

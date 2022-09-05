@@ -25,7 +25,7 @@
 #include <greensocs/libgsutils.h>
 #include <gtest/gtest.h>
 #include <systemc>
-
+#include <scp/report.h>
 using testing::AnyOf;
 using testing::Eq;
 
@@ -35,10 +35,10 @@ SC_MODULE(testA) {
   cci::cci_param<int> luavalue;
   cci::cci_param<int> allvalue;
   void testA_method() {
-    std::cout << "test def value = " << defvalue << std::endl;
-    std::cout << "test cmd value = " << cmdvalue << std::endl;
-    std::cout << "test lua value = " << luavalue << std::endl;
-    std::cout << "test all value = " << allvalue << std::endl;
+    SCP_INFO(SCMOD) << "test def value = " << defvalue;
+    SCP_INFO(SCMOD) << "test cmd value = " << cmdvalue;
+    SCP_INFO(SCMOD) << "test lua value = " << luavalue;
+    SCP_INFO(SCMOD) << "test all value = " << allvalue;
 
     EXPECT_EQ(defvalue, 1234);
     EXPECT_EQ(cmdvalue, 1010);
@@ -55,17 +55,18 @@ SC_MODULE(testA) {
 };
 
 int sc_main(int argc, char **argv) {
-  auto m_broker = new cci_utils::broker("Global Broker");
-  cci::cci_register_broker(m_broker);
-  LuaFile_Tool lua("lua");
-  lua.parseCommandLine(argc, argv);
+  scp::init_logging(
+      scp::LogConfig()
+          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+          .msgTypeFieldWidth(10)); // make the msg type column a bit tighter
+
+  auto m_broker = new gs::ConfigurableBroker(argc, argv);
 
   testA t1("top");
-  
+
   testing::InitGoogleTest(&argc, argv);
   int status = RUN_ALL_TESTS();
   return status;
-
 }
 
 TEST(luatest , all) {

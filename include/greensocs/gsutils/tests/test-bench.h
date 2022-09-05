@@ -90,6 +90,7 @@
 #include <systemc>
 
 #include <gtest/gtest.h>
+#include <scp/report.h>
 
 class TestBench : public sc_core::sc_module {
 protected:
@@ -124,9 +125,10 @@ template <class T> static inline void run_test_bench(T *instance) {
 #else /* _WIN32 */
 #include <iostream>
 
-static inline void run_test_bench() {
-  std::cerr << "Running tests on Windows is not supported.\n";
-  ASSERT_TRUE(false);
+static inline void run_test_bench()
+{
+    SCP_ERR("test_bench") << "Running tests on Windows is not supported.";
+    ASSERT_TRUE(false);
 }
 
 #endif

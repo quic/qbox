@@ -52,6 +52,7 @@
 #include <cci_configuration>
 #include <iostream>
 #include <string>
+#include <scp/report.h>
 
 #define USE_GETOPT
 
@@ -89,6 +90,7 @@ class LuaFile_Tool : public sc_core::sc_module {
 
   cci::cci_broker_handle m_broker; ///< CCI configuration handle
   std::string m_orig_name;
+  cci::cci_param <int> p_log_level;
 
   std::string rel(std::string &n) const {
     if (m_orig_name.empty()) return n;
@@ -97,10 +99,25 @@ class LuaFile_Tool : public sc_core::sc_module {
 
 public:
   /// Constructor
+  LuaFile_Tool(sc_core::sc_module_name name, const char *config_file,
+               std::string _orig_name = "")
+      : LuaFile_Tool(name) {
+    config(config_file);
+  }
+  LuaFile_Tool(sc_core::sc_module_name name, const int argc, char *const argv[],
+               std::string _orig_name = "")
+      : LuaFile_Tool(name) {
+    parseCommandLine(argc, argv);
+  }
   LuaFile_Tool(sc_core::sc_module_name name, std::string _orig_name = "")
-      : sc_core::sc_module(name), m_broker(cci::cci_get_broker()) {
-    if (_orig_name.empty()) m_orig_name = "";
-    else m_orig_name = _orig_name + ".";
+      : sc_core::sc_module(name), m_broker(cci::cci_get_broker()),
+        p_log_level(SCP_LOG_LEVEL_PARAM_NAME, (int)scp::log::INFO,
+                    "LuaFile_Tool LOG_LEVEL") {
+
+    if (_orig_name.empty())
+      m_orig_name = "";
+    else
+      m_orig_name = _orig_name + ".";
   }
 
   /// Makes the configuration
@@ -120,10 +137,9 @@ public:
    */
   int config(const char *config_file) {
 #ifndef HAS_LUA
-    std::cerr << "Lua file specified, but no LUA support compiled in\n";
-    exit(-1);
+    SCP_FATAL("lua") << "Lua file specified, but no LUA support compiled in";
 #else
-    DEBUG(name(), "Read lua file '" << config_file << "'");
+    SCP_INFO("lua") << "Read lua file '" << config_file << "'";
 
     // start Lua
     lua_State *L = luaL_newstate();
@@ -135,18 +151,16 @@ public:
     case 0:
       break;
     case LUA_ERRSYNTAX:
-      fprintf(stderr, "Syntax error reading config file: %s\n", config_file);
+      SCP_ERR("lua") << "Syntax error reading config file: " << config_file;
       return 1;
     case LUA_ERRMEM:
-      fprintf(stderr, "Error allocating memory to read config file: %s\n",
-              config_file);
+      SCP_ERR("lua") << "Error allocating memory to read config file: " << config_file;
       return 1;
     case LUA_ERRFILE:
-      fprintf(stderr, "Error opening/reading the config file: %s\n",
-              config_file);
+      SCP_ERR("lua") << "Error opening/reading the config file: " << config_file;
       return 1;
     default:
-      fprintf(stderr, "Unknown error loading config file: %s\n", config_file);
+      SCP_ERR("lua") << "Unknown error loading config file: " << config_file;
       return 1;
     }
     lua_setglobal(L, "config_chunk");
@@ -158,7 +172,7 @@ public:
 
     // run
     if (luaL_dostring(L, config_loader)) {
-      fprintf(stderr, "%s\n", lua_tostring(L, -1));
+      SCP_ERR("lua") << lua_tostring(L, -1);
       lua_pop(L, 1); /* pop error message from the stack */
     }
 
@@ -168,7 +182,7 @@ public:
     lua_getglobal(L, "_G");
     error = setParamsFromLuaTable(L, lua_gettop(L));
     if (error < 0) {
-      fprintf(stderr, "Error loading lua config file: %s\n", config_file);
+      SCP_ERR("lua") << "Error loading lua config file: " << config_file;
       return error;
     }
     return 0;
@@ -204,8 +218,8 @@ protected:
    */
   void parseCommandLineWithBoost(
       const int argc, const char *const *argv) /*throw(CommandLineException)*/ {
-    DEBUG(name(), "Parse command line for --gs_luafile option ("
-                      << argc << " arguments)");
+    SCP_INFO("lua") << "Parse command line for --gs_luafile option ("
+                      << argc << " arguments)";
 
     po::options_description desc("Allowed options");
 #ifdef ENABLE_SHORT_COMMAND_LINE_OPTIONS
@@ -232,10 +246,10 @@ protected:
               vm); // allows unknown options
 
     if (vm.count("help")) {
-      std::cout << "Command line usage for lua file command line parser:"
+      std::SCP_INFO("lua") << "Command line usage for lua file command line parser:"
                 << std::endl;
-      std::cout << "  Usage: options_description [options]" << std::endl;
-      std::cout << desc;
+      std::SCP_INFO("lua") << "  Usage: options_description [options]" << std::endl;
+      std::SCP_INFO("lua") << desc;
       return;
     }
 
@@ -243,8 +257,8 @@ protected:
       const std::vector<std::string> *vec =
           &vm["gs_luafile"].as<std::vector<std::string>>();
       for (unsigned int i = 0; i < vec->size(); i++) {
-        DEBUG(name(), "Option gs_luafile with value " << vec->at(i).c_str());
-        std::cout << "Lua file command line parser: parse option --gs_luafile "
+        SCP_INFO("lua") << "Option gs_luafile with value " << vec->at(i).c_str();
+        SCP_INFO("lua") << "Lua file command line parser: parse option --gs_luafile "
                   << vec->at(i).c_str() << std::endl;
         config(vec->at(i).c_str());
       }
@@ -263,8 +277,8 @@ protected:
   void parseCommandLineWithGetOpt(
       const int argc,
       const char *const *argv) /* throw(CommandLineException) */ {
-    DEBUG(name(), "Parse command line for --gs_luafile option ("
-                      << argc << " arguments)");
+    SCP_INFO("lua") << "Parse command line for --gs_luafile option ("
+                      << argc << " arguments)";
 
     // getopt permutes argv array, so copy it to argv_cp
     const int BUFFER_SIZE = 8192;
@@ -306,8 +320,8 @@ protected:
       switch (c) {
 
       case 'l': // -l and --gs_luafile
-        DEBUG(name(), "Option --gs_luafile with value " << optarg);
-        std::cout << "Lua file command line parser: parse option --gs_luafile "
+        SCP_INFO("lua") << "Option --gs_luafile with value " << optarg;
+        SCP_INFO("lua") << "Lua file command line parser: parse option --gs_luafile "
                   << optarg << std::endl;
         config(optarg);
         break;
@@ -317,14 +331,12 @@ protected:
         std::stringstream ss(optarg);
         std::string key, value;
         if (!std::getline(ss, key, '=')) {
-          std::cout << "parameter name not found!" << std::endl;
-          exit(-1);
+          SCP_FATAL("lua") << "parameter name not found!" << std::endl;
         }
         if (!std::getline(ss, value)) {
-          std::cout << "parameter value not found!" << std::endl;
-          exit(-1);
+          SCP_FATAL("lua") << "parameter value not found!" << std::endl;
         }
-        DEBUG(name(), "Setting param " << rel(key) << " to value " << value);
+        SCP_INFO("lua") << "Setting param " << rel(key) << " to value " << value;
         m_broker.set_preset_cci_value(
             rel(key), cci::cci_value(cci::cci_value::from_json(value)));
         break;
@@ -353,10 +365,10 @@ protected:
 
       case '?':
       case ':':
-        DEBUG(name(), "Option "
+        SCP_INFO("lua") << "Option "
                           << c
                           << " not processed in lua file command line parser: "
-                          << optopt);
+                          << optopt;
         break;
       }
     }
@@ -389,14 +401,12 @@ protected:
      * for sanity) */
     if (level - static_key > MAX_NAME_SIZE) {
       static_key[MAX_NAME_SIZE - 1] = 0;
-      fprintf(stderr,
-              "FATAL Error: parameter name too big (bigger then %d): %s",
-              MAX_NAME_SIZE, static_key);
+      SCP_ERR("lua") << "FATAL Error: parameter name too big (bigger then " << MAX_NAME_SIZE << "): "<< static_key;
     }
 
     /* is it really a table? */
     if (lua_type(L, t) != LUA_TTABLE) {
-      fprintf(stderr, "Error: argument is not a table");
+      SCP_ERR("lua") << "Error: argument is not a table";
       return -1;
     }
 
@@ -437,7 +447,7 @@ protected:
         break;
 
       default:
-        fprintf(stderr, "Error loading lua file: invalid key");
+        SCP_ERR("lua") << "Error loading lua file: invalid key";
         return -1;
       }
 
@@ -448,8 +458,7 @@ protected:
         // Avoid setting some Lua specific values as parameters
         if (strcmp(key, "math.huge") == 0 || strcmp(key, "math.pi") == 0 || 0) {
           if (GC_LUA_DEBUG)
-            fprintf(stderr, "(%s) %s   (ignored because it's Lua specific)\n",
-                    lua_typename(L, lua_type(L, -1)), key);
+            SCP_ERR("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key << "   (ignored because it's Lua specific)";
         } else {
           double num = lua_tonumber(L, -1);
           if ((floor(num) == num && num >= 0.0 && num < ldexp(1.0, 64))) {
@@ -467,9 +476,7 @@ protected:
 
           if (GC_LUA_VERBOSE) {
             std::string keys = key;
-            fprintf(stderr, "(SET %s) %s = %s\n",
-                    lua_typename(L, lua_type(L, -1)), rel(keys).c_str(),
-                    cci::cci_value(num).to_json().c_str());
+            SCP_ERR("lua") << "(SET " << lua_typename(L, lua_type(L, -1)) << ") " << rel(keys).c_str() << " = " << cci::cci_value(num).to_json().c_str();
           }
           if (should_inc_integer_index_count)
             ++integer_index_count;
@@ -481,9 +488,7 @@ protected:
         m_broker.set_preset_cci_value(
             rel(keys), cci::cci_value((bool)lua_toboolean(L, -1)));
         if (GC_LUA_VERBOSE)
-          fprintf(stderr, "(SET %s) %s = %s\n",
-                  lua_typename(L, lua_type(L, -1)), rel(keys).c_str(),
-                  lua_toboolean(L, -1) ? "true" : "false");
+          SCP_ERR("lua") << "(SET " << lua_typename(L, lua_type(L, -1)) << ") " << rel(keys).c_str() << " = " << (lua_toboolean(L, -1) ? "true" : "false");
         if (should_inc_integer_index_count)
           ++integer_index_count;
         break;
@@ -494,16 +499,13 @@ protected:
             strcmp(key, "package.config") == 0 ||
             strcmp(key, "package.path") == 0 || 0) {
           if (GC_LUA_DEBUG)
-            fprintf(stderr, "(%s) %s   (ignored because it's Lua specific)\n",
-                    lua_typename(L, lua_type(L, -1)), key);
+            SCP_ERR("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key << "   (ignored because it's Lua specific)";
         } else {
           std::string keys = key;
           m_broker.set_preset_cci_value(
               rel(keys), cci::cci_value(std::string(lua_tostring(L, -1))));
           if (GC_LUA_VERBOSE)
-            fprintf(stderr, "(SET %s) %s = %s\n",
-                    lua_typename(L, lua_type(L, -1)), rel(keys).c_str(),
-                    lua_tostring(L, -1));
+            SCP_ERR("lua") << "(SET " << lua_typename(L, lua_type(L, -1)) << ") " << rel(keys).c_str() << " = " << lua_tostring(L, -1);
           if (should_inc_integer_index_count)
             ++integer_index_count;
         }
@@ -514,11 +516,10 @@ protected:
         if (strcmp(key, "_G") == 0 || strcmp(key, "package.loaded") == 0 ||
             strcmp(level, "__index") == 0) {
           if (GC_LUA_DEBUG)
-            fprintf(stderr, "(%s) %s   (ignored to avoid recursion)\n",
-                    lua_typename(L, lua_type(L, -1)), key);
+            SCP_ERR("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key << "   (ignored to avoid recursion)";
         } else {
           if (GC_LUA_DEBUG)
-            fprintf(stderr, "(table) %s\n", key);
+            SCP_ERR("lua") << "(table) " << key;
           *next_level++ = '.';
           // CS
           // int int_index_count =
@@ -542,7 +543,7 @@ protected:
       default:
         // Ignore other types
         if (GC_LUA_DEBUG)
-          fprintf(stderr, "(%s) %s\n", lua_typename(L, lua_type(L, -1)), key);
+          SCP_ERR("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key;
       }
 
       /* removes 'value'; keeps 'key' for next iteration */

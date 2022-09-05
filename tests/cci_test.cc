@@ -126,14 +126,12 @@ int sc_main(int argc, char *argv[]) {
 
   auto params = m_broker->get_param_handles(m_originator);
   for (auto v : params) {
-    std::cout << "config value: " << v.name() << " : " << v.get_cci_value()
-              << "\n";
+    SCP_INFO("sc_main") << "config value: " << v.name() << " : " << v.get_cci_value();
   }
 
   auto uncon = m_broker->get_unconsumed_preset_values();
   for (auto v : uncon) {
-    std::cout << "Unconsumed config value: " << v.first << " : " << v.second
-              << "\n";
+    SCP_INFO("sc_main") << "Unconsumed config value: " << v.first << " : " << v.second;
   }
 
   return status;
