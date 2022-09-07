@@ -5,7 +5,7 @@ project(quic-smmu VERSION 1.0)
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
 set(PACKAGE_PATH "qemu/libqbox")
-set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositories")
+set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositoies")
 
 execute_process(COMMAND git config --get remote.origin.url
     OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -17,11 +17,12 @@ string(REGEX REPLACE "(.*)/sandboxes/[^\/]*/(.*)" "\\1/" GREENSOCS_GIT_ORIGIN "$
 if ( "${GREENSOCS_GIT}" STREQUAL "")
     set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
 endif()
+
 if (NOT gs-cmake_SOURCE_DIR)
    include(FetchContent)
    FetchContent_Declare(gs-cmake
-      GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/cmake-boilerplate.git
-      GIT_TAG master
+        GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/cmake-boilerplate.git
+        GIT_TAG master
    )
    FetchContent_MakeAvailable(gs-cmake)
 endif()

@@ -26,6 +26,10 @@
  */
 #pragma once
 
+#include <systemc>
+#include <cci_configuration>
+#include <tlm>
+
 #include "bitops.h"
 #include "registerfields.h"
 #include <ar.h>
@@ -33,10 +37,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <stdio.h>
-
-#include <cci_configuration>
+#include <inttypes.h>
 #include <memory>
-#include <systemc>
 
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
 #include <sys/types.h>
