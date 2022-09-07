@@ -1,10 +1,8 @@
 /*
  */
 
+#include "quic/smmu500/smmu500.h"
 
-#include "quic/smmu/smmu.h"
-
-
-int sc_main(int argc, char* argv[])
-{
+int sc_main(int argc, char* argv[]) {
+    smmu500<> smmu("test_smmu");
 }
