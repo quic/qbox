@@ -1674,7 +1674,7 @@ private:
 #define ADDRMASK ((1ULL << 12) - 1)
 
     void smmu500_gat(uint64_t v, bool wr, bool s2) {
-        uint64_t va = (v & ~ADDRMASK) & ((1llu<<MAX_CB_SIZE)-1); // the VA is limited tothe max size of a CB region
+        uint64_t va = (v & ~ADDRMASK) & ((1llu << MAX_CB_SIZE) - 1); // the VA is limited tothe max size of a CB region
         unsigned int cb = v & ADDRMASK;
         uint64_t pa;
         int prot;
@@ -1832,7 +1832,7 @@ public:
             .perm = IOMMU_RW,
         };
         int cb;
-        uint64_t va = (addr & ~ADDRMASK) & ((1llu<<MAX_CB_SIZE)-1);
+        uint64_t va = (addr & ~ADDRMASK) & ((1llu << MAX_CB_SIZE) - 1);
         uint64_t pa = va;
         int prot;
         bool err = false;
@@ -2915,7 +2915,7 @@ class smmu500_tbu : public sc_core::sc_module
     smmu500<BUSWIDTH>* smmu;
 
     std::pair<uint64_t, uint64_t> dmi_range[MAX_CB] = {};
-    bool dmi_range_valid[MAX_CB]={false};
+    bool dmi_range_valid[MAX_CB] = { false };
 
 protected:
     void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
@@ -2963,15 +2963,15 @@ protected:
         if (te.addr_mask == -1) {
             assert(te.translated_addr == addr);
             bool ret = downstream_socket->get_direct_mem_ptr(txn, dmi_data);
-            uint64_t end=dmi_data.get_end_address();
+            uint64_t end = dmi_data.get_end_address();
             if (end >> MAX_CB_SIZE != addr >> MAX_CB_SIZE) {
-                dmi_data.set_end_address((((addr>>MAX_CB_SIZE)+1)<<MAX_CB_SIZE)-1);
+                dmi_data.set_end_address((((addr >> MAX_CB_SIZE) + 1) << MAX_CB_SIZE) - 1);
             }
-            uint64_t start=dmi_data.get_start_address();
+            uint64_t start = dmi_data.get_start_address();
             if (start >> MAX_CB_SIZE != addr >> MAX_CB_SIZE) {
-                uint64_t newstart=(((addr>>MAX_CB_SIZE)+1)<<MAX_CB_SIZE)-1;
+                uint64_t newstart = (((addr >> MAX_CB_SIZE) + 1) << MAX_CB_SIZE) - 1;
                 dmi_data.set_start_address(newstart);
-                dmi_data.set_dmi_ptr(dmi_data.get_dmi_ptr() + (newstart-start));
+                dmi_data.set_dmi_ptr(dmi_data.get_dmi_ptr() + (newstart - start));
             }
             return ret;
         }
@@ -2995,14 +2995,14 @@ protected:
         dmi_data.set_end_address(end);
         dmi_data.allow_read_write();
 
-        int CB = (addr>> 32)&0xff;
+        int CB = (addr >> 32) & 0xff;
         if (!dmi_range_valid[CB] || dmi_range[CB].first > start) {
             dmi_range[CB].first = start;
         }
         if (!dmi_range_valid[CB] || dmi_range[CB].second < end) {
             dmi_range[CB].second = end;
         }
-        dmi_range_valid[CB]=true;
+        dmi_range_valid[CB] = true;
 
         D("smmu TBU DMI: translate 0x%" PRIx64 " to 0x%" PRIx64
           " pg size=%d pg base 0x%" PRIx64
@@ -3039,6 +3039,6 @@ public:
         if (dmi_range_valid[CB]) {
             upstream_socket->invalidate_direct_mem_ptr(dmi_range[CB].first, dmi_range[CB].second);
         }
-        dmi_range_valid[CB]=false;
+        dmi_range_valid[CB] = false;
     }
 };
