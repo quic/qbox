@@ -198,6 +198,12 @@ The size set by the configurator will take precedence. The size given to the con
 
 The memory has a 'loader' built in. configuration can be applied to `memory_name.load`. In this case, all addresses are assumed to be offsets.
 
+## Memory Dumper
+A memory dumper is provided that can be used to debug the state of memory for debug purposes.
+`outfile`: std::string file name that should be written. The binary file will be written to <memoryname>.start.end.<outfile name given>
+`MemoryDumper_trigger`: bool trigger that when written to will trigger the dump to start.
+The dumper must be bound to the main system router, it will find all memories in the system, find their addresses and request (via the initiator port) data from that memory.
+A target port must also be bound, and the address to which it's bound, if accessed will trigger the dump.
 
 ## The GreenSocs component library router
 The  router is a simple device, the expectation is that initiators and targets are directly bound to the router's `target_socket` and `initiator_socket` directly (both are multi-sockets).

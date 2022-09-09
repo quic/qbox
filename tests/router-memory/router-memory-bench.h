@@ -28,6 +28,7 @@
 
 #include "memory.h"
 #include "router.h"
+#include "memorydumper.h"
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/test-bench.h>
 
@@ -35,7 +36,7 @@ static constexpr size_t NB_MEMORY = 4;
 
 class RouterMemoryTestBench : public TestBench {
 public:
-    std::vector<uint64_t> address = { 0, 257, 514, 700 };
+    std::vector<uint64_t> address = { 0, 257, 524, 700 };
     std::vector<size_t> size = { 256, 256, 256, 256 };
     std::vector<uint64_t> memory_size;
 
@@ -43,6 +44,7 @@ protected:
     InitiatorTester m_initiator;
     gs::Router<> m_router;
     std::vector<gs::Memory<>*> m_memory;
+    gs::MemoryDumper<> m_dumper;
 
     /* Initiator callback */
     void invalidate_direct_mem_ptr(uint64_t start_range, uint64_t end_range)
@@ -93,6 +95,7 @@ public:
         , m_initiator("initiator")
         , m_router("router")
         , m_memory()
+        , m_dumper("dumper")
     {
 
         for (int i = 0; i < NB_MEMORY; i++) {
@@ -108,6 +111,9 @@ public:
         for (int i = 0; i < NB_MEMORY; i++) {
             m_router.add_target(m_memory[i]->socket, address[i], size[i]);
         }
+
+        m_router.add_initiator(m_dumper.initiator_socket);
+        m_router.add_target(m_dumper.target_socket, 0x10000, 0x10);
     }
 
     virtual ~RouterMemoryTestBench()

@@ -124,6 +124,8 @@ TEST_BENCH(RouterMemoryTestBench, SimpleWriteReadDebug)
     ASSERT_EQ(m_initiator.do_read(0, data64, true), tlm ::TLM_OK_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data64));
     ASSERT_EQ(data64, 0x04);
+
+    ASSERT_EQ(m_initiator.do_write(0x10000,data32), tlm::TLM_OK_RESPONSE);
 }
 
 // Debug Transport Interface transaction outside of the target address space
@@ -166,6 +168,8 @@ TEST_BENCH(RouterMemoryTestBench, WriteBlockingReadDebug)
     ASSERT_EQ(m_initiator.do_read(address[1], data, true), tlm::TLM_OK_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data));
     ASSERT_EQ(data, 0x04);
+
+    gs::memorydumper_tgr_helper();
 }
 
 // Write into memory with Debug Transport Interface and read with Blocking Transport
