@@ -51,6 +51,7 @@
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/memory.h>
 #include <greensocs/base-components/connectors.h>
+#include <greensocs/base-components/memorydumper.h>
 #include "greensocs/systemc-uarts/uart-pl011.h"
 #include "greensocs/systemc-uarts/backends/char-backend.h"
 #include <greensocs/systemc-uarts/backends/char/stdio.h>
@@ -72,7 +73,7 @@
 #define ARCH_TIMER_NS_EL1_IRQ (16 + 14)
 #define ARCH_TIMER_NS_EL2_IRQ (16 + 10)
 
-#define newsmmu
+//#define newsmmu
 
 class hexagon_cluster : public sc_core::sc_module
 {
@@ -216,6 +217,7 @@ protected:
 
     gs::Memory<> m_fallback_mem;
 
+    gs::MemoryDumper<> m_memorydumper;
     gs::Loader<> m_loader;
 
     qtb<>* m_qtb;
@@ -404,6 +406,7 @@ public:
                         return new QemuHexagonQtimer(n, m_qemu_inst);
                     })
         , m_fallback_mem("fallback_memory")
+        , m_memorydumper("memorydumper")
         , m_loader("load") {
         using tlm_utils::tlm_quantumkeeper;
 
@@ -483,6 +486,9 @@ public:
 
         // General loader
         m_loader.initiator_socket.bind(m_router.target_socket);
+
+        m_router.initiator_socket.bind(m_memorydumper.target_socket);
+        m_memorydumper.initiator_socket.bind(m_router.target_socket);
 
         // MUST be added last
         m_router.initiator_socket.bind(m_fallback_mem.socket);
