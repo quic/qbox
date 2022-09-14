@@ -56,7 +56,7 @@ if os.getenv("QQVP_IMAGE_DIR") == nil then
     CMD_DB_BIN        = valid_file(top().."fw/makena/images/cmd_db.bin")
 else
     IMAGE_DIR = os.getenv("QQVP_IMAGE_DIR").."/"
-    SYSTEM_QDRIVE     = valid_file(IMAGE_DIR.."system_qdrive.img")
+    SYSTEM_QDRIVE     = valid_file(IMAGE_DIR.."system_qdrive_qvp.img")
     MIFS_QDRIVE       = valid_file(IMAGE_DIR.."mifs_qdrive_qvp.img")
     QURT_CDSP0        = valid_file(IMAGE_DIR.."bootimage_relocflag_withdummyseg_makena.cdsp0.prodQ.pbn")
     QURT_CDSP1        = valid_file(IMAGE_DIR.."bootimage_relocflag_withdummyseg_makena.cdsp1.prodQ.pbn")
