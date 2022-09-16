@@ -15,7 +15,7 @@ AccessModifierOffset: -4
 
 AlignAfterOpenBracket: Align
 AlignConsecutiveMacros: true
-AlignConsecutiveAssignments: false
+AlignConsecutiveAssignments: true
 
 AllowAllArgumentsOnNextLine: false
 AllowShortFunctionsOnASingleLine: InlineOnly
