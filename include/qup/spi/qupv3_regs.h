@@ -35,6 +35,9 @@
 #define RX_LAST_BYTE_VALID_OFF 28
 #define RX_LAST                (1 << 31)
 
+/* Defining bits for FIFO length */
+#define FIFO_ENTRY_SIZE 4
+
 /* SPI Opcodes */
 #define SPI_TX_ONLY_OPCODE     1
 #define SPI_RX_ONLY_OPCODE     2
