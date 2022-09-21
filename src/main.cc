@@ -164,9 +164,9 @@ public:
         }
 
         m_qtimer.irq[0].bind(
-            m_l2vic.irq_in[3]); // FIXME: Depends on static boolean
+            m_l2vic.irq_in[2]); // FIXME: Depends on static boolean
                                 // syscfg_is_linux, may be 2
-        m_qtimer.irq[1].bind(m_l2vic.irq_in[4]);
+        m_qtimer.irq[1].bind(m_l2vic.irq_in[3]);
 
         m_global_peripheral_initiator_hex.m_initiator.bind(
             m_router.target_socket);
