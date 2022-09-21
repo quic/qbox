@@ -1,20 +1,6 @@
--- Virtual platform configuration: Makena SoC, QNX
+-- Virtual platform configuration
 
-
-
---[[
- smmu_service -v -H
-
-smmu_test &
-out32 0x15184010 0x10000
-out32 0x15184008 0x10000
-out32 0x15184000 0x10000
-in32 0x15184020
-out32 0x15184018 0x1
-in32 0x15184020
-in32 0x15184028
-in32 0x1518402C
---]]
+-- ** Convenience functions **
 function top()
     local str = debug.getinfo(2, "S").source:sub(2)
     if str:match("(.*/)")
@@ -23,6 +9,11 @@ function top()
     else
         return "./"
     end
+ end
+
+ function file_exists(name)
+    local f=io.open(name,"r")
+    if f~=nil then io.close(f) return true else return false end
  end
 
  function valid_file(file)
@@ -36,39 +27,40 @@ function top()
     io.close(f);
     return file
  end
+ function tableMerge(t1, t2)
+    for k,v in pairs(t2) do
+        if type(v) == "table" then
+            if type(t1[k] or false) == "table" then
+                tableMerge(t1[k] or {}, t2[k] or {})
+            else
+                t1[k] = v
+            end
+        else
+            t1[k] = v
+        end
+    end
+    return t1
+end
+function tableJoin(t1,t2)
+    for i=1,#t2 do
+        t1[#t1+1] = t2[i]
+    end
+    return t1
+end
+-- ** End of convenience functions **
 
 print ("Lua config running. . . ");
 
+-- these values are helpful for local configuration, so make them global
+ INITIAL_DDR_SPACE_14GB = 0x80000000
+ OFFSET_MIFS_DDR_SPACE  = 0x20000000
+ OFFSET_SMEM_DDR_SPACE  = 0x00900000
+ DDR_SPACE_SIZE = 16*1024*1024*1024
 
-local INITIAL_DDR_SPACE_14GB = 0x80000000
-local OFFSET_MIFS_DDR_SPACE  = 0x20000000
-local OFFSET_SMEM_DDR_SPACE  = 0x00900000
-local DDR_SPACE_SIZE = 16*1024*1024*1024
 
-if os.getenv("QQVP_IMAGE_DIR") == nil then
-    SYSTEM_QDRIVE     = valid_file(top().."fw/makena/images/system_qdrive_qvp.img")
-    MIFS_QDRIVE       = valid_file(top().."fw/makena/images/mifs_qdrive_qvp.img")
-    QURT_CDSP0        = valid_file(top().."fw/hexagon-images/bootimage_relocflag_withdummyseg.cdsp0.prodQ.pbn")
-    QURT_CDSP1        = valid_file(top().."fw/hexagon-images/bootimage_relocflag_withdummyseg.cdsp1.prodQ.pbn")
-    BL31_BIN          = valid_file(top().."fw/makena/images/bl31.bin")
-    SMEM_MAKENA_BIN   = valid_file(top().."fw/makena/images/smem_makena.bin")
-    CMD_DB_HEADER_BIN = valid_file(top().."fw/makena/images/cmd_db_header.bin")
-    CMD_DB_BIN        = valid_file(top().."fw/makena/images/cmd_db.bin")
-else
-    IMAGE_DIR = os.getenv("QQVP_IMAGE_DIR").."/"
-    SYSTEM_QDRIVE     = valid_file(IMAGE_DIR.."system_qdrive_qvp.img")
-    MIFS_QDRIVE       = valid_file(IMAGE_DIR.."mifs_qdrive_qvp.img")
-    QURT_CDSP0        = valid_file(IMAGE_DIR.."bootimage_relocflag_withdummyseg_makena.cdsp0.prodQ.pbn")
-    QURT_CDSP1        = valid_file(IMAGE_DIR.."bootimage_relocflag_withdummyseg_makena.cdsp1.prodQ.pbn")
-    BL31_BIN          = valid_file(IMAGE_DIR.."bl31.bin")
-    SMEM_MAKENA_BIN   = valid_file(IMAGE_DIR.."smem_makena.bin")
-    CMD_DB_HEADER_BIN = valid_file(IMAGE_DIR.."cmd_db_header.bin")
-    CMD_DB_BIN        = valid_file(IMAGE_DIR.."cmd_db.bin")
-end
 
--- The following are in GIT and probably don't need to be validated.
-MAKENA_REGS_CSV = top().."fw/makena/SA8540P_MakenaAU_v2_Registers.csv"
-HEX_CFGTABLES   = top().."fw/hex_cfgtables.lua"
+local MAKENA_REGS_CSV = valid_file(top().."fw/makena/SA8540P_MakenaAU_v2_Registers.csv")
+local HEX_CFGTABLES   = valid_file(top().."fw/hex_cfgtables.lua")
 
 local NSP0_BASE     = 0x1A000000 -- TURING_SS_0TURING
 local NSP1_BASE     = 0x20000000 -- TURING_SS_1TURING
@@ -120,7 +112,7 @@ local TURING_SS_0TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x1b0a4008
 local TURING_SS_1TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x213b0008;
 local TURING_SS_1TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x210a4008;
 
-dofile (top().."fw/hex_cfgtables.lua")
+dofile (valid_file(HEX_CFGTABLES));
 
 function get_nspss(base, ahbs_base, cfgtable, start_addr, ahb_size)
     local cfgtable_base_addr = base + 0x180000;
@@ -191,6 +183,7 @@ local NSP1_VTCM_SIZE_BYTES = (SA8540P_nsp1_config_table[16] * 1024)
 platform = {
     arm_num_cpus = 8;
     num_redists = 1;
+    with_gpu = false;
 
     hexagon_num_clusters = 2;
     hexagon_cluster_0 = nsp0ss;
@@ -206,7 +199,7 @@ platform = {
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
              redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0x1C0000}};
     virtionet0= { mem    =   {address=0x1c120000, size=0x10000}, irq=18, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21"};
-    virtioblk0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..SYSTEM_QDRIVE..",format=raw,if=none"};
+--    virtioblk_0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..SYSTEM_QDRIVE..",format=raw,if=none"};
 
     qtimer_0=   { mem     =   {address=0x17c20000, size=0x1000};
                   mem_view=   {address=0x17c21000, size=0x1000*2*7}; -- 0x1000*nr_frames*nr_views
@@ -217,16 +210,16 @@ platform = {
     ipcc= {  socket        = {address=IPC_ROUTER_TOP, size=0xfc000},
              irqs = {
                 {irq=8, dst = "platform.gic.spi_in_229"},
-                {irq=18, dst = "platform.hexagon_cluster_1.l2vic.irq_in_30"},
+                {irq=18, dst = "platform.hexagon_cluster_1.l2vic.irq_in_30"}, -- NB relies on 2 clusters
                 {irq=6,  dst = "platform.hexagon_cluster_0.l2vic.irq_in_30"},
             }
         };
 
-    qtb = { control_socket = {address=0x15180000, size=0x80000}};
+    -- qtb = { control_socket = {address=0x15180000, size=0x80000}};
+    -- The QTB model is not active in the system, left here for debug purposes.
 
     smmu = { socket = {address=0x15000000, size=0x100000};
-             mem = {address=0x15000000, size=0x100000};
-             num_tbu=2;
+             num_tbu=2;  -- for now, this needs to match the expected number of TBU's
              num_pages=128;
              num_cb=128;
              irq_context = 103;
@@ -234,19 +227,19 @@ platform = {
            };
 
     tbu_0 = { topology_id=0x31A0,
-              upstream_socket = { topology_id=0x31A0,
-                                  address=NSP0_AHB_HIGH,
+              upstream_socket = { address=NSP0_AHB_HIGH,
                                   size=0xF00000000-NSP0_AHB_HIGH,
                                   relative_addresses=false
              }
             };
     tbu_1 = { topology_id=0x39A0,
-             upstream_socket = { topology_id=0x39A0,
-                                 address=NSP1_AHB_HIGH,
+             upstream_socket = { address=NSP1_AHB_HIGH,
                                  size=0xF00000000-NSP1_AHB_HIGH,
                                  relative_addresses=false
              }
             };
+
+    memorydumper = { target_socket={address=0x1B300040, size=0x10}},
 
     fallback_memory = { target_socket={address=0x0, size=0x40000000},
                         dmi_allow=false, verbose=true,
@@ -255,18 +248,6 @@ platform = {
                         value_str="Reset Value", byte_swap=true}
                       };
     load={
-        {bin_file=BL31_BIN,
-         address=INITIAL_DDR_SPACE_14GB};
-        {bin_file=MIFS_QDRIVE,
-         address=INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE };
-        {bin_file=SMEM_MAKENA_BIN,
-         address=INITIAL_DDR_SPACE_14GB + OFFSET_SMEM_DDR_SPACE };
-        {bin_file=CMD_DB_HEADER_BIN,
-         address= 0x0C3F0000};
-        {bin_file=CMD_DB_BIN,
-         address= 0x80860000};
-	    {elf_file=QURT_CDSP0};
-	    {elf_file=QURT_CDSP1};
         {data={0x60140200}, address=TCSR_SOC_HW_VERSION_ADDR};
         {data={SMEM_TARG_INFO_ADDR}, address=SMEM_TCSR_TZ_WONCE_ADDR};
         {data={0x00005381},
@@ -313,4 +294,35 @@ if (platform.arm_num_cpus > 0) then
     end
 end
 
-print ("Lua config run. . . ");
+
+-- read in any local configuration (Before convenience switches)
+local IMAGE_DIR;
+if os.getenv("QQVP_IMAGE_DIR") == nil then
+    IMAGE_DIR = "./"
+else
+    IMAGE_DIR = os.getenv("QQVP_IMAGE_DIR").."/"
+end
+
+if (file_exists(IMAGE_DIR.."conf.lua"))
+then
+    print ("Running local "..IMAGE_DIR.."conf.lua");
+    dofile(IMAGE_DIR.."conf.lua");
+else
+    print ("A local conf.lua file is required in the directory containint your images. That defaults to the current directory or you can set it using QQVP_IMAGE_DIR\n");
+    os.exit(1);
+end
+
+
+-- convenience switches
+if (platform.with_gpu) then
+    tableMerge(platform, {
+        gpex=     { pio_iface             = {address=0x003eff0000, size=0x0000010000};
+        mmio_iface            = {address=0x0060000000, size=0x002B500000};
+        ecam_iface            = {address=0x4010000000, size=0x0001000000};
+        mmio_iface_high       = {address=0x8000000000, size=0x8000000000},
+    irq_0=0, irq_1=0, irq_2=0, irq_3=0};
+    });
+end
+
+
+print ("Lua config Finished.");

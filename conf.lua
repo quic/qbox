@@ -55,9 +55,9 @@ filesystem_image = get_image("bsp/linux/extras/fs/filesystem.bin",
                              image_install_dir().."filesystem.bin",
                              "filesystem.bin")
 
-linux_image = get_image ("fw/fastrpc-images/images/Image_opengl",
+linux_image = get_image ("bsp/linux/out/android-mainline/dist/Image",
                          nil,
-                         "Image_opengl");
+                         "Image");
 
 device_tree = get_image ("fw/fastrpc-images/images/rumi_opengl.dtb",
                          nil,
@@ -161,14 +161,14 @@ platform = {
     arm_num_cpus = 8;
     num_redists  = 1;
     quantum_ns   = 100000000;
-    with_gpu = true;
+    with_gpu = false;
 
     ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
 
     hexagon_ram={ target_socket         = {address=0x0000000000, size=0x0008000000}};
     ipcc=       { socket                = {address=0x0000410000, size=0x00000fc000}};
     uart=       { simple_target_socket_0= {address=0x0009000000, size=0x0000001000}, irq=1};
-    virtioblk0= { mem                   = {address=0x000a003c00, size=0x0000002000}, irq=0x2e, blkdev_str = "file=" .. filesystem_image};
+    virtioblk_0= { mem                   = {address=0x000a003c00, size=0x0000002000}, irq=0x2e, blkdev_str = "file=" .. filesystem_image..",format=raw,if=none"};
     virtionet0= { mem                   = {address=0x000a003e00, size=0x0000002000}, irq=0x2d, netdev_str = "type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2280-:80"};
     system_imem={ target_socket         = {address=0x0014680000, size=0x0000040000}};
  -- smmu=       { mem                   = {address=0x0015000000, size=0x0000100000};
@@ -199,17 +199,23 @@ platform = {
 
     hexagon_num_clusters = 1;
     hexagon_cluster_0 = hexagon_cluster;
-    smmu = { mem = {address=0x15000000, size=0x100000};
-            num_tbu=2;
-            num_pages=128;
-            num_cb=128;
-            tbu_sid_0 = 0x1234;
-            upstream_socket_0 = {address=0x0, size=0xd81e0000, relative_addresses=false};
-            tbu_sid_1 = 0;
-            upstream_socket_1 = {address=0x0, size=0x100000000, relative_addresses=false};
-            irq_context = 103;
-            irq_global = 65;
+
+    smmu = { socket = { address = 0x15000000, size = 0x100000 };
+        num_tbu = 1; -- for now, this needs to match the expected number of TBU's
+        num_pages = 128;
+        num_cb = 128;
+        irq_context = 103;
+        irq_global = 65;
     };
+
+    tbu_0 = { topology_id = 0x31A0,
+        upstream_socket = { address = 0,
+            size = 0xd81e0000,
+            relative_addresses = false
+        }
+    };
+
+    memorydumper = { target_socket = { address = 0x1B300040, size = 0x10 } },
 
         -- for virtio image
     load = {

@@ -73,7 +73,7 @@
 #define ARCH_TIMER_NS_EL1_IRQ (16 + 14)
 #define ARCH_TIMER_NS_EL2_IRQ (16 + 10)
 
-//#define newsmmu
+#define newsmmu
 
 class hexagon_cluster : public sc_core::sc_module
 {
@@ -209,7 +209,7 @@ protected:
 #endif
 
     QemuVirtioMMIONet m_virtio_net_0;
-    QemuVirtioMMIOBlk m_virtio_blk_0;
+    sc_core::sc_vector<QemuVirtioMMIOBlk> m_virtio_blks;
 
     QemuGPEX* m_gpex;
     QemuVirtioGpuGlPci* m_gpu;
@@ -246,7 +246,10 @@ protected:
         m_router.initiator_socket.bind(m_smmu.socket);
 #endif
         m_router.initiator_socket.bind(m_virtio_net_0.socket);
-        m_router.initiator_socket.bind(m_virtio_blk_0.socket);
+
+        for (auto& vblk : m_virtio_blks) {
+            m_router.initiator_socket.bind(vblk.socket);
+        }
 
         if (p_with_gpu.get_value()) {
             m_router.initiator_socket.bind(m_gpex->ecam_iface);
@@ -276,9 +279,11 @@ protected:
                 int irq = gs::cci_get<int>(std::string(m_virtio_net_0.name()) +
                                            ".irq");
                 m_virtio_net_0.irq_out.bind(m_gic->spi_in[irq]);
-                irq = gs::cci_get<int>(std::string(m_virtio_blk_0.name()) +
+            }
+            for (auto& vblk : m_virtio_blks) {
+                int irq = gs::cci_get<int>(std::string(vblk.name()) +
                                        ".irq");
-                m_virtio_blk_0.irq_out.bind(m_gic->spi_in[irq]);
+                vblk.irq_out.bind(m_gic->spi_in[irq]);
             }
             for (auto& qt : m_qtimers) {
                 uint32_t nr_frames = gs::cci_get<int>(std::string(qt.name()) +
@@ -399,7 +404,11 @@ public:
                              })
 #endif
         , m_virtio_net_0("virtionet0", m_qemu_inst)
-        , m_virtio_blk_0("virtioblk0", m_qemu_inst)
+        , m_virtio_blks("virtioblk",
+                    gs::sc_cci_list_items(sc_module::name(), "virtioblk").size(),
+                    [this](const char* n, size_t i) {
+                        return new QemuVirtioMMIOBlk(n, m_qemu_inst);
+                    })
         , m_qtimers("qtimer",
                     gs::sc_cci_list_items(sc_module::name(), "qtimer").size(),
                     [this](const char* n, size_t i) {
