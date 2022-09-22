@@ -1,3 +1,10 @@
 include:
   - project: 'qqvp/GreenSocs/cmake-boilerplate'
     file: 'gitlab-ci-template.yml'
+
+lua-check:
+  stage: test
+  script: ./scripts/luacheckpatch.sh $CI_MERGE_REQUEST_DIFF_BASE_SHA HEAD
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  allow_failure: true
