@@ -251,14 +251,12 @@ protected:
             m_router.initiator_socket.bind(vblk.socket);
         }
 
-        if (p_with_gpu.get_value()) {
-            m_router.initiator_socket.bind(m_gpex->ecam_iface);
-            m_router.initiator_socket.bind(m_gpex->mmio_iface);
-            m_router.initiator_socket.bind(m_gpex->mmio_iface_high);
-            m_router.initiator_socket.bind(m_gpex->pio_iface);
+        m_router.initiator_socket.bind(m_gpex->ecam_iface);
+        m_router.initiator_socket.bind(m_gpex->mmio_iface);
+        m_router.initiator_socket.bind(m_gpex->mmio_iface_high);
+        m_router.initiator_socket.bind(m_gpex->pio_iface);
 
-            m_router.add_initiator(m_gpex->bus_master);
-        }
+        m_router.add_initiator(m_gpex->bus_master);
 
         for (auto& qt : m_qtimers) {
             m_router.initiator_socket.bind(qt.socket);
@@ -281,8 +279,7 @@ protected:
                 m_virtio_net_0.irq_out.bind(m_gic->spi_in[irq]);
             }
             for (auto& vblk : m_virtio_blks) {
-                int irq = gs::cci_get<int>(std::string(vblk.name()) +
-                                       ".irq");
+                int irq = gs::cci_get<int>(std::string(vblk.name()) + ".irq");
                 vblk.irq_out.bind(m_gic->spi_in[irq]);
             }
             for (auto& qt : m_qtimers) {
@@ -295,24 +292,21 @@ protected:
                 }
             }
 
-            if (p_with_gpu.get_value()) {
-                int irq = gs::cci_get<int>(std::string(m_gpex->name()) +
-                                           ".irq_0");
-                m_gpex->irq_out[0].bind(m_gic->spi_in[irq]);
-                m_gpex->irq_num[0] = irq;
+            int irq = gs::cci_get<int>(std::string(m_gpex->name()) + ".irq_0");
+            m_gpex->irq_out[0].bind(m_gic->spi_in[irq]);
+            m_gpex->irq_num[0] = irq;
 
-                irq = gs::cci_get<int>(std::string(m_gpex->name()) + ".irq_1");
-                m_gpex->irq_out[1].bind(m_gic->spi_in[irq]);
-                m_gpex->irq_num[1] = irq;
+            irq = gs::cci_get<int>(std::string(m_gpex->name()) + ".irq_1");
+            m_gpex->irq_out[1].bind(m_gic->spi_in[irq]);
+            m_gpex->irq_num[1] = irq;
 
-                irq = gs::cci_get<int>(std::string(m_gpex->name()) + ".irq_2");
-                m_gpex->irq_out[2].bind(m_gic->spi_in[irq]);
-                m_gpex->irq_num[2] = irq;
+            irq = gs::cci_get<int>(std::string(m_gpex->name()) + ".irq_2");
+            m_gpex->irq_out[2].bind(m_gic->spi_in[irq]);
+            m_gpex->irq_num[2] = irq;
 
-                irq = gs::cci_get<int>(std::string(m_gpex->name()) + ".irq_3");
-                m_gpex->irq_out[3].bind(m_gic->spi_in[irq]);
-                m_gpex->irq_num[3] = irq;
-            }
+            irq = gs::cci_get<int>(std::string(m_gpex->name()) + ".irq_3");
+            m_gpex->irq_out[3].bind(m_gic->spi_in[irq]);
+            m_gpex->irq_num[3] = irq;
 
             for (int i = 0; i < m_cpus.size(); i++) {
                 m_gic->irq_out[i].bind(m_cpus[i].irq_in);
@@ -390,7 +384,8 @@ public:
               [this](const char* n, size_t i) { return new gs::Memory<>(n); })
 
         , m_hexagon_rams(
-              "hexagon_ram", gs::sc_cci_list_items(sc_module::name(), "hexagon_ram").size(),
+              "hexagon_ram",
+              gs::sc_cci_list_items(sc_module::name(), "hexagon_ram").size(),
               [this](const char* n, size_t i) { return new gs::Memory<>(n); })
 
         //        , m_system_imem("system_imem")
@@ -399,16 +394,17 @@ public:
 #ifdef newsmmu
         , m_smmu("smmu")
         , m_tbus("tbu", p_hexagon_num_clusters,
-                             [this](const char* n, size_t i) {
-                                 return new smmu500_tbu<> (n, &m_smmu);
-                             })
+                 [this](const char* n, size_t i) {
+                     return new smmu500_tbu<>(n, &m_smmu);
+                 })
 #endif
         , m_virtio_net_0("virtionet0", m_qemu_inst)
-        , m_virtio_blks("virtioblk",
-                    gs::sc_cci_list_items(sc_module::name(), "virtioblk").size(),
-                    [this](const char* n, size_t i) {
-                        return new QemuVirtioMMIOBlk(n, m_qemu_inst);
-                    })
+        , m_virtio_blks(
+              "virtioblk",
+              gs::sc_cci_list_items(sc_module::name(), "virtioblk").size(),
+              [this](const char* n, size_t i) {
+                  return new QemuVirtioMMIOBlk(n, m_qemu_inst);
+              })
         , m_qtimers("qtimer",
                     gs::sc_cci_list_items(sc_module::name(), "qtimer").size(),
                     [this](const char* n, size_t i) {
@@ -428,18 +424,19 @@ public:
                 "glob-per-init-arm", m_qemu_inst, m_cpus[0]);
         }
 
-        if (p_with_gpu.get_value()) {
-            uint64_t mmio_addr = gs::cci_get<uint64_t>(
-                std::string(this->name()) + ".gpex.mmio_iface.address");
-            uint64_t mmio_size = gs::cci_get<uint64_t>(
-                std::string(this->name()) + ".gpex.mmio_iface.size");
-            uint64_t mmio_iface_high_addr = gs::cci_get<uint64_t>(
-                std::string(this->name()) + ".gpex.mmio_iface_high.address");
-            uint64_t mmio_iface_high_size = gs::cci_get<uint64_t>(
-                std::string(this->name()) + ".gpex.mmio_iface_high.size");
+        uint64_t mmio_addr = gs::cci_get<uint64_t>(std::string(this->name()) +
+                                                   ".gpex.mmio_iface.address");
+        uint64_t mmio_size = gs::cci_get<uint64_t>(std::string(this->name()) +
+                                                   ".gpex.mmio_iface.size");
+        uint64_t mmio_iface_high_addr = gs::cci_get<uint64_t>(
+            std::string(this->name()) + ".gpex.mmio_iface_high.address");
+        uint64_t mmio_iface_high_size = gs::cci_get<uint64_t>(
+            std::string(this->name()) + ".gpex.mmio_iface_high.size");
 
-            m_gpex = new QemuGPEX("gpex", m_qemu_inst, mmio_addr, mmio_size,
-                                  mmio_iface_high_addr, mmio_iface_high_size);
+        m_gpex = new QemuGPEX("gpex", m_qemu_inst, mmio_addr, mmio_size,
+                              mmio_iface_high_addr, mmio_iface_high_size);
+
+        if (p_with_gpu.get_value()) {
             m_gpu = new QemuVirtioGpuGlPci("gpu", m_qemu_inst);
             m_gpex->add_device(*m_gpu);
         }
@@ -450,6 +447,12 @@ public:
         }
 
         do_bus_binding();
+
+#ifdef newsmmu
+        // Always bind the SMMU even if there are no hexagones, to ensure
+        // complete binding
+        m_smmu.dma_socket.bind(m_router.target_socket);
+#endif
 
         if (p_hexagon_num_clusters) {
             for (int N = 0; N < p_hexagon_num_clusters; N++) {
@@ -467,7 +470,6 @@ public:
 #endif
             }
 #ifdef newsmmu
-            m_smmu.dma_socket.bind(m_router.target_socket);
             {
                 int irq = gs::cci_get<int>(std::string(m_smmu.name()) +
                                            ".irq_context");
@@ -530,8 +532,8 @@ public:
 #endif
         if (p_with_gpu.get_value()) {
             delete m_gpu;
-            delete m_gpex;
         }
+        delete m_gpex;
     }
 };
 

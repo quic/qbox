@@ -215,6 +215,13 @@ platform = {
             }
         };
 
+    gpex = { pio_iface = { address = 0x003eff0000, size = 0x0000010000 };
+        mmio_iface = { address = 0x0060000000, size = 0x002B500000 };
+        ecam_iface = { address = 0x4010000000, size = 0x0010000000 };
+        mmio_iface_high = { address = 0x8000000000, size = 0x8000000000 },
+        irq_0 = 0, irq_1 = 0, irq_2 = 0, irq_3 = 0
+    };
+
     -- qtb = { control_socket = {address=0x15180000, size=0x80000}};
     -- The QTB model is not active in the system, left here for debug purposes.
 
