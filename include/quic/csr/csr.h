@@ -118,7 +118,7 @@ private:
             ret_cfg=val;
             break;
         default:
-            SC_REPORT_ERROR("CSR", "invalid write");
+            SC_REPORT_WARNING("CSR", "Unimplemented write");
             break;
         }
 
@@ -188,8 +188,8 @@ private:
         case QDSP6SS_MEM_STAGGER_RESET_STATUS:
             return 0x0;
         default:
-            SC_REPORT_ERROR("CS", "invalid read");
-            break;
+            SC_REPORT_WARNING("CS", "Unimplemented read");
+            return 0x0;
         }
         return 0;
     }
