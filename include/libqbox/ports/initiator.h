@@ -211,9 +211,13 @@ protected:
             auto next = m_dmi_aliases.upper_bound(start);
             if (next != m_dmi_aliases.begin()) {
                 auto prev = std::prev(next);
-                assert(prev->first !=
-                       start); // item should not already be in the list!
                 DmiRegionAlias::Ptr dmi = prev->second;
+                if (prev->first == start) {
+                    // already have the DMI
+                    assert(end <= dmi->get_end());
+                    assert(m_dmi_data.get_dmi_ptr() == dmi->get_dmi_ptr());
+                    return;
+                }
                 uint64_t sz = dmi->get_size();
                 if (dmi->get_end() + 1 == start &&
                     dmi->get_dmi_ptr() + sz == m_dmi_data.get_dmi_ptr()) {
@@ -228,6 +232,12 @@ protected:
             if (next != m_dmi_aliases.end()) {
                 DmiRegionAlias::Ptr dmi = next->second;
                 uint64_t sz = dmi->get_size();
+                if (next->first == start) {
+                    // already have the DMI
+                    assert(end <= dmi->get_end());
+                    assert(m_dmi_data.get_dmi_ptr() == dmi->get_dmi_ptr());
+                    return;
+                }
                 if (dmi->get_start() == end + 1 &&
                     m_dmi_data.get_dmi_ptr() + sz == dmi->get_dmi_ptr()) {
                     GS_LOG("Merge with next");
