@@ -16,18 +16,22 @@ in CodeLinaro.
 The user guide for QQVP is published in CreatePoint: Qualcomm® Quick
 Emulator (QEMU) Virtual Platform User Guide (80-N2040-55).
 
-----------------------------------------------------------------------
+-----------------------------------------------------------------------
 New in this release:
+- new config file dependencies, new reference config file topology. See
+  the User Guide document for details.
 - build & runtime dependency on new packages:
     libbvirglrenderer-dev libepoxy-dev libgtk-3-dev libsdl2-dev
-- build & runtime dependency on libstdc++ >= 9.4.0.
+- build dependency on gcc >= 9.4.0.
 - replaced QEMU SMMU model with a new SystemC SMMU model.
 - support for virtio-gpu OpenGL device.
 - support for CDSP1.
 - lua config change to CDSP interrupt map: fixes issues encountered
   by diag_service.
+- "Systemc Common Practices", "liblog", "smmu500" repos added.
+- block device name changed: virtioblk0 => virtioblk_<n>
 
-----------------------------------------------------------------------
+-----------------------------------------------------------------------
 Known problems:
 
 Invoking multiple concurrent 'qnn-net-run' instances will fail.
