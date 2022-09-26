@@ -4,7 +4,7 @@
 [*                                                               *]
 [*===============================================================*]
 
-Qualcomm QEMU-Virtual Platform 0.2 - Release Notes
+Qualcomm QEMU-Virtual Platform 0.3 - Release Notes
 
 ----------------------------------------------------------------------
 
@@ -18,14 +18,17 @@ Emulator (QEMU) Virtual Platform User Guide (80-N2040-55).
 
 ----------------------------------------------------------------------
 New in this release:
-- Added Platform support for NSP hexagon core, coprocs + NSP subsystem devices
-- Update from "max" CPU to Cortex-A76
-- Build config simplification
-- Updated QEMU baseline for aarch64, hexagon to 7.0.50
+- build & runtime dependency on new packages:
+    libbvirglrenderer-dev libepoxy-dev libgtk-3-dev libsdl2-dev
+- build & runtime dependency on libstdc++ >= 9.4.0.
+- replaced QEMU SMMU model with a new SystemC SMMU model.
+- support for virtio-gpu OpenGL device.
+- support for CDSP1.
+- lua config change to CDSP interrupt map: fixes issues encountered
+  by diag_service.
 
 ----------------------------------------------------------------------
 Known problems:
 
 Invoking multiple concurrent 'qnn-net-run' instances will fail.
 This issue is still under investigation.
-
