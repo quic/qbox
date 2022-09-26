@@ -1,0 +1,863 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Copyright (c) 2022 Qualcomm Technologies, Inc. All rights reserved. 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This custom LaTeX file includes the other chapters for the PDF. This file is called 
+% by the primary LaTeX document build file, _build_pdf.tex.
+%
+% For questions or more information, send an email to livingdocs.support or go to the
+% website (go\livingdocs).
+%
+% Latex-only docs
+% 01/12/15 Rev D Version 3 for Doxygen 1.7.6.1
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Overview}
+
+QQVP is designed to be used for development, debugging, and testing of software on Qualcomm SoCs.
+
+The following diagram shows an overview of the modeled system.
+
+\begin{figure}[H]
+  \includegraphics[scale=1]{images/qemuvp_overview.png}
+  \renewcommand{\thefigure}{\thechapter-\arabic{figure}}
+  %\caption{Figure caption}
+  %\label{fig:uniqueCrossRefLabel}
+\end{figure}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Getting started}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Host system requirements}
+
+QQVP is supported on Ubuntu Linux 18.04.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Required platform libraries}
+
+QQVP binaries require the following system libraries to be installed, and corresponding 'developer' libraries are required for building QQVP:
+
+\begin{itemize}
+\item libglib
+\item libffi
+\item libpcre
+\item libelf
+\item libz
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Build the release}
+
+You can build this release natively on Ubuntu 18.04.
+
+Install the build dependencies:
+
+\small
+\begin{lstlisting}[language=bash]
+    # apt update && apt upgrade -y
+    # apt install -y make build-essential cmake g++ wget flex bison unzip python python3-pip iproute2 ninja-build pkg-config libpixman-1-dev libglib2.0-dev git wget curl libelf-dev
+\end{lstlisting}
+\normalsize
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Cmake version}
+
+Cmake version 3.14 or newer is required. Download it as follows:
+
+\small
+\begin{lstlisting}[language=bash]
+    # curl -L https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
+\end{lstlisting}
+\normalsize
+
+Cmake is installed in the following directory. Either include this location in your path or run cmake from the directory:
+
+\small
+\begin{lstlisting}[language=bash]
+    # ./cmake-3.20.0-rc4-linux-x86_64/bin/cmake
+\end{lstlisting}
+\normalsize
+
+
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Fetch the sources}
+
+Extract the platform in {\small{\lstinline!$HOME/quic-vp!}}.
+
+If you have an SSH key, enter the following commands:
+
+\small
+\begin{lstlisting}[language=bash]
+    # cd $HOME
+    # git clone git@git.codelinaro.org:clo/private/qqvp/quic-vp.git
+    # cd quic-vp
+\end{lstlisting}
+\normalsize
+
+Otherwise, enter these commands:
+
+\small
+\begin{lstlisting}[language=bash]
+    # cd $HOME
+    # git clone https://git.codelinaro.org/clo/private/qqvp/quic-vp.git
+    # cd quic-vp 
+\end{lstlisting}
+\normalsize
+
+In either case, check out the specific release tag that you intend to use. For example, with version 0.1:
+
+\small
+\begin{lstlisting}[language=bash]
+    # git checkout v0.1.0
+\end{lstlisting}
+\normalsize
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Passwords for git repositories}
+\label{sec:passwords-git-repos}
+
+To avoid using passwords for the git repositories, add an SSH key to your git account. You can also use a keychain manager.
+
+As a last resort, the following script will populate {\small{\lstinline!~/.git-credentials!}} with your user name and password (in plain text).
+
+\small
+\begin{lstlisting}[language=bash]
+    # git config --global credential.helper store
+\end{lstlisting}
+\normalsize
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Build the platform}
+
+This operation will take 5 to 20 minutes, depending on your build system configuration.
+
+\small
+\begin{lstlisting}[language=bash]
+    # cd $HOME/quic-vp
+    # cmake -DGREENSOCS_GIT=git@git.codelinaro.org:clo/private/qqvp/ -DACCELLERA_GIT=git@git.codelinaro.org:clo/private/qqvp/accellera/ -B build
+    # cd build
+    # make -j
+\end{lstlisting}
+\normalsize
+
+Cmake might ask for your git repository credentials (for advice about passwords, see Section \ref{sec:passwords-git-repos}). \vspace{6pt}
+
+For details of other supported build configurations, see Chapter \ref{ch:gs-build-make-system}.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{QQVP build and make system}
+\label{ch:gs-build-make-system}
+
+This chapter contains more details about the build system.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Find and download missing components}
+
+This project uses CPM {\color{blue}{\url{https://github.com/cpm-cmake/CPM.cmake}}} to find or download missing components. To find the locally installed SystemC, use the standard SystemC environment variables: {\small{\lstinline!SYSTEMC_HOME!}} and {\small{\lstinline!CCI_HOME!}}. \leavevmode
+
+CPM uses the standard cmake {\small{\lstinline!find_package!}} mechanism to find installed packages ({\color{blue}{\url{https://cmake.org/cmake/help/latest/command/find_package.html}}}). \leavevmode
+
+To specify a package location, use {\small{\lstinline!<package>_ROOT!}}. CPM will also search along the {\small{\lstinline!CMAKE_MODULE_PATH!}}. \leavevmode
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Use your source}
+
+Sometimes it is convenient to use your own sources. In this case, use the {\small{\lstinline!CPM_<package>_SOURCE_DIR!}}. Hence, you might use your own copy of SystemC CCI.
+
+\small
+\begin{lstlisting}[language=bash]
+    # cmake -B build -DCPM_SystemCCCI_SOURCE=/path/to/your/cci/source
+\end{lstlisting}
+\normalsize
+
+You might also find it convenient to download all the source files. The following command populates the Packages directory:
+
+\small
+\begin{lstlisting}[language=bash]
+    # cmake -B build -DCPM_SOURCE_CACHE=`pwd`/Packages
+\end{lstlisting}
+\normalsize
+
+\note The cmake file system will automatically use the directory called Packages as the source if it exists.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Compiled modules}
+
+This project uses CPM {\color{blue}{\url{https://github.com/cpm-cmake/CPM.cmake}}} to find or download missing components. To find the locally installed SystemC, use the standard SystemC environment variables: {\small{\lstinline!SYSTEMC_HOME!}} and {\small{\lstinline!CCI_HOME!}}.
+
+Cmake holds a cache of compiled modules in {\small{\lstinline!~/.cmake/!}}. Sometimes this can confuse builds. If you seem to be picking up the wrong version of a module, it might be in this cache. It is perfectly safe to delete it.
+
+
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Common cmake options}
+
+The library assumes the use of C++14, and it is compatible with SystemC versions from SystemC 2.3.1a.
+
+{\textbf {\footnotesize{\lstinline!CMAKE_INSTALL_PREFIX!}}}
+\begin{quote}
+Install directory for the package and binaries.
+
+By default, the value of the {\small{\lstinline!CMAKE_INSTALL_PREFIX!}} variable is the {\small{\lstinline!install!}} directory located in the top-level directory.
+\end{quote}
+
+{\textbf {\footnotesize{\lstinline!CMAKE_BUILD_TYPE!}}}
+\begin{quote}
+Valid options are {\small{\lstinline!DEBUG!}} or {\small{\lstinline!RELEASE!}}.
+\end{quote}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Use QQVP}
+
+This chapter covers the configuration options available for using the virtual platform.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Run the virtual platform}
+
+Enter the following:
+
+\small
+\begin{lstlisting}[language=bash]
+    ./vp --gs_luafile conf.lua
+\end{lstlisting}
+\normalsize
+
+You will see the following output:
+
+\small
+\begin{lstlisting}[language=bash]
+            SystemC 2.3.4_pub_rev_20200101-GreenSocs --- Apr 6 2022 17:33:11
+            Copyright (c) 1996-2019 by all Contributors,
+            ALL RIGHTS RESERVED
+    @0 s /0 (lua): Parse command line for --gs_luafile option (3 arguments)
+    @0 s /0 (lua): Option --gs_luafile with value ../fw/<soc>_28_Mar_2022/<soc>_conf.lua
+    Lua file command line parser: parse option --gs_luafile ../fw/<soc>_28_Mar_2022/<soc>_conf.lua
+    @0 s /0 (lua): Read lua file '../fw/<soc>_28_Mar_2022/<soc>_conf.lua'
+    Lua config running. . . 
+    Lua config run. . . 
+    Loading libqemu-system-aarch64.dylib[...]
+\end{lstlisting}
+\normalsize
+
+
+After the kernel boots up, you can interact with it directly by entering the following:
+
+\small
+\begin{lstlisting}[language=bash]
+    # ls
+    bin etc lib proc tmp var
+    dev ifs lib64 root usr
+\end{lstlisting}
+\normalsize
+
+\note In this mode, the simulation will terminate when you press {\small{\lstinline!^c!}}.
+
+
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Command line options}
+
+The QQVP is configured and controlled using a CCI-compatible configuration broker.
+
+The order of options is important because the last option on the command line to set a parameter will take preference. Also, a string parameter must be quoted.
+
+\note In this mode, the simulation will terminate when you press {\small{\lstinline!^c!}}.
+
+{\textbf {\footnotesize{\lstinline!--gs_luafile <FILE.lua>!}}}
+\vspace{-2pt}
+\begin{quote}
+Reads the lua file to set the parameters.
+\end{quote}
+
+{\textbf {\footnotesize{\lstinline!--param path.to.param=<value>!}}}
+\vspace{-2pt}
+\begin{quote}
+Allows you to set individual parameters.
+\end{quote}
+
+{\textbf {\footnotesize{\lstinline!--help!}}} \newline
+{\textbf {\footnotesize{\lstinline!-h!}}}
+\vspace{-2pt}
+\begin{quote}
+Reports on the state of all configurable parameters known to the system up to the beginning of the simulation. The option will cause the simulation to halt at this point.
+
+This option is useful to both find the names of configurable parameters and to check their state.
+\end{quote}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\vspace{9pt}{\large \textbf {\textsf{Configuration file}}}
+
+A configuration file defined for the SoC is provided in the quic-vp git repository: {\small{\lstinline!conf.lua!}}.
+
+\caution Changes to this lua configuration file might make the virtual platform inoperable.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{General configuration options}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Connect the UART to a TCP port}
+
+Use a telnet session to connect to the platform. \leavevmode
+
+\small
+\begin{lstlisting}[language=bash]
+    --param platform.uart_backend_port=4001
+\end{lstlisting}
+\normalsize
+
+In this mode, the simulation will not start until a connection is made to the TCP port.
+
+\small
+\begin{lstlisting}[language=bash]
+    telnet localhost 4001
+    [...]
+    #
+    # ls
+    bin etc lib proc tmp var
+    dev ifs lib64 root usr
+    # ^]
+    telnet> q
+    Connection closed.
+\end{lstlisting}
+\normalsize
+
+
+
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Connect the debugger to the CPUs}
+
+The platform can be configured to hold multiple ARM A53 CPUs, which are numbered {\small{\lstinline!cpu_0!}} through {\small{\lstinline!cpu_[n]!}}.
+
+You can choose the CPU by selecting it when specifying the parameter. For example, connect the debugger on CPU 0 through port 4321:
+
+\small
+\begin{lstlisting}[language=bash]
+    --param platform.cpu_0.gdb_port=4321
+\end{lstlisting}
+\normalsize
+
+The CDSP0/NSP0 subsystem contains a Hexagon core, and debugging Hexagon
+requires {\small{\lstinline!hexagon-lldb!}} from the Hexagon tools.  The Hexagon SDK
+contains the tools: {\color{blue}{\url{https://developer.qualcomm.com/software/hexagon-dsp-sdk}}}.
+
+For example, connect the debugger to the NSP0 Hexagon core through port 1234:
+
+\small
+\begin{lstlisting}[language=bash]
+    --param 'platform.hexagon_cluster_0.hexagon_thread_0.gdb_port=1234'
+\end{lstlisting}
+\normalsize
+
+Simulation will not start until the debugger is connected to the TCP port.
+
+\caution The debugger must be able to handle the correct architecture, and it must be provided with the correct firmware file.
+
+The ARM Gnu Toolchain provides a GDB release suitable for debugging with the emulated ARM CPUs: {\color{blue}{\url{https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads}}}. This debug mechanism is intended for debugging bootstrap operations, kernel operations, interrupt service routines, and so on. However, after the guest operating system comes up, you can use process-level debugging: connect with a debug agent running on the guest system.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{QQVP component library loader}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Load data on the VP}
+\label{sec:load-data-on-vp}
+
+The firmware files that are used to execute the platform are to be set directly in the configuration file:
+
+\small
+\begin{lstlisting}[language=bash]
+    platform={
+       ...
+       load={
+          {bin_file=top().."fw/path/to/binary.img", address=0xABCD0000 };
+          ...
+       }
+    }
+\end{lstlisting}
+\normalsize
+
+In this case, {\small{\lstinline!top()!}} is a function that returns the location of the lua file, such that the subsequent path is relative. The address must lie within a memory area.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Load data on a QNX VBSP build}
+
+From a QNX VBSP build, load the following files into memory in the {\small{\lstinline!load!}} section.
+
+\small
+\begin{lstlisting}[language=bash]
+    bl31.bin
+    mifs_qdrive_qvp.img
+\end{lstlisting}
+\normalsize
+
+For the <soc-name> SoC, stage the binaries as indicated above and use the {\small{\lstinline!<soc-name>_conf.lua!}} file provided in the quic-vp git repository:
+
+\small
+\begin{lstlisting}[language=bash]
+    # ./vp --gs_luafile <soc-name>_conf.lua
+\end{lstlisting}
+\normalsize
+
+\newpage
+
+Following is an excerpt from the relevant {\small{\lstinline!load!}} section. For an unabridged example, see {\color{blue}{\url{https://git.codelinaro.org/clo/private/qqvp/quic-vp/-/blob/e2bbbcc66141d2b3f6ab6445fcbf04344d761ff5/<soc-name>_conf.lua}}}.
+
+\small
+\begin{lstlisting}[language=bash]
+    load={
+        {bin_file=top().."fw/<soc-name>/images/bl31.bin",
+         address=INITIAL_DDR_SPACE_14GB};
+        {bin_file=top().."fw/<soc-name>/images/mifs_qdrive_qvp.img",
+         address=INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE};
+\end{lstlisting}
+\normalsize
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Other loader configurations}
+
+{\textbf {\footnotesize{\lstinline!elf_file!}}}
+\vspace{-2pt}
+\begin{quote}
+No address or offset is possible because they are built into the elf file.
+
+If this parameter is specified within the context of a memory, the addresses will be offset within the memory, which is probably the intent.
+\end{quote}
+
+{\textbf {\footnotesize{\lstinline!bin_file!}}}
+\vspace{-2pt}
+\begin{quote}
+32-bit data file.
+
+Options: {\small{\lstinline!address!}} (absolute address) or {\small{\lstinline!offset!}} (relative address).
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!csv_file!}}}
+\vspace{-2pt}
+\begin{quote}
+32-bit data file.
+
+Options:
+\begin{itemize1}
+\item {\small{\lstinline!address!}} (absolute address) or {\small{\lstinline!offset!}} (relative address)
+\item {\small{\lstinline!addr_str!}}  -- Header in the CSV file for the column used for addresses
+\item {\small{\lstinline!value_str!}} -- Header in the CSV file for the column used for values
+\item {\small{\lstinline!byte_swap!}} -- Indicates whether bytes are to be swapped
+\end{itemize1}
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!param!}}}
+\vspace{-2pt}
+\begin{quote}
+Configuration parameter that is loaded into memory. The parameter must be of type {\small{\lstinline!std::string!}}, and it must be realized such that a typed handle can be obtained.
+
+Options: {\small{\lstinline!address!}} (absolute address) or {\small{\lstinline!offset!}} (relative address).
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!data!}}}
+\vspace{-2pt}
+\begin{quote}
+32-bit data file.
+
+Option: {\small{\lstinline!byte_swap!}}, which indicates whether bytes are to be swapped.
+
+The data parameter is expected to be an array with numbered indices. The indices will be used to address the memory.
+\end{quote}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Configuration example}
+
+No function access is provided. For example, a configuration might look like the following:
+
+\small
+\begin{lstlisting}[language=bash]
+    loader = {{elf_file="my_elf.elf"}, {data={0x1,0x2}, address = 0x30}}
+\end{lstlisting}
+\normalsize
+
+
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{QQVP component library memory}
+
+The memory size is set by the address space allocated to it on its target socket. An optional size can be provided to the constructor.
+
+The size set by the configurator will take precedence. The size given to the constructor will take precedence over that set on the target socket at bind time.
+
+\note Addresses must be provided as offset addresses and not absolute addresses.
+
+The memory component accepts the following configuration options.
+
+{\textbf {\footnotesize{\lstinline!read_only!}}}
+\vspace{-2pt}
+\begin{quote}
+Indicates whether memory is read only. (Default: FALSE)
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!dmi_allow!}}}
+\vspace{-2pt}
+\begin{quote}
+Indicates whether DMI is allowed. (Default: TRUE)
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!verbose!}}}
+\vspace{-2pt}
+\begin{quote}
+Indicates whether to switch ON verbose logging. (Default: FALSE)
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!latency!}}}
+\vspace{-2pt}
+\begin{quote}
+Latency that is reported for DMI access. (Default: 10 ns)
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!map_file!}}}
+\vspace{-2pt}
+\begin{quote}
+File used to map this memory (such that it can be preserved through runs). (Default: None)
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!load!}}}
+\vspace{-2pt}
+\begin{quote}
+Memory can be directly loaded with a file using the generic loader (see \hyperref[sec:load-data-on-vp]{Load data onto the VP}).
+\end{quote}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{QQVP component library router}
+
+The router is a simple device. Initiators and targets are expected to directly bind to the router's {\small{\lstinline!target_socket!}} and {\small{\lstinline!initiator_socket!}} (both are multi-sockets).
+
+The router will use CCI parameters to discover the addresses and size of target devices:
+
+\begin{itemize}
+\item {\small{\lstinline!<target_name>.<socket_name>.address!}}
+\item {\small{\lstinline!<target_name>.<socket_name>.size!}}
+\item {\small{\lstinline!<target_name>.<socket_name>.relative_addresses!}}
+\end{itemize}
+
+A default tlm2 \emph{simple target socket} will have the name {\small{\lstinline!simple_target_socket_0!}} by default (this name can be changed in the target).
+
+The {\small{\lstinline!relative_addresses!}} flag is a Boolean. For targets that opt to have the router mask, their address will receive addresses based on the IP base address. Otherwise, they will receive full addresses. The default is to receive relative addresses.
+
+\note Routing is performed in \emph{bind} order. In other words, overlapping addresses are allowed, and the first to match (in bind order) will be used. This feature allows \emph{fallback} routing.
+
+
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{QQVP CPU components}
+
+Different CPU objects expose different configuration options. These settings are per CPU, so {\small{\lstinline!platform.cpu_0.start_powered_off=1!}} will start the first CPU in Powered On mode.
+
+The Arm A53 processor supports the following options.
+
+{\textbf {\footnotesize{\lstinline!has_el3!}}}
+\vspace{-2pt}
+\begin{quote}
+Starts the core in EL3.
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!has_el2!}}}
+\vspace{-2pt}
+\begin{quote}
+Starts the core in EL2.
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!psci_conduit!}}}
+\vspace{-2pt}
+\begin{quote}
+Uses the built-in virtual PSCI to start the core.
+
+Options: {\small{\lstinline!smc!}}, {\small{\lstinline!hvc!}}, and {\small{\lstinline!disabled!}}.
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!mp_affinity!}}}
+\vspace{-2pt}
+\begin{quote}
+Specifies the core ID.
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!rv_bar!}}}
+\vspace{-2pt}
+\begin{quote}
+Specifies the value to use for the RVBAR register, which contains the core reset vector address.
+\end{quote}
+
+
+{\textbf {\footnotesize{\lstinline!start_powered_off!}}}
+\vspace{-2pt}
+\begin{quote}
+Indicates whether the core is to start (Boolean). See also {\small{\lstinline!psci_conduit!}}.
+\end{quote}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Use YAML for configuration}
+
+If you prefer to use YAML as a configuration language, {\small{\lstinline!lyaml!}} provides a link. Download it from {\color{blue}{\url{https://github.com/gvvaughan/lyaml}}}.
+
+The following lua code will load {\small{\lstinline!conf.yaml!}}:
+
+\small
+\begin{lstlisting}[language=bash]
+    local lyaml   = require "lyaml"function readAll(file)
+       local f = assert(io.open(file, "rb"))
+       local content = f:read("*all")
+       f:close()
+       return content
+    endprint "Loading conf.yaml"
+    yamldata=readAll("conf.yaml")
+    ytab=lyaml.load(yamldata)
+    for k,v in pairs(ytab) do
+       _G[k]=v
+    end
+    yamldata=nil
+    ytab=nil
+\end{lstlisting}
+\normalsize
+
+
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{QEMU arguments}
+
+QEMU arguments can be added to an entire instance using the configuration mechanism. The argument name must be in the form of {\small{\lstinline!"name.of.your.qemu.instance.args.-ARG" = "value"!}}.
+
+For example, to enable the QEMU monitor interface (which allows control over QEMU's internal state):
+
+\small
+\begin{lstlisting}[language=bash]
+    --param platform.QemuInstance.args.-monitor = "tcp:127.0.0.1:55555,server,nowait"!
+\end{lstlisting}
+\normalsize
+
+To check that the QEMU argument has been added, QEMU will report the following:
+
+\small
+\begin{lstlisting}[language=bash]
+    Added QEMU argument: "name of the argument" "value of the argument"!
+\end{lstlisting}
+\normalsize
+
+Use telnet to connect to the monitor:
+
+\small
+\begin{lstlisting}[language=bash]
+    $ telnet 127.0.0.1 55555
+    Trying 127.0.0.1...
+    Connected to 127.0.0.1.
+    Escape character is '^]'.
+    QEMU 5.1.0 monitor - type 'help' for more information
+    (qemu) quit
+    quit
+    Connection closed by foreign host.
+\end{lstlisting}
+\normalsize
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Model Features}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Network device}
+
+A {\small{\lstinline!virtio-mmio-net!}} device model is included as part of the system. A QEMU model of a {\small{\lstinline!virtio-mmio!}} network device appears at the specified address. It can connect to the host network via user mode ({\small{\lstinline!type=user!}}) or tun/tap ({\small{\lstinline!type=tap!}}) networking.
+
+\note {\small{\lstinline!Tap!}} requires superuser access on the host system.
+
+With {\small{\lstinline!hostfwd!}} ports, the virtual platform opens host listening ports and waits for connections. When a connection is established, the platform forwards it to the specified guest TCP port on the guest network interface. This is the simplest way to provide access to an SSH service, for example.
+
+Configuration file examples:
+
+\small
+\begin{lstlisting}[language=bash]
+    platform = {
+    ...
+        virtionet0= {mem = {address=0x1c120000, size=0x10000}, irq=18, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21"};
+    ...
+
+    platform = {
+    ...
+        virtionet0= {mem = {address=0x1c120000, size=0x10000}, irq=18, netdev_str="type=tap"};
+    ...
+\end{lstlisting}
+\normalsize
+
+\clearpage
+
+If your VBSP supports SSH and you have this {\small{\lstinline!hostfwd!}} configuration, you can remotely log in to your virtual platform with the following:
+
+\small
+\begin{lstlisting}[language=bash]
+    ssh -p 2222 root@localhost
+\end{lstlisting}
+\normalsize
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Block storage device}
+
+A {\small{\lstinline!virtio-mmio-blk !}}device model is included as part of the system. A QEMU model of a {\small{\lstinline!virtio-mmio!}} block device appears at the specified address. Typically, you initialize the storage file with a partition table and one or more file systems recognized by the guest operating system.
+
+Configuration file example:
+
+\small
+\begin{lstlisting}[language=bash]
+    platform = {
+    ...
+        virtioblk0= {mem = {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..top().."system_qdrive.img,format=raw,if=none"};
+    ...
+\end{lstlisting}
+\normalsize
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Troubleshooting}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Build problems}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Example of build failure while building QQVP}
+
+The following error indicates that {\small{\lstinline!libelf-dev!}} is not installed.
+
+\small
+\begin{lstlisting}[language=bash]
+    ...
+    -- Configuring done
+    CMake Error in build/_deps/base-components-src/CMakeLists.txt:
+      Target "base-components" INTERFACE_INCLUDE_DIRECTORIES property contains
+      path:
+
+        "/local/mnt/workspace/quic-vp/build/_deps/base-components-src/LIBELF_INCLUDE_DIRS-NOTFOUND"
+
+      which is prefixed in the build directory.
+    ...
+\end{lstlisting}
+\normalsize
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Example of a problem while running QQVP}
+
+The following problem can occur if you do not have permission to open the block device file in read-write mode. For example, if all the binary inputs were stored on a read only medium, you might expect this error message.
+
+\small
+\begin{lstlisting}[language=bash]
+    Copyright (c) 1996-2019 by all Contributors,
+    ALL RIGHTS RESERVED
+    @0 s /0 (lua): Parse command line for --gs_luafile option (3 arguments)
+    ...
+    Lua config running. . .
+    Lua config run. . .
+    Loading libqemu-system-aarch64.so
+    ...
+    Error: 'Error while setting bool property `realized` on object.'
+\end{lstlisting}
+\normalsize
+
+\note The error message will be clarified in subsequent versions of QQVP.
+
+
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Verify that QQVP is working}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Build the reference Linux BSP}
+
+Use the following commands to build a Linux kernel and root file system:
+
+\small
+\begin{lstlisting}[language=bash]
+    # cd ./bsp/linux
+    # sh ./setup.sh 2>&1 | tee build.log
+\end{lstlisting}
+\normalsize
+
+The result is a {\small{\lstinline!bsp/linux/out/android-mainline/common/arch/arm64/boot/Image!}} file.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Run the reference Linux BSP on the platform}
+
+Enter the following commands.
+
+\small
+\begin{lstlisting}[language=bash]
+    # cd ../
+    # ./build/vp --gs_luafile conf.lua
+\end{lstlisting}
+\normalsize
+
+You will see the following output:
+
+\small
+\begin{lstlisting}[language=bash]
+            SystemC 2.3.4_pub_rev_20200101-GreenSocs --- Feb  1 2022 14:35:03
+            Copyright (c) 1996-2019 by all Contributors,
+            ALL RIGHTS RESERVED
+    @0 s /0 (lua): Parse command line for --gs_luafile option (3 arguments)
+    @0 s /0 (lua): Option --gs_luafile with value conf.lua
+    Lua file command line parser: parse option --gs_luafile conf.lua
+    @0 s /0 (lua): Read lua file 'conf.lua'
+
+    Info: non_module: Initializing QEMU instance with args:
+
+    [...]
+    Welcome to Buildroot
+    buildroot login: root
+    login[176]: root login on 'console'
+    # ls /
+    bin           lib           mnt           run           usr
+    bins          lib64         opt           sbin          var
+    dev           lib64_debug   proc          sys
+    etc           linuxrc       qemu.sh       system_lib64
+    init          media         root          tmp
+\end{lstlisting}
+\normalsize
+
+After the kernel boots up, you can log in with the root account. If a password is required for the root account, enter \textbf{root}.
