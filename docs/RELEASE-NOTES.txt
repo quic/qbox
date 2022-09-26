@@ -1,0 +1,31 @@
+[*======================= COPYRIGHT NOTICE ======================*]
+[* Copyright(c) 2022 Qualcomm Innovation Center, Inc.            *]
+[* All rights reserved.                                          *]
+[*                                                               *]
+[*===============================================================*]
+
+Qualcomm QEMU-Virtual Platform 0.2 - Release Notes
+
+----------------------------------------------------------------------
+
+QQVP is provided via git repositories hosted on CodeLinaro.
+
+https://git.codelinaro.org/clo/private/qqvp/ is a link to the QQVP project
+in CodeLinaro.
+
+The user guide for QQVP is published in CreatePoint: Qualcomm® Quick
+Emulator (QEMU) Virtual Platform User Guide (80-N2040-55).
+
+----------------------------------------------------------------------
+New in this release:
+- Added Platform support for NSP hexagon core, coprocs + NSP subsystem devices
+- Update from "max" CPU to Cortex-A76
+- Build config simplification
+- Updated QEMU baseline for aarch64, hexagon to 7.0.50
+
+----------------------------------------------------------------------
+Known problems:
+
+Invoking multiple concurrent 'qnn-net-run' instances will fail.
+This issue is still under investigation.
+
