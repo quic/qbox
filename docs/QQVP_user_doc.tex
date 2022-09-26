@@ -55,18 +55,42 @@ QQVP binaries require the following system libraries to be installed, and corres
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Build the release}
 
-You can build this release natively on Ubuntu 18.04.
+You can build this release natively on Ubuntu 18.04, but it will require
+an alternate host toolchain.
 
 Install the build dependencies:
 
 \small
 \begin{lstlisting}[language=bash]
     # apt update && apt upgrade -y
-    # apt install -y make build-essential cmake g++ wget flex bison unzip python python3-pip iproute2 ninja-build pkg-config libpixman-1-dev libglib2.0-dev git wget curl libelf-dev
+    # apt install -y make build-essential cmake g++ wget flex bison unzip python python3-pip iproute2 ninja-build pkg-config libpixman-1-dev libglib2.0-dev git wget curl libelf-dev libvirglrenderer-dev libepoxy-dev libgtk-3-dev libsdl2-dev
+\end{lstlisting}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{gcc version}
+
+gcc version 9.4.0 or newer is required.  You can download and build gcc
+as follows:
+
+\small
+\begin{lstlisting}[language=bash]
+    # curl https://ftp.gnu.org/gnu/gcc/gcc-9.4.0/gcc-9.4.0.tar.xz | tar xJf -
+    # cd gcc-9.4.0
+    # sed -i -e 's/ftp:/http:/' ./contrib/download_prerequisites
+    # ./contrib/download_prerequisites
+    # mkdir ../gcc-build
+    # cd ../gcc-build
+    # ../gcc-9.4.0/configure \
+        --prefix=/some/install/path \
+        --enable-languages=c,c++
+    # make -j$(nproc)
+    # make install
 \end{lstlisting}
 \normalsize
 
 
+\clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Cmake version}
 
@@ -145,7 +169,8 @@ This operation will take 5 to 20 minutes, depending on your build system configu
 \small
 \begin{lstlisting}[language=bash]
     # cd $HOME/quic-vp
-    # cmake -DGREENSOCS_GIT=git@git.codelinaro.org:clo/private/qqvp/ -DACCELLERA_GIT=git@git.codelinaro.org:clo/private/qqvp/accellera/ -B build
+    # cmake -DCMAKE_C_COMPILER=/some/install/path/bin/gcc \
+      -DCMAKE_CXX_COMPILER=/some/install/path/bin/g++ -B build
     # cd build
     # make -j
 \end{lstlisting}
@@ -309,11 +334,25 @@ This option is useful to both find the names of configurable parameters and to c
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \vspace{9pt}{\large \textbf {\textsf{Configuration file}}}
 
-A configuration file defined for the SoC is provided in the quic-vp git repository: {\small{\lstinline!conf.lua!}}.
+A configuration file defined for the SoC is provided in the quic-vp git
+repository: {\small{\lstinline!*conf.lua!}} and is installed into
+{\small{\lstinline!$CMAKE_INSTALL_PREFIX/etc/vp/*conf.lua!}}
 
 \caution Changes to this lua configuration file might make the virtual platform inoperable.
 
+This configuration file will set all the required parameters within the system,
+but expects to also find an additional configuration file to specify the
+various firmware and binary files required (using an environment variable
+{\small{\lstinline!QQVP_IMAGE_DIR!}}.  An example of such a file can be found
+in the quic-vp repo under {\small{\lstinline!examples/conf.lua!}}.
 
+This can be run as follows:
+
+{\small{\lstinline!QQVP_IMAGE_DIR=/your/image/directory /path/to/vp_install/bin/vp --gs_luafile /path/to/vp_install/etc/vp/SA8540P_conf.lua!}}
+
+The image directory must contain a conf.lua file. The example provided assumes
+all of the files will be located locally, in the same directory. Also note that
+virtio block devices may be added, but must be enabled in the firmware.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{General configuration options}
 
@@ -736,7 +775,7 @@ If your VBSP supports SSH and you have this {\small{\lstinline!hostfwd!}} config
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Block storage device}
 
-A {\small{\lstinline!virtio-mmio-blk !}}device model is included as part of the system. A QEMU model of a {\small{\lstinline!virtio-mmio!}} block device appears at the specified address. Typically, you initialize the storage file with a partition table and one or more file systems recognized by the guest operating system.
+A {\small{\lstinline!virtio-mmio-blk!}} device model is included as part of the system. A QEMU model of a {\small{\lstinline!virtio-mmio!}} block device appears at the specified address. Typically, you initialize the storage file with a partition table and one or more file systems recognized by the guest operating system.
 
 Configuration file example:
 
@@ -744,12 +783,22 @@ Configuration file example:
 \begin{lstlisting}[language=bash]
     platform = {
     ...
-        virtioblk0= {mem = {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..top().."system_qdrive.img,format=raw,if=none"};
+        virtioblk_0= {mem = {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..top().."system_qdrive.img,format=raw,if=none"};
     ...
 \end{lstlisting}
 \normalsize
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{GPU device}
+
+A {\small{\lstinline!virtio-gpu-gl-pci!}} device model is included as part
+of the system. A QEMU model of a {\small{\lstinline!virtio-mmio!}} GPU
+device appears at the specified memory address.  It can render to the host
+X server indicated by the {\small{\lstinline!DISPLAY!}} environment variable.
+
+This model feature is enabled only if the Lua config
+{\small{\lstinline!platform.with_gpu!}} setting is {\small{\lstinline!true!}}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
