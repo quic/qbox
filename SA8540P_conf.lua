@@ -315,7 +315,7 @@ then
     print ("Running local "..IMAGE_DIR.."conf.lua");
     dofile(IMAGE_DIR.."conf.lua");
 else
-    print ("A local conf.lua file is required in the directory containint your images. That defaults to the current directory or you can set it using QQVP_IMAGE_DIR\n");
+    print ("A local conf.lua file is required in the directory containing your images. That defaults to the current directory or you can set it using QQVP_IMAGE_DIR\n");
     os.exit(1);
 end
 
