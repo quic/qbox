@@ -2,6 +2,31 @@ include:
   - project: 'qqvp/GreenSocs/cmake-boilerplate'
     file: 'gitlab-ci-template.yml'
 
+.clone_firmware_images_repo:
+  before_script:
+    - |
+      if [[ -z "$QQVP_FIRMWARE_REPO_SHA" ]]; then
+          echo "$QQVP_FIRMWARE_REPO_SHA not defined in CI. Falling back to source code"
+          export QQVP_FIRMWARE_REPO_SHA=$(cat ./tests/firmware-repo-sha.txt)
+          if [[ -z "$QQVP_FIRMWARE_REPO_SHA" ]]; then
+            echo "Either QQVP_FIRMWARE_REPO_SHA or ./tests/firmware-repo-sha.txt needs to be defined"
+            exit 1
+          fi
+      fi
+    - echo "Using commit id ${QQVP_FIRMWARE_REPO_SHA} of firmware-repo"
+    - eval $(ssh-agent -s)
+    - echo "$LFS_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - git clone --no-checkout git@gitlab.qualcomm.com:qqvp/firmware-images.git
+    - cd firmware-images
+    - git checkout $QQVP_FIRMWARE_REPO_SHA
+    - export QQVP_FIRMWARE_REPO_DIR="$(pwd)"
+    - cd -
+
+.build_job_template:
+  extends:
+    - .clone_firmware_images_repo
+    - .general_build_job_template
+
 lua-check:
   stage: test
   script: ./scripts/luacheckpatch.sh $CI_MERGE_REQUEST_DIFF_BASE_SHA HEAD
