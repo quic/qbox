@@ -829,7 +829,7 @@ The following error indicates that {\small{\lstinline!libelf-dev!}} is not insta
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Example of a problem while running QQVP}
+\subsection{Example of a problem while running QQVP: block device}
 
 The following problem can occur if you do not have permission to open the block device file in read-write mode. For example, if all the binary inputs were stored on a read only medium, you might expect this error message.
 
@@ -849,6 +849,29 @@ The following problem can occur if you do not have permission to open the block 
 
 \note The error message will be clarified in subsequent versions of QQVP.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Example of a problem while running QQVP: X server}
+
+The following problem can occur if you do not have X running on the host
+system while the GPU device is enabled.  In this case, you should either
+disable the GPU device by setting the {\small{\lstinline!platform["with_gpu"]!}}
+option to {\small{\lstinline!false!}} or start the X server and reference
+it via the {\small{\lstinline!DISPLAY!}} environtment variable before invoking
+QQVP.
+
+\small
+\begin{lstlisting}[language=bash]
+    Copyright (c) 1996-2019 by all Contributors,
+    ALL RIGHTS RESERVED
+    @0 s /0 (lua): Parse command line for --gs_luafile option (3 arguments)
+    ...
+    Lua config running. . .
+    Lua config run. . .
+    Loading libqemu-system-aarch64.so
+
+    Could not initialize SDL(x11 not available) - exiting
+\end{lstlisting}
+\normalsize
 
 \clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

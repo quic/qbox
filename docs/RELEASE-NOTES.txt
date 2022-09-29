@@ -36,3 +36,12 @@ Known problems:
 
 Invoking multiple concurrent 'qnn-net-run' instances will fail.
 This issue is still under investigation.
+
+
+-----------------------------------------------------------------------
+Troubleshooting:
+
+    "Could not initialize SDL(x11 not available) - exiting"
+    - This error message indicates your configuration (`conf.lua`)
+    requires a host GPU but the X server was not available.  See
+    User Guide for details.
