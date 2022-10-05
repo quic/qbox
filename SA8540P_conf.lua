@@ -205,7 +205,7 @@ platform = {
                   mem_view=   {address=0x17c21000, size=0x1000*2*7}; -- 0x1000*nr_frames*nr_views
                   irq0=40;irq1=41;irq2=42;irq3=43;irq4=44;irq5=45;irq6=46;
                   nr_frames=7;nr_views=2;cnttid=0x1111515};
-    uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=1};
+    uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=379};
 
     ipcc= {  socket        = {address=IPC_ROUTER_TOP, size=0xfc000},
              irqs = {
