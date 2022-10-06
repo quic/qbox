@@ -28,3 +28,8 @@ add_executable(cci_alias_test cci_alias_test.cc)
 target_link_libraries(cci_alias_test SystemC::systemc SystemC::cci libgsutils scp::reporting)
 add_test(NAME cci_alias_test COMMAND cci_alias_test --param MyTopThree.lua_conf=\"${CMAKE_CURRENT_SOURCE_DIR}/lua_test.lua\")
 set_tests_properties(cci_test PROPERTIES TIMEOUT 10)
+
+add_executable(scp_loggging_test scp_loggging_test.cc)
+target_link_libraries(scp_loggging_test SystemC::systemc SystemC::cci libgsutils scp::tlm_extensions::initiator_id scp::tlm_extensions::path_trace scp::reporting)
+add_test(NAME scp_loggging_test COMMAND scp_loggging_test --gs_luafile ${CMAKE_CURRENT_SOURCE_DIR}/lua_test.lua --param log_level=0)
+set_tests_properties(scp_loggging_test PROPERTIES TIMEOUT 10)
