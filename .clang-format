@@ -2,7 +2,7 @@
 Language: Cpp
 BasedOnStyle: Google
 
-ColumnLimit: 79
+ColumnLimit: 100
 UseTab: Never
 IndentWidth: 4
 IndentCaseLabels: false
@@ -27,6 +27,7 @@ BreakStringLiterals: true
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass: true
+  AfterFunction:   true
 
 SpaceBeforeCtorInitializerColon: false
 SpacesBeforeTrailingComments: 1

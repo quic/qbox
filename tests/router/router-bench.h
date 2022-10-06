@@ -22,7 +22,7 @@
 */
 
 #include "router.h"
-#include "connectors.h"
+#include "pass.h"
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/target-tester.h>
 #include <greensocs/gsutils/tests/test-bench.h>

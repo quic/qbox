@@ -29,7 +29,7 @@ endif()
 include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 ##############################################
 
-find_path(LIBELF_INCLUDE_DIRS NAMES "libelf.h" "libelf/libelf.h"
+find_path(LIBELF_INCLUDE_DIR NAMES "libelf.h" "libelf/libelf.h"
           HINTS $ENV{LIBELF_HOME}/include /usr/include /usr/local/include)
 
 find_library(LIBELF_LIBRARIES NAMES elf "libelf.a"
@@ -39,18 +39,22 @@ find_library(LIBZ_LIBRARIES NAMES z "libz.a"
           HINTS $ENV{LIBZ_HOME}/lib /usr/lib /lib)
 
 list(APPEND LIBELF_LIBRARIES ${LIBZ_LIBRARIES})
-list(APPEND LIBELF_INCLUDE_DIRS ${LIBELF_INCLUDE_DIRS}/libelf)
+list(APPEND LIBELF_INCLUDE_DIR ${LIBELF_INCLUDE_DIR}/libelf)
 
 include(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibELF DEFAULT_MSG
                                   LIBELF_LIBRARIES
-                                  LIBELF_INCLUDE_DIRS)
+                                  LIBELF_INCLUDE_DIR)
 
-mark_as_advanced(LIBELF_INCLUDE_DIRS LIBELF_LIBRARIES)
+mark_as_advanced(LIBELF_INCLUDE_DIR LIBELF_LIBRARIES)
+
+find_package(Threads REQUIRED)
 
 gs_systemc()
 
 gs_addpackage(greensocs/libgsutils)
+gs_addpackage(greensocs/libgssync)
+gs_addexpackage("gh:rpclib/rpclib#v2.3.0")
 
 add_library(${PROJECT_NAME} INTERFACE)
 
@@ -58,12 +62,14 @@ target_include_directories(${PROJECT_NAME}
     INTERFACE
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-        ${LIBELF_INCLUDE_DIRS}
+        ${LIBELF_INCLUDE_DIR}
 )
 
 target_link_libraries(${PROJECT_NAME}
     INTERFACE ${TARGET_LIBS}
     INTERFACE ${LIBELF_LIBRARIES}
+    INTERFACE Threads::Threads
+    INTERFACE rpc
 )
 gs_export()
 

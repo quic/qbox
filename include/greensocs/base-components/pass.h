@@ -20,9 +20,8 @@
 * You may obtain a copy of the Apache License at
 * http://www.apache.org/licenses/LICENSE-2.0
 */
-
-#ifndef _GREENSOCS_BASE_COMPONENTS_CONNECTORS_H
-#define _GREENSOCS_BASE_COMPONENTS_CONNECTORS_H
+#ifndef _GREENSOCS_BASE_COMPONENTS_PASS_H
+#define _GREENSOCS_BASE_COMPONENTS_PASS_H
 
 #include <cci_configuration>
 #include <systemc>
