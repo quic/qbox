@@ -527,7 +527,7 @@ public:
 
     std::string relname(const std::string& n) const
     {
-        return m_orig_name + std::string(".") + n;
+        return (m_orig_name.empty()) ? n : m_orig_name + std::string(".") + n;
     }
 
     ~ConfigurableBroker()
