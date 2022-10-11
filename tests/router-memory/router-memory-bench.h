@@ -74,18 +74,19 @@ protected:
         ASSERT_FALSE(ret);
     }
 
-    void dmi_write_or_read(uint64_t addr, uint8_t& data, size_t len, bool is_read)
+    void dmi_write_or_read(uint64_t addr, uint8_t *data, size_t len, bool is_read)
     {
         using namespace tlm;
 
         const tlm_dmi& dmi_data = m_initiator.get_last_dmi_data();
+        addr-=dmi_data.get_start_address();
 
         if (is_read) {
             ASSERT_TRUE(dmi_data.is_read_allowed());
-            memcpy(&data, dmi_data.get_dmi_ptr() + addr, len);
+            memcpy(data, dmi_data.get_dmi_ptr() + addr, len);
         } else {
             ASSERT_TRUE(dmi_data.is_write_allowed());
-            memcpy(dmi_data.get_dmi_ptr() + addr, &data, len);
+            memcpy(dmi_data.get_dmi_ptr() + addr, data, len);
         }
     }
 

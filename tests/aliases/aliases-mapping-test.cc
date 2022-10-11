@@ -375,39 +375,13 @@ TEST_BENCH(AliasesMappingTest, DmiWriteRead)
     uint8_t data = 0x04;
     uint8_t data_read;
 
-    /* Valid DMI request */
-    do_good_dmi_request_and_check(0, 0, 0x00FF - 1);
-    do_good_dmi_request_and_check(0x0100, 0x0100, 0x01FF - 1);
-    do_good_dmi_request_and_check(0x0200, 0x0200, 0x02FF - 1);
-    do_good_dmi_request_and_check(0x0300, 0x0300, 0x03FF - 1);
-    do_good_dmi_request_and_check(0x0400, 0x0400, 0x04FF - 1);
-    do_good_dmi_request_and_check(0x0500, 0x0500, 0x05FF - 1);
-    do_good_dmi_request_and_check(0x0600, 0x0600, 0x06FF - 1);
-
-    /* Write with DMI */
-    dmi_write_or_read(0, data, sizeof(data), false);
-    dmi_write_or_read(0x0100, data, sizeof(data), false);
-    dmi_write_or_read(0x0200, data, sizeof(data), false);
-    dmi_write_or_read(0x0300, data, sizeof(data), false);
-    dmi_write_or_read(0x0400, data, sizeof(data), false);
-    dmi_write_or_read(0x0500, data, sizeof(data), false);
-    dmi_write_or_read(0x0600, data, sizeof(data), false);
-
-    /* Read with DMI */
-    dmi_write_or_read(0, data_read, sizeof(data), true);
-    ASSERT_EQ(data, data_read);
-    dmi_write_or_read(0x0100, data_read, sizeof(data), true);
-    ASSERT_EQ(data, data_read);
-    dmi_write_or_read(0x0200, data_read, sizeof(data), true);
-    ASSERT_EQ(data, data_read);
-    dmi_write_or_read(0x0300, data_read, sizeof(data), true);
-    ASSERT_EQ(data, data_read);
-    dmi_write_or_read(0x0400, data_read, sizeof(data), true);
-    ASSERT_EQ(data, data_read);
-    dmi_write_or_read(0x0500, data_read, sizeof(data), true);
-    ASSERT_EQ(data, data_read);
-    dmi_write_or_read(0x0600, data_read, sizeof(data), true);
-    ASSERT_EQ(data, data_read);
+    std::vector<uint64_t> addrs={0x0, 0x100, 0x200, 0x300, 0x400, 0x500, 0x600};
+    for (auto addr : addrs) {
+        do_good_dmi_request_and_check(addr, addr, addr + 0xFF - 1);
+        dmi_write_or_read(addr, &data, sizeof(data), false);
+        dmi_write_or_read(addr, &data_read, sizeof(data), true);
+        ASSERT_EQ(data, data_read);
+    }
 }
 
 int sc_main(int argc, char* argv[])

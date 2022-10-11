@@ -213,18 +213,20 @@ TEST_BENCH(RouterMemoryTestBench, DmiWriteRead)
     uint8_t data = 0x04;
     uint8_t data_read;
 
-    /* Valid DMI request */
-    do_good_dmi_request_and_check(0, 0, memory_size[0] - 1);
-    do_good_dmi_request_and_check(address[1], address[1], memory_size[1] - 1);
-
-    /* Write with DMI */
-    dmi_write_or_read(0, data, sizeof(data), false);
-    dmi_write_or_read(address[1], data, sizeof(data), false);
-
-    /* Read with DMI */
-    dmi_write_or_read(0, data_read, sizeof(data), true);
+    /* Valid DMI request target N°1 */
+    do_good_dmi_request_and_check(0x50, 0, memory_size[0] - 1);
+    /* Write with DMI target N°1 */
+    dmi_write_or_read(0x50, &data, sizeof(data), false);
+    /* Read with DMI target N°1 */
+    dmi_write_or_read(0x50, &data_read, sizeof(data), true);
     ASSERT_EQ(data, data_read);
-    dmi_write_or_read(address[1], data_read, sizeof(data), true);
+
+    /* Valid DMI request target N°2 */
+    do_good_dmi_request_and_check(address[1] + 0x50, address[1], memory_size[1] - 1);
+    /* Write with DMI target N°2 */
+    dmi_write_or_read(address[1] + 0x50, &data, sizeof(data), false);
+    /* Read with DMI target N°2 */
+    dmi_write_or_read(address[1] + 0x50, &data_read, sizeof(data), true);
     ASSERT_EQ(data, data_read);
 }
 
