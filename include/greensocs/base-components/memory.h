@@ -76,10 +76,7 @@ class Memory : public sc_core::sc_module
         uint64_t m_len;     // size of the bloc
         uint64_t m_address; // this is an absolute address and this is the
                             // beginning of the bloc/Memory
-        uint64_t m_max_size;
-        uint64_t m_min_size;
-
-        std::string m_filename;
+        Memory<BUSWIDTH> &m_mem;
 
         uint8_t* m_ptr = nullptr;
         std::array<std::unique_ptr<SubBlock>, (1 << N)> m_sub_blocks;
@@ -116,13 +113,10 @@ class Memory : public sc_core::sc_module
         }
 
     public:
-        SubBlock(uint64_t address, uint64_t len, uint64_t max_size, uint64_t min_size,
-                 std::string filename = "")
+        SubBlock(uint64_t address, uint64_t len, Memory &mem)
             : m_address(address)
             , m_len(len)
-            , m_max_size(max_size)
-            , m_min_size(min_size)
-            , m_filename(filename)
+            , m_mem(mem)
         {
         }
 
@@ -135,13 +129,13 @@ class Memory : public sc_core::sc_module
                 assert(address >= m_address);
                 return *this;
             }
-            if (m_len > m_max_size) {
+            if (m_len > m_mem.p_max_block_size) {
                 m_use_sub_blocks = true;
             }
 
             if (!m_use_sub_blocks) {
-                if (!m_filename.empty()) {
-                    if (map(m_filename)) {
+                if (!((std::string)(m_mem.p_mapfile)).empty()) {
+                    if (map(m_mem.p_mapfile)) {
                         return *this;
                     }
                 } else {
@@ -158,7 +152,7 @@ class Memory : public sc_core::sc_module
                 m_use_sub_blocks = true;
             }
 
-            if (m_len < m_min_size) {
+            if (m_len < m_mem.p_min_block_size) {
                 SC_REPORT_FATAL("Memory",
                                 "Unable to allocate memory!"); // out of memory!
             }
@@ -169,30 +163,29 @@ class Memory : public sc_core::sc_module
             int i = (address - m_address) / (m_sub_size);
 
             if (!m_sub_blocks[i]) {
-                m_sub_blocks[i] = std::make_unique<SubBlock>(
-                    (i * m_sub_size) + m_address, m_sub_size, m_max_size, m_min_size, m_filename);
+                m_sub_blocks[i] = std::make_unique<SubBlock>((i * m_sub_size) + m_address, m_sub_size, m_mem);
             }
             return m_sub_blocks[i]->access(address);
         }
 
         uint64_t read_sub_blocks(uint8_t* data, uint64_t offset, uint64_t len)
         {
-            uint64_t bloc_offset = offset - m_address;
-            uint64_t bloc_len = m_len - bloc_offset;
-            uint64_t remain_len = (len < bloc_len) ? len : bloc_len;
+            uint64_t block_offset = offset - m_address;
+            uint64_t block_len = m_len - block_offset;
+            uint64_t remain_len = (len < block_len) ? len : block_len;
 
-            memcpy(data, &m_ptr[bloc_offset], remain_len);
+            memcpy(data, &m_ptr[block_offset], remain_len);
 
             return remain_len;
         }
 
         uint64_t write_sub_blocks(const uint8_t* data, uint64_t offset, uint64_t len)
         {
-            uint64_t bloc_offset = offset - m_address;
-            uint64_t bloc_len = m_len - bloc_offset;
-            uint64_t remain_len = (len < bloc_len) ? len : bloc_len;
+            uint64_t block_offset = offset - m_address;
+            uint64_t block_len = m_len - block_offset;
+            uint64_t remain_len = (len < block_len) ? len : block_len;
 
-            memcpy(&m_ptr[bloc_offset], data, remain_len);
+            memcpy(&m_ptr[block_offset], data, remain_len);
 
             return remain_len;
         }
@@ -260,15 +253,15 @@ protected:
 
         uint8_t* ptr = blk.get_ptr();
         uint64_t size = blk.get_len();
-        uint64_t bloc_address = blk.get_address();
+        uint64_t block_address = blk.get_address();
 
         dmi_data.set_dmi_ptr(reinterpret_cast<unsigned char*>(ptr));
         if (!m_relative_addresses) {
-            dmi_data.set_start_address(bloc_address + m_address);
-            dmi_data.set_end_address((bloc_address + m_address + size) - 1);
+            dmi_data.set_start_address(block_address + m_address);
+            dmi_data.set_end_address((block_address + m_address + size) - 1);
         } else {
-            dmi_data.set_start_address(bloc_address);
-            dmi_data.set_end_address((bloc_address + size) - 1);
+            dmi_data.set_start_address(block_address);
+            dmi_data.set_end_address((block_address + size) - 1);
         }
         dmi_data.set_read_latency(p_latency);
         dmi_data.set_write_latency(p_latency);
@@ -428,8 +421,8 @@ public:
     cci::cci_param<bool> p_verbose;
     cci::cci_param<sc_core::sc_time> p_latency;
     cci::cci_param<std::string> p_mapfile;
-    cci::cci_param<uint64_t> p_max_bloc_size;
-    cci::cci_param<uint64_t> p_min_bloc_size;
+    cci::cci_param<uint64_t> p_max_block_size;
+    cci::cci_param<uint64_t> p_min_block_size;
 
     // NB
     // A size given by a config will always take precedence
@@ -444,8 +437,8 @@ public:
         , p_latency("latency", sc_core::sc_time(10, sc_core::SC_NS),
                     "Latency reported for DMI access")
         , p_mapfile("map_file", "", "(optional) file to map this memory")
-        , p_max_bloc_size("max_bloc_size", 0x100000000, "Maximum size of the sub bloc")
-        , p_min_bloc_size("min_bloc_size", sysconf(_SC_PAGE_SIZE), "Minimum size of the sub bloc")
+        , p_max_block_size("max_block_size", 0x100000000, "Maximum size of the sub bloc")
+        , p_min_block_size("min_block_size", sysconf(_SC_PAGE_SIZE), "Minimum size of the sub bloc")
         , load("load",
                [&](const uint8_t* data, uint64_t offset, uint64_t len) -> void {
                    write(data, offset, len);
@@ -481,8 +474,7 @@ public:
         m_address = base();
         m_size = size();
 
-        m_sub_block = std::make_unique<Memory<BUSWIDTH>::SubBlock<>>(0, m_size, p_max_bloc_size,
-                                                                     p_min_bloc_size, p_mapfile);
+        m_sub_block = std::make_unique<Memory<BUSWIDTH>::SubBlock<>>(0, m_size, *this);
 
         SCP_INFO(SCMOD) << "m_address: " << m_address;
         SCP_INFO(SCMOD) << "m_size: " << m_size;
