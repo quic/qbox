@@ -1,6 +1,5 @@
 -- Virtual platform configuration
 
--- ** Convenience functions **
 function top()
     local str = debug.getinfo(2, "S").source:sub(2)
     if str:match("(.*/)")
@@ -11,44 +10,7 @@ function top()
     end
  end
 
- function file_exists(name)
-    local f=io.open(name,"r")
-    if f~=nil then io.close(f) return true else return false end
- end
-
- function valid_file(file)
-    local f = io.open(file, "r")
-    if (f == nil)
-    then
-        print ("ERROR:")
-        print (file.." Not found.")
-        os.exit(1)
-    end
-    io.close(f);
-    return file
- end
- function tableMerge(t1, t2)
-    for k,v in pairs(t2) do
-        if type(v) == "table" then
-            if type(t1[k] or false) == "table" then
-                tableMerge(t1[k] or {}, t2[k] or {})
-            else
-                t1[k] = v
-            end
-        else
-            t1[k] = v
-        end
-    end
-    return t1
-end
-function tableJoin(t1,t2)
-    for i=1,#t2 do
-        t1[#t1+1] = t2[i]
-    end
-    return t1
-end
--- ** End of convenience functions **
-
+dofile(top().."/fw/utils.lua");
 print ("Lua config running. . . ");
 
 -- these values are helpful for local configuration, so make them global
@@ -60,7 +22,7 @@ print ("Lua config running. . . ");
 
 
 local MAKENA_REGS_CSV = valid_file(top().."fw/makena/SA8540P_MakenaAU_v2_Registers.csv")
-local HEX_CFGTABLES   = valid_file(top().."fw/hex_cfgtables.lua")
+local QDSP6_CFG   = valid_file(top().."fw/qdsp6.lua")
 
 local NSP0_BASE     = 0x24000000 -- TURING_SS_0TURING
 local NSP1_BASE     = 0x28000000 -- TURING_SS_1TURING
@@ -105,41 +67,7 @@ local TURING_SS_1TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x260A4008;
 local HWKM_MASTER_CFG_KM_RNG_EE10_PRNG_DATA_OUT	= 0x10da000;
 local HWKM_MASTER_CFG_KM_RNG_EE10_PRNG_STATUS= 0x10da004;
 
-dofile (valid_file(HEX_CFGTABLES));
-
-function get_nspss(base, ahbs_base, cfgtable, start_addr, ahb_size)
-    local cfgtable_base_addr = base + 0x180000;
-    return {
-        hexagon_num_threads = 6;
-        hexagon_thread_0={start_powered_off = false, start_halted=true};
-        hexagon_thread_1={start_powered_off = true};
-        hexagon_thread_2={start_powered_off = true};
-        hexagon_thread_3={start_powered_off = true};
-        hexagon_thread_4={start_powered_off = true};
-        hexagon_thread_5={start_powered_off = true};
-        HexagonQemuInstance = { tcg_mode="SINGLE",
-            sync_policy = "multithread-unconstrained"};
-        hexagon_start_addr = start_addr;
-        l2vic={  mem           = {address=ahbs_base + 0x90000, size=0x1000};
-                 fastmem       = {address=base     + 0x1e0000, size=0x10000}};
-        qtimer={ mem           = {address=ahbs_base + 0xA0000, size=0x1000};
-                 mem_view      = {address=ahbs_base + 0xA1000, size=0x2000}};
-        pass = {target_socket  = {address=0x0 , size=base + ahb_size,
-            relative_addresses=false}};
-        cfgtable_base = cfgtable_base_addr;
-
-        wdog  = { socket        = {address=ahbs_base + 0x84000, size=0x1000}};
-        pll_0 = { socket        = {address=ahbs_base + 0x40000, size=0x10000}};
-        pll_1 = { socket        = {address=base + 0x01001000, size=0x10000}};
-        pll_2 = { socket        = {address=base + 0x01020000, size=0x10000}};
-        pll_3 = { socket        = {address=base + 0x01021000, size=0x10000}};
-        rom   = { target_socket = {address=cfgtable_base_addr, size=0x100 },
-            read_only=true, load={data=cfgtable, offset=0}};
-
-        csr = { socket = {address=ahbs_base, size=0x1000}};
-    };
-end
-
+dofile(QDSP6_CFG);
 
 -- LeMans: NSP0 configuration --
 local SA8775P_nsp0_config_table= get_SA8775P_nsp0_config_table();

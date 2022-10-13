@@ -1,3 +1,4 @@
+
 function get_SA8540P_nsp0_config_table()
  return {
     --/* captured from an SA840P-NSP0 via T32 */
@@ -241,3 +242,37 @@ function get_SA8775P_nsp1_config_table()
         0x00000000, -- 0000e0 .reserved
 };
 end
+
+function get_nspss(base, ahbs_base, cfgtable, start_addr, ahb_size)
+    local cfgtable_base_addr = base + 0x180000;
+    return {
+        hexagon_num_threads = 6;
+        hexagon_thread_0={start_powered_off = false, start_halted=true};
+        hexagon_thread_1={start_powered_off = true};
+        hexagon_thread_2={start_powered_off = true};
+        hexagon_thread_3={start_powered_off = true};
+        hexagon_thread_4={start_powered_off = true};
+        hexagon_thread_5={start_powered_off = true};
+        HexagonQemuInstance = { tcg_mode="SINGLE",
+            sync_policy = "multithread-unconstrained"};
+        hexagon_start_addr = start_addr;
+        l2vic={  mem           = {address=ahbs_base + 0x90000, size=0x1000};
+                 fastmem       = {address=base     + 0x1e0000, size=0x10000}};
+        qtimer={ mem           = {address=ahbs_base + 0xA0000, size=0x1000};
+                 mem_view      = {address=ahbs_base + 0xA1000, size=0x2000}};
+        pass = {target_socket  = {address=0x0 , size=base + ahb_size,
+            relative_addresses=false}};
+        cfgtable_base = cfgtable_base_addr;
+
+        wdog  = { socket        = {address=ahbs_base + 0x84000, size=0x1000}};
+        pll_0 = { socket        = {address=ahbs_base + 0x40000, size=0x10000}};
+        pll_1 = { socket        = {address=base + 0x01001000, size=0x10000}};
+        pll_2 = { socket        = {address=base + 0x01020000, size=0x10000}};
+        pll_3 = { socket        = {address=base + 0x01021000, size=0x10000}};
+        rom   = { target_socket = {address=cfgtable_base_addr, size=0x100 },
+            read_only=true, load={data=cfgtable, offset=0}};
+
+        csr = { socket = {address=ahbs_base, size=0x1000}};
+    };
+end
+
