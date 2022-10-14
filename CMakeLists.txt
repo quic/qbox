@@ -71,6 +71,11 @@ target_link_libraries(${PROJECT_NAME}
     INTERFACE Threads::Threads
     INTERFACE rpc
 )
+
+if(UNIX AND NOT APPLE)
+    target_link_libraries(${PROJECT_NAME} INTERFACE rt)
+endif()
+
 gs_export()
 
 gs_enable_testing()
