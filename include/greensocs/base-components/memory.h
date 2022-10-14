@@ -58,6 +58,7 @@ namespace gs {
  *    - It supports DMI requests with the method `get_direct_mem_ptr`
  *    - DMI invalidates are not issued.
  */
+#define ALIGNEDBITS 12
 
 template <unsigned int BUSWIDTH = 32>
 class Memory : public sc_core::sc_module
@@ -125,14 +126,18 @@ class Memory : public sc_core::sc_module
         {
             m_shmem_fns.push_back(std::string("/foobaa.mem10"));
 
-            uint8_t* ptr = static_cast<uint8_t*>(aligned_alloc(0x1000, size));
-            if (ptr) {
-                return ptr;
+            if ((size & ((1 << ALIGNEDBITS) - 1)) == 0) {
+                uint8_t* ptr = static_cast<uint8_t*>(aligned_alloc((1 << ALIGNEDBITS), size));
+                if (ptr) {
+                    return ptr;
+                }
             }
             SC_REPORT_INFO("Memory", "Aligned allocation failed, using normal allocation");
-            ptr = (uint8_t*)malloc(size);
-            if (ptr) {
-                return ptr;
+            {
+                uint8_t* ptr = (uint8_t*)malloc(size);
+                if (ptr) {
+                    return ptr;
+                }
             }
             return nullptr;
         }
