@@ -62,14 +62,88 @@ namespace gs {
 template <unsigned int BUSWIDTH = 32>
 class Memory : public sc_core::sc_module
 {
+    /* singleton to handle memory management */
+    class SubBlockUtil
+    {
+    private:
+        SubBlockUtil(){};
+        std::vector<std::string> m_shmem_fns;
+
+    public:
+        ~SubBlockUtil()
+        {
+            for (auto n : m_shmem_fns) {
+                SC_REPORT_INFO("Memory", ("Deleting " + n).c_str());
+                shm_unlink(n.c_str());
+            };
+        }
+        static SubBlockUtil& get()
+        {
+            static SubBlockUtil instance;
+            return instance;
+        }
+        SubBlockUtil(SubBlockUtil const&) = delete;
+        void operator=(SubBlockUtil const&) = delete;
+
+        uint8_t* map_file(const char* mapfile, uint64_t size, uint64_t offset)
+        {
+            int fd = open(mapfile, O_RDWR);
+            if (fd < 0) {
+                SC_REPORT_FATAL("Memory", "Unable to find backing file\n");
+            }
+            uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
+                                          offset);
+            close(fd);
+            if (ptr == MAP_FAILED) {
+                SC_REPORT_FATAL("Memory", "Unable to map backing file\n");
+            }
+            return ptr;
+        }
+
+        uint8_t* map_mem(const char* memname, uint64_t size)
+        {
+            m_shmem_fns.push_back(std::string(memname));
+            int fd = shm_open(memname, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
+            if (fd == -1) {
+                shm_unlink(memname);
+                SC_REPORT_FATAL("Memory", ("can't shm_open " + std::string(memname)).c_str());
+            }
+            ftruncate(fd, size);
+            SC_REPORT_INFO("Memory", ("Length " + std::to_string(size)).c_str());
+            uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            close(fd);
+            if (ptr == MAP_FAILED) {
+                shm_unlink(memname);
+                SC_REPORT_FATAL("Memory", ("can't mmap(shared memory) " + std::string(memname) +
+                                           " " + std::to_string(errno))
+                                              .c_str());
+            }
+            return ptr;
+        }
+
+        uint8_t* alloc(uint64_t size)
+        {
+            m_shmem_fns.push_back(std::string("/foobaa.mem10"));
+
+            uint8_t* ptr = static_cast<uint8_t*>(aligned_alloc(0x1000, size));
+            if (ptr) {
+                return ptr;
+            }
+            SC_REPORT_INFO("Memory", "Aligned allocation failed, using normal allocation");
+            ptr = (uint8_t*)malloc(size);
+            if (ptr) {
+                return ptr;
+            }
+            return nullptr;
+        }
+    };
+
     uint64_t m_size = 0;
     uint64_t m_address;
     bool m_address_valid = false;
     bool m_relative_addresses;
 
-    uint8_t* ptr = nullptr;
-
-    // Teplated on the power of 2 to use to divide the blocks up
+    // Templated on the power of 2 to use to divide the blocks up
     template <unsigned int N = 2>
     class SubBlock
     {
@@ -84,39 +158,9 @@ class Memory : public sc_core::sc_module
 
         bool m_mapped = false;
 
-        /**
-         * @brief This function maps a host file system file into the memory,
-         * such that the results of the memory will be maintained between runs.
-         * This can be useful for emulating a flash ram for instance NB the only
-         * way of having this called is via the configuration paramter mapfile
-         * @param filename Name of the file
-         */
-        bool map(std::string filename)
-        {
-#ifndef _WIN32
-            int fd = open(filename.c_str(), O_RDWR);
-            if (fd < 0) {
-                SC_REPORT_FATAL("Memory", "Unable to find backing file\n");
-            }
-            m_ptr = (uint8_t*)mmap(NULL, m_len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, m_address);
-            close(fd);
-            if (m_ptr == MAP_FAILED) {
-                SC_REPORT_WARNING("Memory", "Unable to map backing file\n");
-                m_ptr = nullptr;
-                return false;
-            }
-            m_mapped = true;
-            return true;
-#else
-            SC_REPORT_FATAL("Memory", "Backing files only supported on UNIX platforms\n");
-#endif
-        }
-
     public:
-        SubBlock(uint64_t address, uint64_t len, Memory &mem)
-            : m_address(address)
-            , m_len(len)
-            , m_mem(mem)
+        SubBlock(uint64_t address, uint64_t len, Memory& mem)
+            : m_address(address), m_len(len), m_mem(mem)
         {
         }
 
@@ -134,21 +178,28 @@ class Memory : public sc_core::sc_module
             }
 
             if (!m_use_sub_blocks) {
-                if (!((std::string)(m_mem.p_mapfile)).empty()) {
-                    if (map(m_mem.p_mapfile)) {
-                        return *this;
-                    }
-                } else {
-                    m_ptr = static_cast<uint8_t*>(aligned_alloc(0x1000, m_len));
-                    if (m_ptr) {
-                        return *this;
-                    }
-                    SC_REPORT_INFO("Memory", "Aligned allocation failed, using normal allocation");
-                    m_ptr = (uint8_t*)malloc(m_len);
-                    if (m_ptr) {
+                if (!((std::string)m_mem.p_mapfile).empty()) {
+                    if ((m_ptr = Memory::SubBlockUtil::get().map_file(
+                             ((std::string)(m_mem.p_mapfile)).c_str(), m_len, m_address)) !=
+                        nullptr) {
+                        m_mapped = true;
                         return *this;
                     }
                 }
+                if (m_mem.p_shmem) {
+                    if ((m_ptr = Memory::SubBlockUtil::get().map_mem(
+                             ("/foobaa" + (std::string(m_mem.name())) + (std::to_string(m_address)))
+                                 .c_str(),
+                             m_len)) != nullptr) {
+                        m_mapped = true;
+                        return *this;
+                    }
+                }
+                if ((m_ptr = Memory::SubBlockUtil::get().alloc(m_len)) != nullptr) {
+                    return *this;
+                }
+
+                // else we failed to allocate, try with a smaller sub_block size.
                 m_use_sub_blocks = true;
             }
 
@@ -163,7 +214,8 @@ class Memory : public sc_core::sc_module
             int i = (address - m_address) / (m_sub_size);
 
             if (!m_sub_blocks[i]) {
-                m_sub_blocks[i] = std::make_unique<SubBlock>((i * m_sub_size) + m_address, m_sub_size, m_mem);
+                m_sub_blocks[i] = std::make_unique<SubBlock<N>>((i * m_sub_size) + m_address,
+                                                                m_sub_size, m_mem);
             }
             return m_sub_blocks[i]->access(address);
         }
@@ -423,6 +475,7 @@ public:
     cci::cci_param<std::string> p_mapfile;
     cci::cci_param<uint64_t> p_max_block_size;
     cci::cci_param<uint64_t> p_min_block_size;
+    cci::cci_param<bool> p_shmem;
 
     // NB
     // A size given by a config will always take precedence
@@ -439,6 +492,7 @@ public:
         , p_mapfile("map_file", "", "(optional) file to map this memory")
         , p_max_block_size("max_block_size", 0x100000000, "Maximum size of the sub bloc")
         , p_min_block_size("min_block_size", sysconf(_SC_PAGE_SIZE), "Minimum size of the sub bloc")
+        , p_shmem("shared_memory", false, "Allocate using shared memory")
         , load("load",
                [&](const uint8_t* data, uint64_t offset, uint64_t len) -> void {
                    write(data, offset, len);
