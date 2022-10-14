@@ -78,4 +78,5 @@ int sc_main(int argc, char* argv[])
     RemoteTest remote("remote");
     std::cout << "END OF ELAB for remote\n";
     sc_core::sc_start();
+    return 0;
 }
