@@ -35,6 +35,8 @@
 
 #include "loader.h"
 
+#include "shmem_extension.h"
+
 #ifndef _WIN32
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -162,6 +164,7 @@ class Memory : public sc_core::sc_module
         bool m_use_sub_blocks = false;
 
         bool m_mapped = false;
+        ShmemIDExtension m_shmemID;
 
     public:
         SubBlock(uint64_t address, uint64_t len, Memory& mem)
@@ -192,10 +195,10 @@ class Memory : public sc_core::sc_module
                     }
                 }
                 if (m_mem.p_shmem) {
-                    if ((m_ptr = Memory::SubBlockUtil::get().map_mem(
-                             ("/foobaa" + (std::string(m_mem.name())) + (std::to_string(m_address)))
-                                 .c_str(),
-                             m_len)) != nullptr) {
+                    m_shmemID = ("/foobaa" + (std::string(m_mem.name())) +
+                                 (std::to_string(m_address)));
+                    if ((m_ptr = Memory::SubBlockUtil::get().map_mem(m_shmemID.c_str(), m_len)) !=
+                        nullptr) {
                         m_mapped = true;
                         return *this;
                     }
@@ -262,6 +265,12 @@ class Memory : public sc_core::sc_module
             return m_address;
         }
 
+        ShmemIDExtension * get_extension() {
+            if (m_shmemID.empty()) return nullptr;
+            return &m_shmemID;
+        }
+
+
         ~SubBlock()
         {
             if (m_mapped) {
@@ -322,6 +331,11 @@ protected:
         }
         dmi_data.set_read_latency(p_latency);
         dmi_data.set_write_latency(p_latency);
+
+        ShmemIDExtension *ext=blk.get_extension();
+        if (ext) {
+            txn.set_extension(ext);
+        }
 
         return true;
     }
