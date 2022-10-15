@@ -15,8 +15,8 @@ print ("Lua config running. . . ");
 
 -- these values are helpful for local configuration, so make them global
  INITIAL_DDR_SPACE_14GB = 0x80000000
- OFFSET_MIFS_DDR_SPACE  = 0x20000000
- OFFSET_SMEM_DDR_SPACE  = 0x00900000
+ OFFSET_MIFS_DDR_SPACE  = 0x60000000
+ OFFSET_SMEM_DDR_SPACE  = 0x10900000
  DDR_SPACE_SIZE = 16*1024*1024*1024
 
 
@@ -55,7 +55,7 @@ local UART0 = PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO
 local TCSR_SOC_HW_VERSION_ADDR = 0x1FC8000;
 local TCSR_SOC_EMULATION_TYPE_ADDR = TCSR_SOC_HW_VERSION_ADDR+4;
 local SMEM_TCSR_TZ_WONCE_ADDR=0x01fd4000;
-local SMEM_TARG_INFO_ADDR=0x80aff2c0; -- must correspond to smem_v3.bin
+local SMEM_TARG_INFO_ADDR=0x90aff320; -- must correspond to smem*.bin
 local RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRVd = 0xb2c1004;
 local RPMH_PDC_COMPUTE_PDC_PARAM_SEQ_CONFIG_DRVd = 0xb2c1008;
 local RPMH_PDC_NSP_PDC_PARAM_RESOURCE_DRVd = 0xb2f1004;
@@ -126,7 +126,7 @@ platform = {
                   mem_view=   {address=0x17c21000, size=0x1000*2*7}; -- 0x1000*nr_frames*nr_views
                   irq0=40;irq1=41;irq2=42;irq3=43;irq4=44;irq5=45;irq6=46;
                   nr_frames=7;nr_views=2;cnttid=0x1111515};
-    uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=1};
+    uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=379};
 
     ipcc= {  socket        = {address=IPC_ROUTER_TOP, size=0xfc000},
              irqs = {
@@ -176,7 +176,7 @@ platform = {
                         value_str="Reset Value", byte_swap=true}
                       };
     load={
-        {data={0x60140200}, address=TCSR_SOC_HW_VERSION_ADDR};
+        {data={0x60190200}, address=TCSR_SOC_HW_VERSION_ADDR};
         {data={SMEM_TARG_INFO_ADDR}, address=SMEM_TCSR_TZ_WONCE_ADDR};
         {data={0x00005381},
          address=RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRVd};
