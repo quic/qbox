@@ -53,7 +53,7 @@ namespace gs {
 
 /* rpc pass through should pass through ONE forward connection ? */
 
-template <unsigned int BUSWIDTH = 32, unsigned int SIGNALS=1>
+template <unsigned int BUSWIDTH = 32, unsigned int SIGNALS = 1>
 class PassRPC : public sc_core::sc_module
 {
     static std::string txn_str(tlm::tlm_generic_payload& trans)
@@ -109,7 +109,7 @@ class PassRPC : public sc_core::sc_module
     std::vector<tlm_dmi_cache> dmi_cache;
     tlm::tlm_dmi* in_cache(uint64_t address)
     {
-        auto it = find_if(dmi_cache.begin(), dmi_cache.end(), [&](tlm_dmi_cache const &t) {
+        auto it = find_if(dmi_cache.begin(), dmi_cache.end(), [&](tlm_dmi_cache const& t) {
             return (t->dmi.get_start_address() <= address) && (t->dmi.get_end_address() >= address);
         });
         if (it != dmi_cache.end()) {
@@ -121,7 +121,7 @@ class PassRPC : public sc_core::sc_module
     tlm::tlm_dmi* in_cache(std::string name)
     {
         auto it = find_if(dmi_cache.begin(), dmi_cache.end(),
-                          [&](tlm_dmi_cache const &t) { return (t->m_shmem_fn == name); });
+                          [&](tlm_dmi_cache const& t) { return (t->m_shmem_fn == name); });
         if (it != dmi_cache.end()) {
             return &((*it)->dmi);
         } else {
@@ -130,7 +130,7 @@ class PassRPC : public sc_core::sc_module
     }
     void cache_clean(uint64_t start, uint64_t end)
     {
-        dmi_cache.erase(remove_if(dmi_cache.begin(), dmi_cache.end(), [&](tlm_dmi_cache const &t) {
+        dmi_cache.erase(remove_if(dmi_cache.begin(), dmi_cache.end(), [&](tlm_dmi_cache const& t) {
             return (start <= t->dmi.get_start_address() && end >= t->dmi.get_start_address()) ||
                    (start <= t->dmi.get_end_address() && end >= t->dmi.get_end_address());
         }));
@@ -362,20 +362,16 @@ private:
         tlm::tlm_dmi* c = in_cache(addr);
         if (c) {
             uint64_t len = trans.get_data_length();
-            if (addr >= c->get_start_address() &&
-                addr + len <= c->get_end_address()) {
+            if (addr >= c->get_start_address() && addr + len <= c->get_end_address()) {
                 switch (trans.get_command()) {
                 case tlm::TLM_IGNORE_COMMAND:
                     break;
                 case tlm::TLM_WRITE_COMMAND:
-                    memcpy(c->get_dmi_ptr() +
-                               (addr - c->get_start_address()),
-                           trans.get_data_ptr(), len);
+                    memcpy(c->get_dmi_ptr() + (addr - c->get_start_address()), trans.get_data_ptr(),
+                           len);
                     break;
                 case tlm::TLM_READ_COMMAND:
-                    memcpy(trans.get_data_ptr(),
-                           c->get_dmi_ptr() +
-                               (addr - c->get_start_address()),
+                    memcpy(trans.get_data_ptr(), c->get_dmi_ptr() + (addr - c->get_start_address()),
                            len);
                     break;
                 }
@@ -445,7 +441,8 @@ private:
 
         c = in_cache(trans.get_address());
         if (c) {
-            std::cout << "In Cache "<<std::hex<<c->get_start_address()<<" - "<<std::hex<<c->get_end_address()<<"\n";
+            std::cout << "In Cache " << std::hex << c->get_start_address() << " - " << std::hex
+                      << c->get_end_address() << "\n";
             dmi_data = *c;
             return !(dmi_data.is_none_allowed());
         }
@@ -461,7 +458,8 @@ private:
             dmi_data = *c;
         } else {
             r.to_tlm(dmi_data);
-std::cout << "Adding "<<r.m_shmem_fn<<" " << dmi_data.get_start_address()<<" to cache\n";
+            std::cout << "Adding " << r.m_shmem_fn << " " << dmi_data.get_start_address()
+                      << " to cache\n";
             dmi_cache.push_back(std::make_unique<tlm_dmi_cache_entry>(r.m_shmem_fn, dmi_data));
         }
         return !(dmi_data.is_none_allowed());
@@ -564,8 +562,12 @@ public:
         , initiator_socket("initiator_socket",
                            [&](std::string s) -> void { remote_register_boundto(s); })
         , target_socket("target_socket_0")
-        , initiator_signal_sockets("initiator_signal_socket", SIGNALS, [this](const char* n, int i) { return new InitiatorSignalSocket<bool>(n); })
-        , target_signal_sockets("target_signal_socket", SIGNALS, [this](const char* n, int i) { return new TargetSignalSocket<bool>(n); })
+        , initiator_signal_sockets(
+              "initiator_signal_socket", SIGNALS,
+              [this](const char* n, int i) { return new InitiatorSignalSocket<bool>(n); })
+        , target_signal_sockets(
+              "target_signal_socket", SIGNALS,
+              [this](const char* n, int i) { return new TargetSignalSocket<bool>(n); })
         , p_cport("client_port", port,
                   "The port that should be used to connect this client to the "
                   "remote server")
@@ -637,18 +639,15 @@ public:
             rpc::this_session().post_exit();
         });
 
-        server->bind("signal", [&](int i, bool v) {
-            initiator_signal_sockets[i]->write(v);
-        });
+        server->bind("signal", [&](int i, bool v) { initiator_signal_sockets[i]->write(v); });
 
         target_socket.register_b_transport(this, &PassRPC::b_transport);
         target_socket.register_transport_dbg(this, &PassRPC::transport_dbg);
         target_socket.register_get_direct_mem_ptr(this, &PassRPC::get_direct_mem_ptr);
 
-        for (int i=0; i< SIGNALS; i++ ) {
-        target_signal_sockets[i].register_value_changed_cb([&,i](bool value) {
-            client->call("signal", i, value);
-        });
+        for (int i = 0; i < SIGNALS; i++) {
+            target_signal_sockets[i].register_value_changed_cb(
+                [&, i](bool value) { client->call("signal", i, value); });
         }
 
         qk = tlm_quantumkeeper_factory(p_sync_policy);
