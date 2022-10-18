@@ -35,7 +35,8 @@
 
 #include <greensocs/libgsutils.h>
 #include <greensocs/libgssync.h>
-
+#include <greensocs/gsutils/ports/initiator-signal-socket.h>
+#include <greensocs/gsutils/ports/target-signal-socket.h>
 #include <iomanip>
 #include <unistd.h>
 
@@ -52,7 +53,7 @@ namespace gs {
 
 /* rpc pass through should pass through ONE forward connection ? */
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = 32, unsigned int SIGNALS=1>
 class PassRPC : public sc_core::sc_module
 {
     static std::string txn_str(tlm::tlm_generic_payload& trans)
@@ -331,6 +332,9 @@ public:
         target_socket;
     multi_passthrough_initiator_socket_spying<PassRPC<BUSWIDTH>> initiator_socket;
 
+    sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets;
+    sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
+
     cci::cci_param<int> p_cport;
     cci::cci_param<int> p_sport;
     cci::cci_param<std::string> p_exec_path;
@@ -560,6 +564,8 @@ public:
         , initiator_socket("initiator_socket",
                            [&](std::string s) -> void { remote_register_boundto(s); })
         , target_socket("target_socket_0")
+        , initiator_signal_sockets("initiator_signal_socket", SIGNALS, [this](const char* n, int i) { return new InitiatorSignalSocket<bool>(n); })
+        , target_signal_sockets("target_signal_socket", SIGNALS, [this](const char* n, int i) { return new TargetSignalSocket<bool>(n); })
         , p_cport("client_port", port,
                   "The port that should be used to connect this client to the "
                   "remote server")
@@ -631,9 +637,19 @@ public:
             rpc::this_session().post_exit();
         });
 
+        server->bind("signal", [&](int i, bool v) {
+            initiator_signal_sockets[i]->write(v);
+        });
+
         target_socket.register_b_transport(this, &PassRPC::b_transport);
         target_socket.register_transport_dbg(this, &PassRPC::transport_dbg);
         target_socket.register_get_direct_mem_ptr(this, &PassRPC::get_direct_mem_ptr);
+
+        for (int i=0; i< SIGNALS; i++ ) {
+        target_signal_sockets[i].register_value_changed_cb([&,i](bool value) {
+            client->call("signal", i, value);
+        });
+        }
 
         qk = tlm_quantumkeeper_factory(p_sync_policy);
         qk->start();
