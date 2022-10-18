@@ -34,6 +34,7 @@
 #include <scp/report.h>
 
 #include "loader.h"
+#include "memory_services.h"
 
 #include "shmem_extension.h"
 
@@ -65,86 +66,6 @@ namespace gs {
 template <unsigned int BUSWIDTH = 32>
 class Memory : public sc_core::sc_module
 {
-    /* singleton to handle memory management */
-    class SubBlockUtil
-    {
-    private:
-        SubBlockUtil(){};
-        std::vector<std::string> m_shmem_fns;
-
-    public:
-        ~SubBlockUtil()
-        {
-            for (auto n : m_shmem_fns) {
-                SC_REPORT_INFO("Memory", ("Deleting " + n).c_str());
-                shm_unlink(n.c_str());
-            };
-        }
-        static SubBlockUtil& get()
-        {
-            static SubBlockUtil instance;
-            return instance;
-        }
-        SubBlockUtil(SubBlockUtil const&) = delete;
-        void operator=(SubBlockUtil const&) = delete;
-
-        uint8_t* map_file(const char* mapfile, uint64_t size, uint64_t offset)
-        {
-            int fd = open(mapfile, O_RDWR);
-            if (fd < 0) {
-                SC_REPORT_FATAL("Memory", "Unable to find backing file\n");
-            }
-            uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
-                                          offset);
-            close(fd);
-            if (ptr == MAP_FAILED) {
-                SC_REPORT_FATAL("Memory", "Unable to map backing file\n");
-            }
-            return ptr;
-        }
-
-        uint8_t* map_mem(const char* memname, uint64_t size)
-        {
-            m_shmem_fns.push_back(std::string(memname));
-            int fd = shm_open(memname, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
-            if (fd == -1) {
-                shm_unlink(memname);
-                SC_REPORT_FATAL("Memory", ("can't shm_open " + std::string(memname)).c_str());
-            }
-            ftruncate(fd, size);
-            SC_REPORT_INFO("Memory", ("Length " + std::to_string(size)).c_str());
-            uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-            close(fd);
-            if (ptr == MAP_FAILED) {
-                shm_unlink(memname);
-                SC_REPORT_FATAL("Memory", ("can't mmap(shared memory) " + std::string(memname) +
-                                           " " + std::to_string(errno))
-                                              .c_str());
-            }
-            return ptr;
-        }
-
-        uint8_t* alloc(uint64_t size)
-        {
-            m_shmem_fns.push_back(std::string("/foobaa.mem10"));
-
-            if ((size & ((1 << ALIGNEDBITS) - 1)) == 0) {
-                uint8_t* ptr = static_cast<uint8_t*>(aligned_alloc((1 << ALIGNEDBITS), size));
-                if (ptr) {
-                    return ptr;
-                }
-            }
-            SC_REPORT_INFO("Memory", "Aligned allocation failed, using normal allocation");
-            {
-                uint8_t* ptr = (uint8_t*)malloc(size);
-                if (ptr) {
-                    return ptr;
-                }
-            }
-            return nullptr;
-        }
-    };
-
     uint64_t m_size = 0;
     uint64_t m_address;
     bool m_address_valid = false;
@@ -187,7 +108,7 @@ class Memory : public sc_core::sc_module
 
             if (!m_use_sub_blocks) {
                 if (!((std::string)m_mem.p_mapfile).empty()) {
-                    if ((m_ptr = Memory::SubBlockUtil::get().map_file(
+                    if ((m_ptr = MemoryServices::get().map_file(
                              ((std::string)(m_mem.p_mapfile)).c_str(), m_len, m_address)) !=
                         nullptr) {
                         m_mapped = true;
@@ -197,13 +118,13 @@ class Memory : public sc_core::sc_module
                 if (m_mem.p_shmem) {
                     m_shmemID = ("/foobaa" + (std::string(m_mem.name())) +
                                  (std::to_string(m_address)));
-                    if ((m_ptr = Memory::SubBlockUtil::get().map_mem(m_shmemID.c_str(), m_len)) !=
+                    if ((m_ptr = MemoryServices::get().map_mem_create(m_shmemID.c_str(), m_len)) !=
                         nullptr) {
                         m_mapped = true;
                         return *this;
                     }
                 }
-                if ((m_ptr = Memory::SubBlockUtil::get().alloc(m_len)) != nullptr) {
+                if ((m_ptr = MemoryServices::get().alloc(m_len)) != nullptr) {
                     return *this;
                 }
 

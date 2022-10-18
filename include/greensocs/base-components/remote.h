@@ -26,15 +26,20 @@
 
 #include <cci_configuration>
 #include <systemc>
+#include <tlm>
 
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
+#include <tlm_utils/multi_passthrough_initiator_socket.h>
+#include <tlm_utils/multi_passthrough_target_socket.h>
 
 #include <greensocs/libgsutils.h>
 #include <greensocs/libgssync.h>
 
 #include <iomanip>
 #include <unistd.h>
+
+#include "memory_services.h"
 
 #include "rpc/client.h"
 #include "rpc/rpc_error.h"
@@ -86,6 +91,90 @@ class PassRPC : public sc_core::sc_module
     }
 
     using str_pairs = std::vector<std::pair<std::string, std::string>>;
+
+    /* Handle local DMI cache */
+    struct tlm_dmi_cache_entry {
+        std::string m_shmem_fn;
+        tlm::tlm_dmi dmi;
+        tlm_dmi_cache_entry(std::string n, tlm::tlm_dmi d): dmi(d), m_shmem_fn(n) {}
+        ~tlm_dmi_cache_entry()
+        {
+            std::cout << "HERE!!!\n\n\n";
+            //            munmap(dmi.get_dmi_ptr(), (dmi.get_end_address() -
+            //            dmi.get_start_address()) + 1);
+        }
+    };
+    using tlm_dmi_cache = std::unique_ptr<tlm_dmi_cache_entry>;
+    std::vector<tlm_dmi_cache> dmi_cache;
+    tlm::tlm_dmi* in_cache(uint64_t address)
+    {
+        auto it = find_if(dmi_cache.begin(), dmi_cache.end(), [&](tlm_dmi_cache const &t) {
+            return (t->dmi.get_start_address() <= address) && (t->dmi.get_end_address() >= address);
+        });
+        if (it != dmi_cache.end()) {
+            return &((*it)->dmi);
+        } else {
+            return nullptr;
+        }
+    }
+    tlm::tlm_dmi* in_cache(std::string name)
+    {
+        auto it = find_if(dmi_cache.begin(), dmi_cache.end(),
+                          [&](tlm_dmi_cache const &t) { return (t->m_shmem_fn == name); });
+        if (it != dmi_cache.end()) {
+            return &((*it)->dmi);
+        } else {
+            return nullptr;
+        }
+    }
+    void cache_clean(uint64_t start, uint64_t end)
+    {
+        dmi_cache.erase(remove_if(dmi_cache.begin(), dmi_cache.end(), [&](tlm_dmi_cache const &t) {
+            return (start <= t->dmi.get_start_address() && end >= t->dmi.get_start_address()) ||
+                   (start <= t->dmi.get_end_address() && end >= t->dmi.get_end_address());
+        }));
+    }
+    /* RPC structure for TLM_DMI */
+    struct tlm_dmi_rpc {
+        std::string m_shmem_fn;
+
+        uint64_t m_dmi_start_address;
+        uint64_t m_dmi_end_address;
+        int m_dmi_access; /*tlm::tlm_dmi::dmi_access_e */
+        double m_dmi_read_latency;
+        double m_dmi_write_latency;
+
+        std::vector<tlm_dmi_cache> dmi_cache;
+
+        MSGPACK_DEFINE_ARRAY(m_shmem_fn, m_dmi_start_address, m_dmi_end_address, m_dmi_access,
+                             m_dmi_read_latency, m_dmi_write_latency);
+
+        void from_tlm(tlm::tlm_dmi& other, std::string fn)
+        {
+            m_shmem_fn = fn;
+
+            m_dmi_start_address = other.get_start_address();
+            m_dmi_end_address = other.get_end_address();
+            m_dmi_access = other.get_granted_access();
+            m_dmi_read_latency = other.get_read_latency().to_seconds();
+            m_dmi_write_latency = other.get_write_latency().to_seconds();
+        }
+
+        void to_tlm(tlm::tlm_dmi& other)
+        {
+            if (m_shmem_fn.empty())
+                return;
+
+            other.set_dmi_ptr(MemoryServices::get().map_mem_join(
+                m_shmem_fn.c_str(), (m_dmi_end_address - m_dmi_start_address) + 1));
+
+            other.set_start_address(m_dmi_start_address);
+            other.set_end_address(m_dmi_end_address);
+            other.set_granted_access((tlm::tlm_dmi::dmi_access_e)m_dmi_access);
+            other.set_read_latency(sc_core::sc_time(m_dmi_read_latency, sc_core::SC_SEC));
+            other.set_write_latency(sc_core::sc_time(m_dmi_write_latency, sc_core::SC_SEC));
+        }
+    };
 
     struct tlm_generic_payload_rpc {
         sc_dt::uint64 m_address;
@@ -178,10 +267,12 @@ class PassRPC : public sc_core::sc_module
 
     template <typename MOD>
     class multi_passthrough_initiator_socket_spying
-        : public tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>
+        : public tlm_utils::multi_passthrough_initiator_socket<
+              MOD, BUSWIDTH, tlm::tlm_base_protocol_types, 0, sc_core::SC_ZERO_OR_MORE_BOUND>
     {
         using typename tlm_utils::multi_passthrough_initiator_socket<
-            MOD, BUSWIDTH>::base_target_socket_type;
+            MOD, BUSWIDTH, tlm::tlm_base_protocol_types, 0,
+            sc_core::SC_ZERO_OR_MORE_BOUND>::base_target_socket_type;
 
         const std::function<void(std::string)> register_cb;
 
@@ -189,14 +280,17 @@ class PassRPC : public sc_core::sc_module
         multi_passthrough_initiator_socket_spying(const char* name,
                                                   const std::function<void(std::string)>& f)
             : tlm_utils::multi_passthrough_initiator_socket<
-                  MOD, BUSWIDTH>::multi_passthrough_initiator_socket(name)
+                  MOD, BUSWIDTH, tlm::tlm_base_protocol_types, 0,
+                  sc_core::SC_ZERO_OR_MORE_BOUND>::multi_passthrough_initiator_socket(name)
             , register_cb(f)
         {
         }
 
         void bind(base_target_socket_type& socket)
         {
-            tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>::bind(socket);
+            tlm_utils::multi_passthrough_initiator_socket<
+                MOD, BUSWIDTH, tlm::tlm_base_protocol_types, 0,
+                sc_core::SC_ZERO_OR_MORE_BOUND>::bind(socket);
             register_cb(socket.get_base_export().name());
         }
     };
@@ -259,6 +353,34 @@ private:
         tlm_generic_payload_rpc t;
         double time = sc_core::sc_time_stamp().to_seconds();
 
+        uint64_t addr = trans.get_address();
+        // If we have a locally cached DMI, use it!
+        tlm::tlm_dmi* c = in_cache(addr);
+        if (c) {
+            uint64_t len = trans.get_data_length();
+            if (addr >= c->get_start_address() &&
+                addr + len <= c->get_end_address()) {
+                switch (trans.get_command()) {
+                case tlm::TLM_IGNORE_COMMAND:
+                    break;
+                case tlm::TLM_WRITE_COMMAND:
+                    memcpy(c->get_dmi_ptr() +
+                               (addr - c->get_start_address()),
+                           trans.get_data_ptr(), len);
+                    break;
+                case tlm::TLM_READ_COMMAND:
+                    memcpy(trans.get_data_ptr(),
+                           c->get_dmi_ptr() +
+                               (addr - c->get_start_address()),
+                           len);
+                    break;
+                }
+                trans.set_dmi_allowed(true);
+                trans.set_response_status(tlm::TLM_OK_RESPONSE);
+                return;
+            }
+        }
+
         t.from_tlm(trans);
         std::cout << name() << " b_transport socket ID " << id << " From_tlm " << txn_str(trans)
                   << "\n";
@@ -285,8 +407,6 @@ private:
         tlm_generic_payload_rpc t;
 
         t.from_tlm(trans);
-        std::cout << name() << " dbg_transport socket ID " << id << " From_tlm " << txn_str(trans)
-                  << "\n";
         tlm_generic_payload_rpc r = client->call("dbg_tspt", id, t)
                                         .template as<tlm_generic_payload_rpc>();
         r.update_to_tlm(trans);
@@ -297,7 +417,6 @@ private:
     {
         tlm::tlm_generic_payload trans;
         t.deep_copy_to_tlm(trans);
-        std::cout << name() << " deep copy to_tlm " << txn_str(trans) << "\n";
         int ret_len;
         qk->run_on_systemc([&] { ret_len = initiator_socket[id]->transport_dbg(trans); });
         t.from_tlm(trans);
@@ -312,13 +431,58 @@ private:
 
     bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
+        tlm::tlm_dmi* c;
         //        if (p_verbose) {
         std::stringstream info;
         info << " " << name() << " get_direct_mem_ptr to address "
              << "0x" << std::hex << trans.get_address();
         SC_REPORT_INFO("PassRPC", info.str().c_str());
         //        }
-        //        return initiator_socket->get_direct_mem_ptr(trans, dmi_data);
+
+        c = in_cache(trans.get_address());
+        if (c) {
+            std::cout << "In Cache "<<std::hex<<c->get_start_address()<<" - "<<std::hex<<c->get_end_address()<<"\n";
+            dmi_data = *c;
+            return !(dmi_data.is_none_allowed());
+        }
+
+        tlm_generic_payload_rpc t;
+        t.from_tlm(trans);
+        std::cout << name() << " DMI socket ID " << id << " From_tlm " << txn_str(trans) << "\n";
+        tlm_dmi_rpc r = client->call("dmi_req", id, t).template as<tlm_dmi_rpc>();
+        if (r.m_shmem_fn.empty())
+            return false;
+        c = in_cache(r.m_shmem_fn);
+        if (c) {
+            dmi_data = *c;
+        } else {
+            r.to_tlm(dmi_data);
+std::cout << "Adding "<<r.m_shmem_fn<<" " << dmi_data.get_start_address()<<" to cache\n";
+            dmi_cache.push_back(std::make_unique<tlm_dmi_cache_entry>(r.m_shmem_fn, dmi_data));
+        }
+        return !(dmi_data.is_none_allowed());
+    }
+
+    tlm_dmi_rpc get_direct_mem_ptr_rpc(int id, tlm_generic_payload_rpc t)
+    {
+        tlm::tlm_generic_payload trans;
+        t.deep_copy_to_tlm(trans);
+
+        //        if (p_verbose) {
+        std::stringstream info;
+        info << " " << name() << " get_direct_mem_ptr " << txn_str(trans) << "\n";
+        SC_REPORT_INFO("PassRPC", info.str().c_str());
+        //        }
+
+        tlm::tlm_dmi dmi_data;
+        tlm_dmi_rpc ret;
+        if (initiator_socket->get_direct_mem_ptr(trans, dmi_data)) {
+            ShmemIDExtension* ext = trans.get_extension<ShmemIDExtension>();
+            if (!ext)
+                return ret;
+            ret.from_tlm(dmi_data, *ext);
+        }
+        return ret;
     }
 
     /* Invalidate DMI Interface */
@@ -342,6 +506,8 @@ private:
         //        }
 
         qk->run_on_systemc([&] {
+            // remove from local DMI cache inside SystemC to prevent race conditions
+            cache_clean(start, end);
             for (int i = 0; i < target_socket.size(); i++) {
                 target_socket[i]->invalidate_direct_mem_ptr(start, end);
             }
@@ -447,12 +613,16 @@ public:
             return PassRPC::b_transport_rpc(id, txn, time);
         });
 
-        server->bind("dbg_tspt", [&](int id, tlm_generic_payload_rpc txn, double time) {
+        server->bind("dbg_tspt", [&](int id, tlm_generic_payload_rpc txn) {
             return PassRPC::transport_dbg_rpc(id, txn);
         });
 
         server->bind("dmi_inv", [&](uint64_t start, uint64_t end) {
             return PassRPC::invalidate_direct_mem_ptr_rpc(start, end);
+        });
+
+        server->bind("dmi_req", [&](int id, tlm_generic_payload_rpc txn) {
+            return PassRPC::get_direct_mem_ptr_rpc(id, txn);
         });
 
         server->bind("exit", [&](int i) {
@@ -515,6 +685,7 @@ public:
             client->call("exit", 0);
             sleep(1);
         }
+        dmi_cache.clear();
     }
 
     void end_of_simulation()

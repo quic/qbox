@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2022 GreenSocs
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All Rights Reserved.
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License

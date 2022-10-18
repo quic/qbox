@@ -73,10 +73,18 @@ public:
 
 int sc_main(int argc, char* argv[])
 {
-    std::cout << "Remote started\n";
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
-    RemoteTest remote("remote");
-    std::cout << "END OF ELAB for remote\n";
-    sc_core::sc_start();
+    try {
+        std::cout << "Remote started\n";
+        auto m_broker = new gs::ConfigurableBroker(argc, argv);
+        RemoteTest remote("remote");
+        std::cout << "END OF ELAB for remote\n";
+        sc_core::sc_start();
+    } catch (std::runtime_error const& e) {
+        std::cerr << "Error: '" << e.what() << "'\n";
+        exit(1);
+    } catch (...) {
+        std::cerr << "Unknown error!\n";
+        exit(2);
+    }
     return 0;
 }

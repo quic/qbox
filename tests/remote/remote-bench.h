@@ -80,6 +80,15 @@ public:
         ASSERT_EQ(m_initiator_dma.do_read(addr, v2), tlm::TLM_OK_RESPONSE);
         ASSERT_EQ(v1, v2);
     }
+    void do_dmi_write_read_check(uint64_t addr) {
+        ASSERT_TRUE(m_initiator.do_dmi_request(addr));
+        tlm::tlm_dmi dmi=m_initiator.get_last_dmi_data();
+        uint64_t *d=(uint64_t *)dmi.get_dmi_ptr();
+        uint64_t v1 = 0x900df00d, v2;
+        d[0x0]=v1;
+        v2=d[0x0];
+        ASSERT_EQ(v1,v2);
+    }
 public:
     RemotePassTest(const sc_core::sc_module_name& n)
         : TestBench(n)

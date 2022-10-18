@@ -39,6 +39,11 @@ TEST_BENCH(RemotePassTest, SimpleReadWriteMem0)
     for (int i = 0; i < 1; i++) {
         do_remote_write_read_check(0x11000);
     }
+    std::cout << "Test 4\n";
+    for (int i = 0; i < 1; i++) {
+        do_dmi_write_read_check(0x23000);
+    }
+    std::cout << "Looks OK\n";
     sc_core::sc_stop();
 }
 
