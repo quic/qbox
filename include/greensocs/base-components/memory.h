@@ -451,7 +451,7 @@ protected:
         uint64_t remain_len = 0;
         uint64_t data_ptr_offset = 0;
 
-        sc_assert(offset + len < m_size);
+        sc_assert(offset + len <= m_size);
 
         while (len > 0) {
             SubBlock<>& blk = m_sub_block->access(offset + data_ptr_offset);
@@ -470,7 +470,7 @@ protected:
         uint64_t remain_len = 0;
         uint64_t data_ptr_offset = 0;
 
-        sc_assert(offset + len < m_size);
+        sc_assert(offset + len <= m_size);
 
         while (len > 0) {
             SubBlock<>& blk = m_sub_block->access(offset + data_ptr_offset);
