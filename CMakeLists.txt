@@ -4,7 +4,7 @@ project(quic-smmu VERSION 1.0)
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
-set(PACKAGE_PATH "qemu/libqbox")
+set(PACKAGE_PATH "quic/components/smmu500")
 set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositoies")
 
 execute_process(COMMAND git config --get remote.origin.url
