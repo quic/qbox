@@ -20,58 +20,58 @@
 /* This macro will define A_FOO, for the byte address of a register
  * as well as R_FOO for the uint32_t[] register number (A_FOO / 4).
  */
-#define REG32(reg, addr)                                                  \
-    enum { A_ ## reg = (addr) };                                          \
-    enum { R_ ## reg = (addr) / 4 };
+#define REG32(reg, addr)       \
+    enum { A_##reg = (addr) }; \
+    enum { R_##reg = (addr) / 4 };
 
-#define REG8(reg, addr)                                                   \
-    enum { A_ ## reg = (addr) };                                          \
-    enum { R_ ## reg = (addr) };
+#define REG8(reg, addr)        \
+    enum { A_##reg = (addr) }; \
+    enum { R_##reg = (addr) };
 
-#define REG16(reg, addr)                                                  \
-    enum { A_ ## reg = (addr) };                                          \
-    enum { R_ ## reg = (addr) / 2 };
+#define REG16(reg, addr)       \
+    enum { A_##reg = (addr) }; \
+    enum { R_##reg = (addr) / 2 };
 
-#define REG64(reg, addr)                                                  \
-    enum { A_ ## reg = (addr) };                                          \
-    enum { R_ ## reg = (addr) / 8 };
+#define REG64(reg, addr)       \
+    enum { A_##reg = (addr) }; \
+    enum { R_##reg = (addr) / 8 };
 
 /* Define SHIFT, LENGTH and MASK constants for a field within a register */
 
 /* This macro will define R_FOO_BAR_MASK, R_FOO_BAR_SHIFT and R_FOO_BAR_LENGTH
  * constants for field BAR in register FOO.
  */
-#define FIELD(reg, field, shift, length)                                  \
-    enum { R_ ## reg ## _ ## field ## _SHIFT = (shift)};                  \
-    enum { R_ ## reg ## _ ## field ## _LENGTH = (length)};                \
-    enum { R_ ## reg ## _ ## field ## _MASK =                             \
-                                        MAKE_64BIT_MASK(shift, length)};
+#define FIELD(reg, field, shift, length)            \
+    enum { R_##reg##_##field##_SHIFT = (shift) };   \
+    enum { R_##reg##_##field##_LENGTH = (length) }; \
+    enum { R_##reg##_##field##_MASK =               \
+               MAKE_64BIT_MASK(shift, length) };
 
 /* Extract a field from a register */
-#define FIELD_EX8(storage, reg, field)                                    \
-    extract8((storage), R_ ## reg ## _ ## field ## _SHIFT,                \
-              R_ ## reg ## _ ## field ## _LENGTH)
-#define FIELD_EX16(storage, reg, field)                                   \
-    extract16((storage), R_ ## reg ## _ ## field ## _SHIFT,               \
-              R_ ## reg ## _ ## field ## _LENGTH)
-#define FIELD_EX32(storage, reg, field)                                   \
-    extract32((storage), R_ ## reg ## _ ## field ## _SHIFT,               \
-              R_ ## reg ## _ ## field ## _LENGTH)
-#define FIELD_EX64(storage, reg, field)                                   \
-    extract64((storage), R_ ## reg ## _ ## field ## _SHIFT,               \
-              R_ ## reg ## _ ## field ## _LENGTH)
+#define FIELD_EX8(storage, reg, field)             \
+    extract8((storage), R_##reg##_##field##_SHIFT, \
+             R_##reg##_##field##_LENGTH)
+#define FIELD_EX16(storage, reg, field)             \
+    extract16((storage), R_##reg##_##field##_SHIFT, \
+              R_##reg##_##field##_LENGTH)
+#define FIELD_EX32(storage, reg, field)             \
+    extract32((storage), R_##reg##_##field##_SHIFT, \
+              R_##reg##_##field##_LENGTH)
+#define FIELD_EX64(storage, reg, field)             \
+    extract64((storage), R_##reg##_##field##_SHIFT, \
+              R_##reg##_##field##_LENGTH)
 
 /* Extract a field from an array of registers */
-#define ARRAY_FIELD_EX32(regs, reg, field)                                \
-    FIELD_EX32((regs)[R_ ## reg], reg, field)
-#define ARRAY_FIELD_EX64(regs, reg, field)                                \
-    FIELD_EX64((regs)[R_ ## reg], reg, field)
+#define ARRAY_FIELD_EX32(regs, reg, field) \
+    FIELD_EX32((regs)[R_##reg], reg, field)
+#define ARRAY_FIELD_EX64(regs, reg, field) \
+    FIELD_EX64((regs)[R_##reg], reg, field)
 
 /* Deposit a register field.
  * Assigning values larger then the target field will result in
  * compilation warnings.
  */
-#define FIELD_DP8(storage, reg, field, val) ({                            \
+#define FIELD_DP8(storage, reg, field, val)  ({                            \
     struct {                                                              \
         unsigned int v:R_ ## reg ## _ ## field ## _LENGTH;                \
     } _v = { .v = val };                                                  \
@@ -105,10 +105,10 @@
     _d; })
 
 /* Deposit a field to array of registers.  */
-#define ARRAY_FIELD_DP32(regs, reg, field, val)                           \
-    (regs)[R_ ## reg] = FIELD_DP32((regs)[R_ ## reg], reg, field, val);
-#define ARRAY_FIELD_DP64(regs, reg, field, val)                           \
-    (regs)[R_ ## reg] = FIELD_DP64((regs)[R_ ## reg], reg, field, val);
+#define ARRAY_FIELD_DP32(regs, reg, field, val) \
+    (regs)[R_##reg] = FIELD_DP32((regs)[R_##reg], reg, field, val);
+#define ARRAY_FIELD_DP64(regs, reg, field, val) \
+    (regs)[R_##reg] = FIELD_DP64((regs)[R_##reg], reg, field, val);
 
 #endif
 
@@ -135,7 +135,7 @@
  */
 
 struct RegisterAccessInfo {
-    const char *name;
+    const char* name;
     uint64_t addr;
     uint64_t w1c;
     uint64_t reset;
@@ -143,13 +143,10 @@ struct RegisterAccessInfo {
     uint64_t rsvd;
     uint64_t unimp;
 
-
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> pre_write;
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> post_write;
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> post_read;
-//    void (*pre_write)(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay);
-//    void (*post_write)(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay);
-//    void (*post_read)(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay);
-
+    //    void (*pre_write)(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay);
+    //    void (*post_write)(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay);
+    //    void (*post_read)(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay);
 };
-
