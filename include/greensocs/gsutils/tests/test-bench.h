@@ -102,6 +102,20 @@ public:
         SC_THREAD(test_bench_body);
     }
 };
+template <class T>
+class TestBenchEnv : public ::testing::Environment
+{
+    // Would be nice to be a smart pointer, but sc_bind takes a pointer.
+    T* instance;
+public:
+  void SetUp() override {
+    instance =  new T();
+  }
+  void TearDown () override {
+    delete instance;
+  }
+  T* get() { return instance; }
+};
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -113,23 +127,10 @@ static inline bool test_bench_succeeded(int ret)
     return WIFEXITED(ret) && (WEXITSTATUS(ret) == 0);
 }
 template <class T>
-static inline void run_test_bench()
+static inline void run_test_bench(T * instance)
 {
-    pid_t pid;
-
-    pid = fork();
-
-    ASSERT_NE(pid, -1);
-
-    if (!pid) {
-        T test_bench("test_bench");
+        sc_spawn(sc_bind(&T::test_bench_body, instance));
         sc_core::sc_start();
-        exit(::testing::Test::HasFatalFailure());
-    } else {
-        int ret;
-        wait(&ret);
-        ASSERT_TRUE(test_bench_succeeded(ret));
-    }
 }
 
 #else /* _WIN32 */
@@ -151,12 +152,13 @@ static inline void run_test_bench()
     protected:                                                  \
         void test_bench_body() override;                        \
     public:                                                     \
-        TEST_BENCH_NAME(name)(const sc_core::sc_module_name &n) \
-            : test_bench(n) {}                                  \
+        TEST_BENCH_NAME(name)()                                 \
+            : test_bench(#name) {}                              \
     };                                                          \
-    TEST(test_bench, name)                                      \
+    testing::Environment* const test_bench_env ## name = testing::AddGlobalTestEnvironment(new TestBenchEnv<TEST_BENCH_NAME(name)>()); \
+    TEST(TEST_BENCH_NAME(name), name)                           \
     {                                                           \
-        run_test_bench<TEST_BENCH_NAME(name)>();                \
+        run_test_bench<TEST_BENCH_NAME(name)>(static_cast<TestBenchEnv<TEST_BENCH_NAME(name)> *>(test_bench_env ## name)->get());                \
     }                                                           \
     void TEST_BENCH_NAME(name)::test_bench_body()
 
