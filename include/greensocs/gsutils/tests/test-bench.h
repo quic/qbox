@@ -135,10 +135,9 @@ static inline void run_test_bench() {
 
 #define TEST_BENCH(test_bench, name)                                           \
   class TEST_BENCH_NAME(name) : public test_bench {                            \
-  protected:                                                                   \
+  public:                                                                   \
     void test_bench_body() override;                                           \
                                                                                \
-  public:                                                                      \
     TEST_BENCH_NAME(name)() : test_bench(#name) {}                             \
   };                                                                           \
   testing::Environment *const test_bench_env##name =                           \
