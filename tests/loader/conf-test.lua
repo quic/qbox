@@ -21,3 +21,7 @@ test_bench = {
         {data={0xdeadbeaf}, address = 0x0500};
     }
 };
+SimpleReadELFFile = test_bench;
+SimpleReadData = test_bench;
+SimpleReadELFFile = test_bench;
+SimpleReadBinFile = test_bench;

@@ -25,7 +25,7 @@
 #include <cci/utils/broker.h>
 
 // Simple load and store into the Target 1 and 2
-TEST_BENCH(RemotePassTest, SimpleReadWriteMem0)
+TEST_BENCH(RemotePassTest, test_bench)
 {
     std::cout << "Test 1\n";
     for (int i = 0; i < 1; i++) {
