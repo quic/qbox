@@ -36,7 +36,7 @@ protected:
         default:
             break;
         }
-        if ((addr & 0xff) != 0x0) {
+        if (((addr & 0xff) != 0x0) && std::getenv("GS_LOG")) {
             std::stringstream info;
             info << name() << " : " << access << " access to address "
                  << "0x" << std::hex << addr << " value 0x"
