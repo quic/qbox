@@ -116,9 +116,6 @@ public:
 #include <sys/wait.h>
 #include <unistd.h>
 
-static inline bool test_bench_succeeded(int ret) {
-  return WIFEXITED(ret) && (WEXITSTATUS(ret) == 0);
-}
 template <class T> static inline void run_test_bench(T *instance) {
   sc_spawn(sc_bind(&T::test_bench_body, instance));
   sc_core::sc_start();
