@@ -1,29 +1,30 @@
 /*
-*  This file is part of libgsutils
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ *  This file is part of libgsutils
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
+ * USA. You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 /*
- * GTest helper to workaround SystemC limitations regarding its non-resettable nature.
+ * GTest helper to workaround SystemC limitations regarding its non-resettable
+ nature.
  *
  * You can use the TEST_BENCH macro as you would use the TEST_F GTest macro.
  * Your fixture class must inherit from the TestBench class.
@@ -65,7 +66,7 @@
  *         , m_module_under_test("module-under-test")
  *         , m_mock_module("mock-module")
  *     {
- *         m_mock_module.target_socket.bind(m_module_under_test.initiator_socket);
+ * m_mock_module.target_socket.bind(m_module_under_test.initiator_socket);
  *     }
  * };
  *
@@ -92,29 +93,22 @@
 
 class TestBench : public sc_core::sc_module {
 protected:
-    virtual void test_bench_body() = 0;
+  virtual void test_bench_body() = 0;
 
 public:
-    SC_HAS_PROCESS(TestBench);
-    TestBench(const sc_core::sc_module_name &n)
-        : sc_core::sc_module(n)
-    {
-        SC_THREAD(test_bench_body);
-    }
+  SC_HAS_PROCESS(TestBench);
+  TestBench(const sc_core::sc_module_name &n) : sc_core::sc_module(n) {
+    SC_THREAD(test_bench_body);
+  }
 };
-template <class T>
-class TestBenchEnv : public ::testing::Environment
-{
-    // Would be nice to be a smart pointer, but sc_bind takes a pointer.
-    T* instance;
+template <class T> class TestBenchEnv : public ::testing::Environment {
+  // Would be nice to be a smart pointer, but sc_bind takes a pointer.
+  T *instance;
+
 public:
-  void SetUp() override {
-    instance =  new T();
-  }
-  void TearDown () override {
-    delete instance;
-  }
-  T* get() { return instance; }
+  void SetUp() override { instance = new T(); }
+  void TearDown() override { delete instance; }
+  T *get() { return instance; }
 };
 
 #ifndef _WIN32
@@ -122,44 +116,43 @@ public:
 #include <sys/wait.h>
 #include <unistd.h>
 
-static inline bool test_bench_succeeded(int ret)
-{
-    return WIFEXITED(ret) && (WEXITSTATUS(ret) == 0);
+static inline bool test_bench_succeeded(int ret) {
+  return WIFEXITED(ret) && (WEXITSTATUS(ret) == 0);
 }
-template <class T>
-static inline void run_test_bench(T * instance)
-{
-        sc_spawn(sc_bind(&T::test_bench_body, instance));
-        sc_core::sc_start();
+template <class T> static inline void run_test_bench(T *instance) {
+  sc_spawn(sc_bind(&T::test_bench_body, instance));
+  sc_core::sc_start();
 }
 
 #else /* _WIN32 */
 #include <iostream>
 
-static inline void run_test_bench()
-{
-    std::cerr << "Running tests on Windows is not supported.\n";
-    ASSERT_TRUE(false);
+static inline void run_test_bench() {
+  std::cerr << "Running tests on Windows is not supported.\n";
+  ASSERT_TRUE(false);
 }
 
 #endif
 
-#define TEST_BENCH_NAME(name) \
-    TestBench__ ## name
+#define TEST_BENCH_NAME(name) TestBench__##name
 
-#define TEST_BENCH(test_bench, name)                            \
-    class TEST_BENCH_NAME(name) : public test_bench {           \
-    protected:                                                  \
-        void test_bench_body() override;                        \
-    public:                                                     \
-        TEST_BENCH_NAME(name)()                                 \
-            : test_bench(#name) {}                              \
-    };                                                          \
-    testing::Environment* const test_bench_env ## name = testing::AddGlobalTestEnvironment(new TestBenchEnv<TEST_BENCH_NAME(name)>()); \
-    TEST(TEST_BENCH_NAME(name), name)                           \
-    {                                                           \
-        run_test_bench<TEST_BENCH_NAME(name)>(static_cast<TestBenchEnv<TEST_BENCH_NAME(name)> *>(test_bench_env ## name)->get());                \
-    }                                                           \
-    void TEST_BENCH_NAME(name)::test_bench_body()
+#define TEST_BENCH(test_bench, name)                                           \
+  class TEST_BENCH_NAME(name) : public test_bench {                            \
+  protected:                                                                   \
+    void test_bench_body() override;                                           \
+                                                                               \
+  public:                                                                      \
+    TEST_BENCH_NAME(name)() : test_bench(#name) {}                             \
+  };                                                                           \
+  testing::Environment *const test_bench_env##name =                           \
+      testing::AddGlobalTestEnvironment(                                       \
+          new TestBenchEnv<TEST_BENCH_NAME(name)>());                          \
+  TEST(TEST_BENCH_NAME(name), name) {                                          \
+    run_test_bench<TEST_BENCH_NAME(name)>(                                     \
+        static_cast<TestBenchEnv<TEST_BENCH_NAME(name)> *>(                    \
+            test_bench_env##name)                                              \
+            ->get());                                                          \
+  }                                                                            \
+  void TEST_BENCH_NAME(name)::test_bench_body()
 
 #endif
