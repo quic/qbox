@@ -53,7 +53,7 @@ namespace gs {
 
 /* rpc pass through should pass through ONE forward connection ? */
 
-template <unsigned int BUSWIDTH = 32, unsigned int SIGNALS = 1>
+template <unsigned int SIGNALS = 1, unsigned int BUSWIDTH = 32>
 class PassRPC : public sc_core::sc_module
 {
     static std::string txn_str(tlm::tlm_generic_payload& trans)
@@ -326,11 +326,12 @@ public:
     // name of the socket itself, in our case "target_socket_0". This means that address lookup will
     // only work for the FIRST such socket, all others will require a 'pass' or should be driven
     // from models that dont use the CCI address map info.
-    tlm_utils::multi_passthrough_target_socket<PassRPC<BUSWIDTH>, BUSWIDTH,
+    // We can fix this using a template and vector of sockets....
+    tlm_utils::multi_passthrough_target_socket<PassRPC<SIGNALS, BUSWIDTH>, BUSWIDTH,
                                                tlm::tlm_base_protocol_types, 0,
                                                sc_core::SC_ZERO_OR_MORE_BOUND>
         target_socket;
-    multi_passthrough_initiator_socket_spying<PassRPC<BUSWIDTH>> initiator_socket;
+    multi_passthrough_initiator_socket_spying<PassRPC<SIGNALS, BUSWIDTH>> initiator_socket;
 
     sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets;
     sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
@@ -634,9 +635,14 @@ public:
         });
 
         server->bind("exit", [&](int i) {
-            qk->stop();
             std::cout << "exit " << name() << "\n\n";
+            qk->run_on_systemc([&] {
             rpc::this_session().post_exit();
+                delete client;
+                client=nullptr;
+                sc_core::sc_stop();
+            });
+            qk->stop();
         });
 
         server->bind("signal", [&](int i, bool v) { initiator_signal_sockets[i]->write(v); });
@@ -698,7 +704,8 @@ public:
         std::cout << "EXIT " << name() << "\n\n";
         if (client) {
             client->call("exit", 0);
-            sleep(1);
+            delete client;
+            client=nullptr;
         }
         dmi_cache.clear();
     }
@@ -708,6 +715,8 @@ public:
         qk->stop();
         if (client) {
             client->call("exit", 0);
+            delete client;
+            client=nullptr;
             sleep(1);
         }
     }
