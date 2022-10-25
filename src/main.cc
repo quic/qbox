@@ -440,10 +440,8 @@ public:
             m_gpu = new QemuVirtioGpuGlPci("gpu", m_qemu_inst);
             m_gpex->add_device(*m_gpu);
         }
-
         if (m_rams.size() <= 0) {
-            SC_REPORT_ERROR("GreenSocsPlatform",
-                            "Please specify at least one memory (ram_0)");
+            SCP_ERR(SCMOD) << "Please specify at least one memory (ram_0)";
         }
 
         do_bus_binding();
@@ -538,19 +536,28 @@ public:
 };
 
 int sc_main(int argc, char* argv[]) {
+    scp::init_logging(
+      scp::LogConfig()
+          .logAsync(false)
+          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+          .msgTypeFieldWidth(50)); // make the msg type column a bit tighter
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
 
     GreenSocsPlatform* platform = new GreenSocsPlatform("platform");
 
     auto start = std::chrono::system_clock::now();
     try {
+        SCP_INFO()<<"SC_START";
         sc_core::sc_start();
     } catch (std::runtime_error const& e) {
-        std::cerr << "Error: '" << e.what() << "'\n";
+        std::cerr << argv[0] << "Error: '" << e.what() << std::endl;
         exit(1);
-    } catch (...) {
-        std::cerr << "Unknown error!\n";
+    } catch (const std::exception& exc) {
+        std::cerr << argv[0] << " Error: '" << exc.what() << std::endl;
         exit(2);
+    } catch (...) {
+        SCP_ERR() << "Unknown error (main.cc)!";
+        exit(3);
     }
 
     auto end = std::chrono::system_clock::now();
