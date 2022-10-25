@@ -1,12 +1,11 @@
 #pragma once
 
-#include <fstream>
-
-#include <systemc>
-#include <tlm>
+#include <scp/report.h>
 #include <tlm_utils/simple_target_socket.h>
 
-#include <scp/report.h>
+#include <fstream>
+#include <systemc>
+#include <tlm>
 
 template <unsigned int BUSWIDTH = 32>
 class pll : public sc_core::sc_module

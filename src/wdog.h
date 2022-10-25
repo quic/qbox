@@ -1,12 +1,11 @@
 #pragma once
 
-#include <fstream>
-
-#include <systemc>
-#include <tlm>
+#include <scp/report.h>
 #include <tlm_utils/simple_target_socket.h>
 
-#include <scp/report.h>
+#include <fstream>
+#include <systemc>
+#include <tlm>
 
 template <unsigned int BUSWIDTH = 32>
 class WDog : public sc_core::sc_module
@@ -19,7 +18,7 @@ protected:
         sc_dt::uint64 addr = txn.get_address();
 
         if (txn.get_streaming_width() < len) {
-            SCP_ERR(SCMOD)<<"not supported.";
+            SCP_ERR(SCMOD) << "not supported.";
         }
 
         switch (txn.get_command()) {
@@ -32,7 +31,6 @@ protected:
         default:
             break;
         }
-
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
 
         txn.set_dmi_allowed(false);

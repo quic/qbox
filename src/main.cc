@@ -103,17 +103,14 @@ public:
     // initiator socket.
     gs::Router<> m_router;
 
-    hexagon_cluster(const sc_core::sc_module_name& n,
-                    QemuInstanceManager& m_inst_mgr,
+    hexagon_cluster(const sc_core::sc_module_name& n, QemuInstanceManager& m_inst_mgr,
                     gs::Router<>& parent_router)
         : sc_core::sc_module(n)
-        , p_hexagon_num_threads("hexagon_num_threads", 8,
-                                "Number of Hexagon threads")
-        , p_hexagon_start_addr("hexagon_start_addr", 0x100,
-                               "Hexagon execution start address")
+        , p_hexagon_num_threads("hexagon_num_threads", 8, "Number of Hexagon threads")
+        , p_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
         , p_cfgbase("cfgtable_base", 0, "config table base address")
-        , m_qemu_hex_inst(m_inst_mgr.new_instance(
-              "HexagonQemuInstance", QemuInstance::Target::HEXAGON))
+        , m_qemu_hex_inst(
+              m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer",
                    m_qemu_hex_inst) // are we sure it's in the hex cluster?????
@@ -123,21 +120,20 @@ public:
         , m_csr("csr")
         , m_rom("rom")
         , m_pass("pass", false)
-        , m_hexagon_threads(
-              "hexagon_thread", p_hexagon_num_threads,
-              [this](const char* n, size_t i) {
-                  /* here n is already "hexagon-cpu_<vector-index>" */
-                  uint64_t l2vic_base = gs::cci_get<uint64_t>(
-                      std::string(name()) + ".l2vic.mem.address");
-                  uint64_t qtmr_rg0 = gs::cci_get<uint64_t>(
-                      std::string(name()) + ".qtimer.mem_view.address");
-                  return new QemuCpuHexagon(
-                      n, m_qemu_hex_inst, p_cfgbase, QemuCpuHexagon::v68_rev,
-                      l2vic_base, qtmr_rg0, p_hexagon_start_addr);
-              })
+        , m_hexagon_threads("hexagon_thread", p_hexagon_num_threads,
+                            [this](const char* n, size_t i) {
+                                /* here n is already "hexagon-cpu_<vector-index>" */
+                                uint64_t l2vic_base = gs::cci_get<uint64_t>(std::string(name()) +
+                                                                            ".l2vic.mem.address");
+                                uint64_t qtmr_rg0 = gs::cci_get<uint64_t>(
+                                    std::string(name()) + ".qtimer.mem_view.address");
+                                return new QemuCpuHexagon(n, m_qemu_hex_inst, p_cfgbase,
+                                                          QemuCpuHexagon::v68_rev, l2vic_base,
+                                                          qtmr_rg0, p_hexagon_start_addr);
+                            })
         , m_router("router")
-        , m_global_peripheral_initiator_hex(
-              "glob-per-init-hex", m_qemu_hex_inst, m_hexagon_threads[0]) {
+        , m_global_peripheral_initiator_hex("glob-per-init-hex", m_qemu_hex_inst,
+                                            m_hexagon_threads[0]) {
         parent_router.initiator_socket.bind(m_l2vic.socket);
         parent_router.initiator_socket.bind(m_l2vic.socket_fast);
         parent_router.initiator_socket.bind(m_qtimer.socket);
@@ -163,13 +159,11 @@ public:
             m_l2vic.irq_out[i].bind(m_hexagon_threads[0].irq_in[i]);
         }
 
-        m_qtimer.irq[0].bind(
-            m_l2vic.irq_in[2]); // FIXME: Depends on static boolean
-                                // syscfg_is_linux, may be 2
+        m_qtimer.irq[0].bind(m_l2vic.irq_in[2]); // FIXME: Depends on static boolean
+                                                 // syscfg_is_linux, may be 2
         m_qtimer.irq[1].bind(m_l2vic.irq_in[3]);
 
-        m_global_peripheral_initiator_hex.m_initiator.bind(
-            m_router.target_socket);
+        m_global_peripheral_initiator_hex.m_initiator.bind(m_router.target_socket);
     }
 };
 
@@ -230,8 +224,7 @@ protected:
 
             m_router.initiator_socket.bind(m_gic->dist_iface);
             m_router.initiator_socket.bind(m_gic->redist_iface[0]);
-            m_global_peripheral_initiator_arm->m_initiator.bind(
-                m_router.target_socket);
+            m_global_peripheral_initiator_arm->m_initiator.bind(m_router.target_socket);
         }
 
         for (auto& ram : m_rams) {
@@ -269,13 +262,11 @@ protected:
     void setup_irq_mapping() {
         if (p_arm_num_cpus) {
             {
-                int irq = gs::cci_get<int>(std::string(m_uart.name()) +
-                                           ".irq");
+                int irq = gs::cci_get<int>(std::string(m_uart.name()) + ".irq");
                 m_uart.irq.bind(m_gic->spi_in[irq]);
             }
             {
-                int irq = gs::cci_get<int>(std::string(m_virtio_net_0.name()) +
-                                           ".irq");
+                int irq = gs::cci_get<int>(std::string(m_virtio_net_0.name()) + ".irq");
                 m_virtio_net_0.irq_out.bind(m_gic->spi_in[irq]);
             }
             for (auto& vblk : m_virtio_blks) {
@@ -283,11 +274,9 @@ protected:
                 vblk.irq_out.bind(m_gic->spi_in[irq]);
             }
             for (auto& qt : m_qtimers) {
-                uint32_t nr_frames = gs::cci_get<int>(std::string(qt.name()) +
-                                                      ".nr_frames");
+                uint32_t nr_frames = gs::cci_get<int>(std::string(qt.name()) + ".nr_frames");
                 for (uint32_t i = 0; i < nr_frames; ++i) {
-                    int irq = gs::cci_get<int>(std::string(qt.name()) +
-                                               ".irq" + std::to_string(i));
+                    int irq = gs::cci_get<int>(std::string(qt.name()) + ".irq" + std::to_string(i));
                     qt.irq[i].bind(m_gic->spi_in[irq]);
                 }
             }
@@ -315,26 +304,20 @@ protected:
                 m_gic->virq_out[i].bind(m_cpus[i].virq_in);
                 m_gic->vfiq_out[i].bind(m_cpus[i].vfiq_in);
 
-                m_cpus[i].irq_timer_phys_out.bind(
-                    m_gic->ppi_in[i][ARCH_TIMER_NS_EL1_IRQ]);
-                m_cpus[i].irq_timer_virt_out.bind(
-                    m_gic->ppi_in[i][ARCH_TIMER_VIRT_IRQ]);
-                m_cpus[i].irq_timer_hyp_out.bind(
-                    m_gic->ppi_in[i][ARCH_TIMER_NS_EL2_IRQ]);
-                m_cpus[i].irq_timer_sec_out.bind(
-                    m_gic->ppi_in[i][ARCH_TIMER_S_EL1_IRQ]);
+                m_cpus[i].irq_timer_phys_out.bind(m_gic->ppi_in[i][ARCH_TIMER_NS_EL1_IRQ]);
+                m_cpus[i].irq_timer_virt_out.bind(m_gic->ppi_in[i][ARCH_TIMER_VIRT_IRQ]);
+                m_cpus[i].irq_timer_hyp_out.bind(m_gic->ppi_in[i][ARCH_TIMER_NS_EL2_IRQ]);
+                m_cpus[i].irq_timer_sec_out.bind(m_gic->ppi_in[i][ARCH_TIMER_S_EL1_IRQ]);
                 m_cpus[i].irq_maintenance_out.bind(m_gic->ppi_in[i][25]);
                 m_cpus[i].irq_pmu_out.bind(m_gic->ppi_in[i][23]);
             }
 
-            for (auto irqnum : gs::sc_cci_children(
-                     (std::string(m_ipcc.name()) + ".irqs").c_str())) {
-                std::string irqss = (std::string(m_ipcc.name()) + ".irqs." +
-                                     irqnum);
+            for (auto irqnum :
+                 gs::sc_cci_children((std::string(m_ipcc.name()) + ".irqs").c_str())) {
+                std::string irqss = (std::string(m_ipcc.name()) + ".irqs." + irqnum);
                 int irq = gs::cci_get<int>(irqss + ".irq");
                 std::string dstname = gs::cci_get<std::string>(irqss + ".dst");
-                sc_core::sc_object* dst_obj = gs::find_sc_obj(nullptr,
-                                                              dstname);
+                sc_core::sc_object* dst_obj = gs::find_sc_obj(nullptr, dstname);
                 auto dst = dynamic_cast<QemuTargetSignalSocket*>(dst_obj);
                 m_ipcc.irq[irq].bind((*dst));
                 //                std::cout << "BINDING IRQ : "<< dstname<<" to
@@ -346,19 +329,16 @@ protected:
 public:
     GreenSocsPlatform(const sc_core::sc_module_name& n)
         : sc_core::sc_module(n)
-        , p_hexagon_num_clusters("hexagon_num_clusters", 2,
-                                 "Number of Hexagon clusters")
+        , p_hexagon_num_clusters("hexagon_num_clusters", 2, "Number of Hexagon clusters")
         , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
         , p_num_redists("num_redists", 1, "Number of redistribution regions")
         , p_with_gpu("with_gpu", false, "Build platform with GPU")
         , m_broker({
-              { "gic.num_spi",
-                cci::cci_value(960) }, // 64 seems reasonable, but can be up to
-                                       // 960 or 987 depending on how the gic
-                                       // is used MUST be a multiple of 32
-              { "gic.redist_region",
-                cci::cci_value(std::vector<unsigned int>(
-                    p_num_redists, p_arm_num_cpus / p_num_redists)) },
+              { "gic.num_spi", cci::cci_value(960) }, // 64 seems reasonable, but can be up to
+                                                      // 960 or 987 depending on how the gic
+                                                      // is used MUST be a multiple of 32
+              { "gic.redist_region", cci::cci_value(std::vector<unsigned int>(
+                                         p_num_redists, p_arm_num_cpus / p_num_redists)) },
           })
         , p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
         , p_uart_backend("uart_backend_port", 0,
@@ -367,8 +347,7 @@ public:
 
         , m_router("router")
 
-        , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance",
-                                              QemuInstance::Target::AARCH64))
+        , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
         , m_cpus("cpu", p_arm_num_cpus,
                  [this](const char* n, size_t i) {
                      /* here n is already "cpu_<vector-index>" */
@@ -376,17 +355,14 @@ public:
                  })
         , m_hexagon_clusters("hexagon_cluster", p_hexagon_num_clusters,
                              [this](const char* n, size_t i) {
-                                 return new hexagon_cluster(n, m_inst_mgr_h,
-                                                            m_router);
+                                 return new hexagon_cluster(n, m_inst_mgr_h, m_router);
                              })
-        , m_rams(
-              "ram", gs::sc_cci_list_items(sc_module::name(), "ram").size(),
-              [this](const char* n, size_t i) { return new gs::Memory<>(n); })
+        , m_rams("ram", gs::sc_cci_list_items(sc_module::name(), "ram").size(),
+                 [this](const char* n, size_t i) { return new gs::Memory<>(n); })
 
-        , m_hexagon_rams(
-              "hexagon_ram",
-              gs::sc_cci_list_items(sc_module::name(), "hexagon_ram").size(),
-              [this](const char* n, size_t i) { return new gs::Memory<>(n); })
+        , m_hexagon_rams("hexagon_ram",
+                         gs::sc_cci_list_items(sc_module::name(), "hexagon_ram").size(),
+                         [this](const char* n, size_t i) { return new gs::Memory<>(n); })
 
         //        , m_system_imem("system_imem")
         , m_uart("uart")
@@ -394,22 +370,15 @@ public:
 #ifdef newsmmu
         , m_smmu("smmu")
         , m_tbus("tbu", p_hexagon_num_clusters,
-                 [this](const char* n, size_t i) {
-                     return new smmu500_tbu<>(n, &m_smmu);
-                 })
+                 [this](const char* n, size_t i) { return new smmu500_tbu<>(n, &m_smmu); })
 #endif
         , m_virtio_net_0("virtionet0", m_qemu_inst)
         , m_virtio_blks(
-              "virtioblk",
-              gs::sc_cci_list_items(sc_module::name(), "virtioblk").size(),
-              [this](const char* n, size_t i) {
-                  return new QemuVirtioMMIOBlk(n, m_qemu_inst);
-              })
-        , m_qtimers("qtimer",
-                    gs::sc_cci_list_items(sc_module::name(), "qtimer").size(),
-                    [this](const char* n, size_t i) {
-                        return new QemuHexagonQtimer(n, m_qemu_inst);
-                    })
+              "virtioblk", gs::sc_cci_list_items(sc_module::name(), "virtioblk").size(),
+              [this](const char* n, size_t i) { return new QemuVirtioMMIOBlk(n, m_qemu_inst); })
+        , m_qtimers(
+              "qtimer", gs::sc_cci_list_items(sc_module::name(), "qtimer").size(),
+              [this](const char* n, size_t i) { return new QemuHexagonQtimer(n, m_qemu_inst); })
         , m_fallback_mem("fallback_memory")
         , m_memorydumper("memorydumper")
         , m_loader("load") {
@@ -428,13 +397,13 @@ public:
                                                    ".gpex.mmio_iface.address");
         uint64_t mmio_size = gs::cci_get<uint64_t>(std::string(this->name()) +
                                                    ".gpex.mmio_iface.size");
-        uint64_t mmio_iface_high_addr = gs::cci_get<uint64_t>(
-            std::string(this->name()) + ".gpex.mmio_iface_high.address");
-        uint64_t mmio_iface_high_size = gs::cci_get<uint64_t>(
-            std::string(this->name()) + ".gpex.mmio_iface_high.size");
+        uint64_t mmio_iface_high_addr = gs::cci_get<uint64_t>(std::string(this->name()) +
+                                                              ".gpex.mmio_iface_high.address");
+        uint64_t mmio_iface_high_size = gs::cci_get<uint64_t>(std::string(this->name()) +
+                                                              ".gpex.mmio_iface_high.size");
 
-        m_gpex = new QemuGPEX("gpex", m_qemu_inst, mmio_addr, mmio_size,
-                              mmio_iface_high_addr, mmio_iface_high_size);
+        m_gpex = new QemuGPEX("gpex", m_qemu_inst, mmio_addr, mmio_size, mmio_iface_high_addr,
+                              mmio_iface_high_size);
 
         if (p_with_gpu.get_value()) {
             m_gpu = new QemuVirtioGpuGlPci("gpu", m_qemu_inst);
@@ -455,24 +424,19 @@ public:
         if (p_hexagon_num_clusters) {
             for (int N = 0; N < p_hexagon_num_clusters; N++) {
 #ifndef newsmmu
-                m_smmu = new QemuArmSmmu(
-                    "smmu", m_hexagon_clusters[N].m_qemu_hex_inst);
-                m_hexagon_clusters[N].m_router.initiator_socket.bind(
-                    m_smmu->upstream_socket[N]);
+                m_smmu = new QemuArmSmmu("smmu", m_hexagon_clusters[N].m_qemu_hex_inst);
+                m_hexagon_clusters[N].m_router.initiator_socket.bind(m_smmu->upstream_socket[N]);
                 m_smmu->downstream_socket[N].bind(m_router.target_socket);
                 m_router.initiator_socket.bind(m_smmu->register_socket);
 #else
-                m_hexagon_clusters[N].m_router.initiator_socket.bind(
-                    m_tbus[N].upstream_socket);
+                m_hexagon_clusters[N].m_router.initiator_socket.bind(m_tbus[N].upstream_socket);
                 m_tbus[N].downstream_socket.bind(m_router.target_socket);
 #endif
             }
 #ifdef newsmmu
             {
-                int irq = gs::cci_get<int>(std::string(m_smmu.name()) +
-                                           ".irq_context");
-                int girq = gs::cci_get<int>(std::string(m_smmu.name()) +
-                                            ".irq_global");
+                int irq = gs::cci_get<int>(std::string(m_smmu.name()) + ".irq_context");
+                int girq = gs::cci_get<int>(std::string(m_smmu.name()) + ".irq_global");
                 for (int i = 0; i < m_smmu.p_num_cb; i++) {
                     m_smmu.irq_context[i].bind(m_gic->spi_in[irq + i]);
                 }
@@ -481,10 +445,8 @@ public:
 #else
             m_smmu->dma_socket.bind(m_router.target_socket);
             {
-                int irq = gs::cci_get<int>(std::string(m_smmu->name()) +
-                                           ".irq_context");
-                int girq = gs::cci_get<int>(std::string(m_smmu->name()) +
-                                            ".irq_global");
+                int irq = gs::cci_get<int>(std::string(m_smmu->name()) + ".irq_context");
+                int girq = gs::cci_get<int>(std::string(m_smmu->name()) + ".irq_global");
                 for (int i = 0; i < m_smmu->p_num_cb; i++) {
                     m_smmu->irq_context[i].bind(m_gic->spi_in[irq + i]);
                 }
@@ -509,8 +471,7 @@ public:
             backend = new CharBackendStdio("backend_stdio");
         } else {
             backend = new CharBackendSocket(
-                "backend_socket", "tcp",
-                "127.0.0.1:" + std::to_string(p_uart_backend.get_value()));
+                "backend_socket", "tcp", "127.0.0.1:" + std::to_string(p_uart_backend.get_value()));
         }
 
         m_uart.set_backend(backend);
@@ -547,7 +508,7 @@ int sc_main(int argc, char* argv[]) {
 
     auto start = std::chrono::system_clock::now();
     try {
-        SCP_INFO()<<"SC_START";
+        SCP_INFO() << "SC_START";
         sc_core::sc_start();
     } catch (std::runtime_error const& e) {
         std::cerr << argv[0] << "Error: '" << e.what() << std::endl;
@@ -562,12 +523,10 @@ int sc_main(int argc, char* argv[]) {
 
     auto end = std::chrono::system_clock::now();
 
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end -
-                                                                    start);
-    std::cout << "Simulation Time: " << sc_core::sc_time_stamp().to_seconds()
-              << "SC_SEC" << std::endl;
-    std::cout << "Simulation Duration: " << elapsed.count() << "s (Wall Clock)"
+    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+    std::cout << "Simulation Time: " << sc_core::sc_time_stamp().to_seconds() << "SC_SEC"
               << std::endl;
+    std::cout << "Simulation Duration: " << elapsed.count() << "s (Wall Clock)" << std::endl;
 
     free(platform);
     return 0;
