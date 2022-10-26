@@ -28,19 +28,23 @@
 TEST_BENCH(RemotePassTest, test_bench)
 {
     std::cout << "Test 1\n";
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 10; i++) {
         do_write_read_check(0x11000);
     }
     std::cout << "Test 2\n";
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 10; i++) {
         do_write_read_check(0x22000);
     }
+    std::cout << "Test 2l\n";
+    for (int i = 0; i < 10; i++) {
+        do_write_read_check_larger(0x22000+(i*8));
+    }
     std::cout << "Test 3\n";
-    for (int i = 0; i < 1; i++) {
-        do_remote_write_read_check(0x11000);
+    for (int i = 0; i < 10; i++) {
+        //do_remote_write_read_check(0x11000);
     }
     std::cout << "Test 4\n";
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 10; i++) {
         do_dmi_write_read_check(0x23000);
     }
     std::cout << "Looks OK\n";
@@ -57,11 +61,11 @@ int sc_main(int argc, char* argv[])
             { "test_bench.remote_router.target_socket.relative_addresses", cci::cci_value(false) },
 
             { "test_bench.mem1.target_socket.address", cci::cci_value(0x11000) },
-            { "test_bench.mem1.target_socket.size", cci::cci_value(0x100) },
+            { "test_bench.mem1.target_socket.size", cci::cci_value(0x1000) },
             { "test_bench.mem2.target_socket.address", cci::cci_value(0x22000) },
-            { "test_bench.mem2.target_socket.size", cci::cci_value(0x100) },
+            { "test_bench.mem2.target_socket.size", cci::cci_value(0x1000) },
             { "test_bench.mem3.target_socket.address", cci::cci_value(0x23000) },
-            { "test_bench.mem3.target_socket.size", cci::cci_value(0x100) },
+            { "test_bench.mem3.target_socket.size", cci::cci_value(0x1000) },
 
             { "test_bench.mem1.verbose", cci::cci_value(true) },
             { "test_bench.mem2.verbose", cci::cci_value(true) },

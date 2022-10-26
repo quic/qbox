@@ -116,11 +116,12 @@ class Memory : public sc_core::sc_module
                     }
                 }
                 if (m_mem.p_shmem) {
-                    m_shmemID = ("/foobaa" + (std::string(m_mem.name())) +
+                    std::string shmname = ("/foobaa" + (std::string(m_mem.name())) +
                                  (std::to_string(m_address)));
-                    if ((m_ptr = MemoryServices::get().map_mem_create(m_shmemID.c_str(), m_len)) !=
+                    if ((m_ptr = MemoryServices::get().map_mem_create(shmname.c_str(), m_len)) !=
                         nullptr) {
                         m_mapped = true;
+                        m_shmemID=ShmemIDExtension(shmname, (uint64_t)m_ptr, m_len);
                         return *this;
                     }
                 }
@@ -270,6 +271,7 @@ protected:
         unsigned int bel = txn.get_byte_enable_length();
 
         if (txn.get_streaming_width() < len) {
+            std::cout << "sw "<< txn.get_streaming_width() << " "<<len<<"\n";
             SC_REPORT_WARNING("Memory", "not supported.\n");
         }
 

@@ -51,23 +51,35 @@ namespace gs {
 class MemoryServices
 {
 private:
-    MemoryServices() { signal(SIGABRT, MemoryServices::cleanupsig); }
-    std::vector<std::string> m_shmem_fns;
+    MemoryServices()
+    {
+        signal(SIGABRT, MemoryServices::cleanupsig);
+        signal(SIGINT, MemoryServices::cleanupsig);
+        signal(SIGKILL, MemoryServices::cleanupsig);
+        signal(SIGSEGV, MemoryServices::cleanupsig);
+        signal(SIGBUS, MemoryServices::cleanupsig);
+    }
+    struct shmem_info {
+        uint8_t *base;
+        size_t size;
+    };
+    std::map<std::string, shmem_info> m_shmem_info_map;
 
 public:
     ~MemoryServices() { cleanup(); }
 
     void cleanup()
     {
-        for (auto n : m_shmem_fns) {
-            SC_REPORT_INFO("MemoryServices", ("Deleting " + n).c_str());
-            shm_unlink(n.c_str());
+        for (auto n : m_shmem_info_map) {
+            SC_REPORT_INFO("MemoryServices", ("Deleting " + n.first).c_str());
+            shm_unlink(n.first.c_str());
         };
     }
     static void cleanupsig(int num)
     {
-        std::cout << "Cleanup SIG\n";
+        std::cerr<<"Received signal "<<num<<"\n";
         MemoryServices::get().cleanup();
+        exit(num);
     }
     static MemoryServices& get()
     {
@@ -93,7 +105,7 @@ public:
 
     uint8_t* map_mem_create(const char* memname, uint64_t size)
     {
-        m_shmem_fns.push_back(std::string(memname));
+        assert (m_shmem_info_map.count(memname)==0);
         int fd = shm_open(memname, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
             shm_unlink(memname);
@@ -113,12 +125,18 @@ public:
         SC_REPORT_INFO("MemoryServices", ("Shared memory created: " + std::string(memname) +
                                           " length " + std::to_string(size) + " ")
                                              .c_str());
+        m_shmem_info_map.insert({ std::string(memname), { ptr, size } });
         return ptr;
     }
 
-    uint8_t* map_mem_join(const char* memname, uint64_t size)
+    uint8_t* map_mem_join(const char* memname, size_t size)
     {
-        m_shmem_fns.push_back(std::string(memname));
+        auto cache = m_shmem_info_map.find(memname);
+        if (cache != m_shmem_info_map.end()) {
+            assert(cache->second.size == size);
+            return cache->second.base;
+        }
+
         int fd = shm_open(memname, O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
             shm_unlink(memname);
@@ -135,6 +153,7 @@ public:
                                                std::string(memname) + " " + std::to_string(errno))
                                                   .c_str());
         }
+        m_shmem_info_map.insert({std::string(memname), {ptr, size}});
         return ptr;
     }
 

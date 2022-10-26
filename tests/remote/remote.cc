@@ -35,7 +35,7 @@
 
 class RemoteTest : public sc_core::sc_module
 {
-    gs::PassRPC<> m_pass;
+    gs::PassRPC<2,0> m_pass;
     gs::pass<> m_loopback;
 
     gs::Router<> m_router;
@@ -57,9 +57,9 @@ public:
         m_router.initiator_socket.bind(m_mem2.socket);
         m_router.initiator_socket.bind(m_mem3.socket);
 
-        m_pass.initiator_socket.bind(m_router.target_socket);
-        m_pass.initiator_socket.bind(m_loopback.target_socket);
-        m_loopback.initiator_socket.bind(m_pass.target_socket);
+        m_pass.initiator_sockets[0].bind(m_router.target_socket);
+        m_pass.initiator_sockets[1].bind(m_loopback.target_socket);
+        m_loopback.initiator_socket.bind(m_pass.target_sockets[0]);
     }
 
     virtual ~RemoteTest() {}
@@ -81,6 +81,9 @@ int sc_main(int argc, char* argv[])
         sc_core::sc_start();
     } catch (std::runtime_error const& e) {
         std::cerr << "Error: '" << e.what() << "'\n";
+        exit(1);
+    } catch (const std::exception& exc) {
+        std::cerr << "Error: '" << exc.what() << "'\n";
         exit(1);
     } catch (...) {
         std::cerr << "Unknown error!\n";
