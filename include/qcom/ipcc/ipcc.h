@@ -160,7 +160,7 @@ protected:
         // Side effects
         switch (addr / 4) {
         case RECV_ID:
-            if (src.regs[CONFIG] & 0x1) {
+            if ((src.regs[CONFIG] & 0x1) && (ret != 0xffffffff)) {
                 int sc = (src.regs[ID] >> 16) & 0x3f;
                 src.clear_status(ret >> 16, ret & 0xffff);
                 if (irq_status[sc]) {
