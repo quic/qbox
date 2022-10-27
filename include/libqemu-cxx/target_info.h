@@ -22,10 +22,15 @@
 namespace qemu {
 
 enum Target {
-    AARCH64, RISCV64, RISCV32, MICROBLAZE, MICROBLAZEEL, HEXAGON,
+    AARCH64,
+    RISCV64,
+    RISCV32,
+    MICROBLAZE,
+    MICROBLAZEEL,
+    HEXAGON,
 };
 
-const char *get_target_name(Target t);
-const char *get_target_lib(Target t);
+const char* get_target_name(Target t);
+const char* get_target_lib(Target t);
 
-}
+} // namespace qemu

@@ -24,13 +24,12 @@
 
 namespace qemu {
 
-void GpexHost::set_irq_num(int idx, int gic_irq)
-{
-    QemuSysBusDevice *qemu_sbd;
+void GpexHost::set_irq_num(int idx, int gic_irq) {
+    QemuSysBusDevice* qemu_sbd;
 
-    qemu_sbd = reinterpret_cast<QemuSysBusDevice *>(m_obj);
+    qemu_sbd = reinterpret_cast<QemuSysBusDevice*>(m_obj);
 
     m_int->exports().gpex_set_irq_num(qemu_sbd, idx, gic_irq);
 }
 
-}
+} // namespace qemu

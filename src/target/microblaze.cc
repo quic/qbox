@@ -21,7 +21,4 @@
 
 #include "libqemu-cxx/target/microblaze.h"
 
-namespace qemu {
-
-}
-
+namespace qemu {}

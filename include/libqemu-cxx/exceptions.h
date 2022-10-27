@@ -28,10 +28,8 @@ namespace qemu {
 class LibQemuException : public std::runtime_error
 {
 public:
-    LibQemuException(const char *what)
-        : std::runtime_error(what) {}
-    LibQemuException(const std::string &what)
-        : std::runtime_error(what) {}
+    LibQemuException(const char* what): std::runtime_error(what) {}
+    LibQemuException(const std::string& what): std::runtime_error(what) {}
 
     virtual ~LibQemuException() throw() {}
 };
@@ -40,9 +38,8 @@ class TargetNotSupportedException : public LibQemuException
 {
 public:
     TargetNotSupportedException(Target t)
-        : LibQemuException(std::string("target `")
-                           + get_target_name(t)
-                           + "` disabled at compile time.") {}
+        : LibQemuException(std::string("target `") + get_target_name(t) +
+                           "` disabled at compile time.") {}
 
     virtual ~TargetNotSupportedException() throw() {}
 };
@@ -50,9 +47,9 @@ public:
 class LibraryLoadErrorException : public LibQemuException
 {
 public:
-    LibraryLoadErrorException(const char *lib_name, const char *error)
-        : LibQemuException(std::string("error while loading libqemu library `")
-                           + lib_name + "`: " + error) {}
+    LibraryLoadErrorException(const char* lib_name, const char* error)
+        : LibQemuException(std::string("error while loading libqemu library `") + lib_name +
+                           "`: " + error) {}
 
     virtual ~LibraryLoadErrorException() throw() {}
 };
@@ -60,9 +57,9 @@ public:
 class InvalidLibraryException : public LibQemuException
 {
 public:
-    InvalidLibraryException(const char *lib_name, const char *symbol)
-        : LibQemuException(std::string("Invalid libqemu library `") + lib_name + "` "
-                           + "(Symbol `" + symbol + "` not found).") {}
+    InvalidLibraryException(const char* lib_name, const char* symbol)
+        : LibQemuException(std::string("Invalid libqemu library `") + lib_name + "` " +
+                           "(Symbol `" + symbol + "` not found).") {}
 
     virtual ~InvalidLibraryException() throw() {}
 };
@@ -70,10 +67,9 @@ public:
 class SetPropertyException : public LibQemuException
 {
 public:
-    SetPropertyException(const char *type, const char *name)
-        : LibQemuException(std::string("Error while setting ")
-                           + type + " property `"
-                           + name + "` on object.") {}
+    SetPropertyException(const char* type, const char* name)
+        : LibQemuException(std::string("Error while setting ") + type + " property `" + name +
+                           "` on object.") {}
 
     virtual ~SetPropertyException() throw() {}
 };
@@ -81,12 +77,11 @@ public:
 class GetPropertyException : public LibQemuException
 {
 public:
-    GetPropertyException(const char *type, const char *name)
-        : LibQemuException(std::string("Error while getting ")
-                           + type + " property `"
-                           + name + "` on object.") {}
+    GetPropertyException(const char* type, const char* name)
+        : LibQemuException(std::string("Error while getting ") + type + " property `" + name +
+                           "` on object.") {}
 
     virtual ~GetPropertyException() throw() {}
 };
 
-}
+} // namespace qemu

@@ -23,13 +23,14 @@
 
 namespace qemu {
 
-class CpuMicroblaze : public Cpu {
+class CpuMicroblaze : public Cpu
+{
 public:
-    static constexpr const char * const TYPE = "microblaze-cpu";
+    static constexpr const char* const TYPE = "microblaze-cpu";
 
     CpuMicroblaze() = default;
-    CpuMicroblaze(const CpuMicroblaze &) = default;
-    CpuMicroblaze(const Object &o) : Cpu(o) {}
+    CpuMicroblaze(const CpuMicroblaze&) = default;
+    CpuMicroblaze(const Object& o): Cpu(o) {}
 };
 
-}
+} // namespace qemu

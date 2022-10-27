@@ -22,15 +22,15 @@
 #include "libqemu-cxx/libqemu-cxx.h"
 
 namespace qemu {
-    class CpuHexagon : public Cpu {
-    public:
-        static constexpr const char *const TYPE = "v67-hexagon-cpu";
+class CpuHexagon : public Cpu
+{
+public:
+    static constexpr const char* const TYPE = "v67-hexagon-cpu";
 
-        using MipUpdateCallbackFn = std::function<void (uint32_t)>;
+    using MipUpdateCallbackFn = std::function<void(uint32_t)>;
 
-        CpuHexagon() = default;
-        CpuHexagon(const CpuHexagon &) = default;
-        CpuHexagon(const Object &o) : Cpu(o) {}
-
-    };
-}
+    CpuHexagon() = default;
+    CpuHexagon(const CpuHexagon&) = default;
+    CpuHexagon(const Object& o): Cpu(o) {}
+};
+} // namespace qemu

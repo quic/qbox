@@ -23,13 +23,14 @@
 
 namespace qemu {
 
-class CpuArm : public Cpu {
+class CpuArm : public Cpu
+{
 public:
-    static constexpr const char * const TYPE = "arm-cpu";
+    static constexpr const char* const TYPE = "arm-cpu";
 
     CpuArm() = default;
-    CpuArm(const CpuArm &) = default;
-    CpuArm(const Object &o) : Cpu(o) {}
+    CpuArm(const CpuArm&) = default;
+    CpuArm(const Object& o): Cpu(o) {}
 
     void set_cp15_cbar(uint64_t cbar);
     void add_nvic_link();
@@ -39,26 +40,28 @@ public:
     void set_exclusive_val(uint64_t val);
 };
 
-class CpuAarch64 : public CpuArm {
+class CpuAarch64 : public CpuArm
+{
 public:
-    static constexpr const char * const TYPE = "arm-cpu";
+    static constexpr const char* const TYPE = "arm-cpu";
 
     CpuAarch64() = default;
-    CpuAarch64(const CpuAarch64 &) = default;
-    CpuAarch64(const Object &o) : CpuArm(o) {}
+    CpuAarch64(const CpuAarch64&) = default;
+    CpuAarch64(const Object& o): CpuArm(o) {}
 
     void set_aarch64_mode(bool aarch64_mode);
 };
 
-class ArmNvic : public Device {
+class ArmNvic : public Device
+{
 public:
-    static constexpr const char * const TYPE = "armv7m_nvic";
+    static constexpr const char* const TYPE = "armv7m_nvic";
 
     ArmNvic() = default;
-    ArmNvic(const ArmNvic &) = default;
-    ArmNvic(const Object &o) : Device(o) {}
+    ArmNvic(const ArmNvic&) = default;
+    ArmNvic(const Object& o): Device(o) {}
 
     void add_cpu_link();
 };
 
-}
+} // namespace qemu

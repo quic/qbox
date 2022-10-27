@@ -25,8 +25,7 @@
 
 #include "libqemu-cxx/loader.h"
 
-static void copy_file(const char* src_file, const char* dest_file)
-{
+static void copy_file(const char* src_file, const char* dest_file) {
     std::ifstream src(src_file, std::ios::binary);
     std::ofstream dest(dest_file, std::ios::binary);
     dest << src.rdbuf();
@@ -37,7 +36,7 @@ static void copy_file(const char* src_file, const char* dest_file)
     libtool << "install_name_tool -id " << dest_file << " " << dest_file;
     system(libtool.str().c_str());
 #endif
- }
+}
 
 /*
  * WINDOWS support
@@ -46,47 +45,40 @@ static void copy_file(const char* src_file, const char* dest_file)
 #include <Lmcons.h>
 #include <windows.h>
 
-class Library : public qemu::LibraryIface {
+class Library : public qemu::LibraryIface
+{
 private:
     HMODULE m_lib;
 
 public:
-    Library(HMODULE lib)
-        : m_lib(lib)
-    {
-    }
+    Library(HMODULE lib): m_lib(lib) {}
 
-    bool symbol_exists(const char* name)
-    {
-        return get_symbol(name) != NULL;
-    }
+    bool symbol_exists(const char* name) { return get_symbol(name) != NULL; }
 
-    void* get_symbol(const char* name)
-    {
+    void* get_symbol(const char* name) {
         FARPROC symbol = GetProcAddress(m_lib, name);
         return *(void**)(&symbol);
     }
 };
 
-class DefaultLibraryLoader : public qemu::LibraryLoaderIface {
+class DefaultLibraryLoader : public qemu::LibraryLoaderIface
+{
 private:
     const char* m_base;
     std::string m_last_error;
 
-    std::string get_last_error_as_str()
-    {
+    std::string get_last_error_as_str() {
         // Get the error message, if any.
         DWORD errorMessageID = ::GetLastError();
         if (errorMessageID == 0)
             return std::string(); // No error message has been recorded
 
         LPSTR messageBuffer = nullptr;
-        size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER
-                | FORMAT_MESSAGE_FROM_SYSTEM
-                | FORMAT_MESSAGE_IGNORE_INSERTS,
-            NULL, errorMessageID,
-            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-            (LPSTR)&messageBuffer, 0, NULL);
+        size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                                         FORMAT_MESSAGE_IGNORE_INSERTS,
+                                     NULL, errorMessageID,
+                                     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                     (LPSTR)&messageBuffer, 0, NULL);
 
         std::string message(messageBuffer, size);
 
@@ -97,8 +89,7 @@ private:
     }
 
 public:
-    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name)
-    {
+    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name) {
         if (!m_base) {
             HMODULE handle = LoadLibraryExA(lib_name, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
             if (handle == nullptr) {
@@ -140,14 +131,9 @@ public:
         return std::make_shared<Library>(handle);
     }
 
-    const char* get_lib_ext()
-    {
-        return "dll";
-    }
+    const char* get_lib_ext() { return "dll"; }
 
-    const char* get_last_error()
-    {
-    }
+    const char* get_last_error() {}
 };
 
 /*
@@ -165,13 +151,10 @@ public:
 #include <sys/stat.h>
 #include <unistd.h>
 
-
-const char* dlpath(void* handle)
-{
+const char* dlpath(void* handle) {
     const char* path = NULL;
 #ifdef __APPLE__
     for (int32_t i = _dyld_image_count(); i >= 0; i--) {
-
         bool found = FALSE;
         const char* probe_path = _dyld_get_image_name(i);
         void* probe_handle = dlopen(probe_path, RTLD_NOW | RTLD_LOCAL | RTLD_NOLOAD);
@@ -196,35 +179,27 @@ const char* dlpath(void* handle)
     return path;
 }
 
-class Library : public qemu::LibraryIface {
+class Library : public qemu::LibraryIface
+{
 private:
     void* m_lib;
 
 public:
-    Library(void* lib)
-        : m_lib(lib)
-    {
-    }
+    Library(void* lib): m_lib(lib) {}
 
-    bool symbol_exists(const char* name)
-    {
-        return get_symbol(name) != NULL;
-    }
+    bool symbol_exists(const char* name) { return get_symbol(name) != NULL; }
 
-    void* get_symbol(const char* name)
-    {
-        return dlsym(m_lib, name);
-    }
+    void* get_symbol(const char* name) { return dlsym(m_lib, name); }
 };
 
-class DefaultLibraryLoader : public qemu::LibraryLoaderIface {
+class DefaultLibraryLoader : public qemu::LibraryLoaderIface
+{
 private:
     const char* m_base = nullptr;
     std::string m_last_error;
 
 public:
-    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name)
-    {
+    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name) {
         if (!m_base) {
             std::cout << "Loading " << lib_name <<"\n";
             void* handle = dlopen(lib_name, RTLD_LOCAL | RTLD_NOW);
@@ -241,14 +216,13 @@ public:
             m_last_error = "Unable to create temp file";
             return nullptr;
         }
-        copy_file(m_base,tmp);
+        copy_file(m_base, tmp);
 
         void* handle = dlopen(tmp, RTLD_LOCAL | RTLD_NOW);
         if (handle == nullptr) {
             m_last_error = dlerror();
             return nullptr;
         }
-
 
 #ifndef DEBUG_TMP_LIBRARIES
         remove(tmp);
@@ -258,8 +232,7 @@ public:
         return std::make_shared<Library>(handle);
     }
 
-    const char* get_lib_ext()
-    {
+    const char* get_lib_ext() {
 #if defined(__APPLE__)
         return "dylib";
 #else
@@ -267,14 +240,10 @@ public:
 #endif
     }
 
-    const char* get_last_error()
-    {
-        return m_last_error.c_str();
-    }
+    const char* get_last_error() { return m_last_error.c_str(); }
 };
 #endif
 
-qemu::LibraryLoaderIface* qemu::get_default_lib_loader()
-{
+qemu::LibraryLoaderIface* qemu::get_default_lib_loader() {
     return new DefaultLibraryLoader;
 }

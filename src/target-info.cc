@@ -21,8 +21,7 @@
 
 namespace qemu {
 
-const char *get_target_name(Target t)
-{
+const char* get_target_name(Target t) {
     switch (t) {
     case AARCH64:
         return "AArch64";
@@ -48,31 +47,30 @@ const char *get_target_name(Target t)
 }
 
 #ifndef LIBQEMU_TARGET_aarch64_LIBRARY
-# define LIBQEMU_TARGET_aarch64_LIBRARY nullptr
+#define LIBQEMU_TARGET_aarch64_LIBRARY nullptr
 #endif
 
 #ifndef LIBQEMU_TARGET_riscv64_LIBRARY
-# define LIBQEMU_TARGET_riscv64_LIBRARY nullptr
+#define LIBQEMU_TARGET_riscv64_LIBRARY nullptr
 #endif
 
 #ifndef LIBQEMU_TARGET_riscv32_LIBRARY
-# define LIBQEMU_TARGET_riscv32_LIBRARY nullptr
+#define LIBQEMU_TARGET_riscv32_LIBRARY nullptr
 #endif
 
 #ifndef LIBQEMU_TARGET_microblaze_LIBRARY
-# define LIBQEMU_TARGET_microblaze_LIBRARY nullptr
+#define LIBQEMU_TARGET_microblaze_LIBRARY nullptr
 #endif
 
 #ifndef LIBQEMU_TARGET_microblazeel_LIBRARY
-# define LIBQEMU_TARGET_microblazeel_LIBRARY nullptr
+#define LIBQEMU_TARGET_microblazeel_LIBRARY nullptr
 #endif
 
 #ifndef LIBQEMU_TARGET_hexagon_LIBRARY
-# define LIBQEMU_TARGET_hexagon_LIBRARY nullptr
+#define LIBQEMU_TARGET_hexagon_LIBRARY nullptr
 #endif
 
-const char *get_target_lib(Target t)
-{
+const char* get_target_lib(Target t) {
     switch (t) {
     case AARCH64:
         return LIBQEMU_TARGET_aarch64_LIBRARY;
@@ -97,4 +95,4 @@ const char *get_target_lib(Target t)
     }
 }
 
-}
+} // namespace qemu

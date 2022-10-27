@@ -24,40 +24,32 @@
 
 namespace qemu {
 
-void CpuArm::set_cp15_cbar(uint64_t cbar)
-{
+void CpuArm::set_cp15_cbar(uint64_t cbar) {
     m_int->exports().cpu_arm_set_cp15_cbar(m_obj, cbar);
 }
 
-void CpuArm::add_nvic_link()
-{
+void CpuArm::add_nvic_link() {
     m_int->exports().cpu_arm_add_nvic_link(m_obj);
 }
 
-uint64_t CpuArm::get_exclusive_addr() const
-{
+uint64_t CpuArm::get_exclusive_addr() const {
     return m_int->exports().cpu_arm_get_exclusive_addr(m_obj);
 }
 
-uint64_t CpuArm::get_exclusive_val() const
-{
+uint64_t CpuArm::get_exclusive_val() const {
     return m_int->exports().cpu_arm_get_exclusive_val(m_obj);
 }
 
-void CpuArm::set_exclusive_val(uint64_t val)
-{
+void CpuArm::set_exclusive_val(uint64_t val) {
     m_int->exports().cpu_arm_set_exclusive_val(m_obj, val);
 }
 
-void CpuAarch64::set_aarch64_mode(bool aarch64_mode)
-{
+void CpuAarch64::set_aarch64_mode(bool aarch64_mode) {
     m_int->exports().cpu_aarch64_set_aarch64_mode(m_obj, aarch64_mode);
 }
 
-void ArmNvic::add_cpu_link()
-{
+void ArmNvic::add_cpu_link() {
     m_int->exports().arm_nvic_add_cpu_link(m_obj);
 }
 
-}
-
+} // namespace qemu
