@@ -51,7 +51,7 @@
 #define GS_Process_Serve_Port "GS_Process_Serve_Port"
 namespace gs {
 
-#define DMICACHE
+//#define DMICACHE switchthis on - then you need a mutex
 /* rpc pass through should pass through ONE forward connection ? */
 
 template <unsigned int TLMPORTS = 1, unsigned int SIGNALS = 1, unsigned int BUSWIDTH = 32>
@@ -136,8 +136,6 @@ class PassRPC : public sc_core::sc_module
     }*/
     void cache_clean(uint64_t start, uint64_t end)
     {
-                m_dmi_cache.clear();
-
         for (auto it=m_dmi_cache.begin(); it!=m_dmi_cache.end();) {
             if ((start <= it->second.get_start_address() && end >= it->second.get_start_address()) ||
                    (start <= it->second.get_end_address() && end >= it->second.get_end_address()))
@@ -590,16 +588,12 @@ private:
                  << end;
             SC_REPORT_INFO("PassRPC", info.str().c_str());
         }
-
-        m_sc.run_on_sysc([&] {
-        // remove from local DMI cache inside SystemC to prevent race conditions
 #ifdef DMICACHE
-            cache_clean(start, end);
+        cache_clean(start, end);
 #endif
-            for (int i = 0; i < target_sockets.size(); i++) {
-                target_sockets[i]->invalidate_direct_mem_ptr(start, end);
-            }
-        });
+        for (int i = 0; i < target_sockets.size(); i++) {
+            target_sockets[i]->invalidate_direct_mem_ptr(start, end);
+        }
     }
 
     str_pairs get_cci_db()
@@ -763,6 +757,8 @@ public:
             target_sockets[i].register_b_transport(this, &PassRPC::b_transport, i);
             target_sockets[i].register_transport_dbg(this, &PassRPC::transport_dbg, i);
             target_sockets[i].register_get_direct_mem_ptr(this, &PassRPC::get_direct_mem_ptr, i);
+
+            initiator_sockets[i].register_invalidate_direct_mem_ptr(this, &PassRPC::invalidate_direct_mem_ptr);
         }
 
         for (int i = 0; i < SIGNALS; i++) {

@@ -32,6 +32,9 @@
 #include <mutex>
 #endif
 
+#include <iomanip>
+//#include <unistd.h>
+
 #include <cci_configuration>
 #include <systemc>
 #include <tlm>
@@ -88,6 +91,30 @@ private:
         sc_dt::uint64 size;
         bool mask_addr;
     };
+
+    std::mutex dmi_mutex;
+    struct dmi_info {
+        std::set<int> targets;
+        tlm::tlm_dmi dmi;
+        dmi_info(tlm::tlm_dmi& _dmi) { dmi = _dmi; }
+    };
+    std::map<uint64_t, dmi_info> m_dmi_info_map;
+    dmi_info* in_dmi_cache(tlm::tlm_dmi& dmi)
+    {
+        auto it = m_dmi_info_map.find(dmi.get_start_address());
+        if (it != m_dmi_info_map.end()) {
+            assert(it->second.dmi.get_end_address() == dmi.get_end_address());
+            return &(it->second);
+        }
+        auto insit = m_dmi_info_map.insert({ dmi.get_start_address(), dmi_info(dmi) });
+        return &(insit.first->second);
+    }
+    void record_dmi(int id, tlm::tlm_dmi& dmi)
+    {
+        std::lock_guard<std::mutex> lock(dmi_mutex);
+        dmi_info* dinfo = in_dmi_cache(dmi);
+        dinfo->targets.insert(id);
+    }
 
     /* NB use the EXPORT name, so as not to be hassled by the _port_0*/
     std::string nameFromSocket(std::string s)
@@ -229,6 +256,7 @@ private:
             dmi_data.set_end_address(ti->address + dmi_data.get_end_address());
             trans.set_address(addr);
         }
+        record_dmi(id, dmi_data);
         return status;
     }
 
@@ -241,9 +269,18 @@ private:
             bw_start_range = compose_address(id, start);
             bw_end_range = compose_address(id, end);
         }
-
-        for (int i = 0; i < target_socket.size(); i++) {
-            target_socket[i]->invalidate_direct_mem_ptr(bw_start_range, bw_end_range);
+        std::lock_guard<std::mutex> lock(dmi_mutex);
+        for (auto it=m_dmi_info_map.begin(); it!=m_dmi_info_map.end();) {
+            if ((start <= it->second.dmi.get_start_address() && end >= it->second.dmi.get_start_address()) ||
+                   (start <= it->second.dmi.get_end_address() && end >= it->second.dmi.get_end_address()))
+            {
+                for (auto t: it->second.targets) {
+                    target_socket[t]->invalidate_direct_mem_ptr(it->second.dmi.get_start_address(),it->second.dmi.get_end_address() );
+                }
+                it=m_dmi_info_map.erase(it);
+            } else {
+                it++;
+            }
         }
     }
 
