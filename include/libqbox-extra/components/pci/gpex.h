@@ -24,6 +24,8 @@
 
 #include <greensocs/libgssync.h>
 
+#include <scp/report.h>
+
 #include "libqbox/components/device.h"
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator.h"
@@ -122,7 +124,7 @@ public:
     void add_device(Device &dev)
     {
         if (m_inst != dev.get_qemu_inst()) {
-            SC_REPORT_FATAL("qbox", "PCIE device and host have to be in same qemu instance");
+            SCP_FATAL(SCMOD) << "PCIE device and host have to be in same qemu instance";
         }
         devices.push_back(&dev);
     }
