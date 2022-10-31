@@ -26,7 +26,7 @@
 #include <greensocs/libgsutils.h>
 #include <gtest/gtest.h>
 #include <systemc>
-
+#include <scp/report.h>
 // global for test
 int set_value = 0;
 /*
@@ -39,7 +39,13 @@ public:
   IrqCtrl(const sc_core::sc_module_name &n, int n_irq = 0)
       : m_irqs("irqs", n_irq) {
     set_value = m_irqs;
-    std::cout << name() << " Number of IRQs " << m_irqs << std::endl;
+    SCP_INFO(SCMOD) <<"Number of IRQs " << m_irqs;
+    if (::scp::get_log_verbosity(SCMOD)>= sc_core::SC_LOW) {
+      EXPECT_NE(m_irqs, 99);  // the 3rd (99) should be disable on the command line
+      SCP_INFO(SCMOD) << "Report test output";
+    } else {
+      EXPECT_EQ(m_irqs,99);
+    }
   }
 };
 
@@ -53,7 +59,8 @@ protected:
 
 public:
   TopLevel(const sc_core::sc_module_name &n)
-      : m_priv_broker(), m_ctrl("MyCtrl", 64) {}
+      : m_priv_broker({{"MyCtrl.irqs", cci::cci_value()}}), m_ctrl("MyCtrl", 64) {}
+      // Add irqs to the list so it is not exported, but take it's value from the passed value
 };
 
 /*
@@ -88,7 +95,19 @@ TopLevel *top_level1;
 TopLevelTwo *top_level2;
 TopLevelThree *top_level3;
 int sc_main(int argc, char *argv[]) {
+
+  std::cout << "Test Start\nstd::cout print\n";
+  SCP_INFO("main") << "SCP_INFO(\"main\") prior to init_logging";
+  scp::init_logging(
+      scp::LogConfig()
+          .logAsync(false)
+          .printSimTime(false)
+          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+          .msgTypeFieldWidth(50)); // make the msg type column a bit tighter
+  SCP_INFO("main") << "SCP_INFO(\"main\") between init_logging and broker construction (Causes ERROR which is caught)";
   auto m_broker = new gs::ConfigurableBroker(argc, argv);
+  SCP_INFO("main") << "SCP_INFO(\"main\") after broker construction";
+
   cci::cci_originator m_originator("MyConfigTool");
   m_broker->set_preset_cci_value(
       "MyTop.MyCtrl.irqs", cci::cci_value(cci::cci_value::from_json("100")),
