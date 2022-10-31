@@ -62,8 +62,10 @@ public:
 
     void end_of_elaboration()
     {
-      EXPECT_EQ(m_thing_muty, 60);
-      std::cout << name() << " EOE : thing " << m_thing_muty << std::endl;
+      // This should be the value set at construction, not the
+      // value at EOE because it's marked as IMMUTABLE
+        EXPECT_EQ(m_thing_muty, 20);
+        std::cout << name() << " EOE : thing " << m_thing_muty << std::endl;
     }
 };
 

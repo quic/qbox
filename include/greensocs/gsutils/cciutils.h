@@ -169,7 +169,7 @@ class ConfigurableBroker : public cci_utils::consuming_broker {
 
 public:
     // a set of perameters that should be exposed up the broker stack
-    std::set<std::string> expose;
+    std::set<std::string> hide;
     cci_param<std::string> conf_file;
 
 private:
@@ -215,7 +215,7 @@ private:
      */
     bool sendToParent(const std::string& parname) const
     {
-        return ((expose.find(parname) != expose.end()) && (!is_global_broker()));
+        return ((hide.find(parname) == hide.end()) && (!is_global_broker()));
     }
 
     /**
@@ -228,14 +228,11 @@ private:
     {
         using namespace cci;
 
-        // Expose everything
-        for (auto p : m_parent.get_unconsumed_preset_values()) {
-            expose.insert(p.first);
-        }
-        // Hide configured things
         for (auto& p : list) {
-            expose.erase(relname(p.first));
+            hide.insert(relname(p.first));
+            if (!p.second.is_null()) {
             set_preset_cci_value(relname(p.first), p.second, m_originator);
+            }
         }
     }
 
