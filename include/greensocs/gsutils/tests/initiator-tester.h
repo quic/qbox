@@ -106,7 +106,7 @@ protected:
         txn.set_data_length(len);
         txn.set_data_ptr(data);
         txn.set_command(cmd);
-        txn.set_streaming_width(sizeof(data));
+        txn.set_streaming_width(len);
         txn.set_byte_enable_ptr(nullptr);
         txn.set_response_status(TLM_INCOMPLETE_RESPONSE);
     }
