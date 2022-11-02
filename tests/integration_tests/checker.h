@@ -184,13 +184,12 @@ public:
                     default: timename="         n/a :";
                 }
                 
-                std::cout << std::chrono::duration_cast<std::chrono::microseconds>(e.realtime - realtimeStart).count()
+                SCP_INFO("checker.h") << std::chrono::duration_cast<std::chrono::microseconds>(e.realtime - realtimeStart).count()
                           <<" sc_time:"<<e.simtime -  startTime
                           <<timename<<time
                           <<" "<<((e.model)?e.model->name():"n/a")
                           <<" event: "<<evTypeString(e.event)
-                          <<((!rec)?"(!R)":" ")
-                          <<std::endl;
+                          <<((!rec)?"(!R)":" ");
     }
 
     
@@ -321,8 +320,8 @@ public:
 
         std::stringstream csv;
         
-        std::cout << "\n\n\n Analysis of runs \n\n";
-        std::cout << std::setprecision(5)<<std::fixed;
+        SCP_INFO("checker.h") << "\n\n\n Analysis of runs \n";
+        SCP_INFO("checker.h") << std::setprecision(5)<<std::fixed;
 
         csv << "test, sc_time, ins bound, Deterministic, backwards, sc ahead, realtime, run budget, quantum, error, worst, txns, dropped, desc\n";
 
@@ -337,10 +336,10 @@ public:
             wd_ok=true;
 
             
-            std::cout << "\nTest : "<<test_p.first<<std::endl;
+            SCP_INFO("checker.h") << "\nTest : " << test_p.first;
             cci::cci_value desc=m_broker.get_preset_cci_value(test_p.first+".description");
             if (desc.is_string()) {
-                std::cout << desc.get_string()<<"\n";
+                SCP_INFO("checker.h") << desc.get_string();
             }
             csv<<test_p.first<<",";
             /* simulation time */
@@ -375,14 +374,14 @@ public:
                     if (iboundfound) ibound++;
                     iboundi++;
                 }
-                std::cout << "  Average Simulation (sc_)time "<<to_us(runtime)/(float)i<<"us\n";
+                SCP_INFO("checker.h") << "  Average Simulation (sc_)time "<<to_us(runtime)/(float)i<<"us";
                 if (!ibound)
-                    std::cout << "  Time bound\n";
+                    SCP_INFO("checker.h") << " Time bound";
                 else
                     if (ibound==iboundi) {
-                        std::cout << "  Instruction bound\n";
+                        SCP_INFO("checker.h") << "  Instruction bound";
                     } else {
-                        std::cout << "  "<<ibound*100/iboundi<<"% runs instruction bound\n";
+                        SCP_INFO("checker.h") << "  "<<ibound*100/iboundi<<"% runs instruction bound";
                     }
                 csv<<to_us(runtime)/(float)i<<",";
                 csv<<ibound*100/iboundi<<",";
@@ -402,15 +401,14 @@ public:
                             std::equal(one.begin(), one.end(), run.begin(),
                                        [this,i](auto a, auto b) -> bool{
                                            if (!(a==b)) {
-                                               std::cout << "  Non determinitic Difference in run "<<i<<" between "
+                                               SCP_INFO("checker.h") << "  Non determinitic Difference in run "<<i<<" between "
                                                          <<a.model->name()<<" (at time "
                                                          << std::chrono::duration_cast<std::chrono::microseconds>(a.realtime - realtimeStart).count()<<")"
                                                          << " and "
                                                          <<b.model->name()<<" (at time "
                                                          << std::chrono::duration_cast<std::chrono::microseconds>(b.realtime - realtimeStart).count()<<")"
 
-                                                         << " "<< to_string(a)<<" != "<<to_string(b)
-                                                         <<std::endl;
+                                                         << " "<< to_string(a)<<" != "<<to_string(b);
                                                return false;
                                            }
                                            return true;
@@ -421,12 +419,12 @@ public:
                         }
                     }
                     if (result==false) {
-                         std::cout << "  Non determanistic\n";
+                         SCP_INFO("checker.h") << "  Non determanistic";
                     } else {
                         if (test_p.second.size()>5) {
                             if (result) std::cout << "  Determanistic\n";
                         } else {
-                            std::cout << "  Not enough data to determin determanism\n";
+                            SCP_INFO("checker.h") << "  Not enough data to determin determanism";
                         }
                     }
                     csv<<result<<",";
@@ -454,7 +452,7 @@ public:
                     }
                 }
                 if (time_backwards) {
-                    std::cout << "  Time went backwards for a target "<<time_backwards<<" times\n";
+                    SCP_INFO("checker.h") << "Time went backwards for a target "<<time_backwards<<" times";
                 }
                 csv<<time_backwards<<",";
             }
@@ -472,7 +470,7 @@ public:
                     }
                 }
                 if (ahead) {
-                    std::cout << "  SystemC ahead "<<ahead<<" times\n";
+                    SCP_INFO("checker.h") << "  SystemC ahead "<<ahead<<" times";
                 }
                 csv<<ahead<<",";
             }
@@ -489,7 +487,7 @@ public:
                     duration_total += std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
                 }
                 duration_total/=(float)n;
-                std::cout << "  Average execution time: "<<duration_total << "ms\n";
+                SCP_INFO("checker.h") << "  Average execution time: "<<duration_total << "ms";
                 csv<<duration_total<<",";
             }
             
@@ -507,7 +505,7 @@ public:
                     }
                 }
                 if (n) {
-                    std::cout << "  Average run budget "<<to_us(total_Budget/(float)n)<<"us\n";
+                    SCP_INFO("checker.h") << "  Average run budget "<<to_us(total_Budget/(float)n)<<"us";
                 }
                 csv<<(n?to_us(total_Budget/(float)n):0)<<",";
             }
@@ -533,9 +531,9 @@ public:
                     }
                 }
                 if (n) {
-                    std::cout << "  Quantum "<<to_us(quantum)<<"us\n";
-                    std::cout << "  Average error "<<to_us(total_error/(float)n)<<"us\n";
-                    std::cout << "  worst error "<<to_us(worst)<<"us\n";
+                    SCP_INFO("checker.h") << "  Quantum "<<to_us(quantum)<<"us";
+                    SCP_INFO("checker.h") << "  Average error "<<to_us(total_error/(float)n)<<"us";
+                    SCP_INFO("checker.h") << "  worst error "<<to_us(worst)<<"us";
                     csv<<to_us(quantum)<<","<<to_us(total_error/(float)n)<<","<<to_us(worst)<<",";
                 } else {
                     csv<<"0,0,0,";
@@ -559,9 +557,9 @@ public:
                     }
                 }
                 if (n && sent) {
-                    std::cout << "  Average txns "<<(float)sent/(float)n<<"\n";
+                    SCP_INFO("checker.h") << "  Average txns "<<(float)sent/(float)n;
                     if (rec!=sent) {
-                        std::cout << " Total transactions dropped (!) : "<<sent-rec<<"\n";
+                        SCP_INFO("checker.h") << " Total transactions dropped (!) : "<<sent-rec;
                     }
                 }
                 csv<<(n?(float)sent/(float)n:0)<<","<<sent-rec<<",";
@@ -581,7 +579,7 @@ public:
             });
         for( auto v : uncon )
         {
-            std::cout << "Unconsumed config value: " << v.first<<"\n";
+            SCP_INFO("checker.h") << "Unconsumed config value: " << v.first;
         }
 
         if (m_broker.get_preset_cci_value("csvfile").is_string()) {
@@ -611,7 +609,7 @@ public:
         verbose=m_broker.get_preset_cci_value("verbose").get_int();
 
         if (verbose!=0) {
-            std::cout << "Verbosity : "<<verbose<<"\n";
+            SCP_INFO("checker.h") << "Verbosity : "<<verbose;
         }
 
         wd_on=true;

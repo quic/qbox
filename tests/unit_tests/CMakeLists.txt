@@ -1,7 +1,7 @@
 
 macro(gs_test test)
     add_executable(${test} ${test}.cc)
-    target_link_libraries(${test} gssync SystemC::systemc SystemC::cci GreenSocs::libgsutils gtest gmock)
+    target_link_libraries(${test} gssync SystemC::systemc SystemC::cci scp::tlm_extensions::initiator_id scp::tlm_extensions::path_trace scp::reporting GreenSocs::libgsutils gtest gmock)
     add_test(NAME ${test} COMMAND ${test})
     set_tests_properties(${test} PROPERTIES TIMEOUT 10)
 endmacro()

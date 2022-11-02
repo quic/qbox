@@ -29,6 +29,8 @@
 #endif
 #include <systemc>
 
+#include <scp/report.h>
+
 #include "greensocs/libgssync/qkmulti-quantum.h"
 #include "greensocs/libgssync/semaphore.h"
 #include <greensocs/libgsutils.h>
@@ -48,17 +50,17 @@ namespace gs {
             sc_core::sc_time next_event = sc_core::sc_time_to_pending_activity();
             sc_core::sc_time quantum_boundary = sc_core::sc_time_stamp() + quantum - get_current_time();
             if (sc_core::sc_pending_activity_at_current_time()) {
-                GS_LOG("Pending activity now returning SC_ZERO_TIME");
+                SCP_INFO("Libgssync") << "Pending activity now returning SC_ZERO_TIME";
                 m_tick.notify();
                 return sc_core::SC_ZERO_TIME;
             }
             else if (sc_core::sc_pending_activity_at_future_time()) {
                 sc_core::sc_time ret = std::min(next_event, quantum_boundary);
-                GS_LOG("Pending activity returning %s", ret.to_string().c_str());
+                SCP_INFO("Libgssync") << "Pending activity returning " << ret.to_string();
                 return ret;
             }
             else {
-                GS_LOG("No pending activity returning quantum boundary %s", quantum_boundary.to_string().c_str());
+                SCP_INFO("Libgssync") << "No pending activity returning quantum boundary " << quantum_boundary.to_string();
                 return quantum_boundary;
             }
         }
@@ -67,7 +69,6 @@ namespace gs {
             m_next_time = get_next_time();
             m_sem.notify();
         }
-
 
         virtual sc_core::sc_time time_to_sync() override {
             if (is_sysc_thread())

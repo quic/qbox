@@ -26,6 +26,8 @@
 #endif
 #include <systemc>
 
+#include <scp/report.h>
+
 #include "greensocs/libgssync/pre_suspending_sc_support.h"
 #include <greensocs/libgsutils.h>
 
@@ -38,28 +40,29 @@ namespace gs {
 
     void global_pause::sleeper() {
         if (m_has_suspending_channels == 0 && m_suspend == 0) {
-            GS_LOG("no suspending");
+            SCP_INFO(SCMOD) << "no suspending";
             return;
         }
 
         if (m_suspend > 0 && m_unsuspendable > 0 && sc_core::sc_pending_activity()) {
             // wait till we can suspend.
-            GS_LOG("unsuspendable %d", m_unsuspendable);
+            SCP_INFO(SCMOD) << "unsuspendable " << m_unsuspendable;
             return sleeper_event.notify(sc_core::sc_time_to_pending_activity());
         }
 
         if (m_suspend == 0 && m_has_suspending_channels > 0 && sc_core::sc_pending_activity()) {
-            GS_LOG("suspending channels wait for idle");
+            SCP_INFO(SCMOD) << "suspending channels wait for idle";
+
             return sleeper_event.notify(sc_core::sc_time_to_pending_activity());
         }
 
         // wait till there are no other pending events in this delta,
         // then suspend
         if (sc_core::sc_pending_activity_at_current_time()) {
-            GS_LOG("waiting for idle");
+            SCP_INFO(SCMOD) << "waiting for idle";
             sleeper_event.notify(sc_core::SC_ZERO_TIME);
         } else {
-            GS_LOG("%s Suspended", sc_core::sc_time_stamp().to_string().c_str());
+            SCP_INFO(SCMOD) << sc_core::sc_time_stamp().to_string() << " Suspended";
             std::unique_lock<std::mutex> lock(mutex);
             cond.wait(lock, [this] {
                 return wakeups > 0
@@ -70,9 +73,9 @@ namespace gs {
             if (wakeups) {
                 wakeups--;
             }
-            GS_LOG("%s Wake", sc_core::sc_time_stamp().to_string().c_str());
+            SCP_INFO(SCMOD) << sc_core::sc_time_stamp().to_string() << " Wake";
             if (m_suspend > 0 || m_has_suspending_channels > 0) {
-                GS_LOG("Loop again");
+                SCP_INFO(SCMOD) << "Loop again";
                 // could optimise for the suspending channels
                 // e.g. sleeper_event.notify(sc_core::sc_time_to_pending_activity());
                 sleeper_event.notify(sc_core::SC_ZERO_TIME);
@@ -92,9 +95,9 @@ namespace gs {
 
             if(log_enabled) {
                 if (process_p && process_p->get_parent_object())
-                    GS_LOG("suspendable() %d %s", m_unsuspendable, process_p->get_parent_object()->name());
+                    SCP_INFO(SCMOD) << "suspendable() " << m_unsuspendable << process_p->get_parent_object()->name();
                 else
-                    GS_LOG("suspendable() %d none", m_unsuspendable);
+                    SCP_INFO(SCMOD) << "suspendable() " << m_unsuspendable << " none";
             }
         }
         sleeper_event.notify(sc_core::SC_ZERO_TIME);
@@ -111,9 +114,9 @@ namespace gs {
 
             if (log_enabled) {
                 if (process_p && process_p->get_parent_object())
-                    GS_LOG("unsuspendable() %d %s", m_unsuspendable, process_p->get_parent_object()->name());
+                    SCP_INFO(SCMOD) << "unsuspendable() " << m_unsuspendable << process_p->get_parent_object()->name();
                 else
-                    GS_LOG("unsuspendable() %d none", m_unsuspendable);
+                    SCP_INFO(SCMOD) << "unsuspendable() " << m_unsuspendable << " none";
             }
         }
     }
@@ -133,9 +136,9 @@ namespace gs {
 
         if (log_enabled) {
             if (process_p && process_p->get_parent_object())
-                GS_LOG("unsuspend_all() %d %s", m_suspend, process_p->get_parent_object()->name());
+                SCP_INFO(SCMOD) << "unsuspend_all() " << m_suspend << process_p->get_parent_object()->name();
             else
-                GS_LOG("unsuspend_all() %d none", m_suspend);
+                SCP_INFO(SCMOD) << "unsuspend_all() " << m_suspend << " none";
         }
     }
 
@@ -154,9 +157,9 @@ namespace gs {
 
         if (log_enabled) {
             if (process_p && process_p->get_parent_object())
-                GS_LOG("suspend_all() %d %s", m_suspend, process_p->get_parent_object()->name());
+                SCP_INFO(SCMOD) << "suspend_all() " << m_suspend << process_p->get_parent_object()->name();
             else
-                GS_LOG("suspend_all() %d none", m_suspend);
+                SCP_INFO(SCMOD) << "suspend_all() " << m_suspend << " none";
         }
     }
 
@@ -174,7 +177,7 @@ namespace gs {
     }
 
     bool global_pause::detach_suspending(sc_core::sc_prim_channel *p) {
-        GS_LOG("detach_suspending() %d", m_suspending_channels.size());
+        SCP_INFO(SCMOD) << "detach_suspending() " << m_suspending_channels.size();
         assert(p);
         std::vector<const sc_core::sc_prim_channel *>::iterator it =
                 std::find(m_suspending_channels.begin(), m_suspending_channels.end(), p);
@@ -189,7 +192,7 @@ namespace gs {
 
     void global_pause::async_wakeup() {
         std::lock_guard<std::mutex> lock(mutex);
-        GS_LOG("async_wakeup()");
+        SCP_INFO(SCMOD) << "async_wakeup()";
         wakeups++;
         cond.notify_all();
     }
@@ -202,7 +205,7 @@ namespace gs {
         {
             std::lock_guard<std::mutex> lock(mutex);
             if (gp_ref_count > 0) {
-                std::cerr << "global_pause is a singleton, should only be instantiated once." << std::endl;
+                SCP_ERR(SCMOD) << "global_pause is a singleton, should only be instantiated once.";
                 std::abort();
             }
             gp_ref_count++;

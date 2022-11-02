@@ -76,6 +76,7 @@ void finished_quantum() {
 }
 
 int sc_main(int argc, char **argv) {
+
     qk = new gs::tlm_quantumkeeper_multi_quantum;
     sc_core::sc_time quantum(1, sc_core::SC_MS);
     tlm_utils::tlm_quantumkeeper::set_global_quantum(quantum);

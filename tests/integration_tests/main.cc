@@ -638,7 +638,7 @@ SC_MODULE(tests)
 //                        std::cout << "adding a "<<type<<" with name "<<std::string(sc_module::name())+"."+name<<"\n";
                         allModels.push_back(m);
                     } else {
-                        std::cout << "Can't find "<<type<<"\n";
+                        SCP_INFO(SCMOD) << "Can't find "<<type;
                     }
                 } // else it's some other config
             }
@@ -750,6 +750,13 @@ public:
 
 int sc_main(int argc, char **argv)
 {
+    scp::init_logging(
+      scp::LogConfig()
+          .logAsync(false)
+          .printSimTime(false)
+          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+          .msgTypeFieldWidth(50)); // make the msg type column a bit tighter
+
     auto m_broker=new cci_utils::broker("Global Broker");
     cci::cci_register_broker(m_broker);
     LuaFile_Tool lua("lua");
@@ -758,7 +765,7 @@ int sc_main(int argc, char **argv)
         auto uncon = m_broker->get_unconsumed_preset_values();
         for( auto v : uncon )
         {
-            std::cout << "Unconsumed config value: " << v.first<<" : "<<v.second<<"\n";
+            SCP_INFO("sc_main") << "Unconsumed config value: " << v.first<<" : "<<v.second;
         }
         
 
@@ -770,8 +777,8 @@ int sc_main(int argc, char **argv)
         
     }
     catch (sc_report rpt) {
-        std::cout << rpt.get_process_name() << std::endl;
-        std::cout << rpt.what() << std::endl;
+        SCP_INFO("sc_main") << rpt.get_process_name();
+        SCP_INFO("sc_main") << rpt.what();
     }
 
     
