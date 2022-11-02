@@ -24,8 +24,7 @@
 
 #include "libqemu-cxx/libqemu-cxx.h"
 
-class QemuMrHintTlmExtension
-    : public tlm::tlm_extension<QemuMrHintTlmExtension>
+class QemuMrHintTlmExtension : public tlm::tlm_extension<QemuMrHintTlmExtension>
 {
 private:
     qemu::MemoryRegion m_mr;
@@ -33,20 +32,13 @@ private:
 
 public:
     QemuMrHintTlmExtension() = default;
-    QemuMrHintTlmExtension(const QemuMrHintTlmExtension &) = default;
+    QemuMrHintTlmExtension(const QemuMrHintTlmExtension&) = default;
 
-    QemuMrHintTlmExtension(qemu::MemoryRegion mr, uint64_t offset)
-        : m_mr(mr)
-        , m_offset(offset)
-    {}
+    QemuMrHintTlmExtension(qemu::MemoryRegion mr, uint64_t offset): m_mr(mr), m_offset(offset) {}
 
-    virtual tlm_extension_base* clone() const override
-    {
-        return new QemuMrHintTlmExtension(*this);
-    }
+    virtual tlm_extension_base* clone() const override { return new QemuMrHintTlmExtension(*this); }
 
-    virtual void copy_from(tlm_extension_base const &ext) override
-    {
+    virtual void copy_from(tlm_extension_base const& ext) override {
         m_mr = static_cast<const QemuMrHintTlmExtension&>(ext).m_mr;
         m_offset = static_cast<const QemuMrHintTlmExtension&>(ext).m_offset;
     }

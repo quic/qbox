@@ -26,7 +26,8 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 
-class QemuUart16550 : public QemuDevice {
+class QemuUart16550 : public QemuDevice
+{
 protected:
     qemu::Chardev m_chardev;
 
@@ -37,19 +38,18 @@ public:
     QemuTargetSocket<> socket;
     QemuInitiatorSignalSocket irq_out;
 
-    QemuUart16550(const sc_core::sc_module_name &n, QemuInstance &inst)
+    QemuUart16550(const sc_core::sc_module_name& n, QemuInstance& inst)
         : QemuDevice(n, inst, "serial-mm")
-        , p_baudbase("baudbase", 38400000, "Base frequency from which the baudrate "
-                                           "is derived (in Hz)")
-        , p_regshift("regshift", 2, "Shift to apply to the MMIO register map "
-                                    "(2 means one reg = 32 bits)")
+        , p_baudbase("baudbase", 38400000,
+                     "Base frequency from which the baudrate "
+                     "is derived (in Hz)")
+        , p_regshift("regshift", 2,
+                     "Shift to apply to the MMIO register map "
+                     "(2 means one reg = 32 bits)")
         , socket("mem", inst)
-        , irq_out("irq_out")
-    {
-    }
+        , irq_out("irq_out") {}
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         QemuDevice::before_end_of_elaboration();
 
         m_dev.set_prop_int("baudbase", p_baudbase);
@@ -60,8 +60,7 @@ public:
         m_dev.set_prop_chardev("chardev", m_chardev);
     }
 
-    void end_of_elaboration() override
-    {
+    void end_of_elaboration() override {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 

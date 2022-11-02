@@ -31,7 +31,8 @@
 
 #include "libqbox/components/cpu/cpu.h"
 
-class QemuCpuHexagon : public QemuCpu {
+class QemuCpuHexagon : public QemuCpu
+{
 public:
     typedef enum {
         v66_rev = 0xa666,
@@ -42,34 +43,33 @@ public:
 
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
 
-    QemuCpuHexagon(const sc_core::sc_module_name &name,
-                   QemuInstance &inst, uint32_t cfgbase, Rev_t rev, uint32_t l2vic_base_addr, uint32_t qtimer_base_addr, uint32_t exec_start_addr)
-        : QemuCpu(name, inst,"v67-hexagon")
-        , irq_in("irq_in", 8, [] (const char *n, int i) {
-                    return new QemuTargetSignalSocket(n);
-                })
+    QemuCpuHexagon(const sc_core::sc_module_name& name, QemuInstance& inst, uint32_t cfgbase,
+                   Rev_t rev, uint32_t l2vic_base_addr, uint32_t qtimer_base_addr,
+                   uint32_t exec_start_addr)
+        : QemuCpu(name, inst, "v67-hexagon")
+        , irq_in("irq_in", 8, [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
         , m_cfgbase(cfgbase)
         , m_rev(rev)
         , m_l2vic_base_addr(l2vic_base_addr)
         , m_qtimer_base_addr(qtimer_base_addr)
         , m_exec_start_addr(exec_start_addr)
-        , p_start_powered_off("start_powered_off", false, "Start and reset the CPU "
-                                                    "in powered-off state")
+        , p_start_powered_off("start_powered_off", false,
+                              "Start and reset the CPU "
+                              "in powered-off state")
         , p_sched_limit("sched_limit", true, "use sched limit")
 
-          /*
-           * We have no choice but to attach-suspend here. This is fixable but
-           * non-trivial. It means that the SystemC kernel will never starve...
-           */
+    /*
+     * We have no choice but to attach-suspend here. This is fixable but
+     * non-trivial. It means that the SystemC kernel will never starve...
+     */
     {
         for (int i = 0; i < irq_in.size(); ++i) {
             m_external_ev |= irq_in[i]->default_event();
         }
     }
 
-    void before_end_of_elaboration() override
-    {
-        //set the parameter config-table-addr 195 hexagon_testboard
+    void before_end_of_elaboration() override {
+        // set the parameter config-table-addr 195 hexagon_testboard
         QemuCpu::before_end_of_elaboration();
         qemu::CpuHexagon cpu(get_qemu_dev());
 
@@ -79,13 +79,12 @@ public:
         cpu.set_prop_int("qtimer-base-addr", m_qtimer_base_addr);
         cpu.set_prop_int("exec-start-addr", m_exec_start_addr);
         cpu.set_prop_bool("start-powered-off", p_start_powered_off);
-        //in case of additional reset, this value will be loaded for PC
+        // in case of additional reset, this value will be loaded for PC
         cpu.set_prop_int("start-evb", m_exec_start_addr);
         cpu.set_prop_bool("sched-limit", p_sched_limit);
     }
 
-    void end_of_elaboration() override
-    {
+    void end_of_elaboration() override {
         QemuCpu::end_of_elaboration();
 
         for (int i = 0; i < irq_in.size(); ++i) {
@@ -99,6 +98,7 @@ protected:
     uint32_t m_l2vic_base_addr;
     uint32_t m_qtimer_base_addr;
     uint32_t m_exec_start_addr;
+
 public:
     cci::cci_param<bool> p_start_powered_off;
     cci::cci_param<bool> p_sched_limit;

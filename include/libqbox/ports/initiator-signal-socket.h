@@ -47,16 +47,15 @@
  * kernel. Note that this is only true if the GPIOs wrapped by both this socket
  * and the remote socket lie in the same QEMU instance.
  */
-class QemuInitiatorSignalSocket : public InitiatorSignalSocket<bool> {
+class QemuInitiatorSignalSocket : public InitiatorSignalSocket<bool>
+{
 protected:
     qemu::Gpio m_proxy;
     gs::RunOnSysC m_on_sysc;
-    QemuTargetSignalSocket *m_qemu_remote = nullptr;
+    QemuTargetSignalSocket* m_qemu_remote = nullptr;
 
-    void event_cb(bool val)
-    {
-        if (m_qemu_remote
-            && (m_qemu_remote->get_gpio().same_inst_as(m_proxy))) {
+    void event_cb(bool val) {
+        if (m_qemu_remote && (m_qemu_remote->get_gpio().same_inst_as(m_proxy))) {
             /*
              * We make sure to be in the same instance as the target socket.
              * Otherwise we would need to hold the target's QEMU instance
@@ -79,15 +78,12 @@ protected:
 
         m_proxy.get_inst().unlock_iothread();
 
-        m_on_sysc.run_on_sysc([this, val] {
-            (*this)->write(val);
-        });
+        m_on_sysc.run_on_sysc([this, val] { (*this)->write(val); });
 
         m_proxy.get_inst().lock_iothread();
     }
 
-    void init_qemu_to_sysc_gpio_proxy(qemu::Device &dev)
-    {
+    void init_qemu_to_sysc_gpio_proxy(qemu::Device& dev) {
         using namespace std::placeholders;
 
         m_proxy = dev.get_inst().gpio_new();
@@ -96,11 +92,10 @@ protected:
         m_proxy.set_event_callback(cb);
     }
 
-    void init_internal(qemu::Device &dev)
-    {
-        sc_core::sc_interface *iface;
-        TargetSignalSocketProxy<bool> *socket_iface;
-        QemuTargetSignalSocket *remote;
+    void init_internal(qemu::Device& dev) {
+        sc_core::sc_interface* iface;
+        TargetSignalSocketProxy<bool>* socket_iface;
+        QemuTargetSignalSocket* remote;
 
         init_qemu_to_sysc_gpio_proxy(dev);
 
@@ -130,10 +125,9 @@ protected:
     }
 
 public:
-    QemuInitiatorSignalSocket(const char *name)
+    QemuInitiatorSignalSocket(const char* name)
         : InitiatorSignalSocket<bool>(name)
-        , m_on_sysc(sc_core::sc_gen_unique_name("run_on_sysc"))
-    {}
+        , m_on_sysc(sc_core::sc_gen_unique_name("run_on_sysc")) {}
 
     /**
      * @brief Initialize this socket with a device and a GPIO index
@@ -145,8 +139,7 @@ public:
      * @param[in] dev The QEMU device
      * @param[in] gpio_idx The GPIO index within the device
      */
-    void init(qemu::Device dev, int gpio_idx)
-    {
+    void init(qemu::Device dev, int gpio_idx) {
         init_internal(dev);
         dev.connect_gpio_out(gpio_idx, m_proxy);
     }
@@ -163,8 +156,7 @@ public:
      * @param[in] gpio_name The GPIO namespace within the device
      * @param[in] gpio_idx The GPIO index within the device
      */
-    void init_named(qemu::Device dev, const char *gpio_name, int gpio_idx)
-    {
+    void init_named(qemu::Device dev, const char* gpio_name, int gpio_idx) {
         init_internal(dev);
         dev.connect_gpio_out_named(gpio_name, gpio_idx, m_proxy);
     }
@@ -181,8 +173,7 @@ public:
      * @param[in] sbd The QEMU SysBusDevice
      * @param[in] gpio_idx The GPIO index within the SBD
      */
-    void init_sbd(qemu::SysBusDevice sbd, int gpio_idx)
-    {
+    void init_sbd(qemu::SysBusDevice sbd, int gpio_idx) {
         init_internal(sbd);
         sbd.connect_gpio_out(gpio_idx, m_proxy);
     }

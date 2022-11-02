@@ -59,15 +59,13 @@ public:
  *          forwards them as standard TLM-2.0 transactions.
  */
 template <unsigned int BUSWIDTH = 32>
-class QemuInitiatorSocket
-    : public tlm::tlm_initiator_socket<BUSWIDTH, tlm::tlm_base_protocol_types,
-                                       1, sc_core::SC_ZERO_OR_MORE_BOUND>,
-      public tlm::tlm_bw_transport_if<>
+class QemuInitiatorSocket : public tlm::tlm_initiator_socket<BUSWIDTH, tlm::tlm_base_protocol_types,
+                                                             1, sc_core::SC_ZERO_OR_MORE_BOUND>,
+                            public tlm::tlm_bw_transport_if<>
 {
 public:
-    using TlmInitiatorSocket = tlm::tlm_initiator_socket<
-        BUSWIDTH, tlm::tlm_base_protocol_types, 1,
-        sc_core::SC_ZERO_OR_MORE_BOUND>;
+    using TlmInitiatorSocket = tlm::tlm_initiator_socket<BUSWIDTH, tlm::tlm_base_protocol_types, 1,
+                                                         sc_core::SC_ZERO_OR_MORE_BOUND>;
     using TlmPayload = tlm::tlm_generic_payload;
     using MemTxResult = qemu::MemoryRegionOps::MemTxResult;
     using MemTxAttrs = qemu::MemoryRegionOps::MemTxAttrs;
@@ -89,19 +87,16 @@ protected:
     {
     public:
         qemu::MemoryRegion m_root;
-        m_mem_obj(qemu::LibQemu& inst) {
-            m_root = inst.object_new<qemu::MemoryRegion>();
-        }
+        m_mem_obj(qemu::LibQemu& inst) { m_root = inst.object_new<qemu::MemoryRegion>(); }
     };
     m_mem_obj* m_r = nullptr;
 
     // we use an ordered map to find and combine elements
     std::map<DmiRegionAliasKey, DmiRegionAlias::Ptr> m_dmi_aliases;
-    using AliasesIterator = std::map<DmiRegionAliasKey,
-                                     DmiRegionAlias::Ptr>::iterator;
+    using AliasesIterator = std::map<DmiRegionAliasKey, DmiRegionAlias::Ptr>::iterator;
 
-    void init_payload(TlmPayload& trans, tlm::tlm_command command,
-                      uint64_t addr, uint64_t* val, unsigned int size) {
+    void init_payload(TlmPayload& trans, tlm::tlm_command command, uint64_t addr, uint64_t* val,
+                      unsigned int size) {
         trans.set_command(command);
         trans.set_address(addr);
         trans.set_data_ptr(reinterpret_cast<unsigned char*>(val));
@@ -117,7 +112,8 @@ protected:
     void add_dmi_mr_alias(DmiRegionAlias::Ptr alias) {
         qemu::MemoryRegion alias_mr = alias->get_alias_mr();
 
-        SCP_INFO(SCMOD) << "Adding DMI alias for region [ 0x"<< std::hex << alias->get_start() << ", 0x" << std::hex << alias->get_end() << "]";
+        SCP_INFO(SCMOD) << "Adding DMI alias for region [ 0x" << std::hex << alias->get_start()
+                        << ", 0x" << std::hex << alias->get_end() << "]";
 
         m_inst.get().lock_iothread();
         m_r->m_root.add_subregion(alias_mr, alias->get_start());
@@ -131,7 +127,8 @@ protected:
             return;
         }
 
-        SCP_INFO(SCMOD) << "Removing DMI alias for region [ 0x" << std::hex << alias->get_start() << ", 0x" << std::hex << alias->get_end() << "]";
+        SCP_INFO(SCMOD) << "Removing DMI alias for region [ 0x" << std::hex << alias->get_start()
+                        << ", 0x" << std::hex << alias->get_end() << "]";
 
         m_inst.get().lock_iothread();
         m_r->m_root.del_subregion(alias->get_alias_mr());
@@ -173,9 +170,8 @@ protected:
 
         bool ret;
         SCP_INFO(SCMOD) << "DMI request for address 0x" << std::hex << trans.get_address();
-        m_on_sysc.run_on_sysc([this, &trans] {
-            m_dmi_data_valid = (*this)->get_direct_mem_ptr(trans, m_dmi_data);
-        });
+        m_on_sysc.run_on_sysc(
+            [this, &trans] { m_dmi_data_valid = (*this)->get_direct_mem_ptr(trans, m_dmi_data); });
 
         // check here before taking the lock!
         if (!m_dmi_data_valid) {
@@ -185,7 +181,8 @@ protected:
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
 
         if (!m_dmi_data_valid) {
-            SCP_INFO(SCMOD) << "DMI Request invalidated before being committed 0x" << std::hex << trans.get_address();
+            SCP_INFO(SCMOD) << "DMI Request invalidated before being committed 0x" << std::hex
+                            << trans.get_address();
             // Between SystemC providing the DMI, and us 'accepting' the DMI,
             // an 'invalidation' may arrive from SystemC
             return;
@@ -247,7 +244,8 @@ protected:
             }
         }
 
-        SCP_INFO(SCMOD) << "Got DMI for range [0x" << std::hex << m_dmi_data.get_start_address() << ", 0x" << std::hex << m_dmi_data.get_end_address() << "]";
+        SCP_INFO(SCMOD) << "Got DMI for range [0x" << std::hex << m_dmi_data.get_start_address()
+                        << ", 0x" << std::hex << m_dmi_data.get_end_address() << "]";
 
         DmiRegionAlias::Ptr alias(dmi_mgr.get_new_region_alias(m_dmi_data));
 
@@ -273,8 +271,7 @@ protected:
 
         mapping_addr = trans.get_address() - ext->get_offset();
 
-        qemu::MemoryRegion mr(
-            m_inst.get().template object_new<qemu::MemoryRegion>());
+        qemu::MemoryRegion mr(m_inst.get().template object_new<qemu::MemoryRegion>());
 
         mr.init_alias(m_dev, "mr-alias", target_mr, 0, target_mr.get_size());
         m_r->m_root.add_subregion(mr, mapping_addr);
@@ -286,8 +283,7 @@ protected:
         uint64_t addr = trans.get_address();
         sc_time now = m_initiator.initiator_get_local_time();
 
-        m_on_sysc.run_on_sysc(
-            [this, &trans, &now] { (*this)->b_transport(trans, now); });
+        m_on_sysc.run_on_sysc([this, &trans, &now] { (*this)->b_transport(trans, now); });
 
         /*
          * Reset transaction address before dmi check (could be altered by
@@ -302,13 +298,11 @@ protected:
     }
 
     void do_debug_access(TlmPayload& trans) {
-        m_on_sysc.run_on_sysc(
-            [this, &trans] { (*this)->transport_dbg(trans); });
+        m_on_sysc.run_on_sysc([this, &trans] { (*this)->transport_dbg(trans); });
     }
 
-    MemTxResult qemu_io_access(tlm::tlm_command command, uint64_t addr,
-                               uint64_t* val, unsigned int size,
-                               MemTxAttrs attrs) {
+    MemTxResult qemu_io_access(tlm::tlm_command command, uint64_t addr, uint64_t* val,
+                               unsigned int size, MemTxAttrs attrs) {
         TlmPayload trans;
 
         m_inst.get().unlock_iothread();
@@ -337,25 +331,21 @@ protected:
         }
     }
 
-    MemTxResult qemu_io_read(uint64_t addr, uint64_t* val, unsigned int size,
-                             MemTxAttrs attrs) {
+    MemTxResult qemu_io_read(uint64_t addr, uint64_t* val, unsigned int size, MemTxAttrs attrs) {
         return qemu_io_access(tlm::TLM_READ_COMMAND, addr, val, size, attrs);
     }
 
-    MemTxResult qemu_io_write(uint64_t addr, uint64_t val, unsigned int size,
-                              MemTxAttrs attrs) {
+    MemTxResult qemu_io_write(uint64_t addr, uint64_t val, unsigned int size, MemTxAttrs attrs) {
         return qemu_io_access(tlm::TLM_WRITE_COMMAND, addr, &val, size, attrs);
     }
 
 public:
-    QemuInitiatorSocket(const char* name, QemuInitiatorIface& initiator,
-                        QemuInstance& inst)
+    QemuInitiatorSocket(const char* name, QemuInitiatorIface& initiator, QemuInstance& inst)
         : TlmInitiatorSocket(name)
         , m_inst(inst)
         , m_on_sysc(sc_core::sc_gen_unique_name("initiator_run_on_sysc"))
         , m_initiator(initiator) {
-        TlmInitiatorSocket::bind(
-            *static_cast<tlm::tlm_bw_transport_if<>*>(this));
+        TlmInitiatorSocket::bind(*static_cast<tlm::tlm_bw_transport_if<>*>(this));
     }
 
     void init(qemu::Device& dev, const char* prop) {
@@ -364,70 +354,60 @@ public:
         qemu::LibQemu& inst = m_inst.get();
         qemu::MemoryRegionOpsPtr ops;
 
-        m_r = new m_mem_obj(
-            inst); // oot = inst.object_new<qemu::MemoryRegion>();
+        m_r = new m_mem_obj(inst); // oot = inst.object_new<qemu::MemoryRegion>();
         ops = inst.memory_region_ops_new();
 
-        ops->set_read_callback(std::bind(&QemuInitiatorSocket::qemu_io_read,
-                                         this, _1, _2, _3, _4));
-        ops->set_write_callback(std::bind(&QemuInitiatorSocket::qemu_io_write,
-                                          this, _1, _2, _3, _4));
+        ops->set_read_callback(std::bind(&QemuInitiatorSocket::qemu_io_read, this, _1, _2, _3, _4));
+        ops->set_write_callback(
+            std::bind(&QemuInitiatorSocket::qemu_io_write, this, _1, _2, _3, _4));
         ops->set_max_access_size(8);
 
-        m_r->m_root.init_io(dev, TlmInitiatorSocket::name(),
-                            std::numeric_limits<uint64_t>::max(), ops);
+        m_r->m_root.init_io(dev, TlmInitiatorSocket::name(), std::numeric_limits<uint64_t>::max(),
+                            ops);
 
         dev.set_prop_link(prop, m_r->m_root);
 
         m_dev = dev;
     }
-    void end_of_simulation() {
-        delete m_r;
-    }
+    void end_of_simulation() { delete m_r; }
     void init_global(qemu::Device& dev) {
         using namespace std::placeholders;
 
         qemu::LibQemu& inst = m_inst.get();
         qemu::MemoryRegionOpsPtr ops;
-        m_r = new m_mem_obj(
-            inst); // oot = inst.object_new<qemu::MemoryRegion>();
+        m_r = new m_mem_obj(inst); // oot = inst.object_new<qemu::MemoryRegion>();
         ops = inst.memory_region_ops_new();
 
-        ops->set_read_callback(std::bind(&QemuInitiatorSocket::qemu_io_read,
-                                         this, _1, _2, _3, _4));
-        ops->set_write_callback(std::bind(&QemuInitiatorSocket::qemu_io_write,
-                                          this, _1, _2, _3, _4));
+        ops->set_read_callback(std::bind(&QemuInitiatorSocket::qemu_io_read, this, _1, _2, _3, _4));
+        ops->set_write_callback(
+            std::bind(&QemuInitiatorSocket::qemu_io_write, this, _1, _2, _3, _4));
         ops->set_max_access_size(8);
 
-        m_r->m_root.init_io(dev, TlmInitiatorSocket::name(),
-                            std::numeric_limits<uint64_t>::max(), ops);
+        m_r->m_root.init_io(dev, TlmInitiatorSocket::name(), std::numeric_limits<uint64_t>::max(),
+                            ops);
 
         auto as = inst.address_space_get_system_memory();
         as->init(m_r->m_root, "global-peripheral-initiator", true);
         m_dev = dev;
     }
 
-    void cancel_all() {
-        m_on_sysc.cancel_all();
-    }
+    void cancel_all() { m_on_sysc.cancel_all(); }
 
     /* tlm::tlm_bw_transport_if<> */
     virtual tlm::tlm_sync_enum nb_transport_bw(tlm::tlm_generic_payload& trans,
-                                               tlm::tlm_phase& phase,
-                                               sc_core::sc_time& t) {
+                                               tlm::tlm_phase& phase, sc_core::sc_time& t) {
         /* Should not be reached */
         assert(false);
         return tlm::TLM_COMPLETED;
     }
 
     virtual AliasesIterator remove_alias(AliasesIterator it) {
-        DmiRegionAlias::Ptr
-            r = it->second; /*
-                             * Invalidate this region. Do not bother with
-                             * partial invalidation as it's really not worth
-                             * it. Better let the target model returns sub-DMI
-                             * regions during future accesses.
-                             */
+        DmiRegionAlias::Ptr r = it->second; /*
+                                             * Invalidate this region. Do not bother with
+                                             * partial invalidation as it's really not worth
+                                             * it. Better let the target model returns sub-DMI
+                                             * regions during future accesses.
+                                             */
 
         /*
          * Mark the whole region this alias maps to as invalid. This has
@@ -464,9 +444,9 @@ public:
         return m_dmi_aliases.erase(it);
     }
 
-    virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start_range,
-                                           sc_dt::uint64 end_range) {
-        SCP_INFO(SCMOD) << "DMI invalidate [0x" << std::hex << start_range << ", 0x" << std::hex << end_range << "]";
+    virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start_range, sc_dt::uint64 end_range) {
+        SCP_INFO(SCMOD) << "DMI invalidate [0x" << std::hex << start_range << ", 0x" << std::hex
+                        << end_range << "]";
 
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
 
@@ -503,7 +483,8 @@ public:
 
             it = remove_alias(it);
 
-            SCP_INFO(SCMOD) << "Invalidated region [0x" << std::hex << r->get_start() << ", 0x" << std::hex << r->get_end() << "]";
+            SCP_INFO(SCMOD) << "Invalidated region [0x" << std::hex << r->get_start() << ", 0x"
+                            << std::hex << r->get_end() << "]";
         }
     }
 };

@@ -50,14 +50,13 @@ private:
     std::string m_qom_type;
 
 protected:
-    QemuInstance &m_inst;
+    QemuInstance& m_inst;
     qemu::Device m_dev;
     bool m_instanciated = false;
     bool m_realized = false;
 
 public:
-    void instantiate()
-    {
+    void instantiate() {
         if (m_instanciated) {
             return;
         }
@@ -66,8 +65,7 @@ public:
         m_instanciated = true;
     }
 
-    void realize()
-    {
+    void realize() {
         if (m_realized) {
             return;
         }
@@ -83,43 +81,22 @@ public:
      * @param[in] inst QEMU instance the device will be created in
      * @param[in] qom_type Device QOM type name
      */
-    QemuDevice(const sc_core::sc_module_name &name, QemuInstance &inst,
-               const char* qom_type)
-        : sc_module(name)
-        , m_qom_type(qom_type)
-        , m_inst(inst)
-    {}
+    QemuDevice(const sc_core::sc_module_name& name, QemuInstance& inst, const char* qom_type)
+        : sc_module(name), m_qom_type(qom_type), m_inst(inst) {}
 
     virtual ~QemuDevice() {}
 
-    virtual void before_end_of_elaboration() override
-    {
-        instantiate();
-    }
+    virtual void before_end_of_elaboration() override { instantiate(); }
 
-    virtual void end_of_elaboration() override
-    {
-        realize();
-    }
+    virtual void end_of_elaboration() override { realize(); }
 
-    const char * get_qom_type() const
-    {
-        return m_qom_type.c_str();
-    }
+    const char* get_qom_type() const { return m_qom_type.c_str(); }
 
-    qemu::Device get_qemu_dev()
-    {
-        return m_dev;
-    }
+    qemu::Device get_qemu_dev() { return m_dev; }
 
-    QemuInstance& get_qemu_inst()
-    {
-        return m_inst;
-    }
+    QemuInstance& get_qemu_inst() { return m_inst; }
 
-    void set_sysbus_as_parent_bus(void) {
-         m_dev.set_parent_bus(m_inst.get().sysbus_get_default());
-    }
+    void set_sysbus_as_parent_bus(void) { m_dev.set_parent_bus(m_inst.get().sysbus_get_default()); }
 };
 
 #endif

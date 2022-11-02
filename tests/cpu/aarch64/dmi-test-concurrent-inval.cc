@@ -123,30 +123,25 @@ private:
 public:
     SC_HAS_PROCESS(CpuArmCortexA53DmiConcurrentInvalTest);
 
-    CpuArmCortexA53DmiConcurrentInvalTest(const sc_core::sc_module_name &n)
-        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>(n)
-    {
+    CpuArmCortexA53DmiConcurrentInvalTest(const sc_core::sc_module_name& n)
+        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>(n) {
         char buf[2048];
 
         m_num_write_per_cpu = NUM_WRITES / p_num_cpu;
 
-        std::snprintf(buf, sizeof(buf), FIRMWARE,
-                      CpuTesterDmi::MMIO_ADDR,
-                      CpuTesterDmi::DMI_ADDR,
+        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterDmi::MMIO_ADDR, CpuTesterDmi::DMI_ADDR,
                       m_num_write_per_cpu);
         set_firmware(buf);
     }
 
-    virtual ~CpuArmCortexA53DmiConcurrentInvalTest()
-    {
-    }
+    virtual ~CpuArmCortexA53DmiConcurrentInvalTest() {}
 
-    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override
-    {
+    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override {
         int cpuid = addr >> 3;
 
         if (id != CpuTesterDmi::SOCKET_MMIO) {
-            SCP_INFO(SCMOD) << "CPU " << cpuid << "DMI write data: " << std::hex << data << ", len: " << len;
+            SCP_INFO(SCMOD) << "CPU " << cpuid << "DMI write data: " << std::hex << data
+                            << ", len: " << len;
 
             /*
              * The tester is about to write the new value to memory. Check the
@@ -157,35 +152,34 @@ public:
             return;
         }
 
-        SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data <<", len: " << len;
+        SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data
+                        << ", len: " << len;
 
         TEST_ASSERT(data != -1);
 
         m_tester.dmi_invalidate();
     }
 
-    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override
-    {
+    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override {
         int cpuid = addr >> 3;
 
         /* No read on the control socket */
         TEST_ASSERT(id == CpuTesterDmi::SOCKET_DMI);
 
-        SCP_INFO(SCMOD) << "CPU " <<cpuid<< "DMI read data: "<< std::hex << m_tester.get_buf_value(cpuid) << ", len: " << len;
+        SCP_INFO(SCMOD) << "CPU " << cpuid << "DMI read data: " << std::hex
+                        << m_tester.get_buf_value(cpuid) << ", len: " << len;
 
         /* The return value is ignored by the tester */
         return 0;
     }
 
-    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi &ret) override
-    {
+    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override {
         SCP_INFO(SCMOD) << "CPU DMI request at 0x" << std::hex << addr << ", len: " << len;
 
         return true;
     }
 
-    virtual void end_of_simulation() override
-    {
+    virtual void end_of_simulation() override {
         CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>::end_of_simulation();
 
         for (int i = 0; i < p_num_cpu; i++) {
@@ -194,9 +188,8 @@ public:
     }
 };
 
-constexpr const char * CpuArmCortexA53DmiConcurrentInvalTest::FIRMWARE;
+constexpr const char* CpuArmCortexA53DmiConcurrentInvalTest::FIRMWARE;
 
-int sc_main(int argc, char *argv[])
-{
+int sc_main(int argc, char* argv[]) {
     return run_testbench<CpuArmCortexA53DmiConcurrentInvalTest>(argc, argv);
 }

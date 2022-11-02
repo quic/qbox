@@ -22,10 +22,10 @@
 
 #include <stdexcept>
 
-class QboxException : public std::runtime_error {
+class QboxException : public std::runtime_error
+{
 public:
-    QboxException(const char *what)
-        : std::runtime_error(what) {}
+    QboxException(const char* what): std::runtime_error(what) {}
 
     virtual ~QboxException() throw() {}
 };

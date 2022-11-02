@@ -32,7 +32,8 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/target-signal-socket.h"
 
-class QemuRiscvSifivePlic : public QemuDevice {
+class QemuRiscvSifivePlic : public QemuDevice
+{
 public:
     cci::cci_param<unsigned int> p_num_sources;
     cci::cci_param<unsigned int> p_num_priorities;
@@ -48,29 +49,27 @@ public:
     QemuTargetSocket<> socket;
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
 
-    QemuRiscvSifivePlic(sc_core::sc_module_name nm, QemuInstance &inst)
+    QemuRiscvSifivePlic(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuDevice(nm, inst, "riscv.sifive.plic")
-          , p_num_sources("num_sources", 0, "Number of input IRQ lines")
-          , p_num_priorities("num_priorities", 0, "Number of priorities")
-          , p_priority_base("priority_base", 0, "Base address of the priority registers")
-          , p_pending_base("pending_base", 0, "Base address of the pending registers")
-          , p_enable_base("enable_base", 0, "Base address of the enable registers")
-          , p_enable_stride("enable_stride", 0, "Size of the enable regiters")
-          , p_context_base("context_base", 0, "Base address the context registers")
-          , p_context_stride("context_stride", 0, "Size of the context registers")
-          , p_aperture_size("aperture_size", 0, "Size of the whole PLIC address space")
-          , p_hart_config("hart_config", "", "HART configurations (can be U, S, H or M or "
-                                             "a combination of those, each HART config is "
-                                             "separarted by a comma) (example: \"MS,MS\" -> "
-                                             "two HARTs with M and S mode)")
+        , p_num_sources("num_sources", 0, "Number of input IRQ lines")
+        , p_num_priorities("num_priorities", 0, "Number of priorities")
+        , p_priority_base("priority_base", 0, "Base address of the priority registers")
+        , p_pending_base("pending_base", 0, "Base address of the pending registers")
+        , p_enable_base("enable_base", 0, "Base address of the enable registers")
+        , p_enable_stride("enable_stride", 0, "Size of the enable regiters")
+        , p_context_base("context_base", 0, "Base address the context registers")
+        , p_context_stride("context_stride", 0, "Size of the context registers")
+        , p_aperture_size("aperture_size", 0, "Size of the whole PLIC address space")
+        , p_hart_config("hart_config", "",
+                        "HART configurations (can be U, S, H or M or "
+                        "a combination of those, each HART config is "
+                        "separarted by a comma) (example: \"MS,MS\" -> "
+                        "two HARTs with M and S mode)")
         , socket("mem", inst)
-        , irq_in("irq_in", p_num_sources, [] (const char *n, int i) {
-                    return new QemuTargetSignalSocket(n);
-                 })
-    {}
+        , irq_in("irq_in", p_num_sources,
+                 [](const char* n, int i) { return new QemuTargetSignalSocket(n); }) {}
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         QemuDevice::before_end_of_elaboration();
 
         m_dev.set_prop_str("hart-config", p_hart_config.get_value().c_str());
@@ -85,8 +84,7 @@ public:
         m_dev.set_prop_int("context-stride", p_context_stride);
     }
 
-    void end_of_elaboration() override
-    {
+    void end_of_elaboration() override {
         int i;
 
         QemuDevice::set_sysbus_as_parent_bus();

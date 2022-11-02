@@ -36,17 +36,14 @@
  * or a TargetInitiatorSocket<bool>. Modifications to this socket will be
  * reported to the wrapped GPIO.
  */
-class QemuTargetSignalSocket : public TargetSignalSocket<bool> {
+class QemuTargetSignalSocket : public TargetSignalSocket<bool>
+{
 protected:
     qemu::Gpio m_gpio_in;
 
-    void value_changed_cb(const bool &val)
-    {
-        m_gpio_in.set(val);
-    }
+    void value_changed_cb(const bool& val) { m_gpio_in.set(val); }
 
-    void init_with_gpio(qemu::Gpio gpio)
-    {
+    void init_with_gpio(qemu::Gpio gpio) {
         using namespace std::placeholders;
 
         m_gpio_in = gpio;
@@ -56,9 +53,7 @@ protected:
     }
 
 public:
-    QemuTargetSignalSocket(const char *name)
-        : TargetSignalSocket(name)
-    {}
+    QemuTargetSignalSocket(const char* name): TargetSignalSocket(name) {}
 
     /**
      * @brief Initialize this socket with a device and a GPIO index
@@ -70,8 +65,7 @@ public:
      * @param[in] dev The QEMU device
      * @param[in] gpio_idx The GPIO index within the device
      */
-    void init(qemu::Device dev, int gpio_idx)
-    {
+    void init(qemu::Device dev, int gpio_idx) {
         qemu::Gpio gpio(dev.get_gpio_in(gpio_idx));
         init_with_gpio(gpio);
     }
@@ -88,8 +82,7 @@ public:
      * @param[in] gpio_name The GPIO namespace within the device
      * @param[in] gpio_idx The GPIO index within the device
      */
-    void init_named(qemu::Device dev, const char *gpio_name, int gpio_idx)
-    {
+    void init_named(qemu::Device dev, const char* gpio_name, int gpio_idx) {
         qemu::Gpio gpio(dev.get_gpio_in_named(gpio_name, gpio_idx));
         init_with_gpio(gpio);
     }
@@ -99,18 +92,12 @@ public:
      *
      * @return the GPIO wrapped by this socket
      */
-    qemu::Gpio get_gpio()
-    {
-        return m_gpio_in;
-    }
+    qemu::Gpio get_gpio() { return m_gpio_in; }
 
     /**
      * @brief Force a notification on the default event
      */
-    void notify()
-    {
-        m_proxy.notify();
-    }
+    void notify() { m_proxy.notify(); }
 };
 
 #endif

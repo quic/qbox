@@ -28,7 +28,8 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 
-class QemuUartPl011 : public QemuDevice {
+class QemuUartPl011 : public QemuDevice
+{
 protected:
     qemu::Chardev m_chardev;
 
@@ -39,16 +40,10 @@ public:
     QemuTargetSocket<> socket;
     QemuInitiatorSignalSocket irq_out;
 
-    QemuUartPl011(const sc_core::sc_module_name &n, QemuInstance &inst)
-        : QemuDevice(n, inst, "pl011")
-        , m_ext_ev(true)
-        , socket("mem", inst)
-        , irq_out("irq_out")
-    {
-    }
+    QemuUartPl011(const sc_core::sc_module_name& n, QemuInstance& inst)
+        : QemuDevice(n, inst, "pl011"), m_ext_ev(true), socket("mem", inst), irq_out("irq_out") {}
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         QemuDevice::before_end_of_elaboration();
 
         /* FIXME: hardcoded for now */
@@ -56,8 +51,7 @@ public:
         m_dev.set_prop_chardev("chardev", m_chardev);
     }
 
-    void end_of_elaboration() override
-    {
+    void end_of_elaboration() override {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 

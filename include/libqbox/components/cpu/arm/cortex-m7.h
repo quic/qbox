@@ -30,11 +30,13 @@
 #include "libqbox/ports/target-signal-socket.h"
 #include "libqbox/ports/target.h"
 
-class CpuArmCortexM7 : public QemuCpu {
+class CpuArmCortexM7 : public QemuCpu
+{
 public:
     static constexpr qemu::Target ARCH = qemu::Target::AARCH64;
 
-    class QemuNvicArmv7m : public QemuDevice {
+    class QemuNvicArmv7m : public QemuDevice
+    {
     protected:
         bool before_end_of_elaboration_done;
 
@@ -48,12 +50,9 @@ public:
             , before_end_of_elaboration_done(false)
             , p_num_irq("num_irq", 64, "Number of external interrupts")
             , socket("mem", inst)
-            , irq_in("irq_in", p_num_irq)
-        {
-        }
+            , irq_in("irq_in", p_num_irq) {}
 
-        void before_end_of_elaboration() override
-        {
+        void before_end_of_elaboration() override {
             if (before_end_of_elaboration_done) {
                 return;
             }
@@ -68,8 +67,7 @@ public:
             m_dev.set_prop_int("num-irq", p_num_irq);
         }
 
-        void end_of_elaboration() override
-        {
+        void end_of_elaboration() override {
             /*
              * At this point, the cpu link must have been set. Otherwise
              * realize will fail.
@@ -100,14 +98,12 @@ public:
     CpuArmCortexM7(sc_core::sc_module_name name, QemuInstance& inst)
         : QemuCpu(name, inst, "cortex-m7-arm")
         , m_nvic("nvic", inst)
-        , p_start_powered_off("start_powered_off", false, "Start and reset the CPU "
-                                                          "in powered-off state")
-        , p_init_nsvtor("init_nsvtor", 0ull, "Reset vector base address")
-    {
-    }
+        , p_start_powered_off("start_powered_off", false,
+                              "Start and reset the CPU "
+                              "in powered-off state")
+        , p_init_nsvtor("init_nsvtor", 0ull, "Reset vector base address") {}
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         QemuCpu::before_end_of_elaboration();
 
         qemu::CpuArm cpu(m_dev);

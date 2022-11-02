@@ -30,12 +30,12 @@
 
 #include <scp/report.h>
 
-class TestFailureException : public std::runtime_error {
+class TestFailureException : public std::runtime_error
+{
 protected:
-    std::string *m_what;
+    std::string* m_what;
 
-    const char *make_what(const char *what, const char *func, const char *file, int line)
-    {
+    const char* make_what(const char* what, const char* func, const char* file, int line) {
         std::stringstream ss;
         ss << what << " (in " << func << ", at " << file << ":" << line << ")";
 
@@ -45,11 +45,10 @@ protected:
     }
 
 public:
-    TestFailureException(const char *what, const char *func, const char *file, int line)
+    TestFailureException(const char* what, const char* func, const char* file, int line)
         : std::runtime_error(make_what(what, func, file, line)) {}
     virtual ~TestFailureException() noexcept { delete m_what; }
 };
-
 
 class TestBench : public sc_core::sc_module
 {
@@ -57,36 +56,28 @@ private:
     bool m_test_success = true;
 
 public:
-    TestBench(const sc_core::sc_module_name &n)
-        : sc_core::sc_module(n)
-    {}
+    TestBench(const sc_core::sc_module_name& n): sc_core::sc_module(n) {}
 
-    virtual ~TestBench()
-    {}
+    virtual ~TestBench() {}
 
-    void run()
-    {
+    void run() {
         try {
             sc_core::sc_start();
 
             if (sc_core::sc_get_status() != sc_core::SC_STOPPED) {
                 sc_core::sc_stop(); /* For end_of_simulation callbacks */
             }
-        } catch (std::exception &e) {
+        } catch (std::exception& e) {
             std::cerr << "Test failure: " << e.what() << "\n";
             m_test_success = false;
         }
     }
 
-    int get_rc() const
-    {
-        return !m_test_success;
-    }
+    int get_rc() const { return !m_test_success; }
 };
 
 template <class TESTBENCH>
-int run_testbench(int argc, char *argv[])
-{
+int run_testbench(int argc, char* argv[]) {
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
 
     TESTBENCH test_bench("test-bench");
@@ -96,10 +87,9 @@ int run_testbench(int argc, char *argv[])
     return test_bench.get_rc();
 }
 
-#define TEST_FAIL(what)                                 \
-    do {                                                \
-        throw TestFailureException(what, __func__,      \
-                                   __FILE__, __LINE__); \
+#define TEST_FAIL(what)                                                 \
+    do {                                                                \
+        throw TestFailureException(what, __func__, __FILE__, __LINE__); \
     } while (0)
 
 #define TEST_ASSERT(assertion)                              \
@@ -107,4 +97,4 @@ int run_testbench(int argc, char *argv[])
         if (!(assertion)) {                                 \
             TEST_FAIL("assertion `" #assertion "' failed"); \
         }                                                   \
-    } while(0)
+    } while (0)

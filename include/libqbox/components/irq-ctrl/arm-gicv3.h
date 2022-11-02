@@ -30,7 +30,8 @@
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
 
-class QemuArmGicv3 : public QemuDevice {
+class QemuArmGicv3 : public QemuDevice
+{
 public:
     static const uint32_t NUM_PPI = 32;
 
@@ -43,7 +44,7 @@ protected:
 
 public:
     QemuTargetSocket<> dist_iface;
-    sc_core::sc_vector< QemuTargetSocket<> > redist_iface;
+    sc_core::sc_vector<QemuTargetSocket<> > redist_iface;
 
     /* Shared peripheral interrupts: sized with the p_num_spi parameter */
     sc_core::sc_vector<QemuTargetSignalSocket> spi_in;
@@ -52,7 +53,7 @@ public:
      * Private peripheral interrupts: 32 per CPUs, the outer vector is sized with the
      * number of CPUs.
      */
-    sc_core::sc_vector< sc_core::sc_vector<QemuTargetSignalSocket> > ppi_in;
+    sc_core::sc_vector<sc_core::sc_vector<QemuTargetSignalSocket> > ppi_in;
 
     /* Output interrupt lines. Vector are sized with the number of CPUs */
     sc_core::sc_vector<QemuInitiatorSignalSocket> irq_out;
@@ -60,7 +61,7 @@ public:
     sc_core::sc_vector<QemuInitiatorSignalSocket> virq_out;
     sc_core::sc_vector<QemuInitiatorSignalSocket> vfiq_out;
 
-    QemuArmGicv3(const sc_core::sc_module_name &name, QemuInstance &inst, unsigned num_cpus = 0)
+    QemuArmGicv3(const sc_core::sc_module_name& name, QemuInstance& inst, unsigned num_cpus = 0)
         : QemuDevice(name, inst, "arm-gicv3")
         , p_num_cpu("num_cpu", num_cpus, "Number of CPU interfaces")
         , p_num_spi("num_spi", 0, "Number of shared peripheral interrupts")
@@ -70,20 +71,18 @@ public:
         , p_has_security_extensions("has_security_extensions", false, "Enable security extensions")
         , dist_iface("dist_iface", inst)
         , redist_iface("redist_iface", p_redist_region.get_value().size(),
-                       [&inst] (const char *n, int i) { return new QemuTargetSocket<>(n, inst); })
+                       [&inst](const char* n, int i) { return new QemuTargetSocket<>(n, inst); })
         , spi_in("spi_in", p_num_spi)
-        , ppi_in("ppi_in_cpu", p_num_cpu, [] (const char *n, size_t i) {
+        , ppi_in("ppi_in_cpu", p_num_cpu,
+                 [](const char* n, size_t i) {
                      return new sc_core::sc_vector<QemuTargetSignalSocket>(n, NUM_PPI);
                  })
         , irq_out("irq_out", p_num_cpu)
         , fiq_out("fiq_out", p_num_cpu)
         , virq_out("virq_out", p_num_cpu)
-        , vfiq_out("vfiq_out", p_num_cpu)
-    {
-    }
+        , vfiq_out("vfiq_out", p_num_cpu) {}
 
-    void before_end_of_elaboration()
-    {
+    void before_end_of_elaboration() {
         QemuDevice::before_end_of_elaboration();
         int i;
 
@@ -101,8 +100,7 @@ public:
         }
     }
 
-    void end_of_elaboration()
-    {
+    void end_of_elaboration() {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 

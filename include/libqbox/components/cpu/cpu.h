@@ -36,15 +36,18 @@
 #include "libqbox/tlm-extensions/qemu-cpu-hint.h"
 #include "libqbox/ports/target-signal-socket.h"
 
-class QemuCpu : public QemuDevice, public QemuInitiatorIface {
+class QemuCpu : public QemuDevice, public QemuInitiatorIface
+{
 protected:
     /*
      * We have a unique copy per CPU of this extension, which is not dynamically allocated.
      * We really don't want the default implementation to call delete on it...
      */
-    class QemuCpuHintTlmExtension : public ::QemuCpuHintTlmExtension {
+    class QemuCpuHintTlmExtension : public ::QemuCpuHintTlmExtension
+    {
     public:
-        void free() override { /* leave my extension alone, TLM */ }
+        void free() override { /* leave my extension alone, TLM */
+        }
     };
 
     gs::RunOnSysC m_on_sysc;
@@ -63,14 +66,13 @@ protected:
     int64_t m_last_vclock;
 
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
-    bool m_finished=false;
+    bool m_finished = false;
     QemuCpuHintTlmExtension m_cpu_hint_ext;
 
     /*
      * Request quantum keeper from instance
      */
-    void create_quantum_keeper()
-    {
+    void create_quantum_keeper() {
         m_qk = m_inst.create_quantum_keeper();
 
         if (!m_qk) {
@@ -84,8 +86,7 @@ protected:
      * Given the quantum keeper nature (synchronous or asynchronous) and the
      * p_icount parameter, we can configure the QEMU instance accordingly.
      */
-    void set_coroutine_mode()
-    {
+    void set_coroutine_mode() {
         switch (m_qk->get_thread_type()) {
         case gs::SyncPolicy::SYSTEMC_THREAD:
             m_coroutines = true;
@@ -96,7 +97,6 @@ protected:
             break;
         }
     }
-
 
     /*
      * ---- CPU loop related methods ----
@@ -113,8 +113,7 @@ protected:
      * while the CPU thread go to sleep, the fact that the CPU thread is also
      * the SystemC thread will ensure correct ordering of the events.
      */
-    void set_signaled()
-    {
+    void set_signaled() {
         assert(!m_coroutines);
         if (m_inst.get_tcg_mode() != QemuInstance::TCG_SINGLE) {
             std::lock_guard<std::mutex> lock(m_signaled_lock);
@@ -131,8 +130,7 @@ protected:
      * SystemC thread watching the m_external_ev event list. Only used in MTTCG
      * mode.
      */
-    void watch_external_ev()
-    {
+    void watch_external_ev() {
         for (;;) {
             wait(m_external_ev);
             set_signaled();
@@ -143,8 +141,7 @@ protected:
      * Called when the CPU is kicked. We notify the corresponding async event
      * to wake the CPU up if it was sleeping waiting for work.
      */
-    void kick_cb()
-    {
+    void kick_cb() {
         if (m_coroutines) {
             m_qemu_kick_ev.async_notify();
         } else {
@@ -156,10 +153,7 @@ protected:
      * Called by the QEMU iothread when the deadline timer expires. We kick the
      * CPU out of its execution loop for it to call the end_of_loop_cb callback.
      */
-    void deadline_timer_cb()
-    {
-        m_cpu.kick();
-    }
+    void deadline_timer_cb() { m_cpu.kick(); }
 
     /*
      * The CPU does not have work anymore. Pause the CPU thread until we have
@@ -170,32 +164,33 @@ protected:
      * - In MTTCG mode, we wait on the m_signaled_cond condition, signaled when
      *   set_signaled is called.
      */
-    void wait_for_work()
-    {
-        if (m_finished) return;
+    void wait_for_work() {
+        if (m_finished)
+            return;
         m_qk->stop();
         if (m_coroutines) {
-            m_on_sysc.run_on_sysc([this] () { wait(m_external_ev); });
+            m_on_sysc.run_on_sysc([this]() { wait(m_external_ev); });
         } else {
             if (m_inst.get_tcg_mode() != QemuInstance::TCG_SINGLE) {
                 std::unique_lock<std::mutex> lock(m_signaled_lock);
                 m_signaled_cond.wait(lock, [this] { return m_signaled; });
                 m_signaled = false;
-            } else{
+            } else {
                 std::unique_lock<std::mutex> lock(m_inst.g_signaled_lock);
-                m_inst.g_signaled_cond.wait(lock, [this] { return m_inst.g_signaled | m_finished ; });
-                m_inst.g_signaled = false; 
+                m_inst.g_signaled_cond.wait(lock,
+                                            [this] { return m_inst.g_signaled | m_finished; });
+                m_inst.g_signaled = false;
             }
         }
-        if (m_finished) return;
+        if (m_finished)
+            return;
         m_qk->start();
     }
 
     /*
      * Set the deadline timer to trigger at the end of the time budget
      */
-    void rearm_deadline_timer()
-    {
+    void rearm_deadline_timer() {
         sc_core::sc_time run_budget;
         int64_t budget_ns, next_dl_ns;
 
@@ -213,8 +208,7 @@ protected:
      * Called before running the CPU. Lock the BQL and set the deadline timer
      * to not run beyond the time budget.
      */
-    void prepare_run_cpu()
-    {
+    void prepare_run_cpu() {
         /*
          * The QEMU CPU loop expect us to enter it with the iothread mutex locked.
          * It is then unlocked when we come back from the CPU loop, in
@@ -222,7 +216,7 @@ protected:
          */
         m_inst.get().lock_iothread();
 
-        if (m_inst.get_tcg_mode()==QemuInstance::TCG_SINGLE) {
+        if (m_inst.get_tcg_mode() == QemuInstance::TCG_SINGLE) {
             while (!m_inst.can_run()) {
                 m_inst.get().unlock_iothread();
                 wait_for_work();
@@ -245,16 +239,14 @@ protected:
     /*
      * Run the CPU loop. Only used in coroutine mode.
      */
-    void run_cpu_loop()
-    {
+    void run_cpu_loop() {
         m_cpu.loop();
 
         /*
          * Workaround in icount mode: sometimes, the CPU does not execute
          * on the first call of run_loop(). Give it a second chance.
          */
-        if ((m_inst.get().get_virtual_clock() == m_last_vclock)
-            && (m_cpu.can_run())) {
+        if ((m_inst.get().get_virtual_clock() == m_last_vclock) && (m_cpu.can_run())) {
             m_cpu.loop();
         }
     }
@@ -262,8 +254,7 @@ protected:
     /*
      * Called after a CPU loop run. It synchronizes with the kernel.
      */
-    void sync_with_kernel()
-    {
+    void sync_with_kernel() {
         sc_core::sc_time elapsed;
         int64_t now = m_inst.get().get_virtual_clock();
 
@@ -272,7 +263,9 @@ protected:
 
         m_inst.get().unlock_iothread();
 
-        if (now < m_last_vclock) {m_last_vclock = now;}
+        if (now < m_last_vclock) {
+            m_last_vclock = now;
+        }
         elapsed = sc_core::sc_time(now - m_last_vclock, sc_core::SC_NS);
         m_qk->inc(elapsed);
 
@@ -284,9 +277,7 @@ protected:
      * mode, we yield here to come back to run_cpu_loop(). In TCG thread mode,
      * we use this hook to synchronize with the kernel.
      */
-    void end_of_loop_cb()
-    {
-
+    void end_of_loop_cb() {
         if (m_coroutines) {
             m_inst.get().coroutine_yield();
         } else {
@@ -298,8 +289,7 @@ protected:
     /*
      * SystemC thread entry when running in coroutine mode.
      */
-    void mainloop_thread_coroutine()
-    {
+    void mainloop_thread_coroutine() {
         if (m_coroutines) {
             m_cpu.register_thread();
         }
@@ -321,22 +311,20 @@ public:
 
     SC_HAS_PROCESS(QemuCpu);
 
-    QemuCpu(const sc_core::sc_module_name &name, QemuInstance &inst,
-            const std::string &type_name)
+    QemuCpu(const sc_core::sc_module_name& name, QemuInstance& inst, const std::string& type_name)
         : QemuDevice(name, inst, (type_name + "-cpu").c_str())
         , halt("halt")
         , m_qemu_kick_ev(false)
         , m_signaled(false)
         , p_start_halted("start_halted", false, "Start halted by default is false")
         , p_gdb_port("gdb_port", 0, "Wait for gdb connection on TCP port <gdb_port>")
-        , socket("mem", *this, inst)
-    {
+        , socket("mem", *this, inst) {
         using namespace std::placeholders;
 
         m_external_ev |= m_qemu_kick_ev;
 
         auto cb = std::bind(&QemuCpu::halt_cb, this, _1);
-           halt.register_value_changed_cb(cb);
+        halt.register_value_changed_cb(cb);
 
         create_quantum_keeper();
         set_coroutine_mode();
@@ -348,8 +336,7 @@ public:
         m_inst.add_dev(this);
     }
 
-    virtual ~QemuCpu()
-    {
+    virtual ~QemuCpu() {
         m_inst.del_dev(this);
 
         if (!m_cpu.valid()) {
@@ -366,7 +353,7 @@ public:
             return;
         }
 
-        m_finished=true; // assert before taking lock
+        m_finished = true; // assert before taking lock
 
         m_inst.get().lock_iothread();
 
@@ -379,12 +366,11 @@ public:
         /* Unblock the CPU thread if it's sleeping */
         set_signaled();
 
-
         /* Unblock it if it's waiting for some I/O to complete */
         socket.cancel_all();
 
         /* Wait for QEMU to terminate the CPU thread */
-        if (m_inst.get_tcg_mode()==QemuInstance::TCG_MULTI) {
+        if (m_inst.get_tcg_mode() == QemuInstance::TCG_MULTI) {
             m_cpu.remove_sync();
         } else { // Handle non multi- non coroutine mode (SINGLE mode)
             m_cpu.set_unplug(true);
@@ -392,19 +378,14 @@ public:
         }
 
         m_inst.get().unlock_iothread();
-
     }
 
     /* NB this is usd to determin if this cpu can run in SINGLE mode
      * for the m_inst.can_run calculation
      */
-    bool can_run() override
-    {
-        return m_cpu.can_run();
-    }
+    bool can_run() override { return m_cpu.can_run(); }
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         QemuDevice::before_end_of_elaboration();
 
         m_cpu = qemu::Cpu(m_dev);
@@ -421,18 +402,14 @@ public:
         m_cpu.set_kick_callback(std::bind(&QemuCpu::kick_cb, this));
 
         m_deadline_timer = m_inst.get().timer_new();
-        m_deadline_timer->set_callback(std::bind(&QemuCpu::deadline_timer_cb,
-                                                 this));
+        m_deadline_timer->set_callback(std::bind(&QemuCpu::deadline_timer_cb, this));
 
         m_cpu_hint_ext.set_cpu(m_cpu);
     }
 
-    void halt_cb(const bool &val){
-        m_cpu.halt(val);
-    }
+    void halt_cb(const bool& val) { m_cpu.halt(val); }
 
-    virtual void end_of_elaboration() override
-    {
+    virtual void end_of_elaboration() override {
         QemuDevice::end_of_elaboration();
 
         if (!p_gdb_port.is_default_value()) {
@@ -447,13 +424,11 @@ public:
         }
 
         for (auto p : gs::sc_cci_children(sc_module::name())) {
-            SCP_WARN(SCMOD) << "Unexpected parameter "+ p + " to" + sc_module::name();
+            SCP_WARN(SCMOD) << "Unexpected parameter " + p + " to" + sc_module::name();
         }
-
     }
 
-    virtual void start_of_simulation() override
-    {
+    virtual void start_of_simulation() override {
         QemuDevice::start_of_simulation();
         m_cpu.reset();
         /* By default, we set the halt to release */
@@ -468,14 +443,12 @@ public:
     }
 
     /* QemuInitiatorIface  */
-    virtual void initiator_customize_tlm_payload(TlmPayload &payload) override
-    {
+    virtual void initiator_customize_tlm_payload(TlmPayload& payload) override {
         /* Signal the other end we are a CPU */
         payload.set_extension(&m_cpu_hint_ext);
     }
 
-    virtual void initiator_tidy_tlm_payload(TlmPayload &payload) override
-    {
+    virtual void initiator_tidy_tlm_payload(TlmPayload& payload) override {
         payload.clear_extension(&m_cpu_hint_ext);
     }
 
@@ -483,8 +456,7 @@ public:
      * Called by the initiator socket just before a memory transaction.
      * We update our current view of the local time and return it.
      */
-    virtual sc_core::sc_time initiator_get_local_time() override
-    {
+    virtual sc_core::sc_time initiator_get_local_time() override {
         using sc_core::sc_time;
         using sc_core::SC_NS;
 
@@ -502,8 +474,7 @@ public:
      * Called after the transaction. We must update our local time view to
      * match t.
      */
-    virtual void initiator_set_local_time(const sc_core::sc_time &t) override
-    {
+    virtual void initiator_set_local_time(const sc_core::sc_time& t) override {
         m_qk->set(t);
 
         if (m_qk->need_sync()) {
@@ -532,8 +503,6 @@ public:
 #endif
         }
     }
-
 };
-
 
 #endif

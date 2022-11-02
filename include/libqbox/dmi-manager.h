@@ -54,13 +54,14 @@ class QemuInstanceDmiManager
 {
 public:
     /* Simple container object used to parent the memory regions we create */
-    class QemuContainer : public qemu::Object {
+    class QemuContainer : public qemu::Object
+    {
     public:
-        static constexpr const char * const TYPE = "container";
+        static constexpr const char* const TYPE = "container";
 
         QemuContainer() = default;
-        QemuContainer(const QemuContainer &o) = default;
-        QemuContainer(const Object &o) : Object(o) {}
+        QemuContainer(const QemuContainer& o) = default;
+        QemuContainer(const Object& o): Object(o) {}
     };
 
     /**
@@ -79,21 +80,21 @@ public:
      * address.  This is not clearly stated in the TLM-2.0 standard but is
      * quite reasonable to assume.
      */
-    class DmiRegion {
+    class DmiRegion
+    {
     public:
         using Key = uintptr_t;
         using Ptr = std::shared_ptr<DmiRegion>;
 
     private:
-        void *m_ptr;
+        void* m_ptr;
 
         bool m_valid;
         QemuContainer m_container;
         qemu::MemoryRegion m_mr;
         uint64_t m_size;
 
-        void set_size(const tlm::tlm_dmi &info)
-        {
+        void set_size(const tlm::tlm_dmi& info) {
             uint64_t start, end;
 
             start = info.get_start_address();
@@ -110,56 +111,35 @@ public:
     public:
         DmiRegion() = default;
 
-        DmiRegion(const tlm::tlm_dmi &info, qemu::LibQemu &inst)
+        DmiRegion(const tlm::tlm_dmi& info, qemu::LibQemu& inst)
             : m_ptr(info.get_dmi_ptr())
             , m_valid(true)
             , m_container(inst.object_new_unparented<QemuContainer>())
-            , m_mr(inst.object_new_unparented<qemu::MemoryRegion>())
-        {
+            , m_mr(inst.object_new_unparented<qemu::MemoryRegion>()) {
             set_size(info);
-//          This will parent the objects
+            //          This will parent the objects
             m_mr.init_ram_ptr(m_container, "dmi", get_size(), m_ptr);
         }
 
-        virtual ~DmiRegion()
-        {
+        virtual ~DmiRegion() {
             SCP_INFO("Libqbox") << "Destroying DMI region for host ptr " << m_ptr;
         }
 
-        uint64_t get_size() const
-        {
-            return m_size;
-        }
+        uint64_t get_size() const { return m_size; }
 
-        qemu::MemoryRegion get_mr()
-        {
-            return m_mr;
-        }
+        qemu::MemoryRegion get_mr() { return m_mr; }
 
-        Key get_key() const
-        {
-            return reinterpret_cast<Key>(m_ptr);
-        }
+        Key get_key() const { return reinterpret_cast<Key>(m_ptr); }
 
-        void * get_ptr() const
-        {
-            return m_ptr;
-        }
+        void* get_ptr() const { return m_ptr; }
 
-        static Key key_from_tlm_dmi(const tlm::tlm_dmi &info)
-        {
+        static Key key_from_tlm_dmi(const tlm::tlm_dmi& info) {
             return reinterpret_cast<Key>(info.get_dmi_ptr());
         }
 
-        bool is_valid() const
-        {
-            return m_valid;
-        }
+        bool is_valid() const { return m_valid; }
 
-        void invalidate()
-        {
-            m_valid = false;
-        }
+        void invalidate() { m_valid = false; }
     };
 
     /**
@@ -173,7 +153,8 @@ public:
      * It embeds a shared pointer of the underlying DMI region. The DMI region
      * get destroyed once all aliases referencing it have been destroyed.
      */
-    class DmiRegionAlias {
+    class DmiRegionAlias
+    {
     private:
         DmiRegion::Ptr m_region;
 
@@ -189,58 +170,36 @@ public:
         using Ptr = std::shared_ptr<DmiRegionAlias>;
 
         /* Construct an invalid alias */
-        DmiRegionAlias()
-        {}
+        DmiRegionAlias() {}
 
-        DmiRegionAlias(DmiRegion::Ptr region, const tlm::tlm_dmi &info, qemu::LibQemu &inst)
+        DmiRegionAlias(DmiRegion::Ptr region, const tlm::tlm_dmi& info, qemu::LibQemu& inst)
             : m_region(region)
             , m_start(info.get_start_address())
             , m_end(info.get_end_address())
             , m_container(inst.object_new_unparented<QemuContainer>())
-            , m_alias(inst.object_new_unparented<qemu::MemoryRegion>())
-        {
-//          This will parent the objects.
-            m_alias.init_alias(m_container, "dmi-alias",
-                               m_region->get_mr(), 0,
+            , m_alias(inst.object_new_unparented<qemu::MemoryRegion>()) {
+            //          This will parent the objects.
+            m_alias.init_alias(m_container, "dmi-alias", m_region->get_mr(), 0,
                                m_region->get_size());
         }
 
         /* helpful for debugging */
-        ~DmiRegionAlias()
-        {
-            SCP_INFO("Libqbox") << "Destroying DMI region Alias";
-        }
+        ~DmiRegionAlias() { SCP_INFO("Libqbox") << "Destroying DMI region Alias"; }
 
-        DmiRegionAlias(DmiRegionAlias &&)=delete;
+        DmiRegionAlias(DmiRegionAlias&&) = delete;
 
-        uint64_t get_start() const
-        {
-            return m_start;
-        }
+        uint64_t get_start() const { return m_start; }
 
-        uint64_t get_end() const
-        {
-            return m_end;
-        }
+        uint64_t get_end() const { return m_end; }
 
-        uint64_t get_size() const
-        {
-            return m_region->get_size();
-        }
+        uint64_t get_size() const { return m_region->get_size(); }
 
-        qemu::MemoryRegion get_alias_mr() const
-        {
-            return m_alias;
-        }
+        qemu::MemoryRegion get_alias_mr() const { return m_alias; }
 
-        DmiRegion::Key get_key() const
-        {
-            return m_region->get_key();
-        }
+        DmiRegion::Key get_key() const { return m_region->get_key(); }
 
-        unsigned char * get_dmi_ptr() const
-        {
-            return reinterpret_cast<unsigned char *>(m_region->get_ptr());
+        unsigned char* get_dmi_ptr() const {
+            return reinterpret_cast<unsigned char*>(m_region->get_ptr());
         }
 
         /**
@@ -248,61 +207,47 @@ public:
          *
          * @note Must be called with the DMI manager lock held
          */
-        bool is_valid() const
-        {
-            return m_region && m_region->is_valid();
-        }
+        bool is_valid() const { return m_region && m_region->is_valid(); }
 
         /**
          * @brief Invalidate the underlying DMI region
          *
          * @note Must be called with the DMI manager lock held
          */
-        void invalidate_region()
-        {
-            m_region->invalidate();
-        }
+        void invalidate_region() { m_region->invalidate(); }
 
         /**
          * @brief Mark the alias as mapped onto QEMU root MR
          *
          * @note Must be called with the DMI manager lock held
          */
-        void set_installed()
-        {
-            m_installed = true;
-        }
+        void set_installed() { m_installed = true; }
 
         /**
          * @brief Return true if the alias is mapped onto QEMU root MR
          *
          * @note Must be called with the DMI manager lock held
          */
-        bool is_installed() const
-        {
-            return m_installed;
-        }
+        bool is_installed() const { return m_installed; }
     };
 
 protected:
-    qemu::LibQemu &m_inst;
+    qemu::LibQemu& m_inst;
     std::mutex m_mutex;
 
     /*
      * Keep a weak pointer on the DMI region so that they get destroyed once no
      * alias reference it anymore.
      */
-    std::map< DmiRegion::Key, std::weak_ptr<DmiRegion> > m_regions;
+    std::map<DmiRegion::Key, std::weak_ptr<DmiRegion> > m_regions;
 
-    DmiRegion::Ptr create_region(const tlm::tlm_dmi &info)
-    {
+    DmiRegion::Ptr create_region(const tlm::tlm_dmi& info) {
         DmiRegion::Ptr ret = std::make_shared<DmiRegion>(info, m_inst);
 
         return ret;
     }
 
-    DmiRegion::Ptr get_region(const tlm::tlm_dmi &info)
-    {
+    DmiRegion::Ptr get_region(const tlm::tlm_dmi& info) {
         DmiRegion::Key key = DmiRegion::key_from_tlm_dmi(info);
         DmiRegion::Ptr ret;
 
@@ -321,27 +266,22 @@ protected:
     }
 
 public:
-    QemuInstanceDmiManager(qemu::LibQemu &inst)
-        : m_inst(inst)
-    {}
+    QemuInstanceDmiManager(qemu::LibQemu& inst): m_inst(inst) {}
 
-    QemuInstanceDmiManager(const QemuInstanceDmiManager &) = delete;
+    QemuInstanceDmiManager(const QemuInstanceDmiManager&) = delete;
 
     /*
      * The move constructor is not locked as we do not expect concurrent code
      * to use the instance directly, but through the
      * LockedQemuInstanceDmiManager class.
      */
-    QemuInstanceDmiManager(QemuInstanceDmiManager &&a)
-        : m_inst(a.m_inst)
-        , m_regions(std::move(a.m_regions))
-    {}
+    QemuInstanceDmiManager(QemuInstanceDmiManager&& a)
+        : m_inst(a.m_inst), m_regions(std::move(a.m_regions)) {}
 
     /**
      * @brief Create a new alias for the DMI region designated by `info`
      */
-    DmiRegionAlias::Ptr get_new_region_alias(const tlm::tlm_dmi& info)
-    {
+    DmiRegionAlias::Ptr get_new_region_alias(const tlm::tlm_dmi& info) {
         DmiRegion::Ptr region(get_region(info));
 
         return std::make_shared<DmiRegionAlias>(region, info, m_inst);
@@ -366,23 +306,20 @@ public:
     using DmiRegion = QemuInstanceDmiManager::DmiRegion;
 
 protected:
-    QemuInstanceDmiManager &m_inst;
+    QemuInstanceDmiManager& m_inst;
     std::unique_lock<std::mutex> m_lock;
 
 public:
-    LockedQemuInstanceDmiManager(QemuInstanceDmiManager &inst)
-        : m_inst(inst)
-        , m_lock(inst.m_mutex)
-    {}
+    LockedQemuInstanceDmiManager(QemuInstanceDmiManager& inst)
+        : m_inst(inst), m_lock(inst.m_mutex) {}
 
-    LockedQemuInstanceDmiManager(const LockedQemuInstanceDmiManager &) = delete;
-    LockedQemuInstanceDmiManager(LockedQemuInstanceDmiManager &&) = default;
+    LockedQemuInstanceDmiManager(const LockedQemuInstanceDmiManager&) = delete;
+    LockedQemuInstanceDmiManager(LockedQemuInstanceDmiManager&&) = default;
 
     /**
      * @see QemuInstanceDmiManager::get_new_region_alias
      */
-    QemuInstanceDmiManager::DmiRegionAlias::Ptr get_new_region_alias(const tlm::tlm_dmi &info)
-    {
+    QemuInstanceDmiManager::DmiRegionAlias::Ptr get_new_region_alias(const tlm::tlm_dmi& info) {
         return m_inst.get_new_region_alias(info);
     }
 };

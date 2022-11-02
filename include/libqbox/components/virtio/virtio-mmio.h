@@ -27,7 +27,8 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 
-class QemuVirtioMMIO: public QemuDevice {
+class QemuVirtioMMIO : public QemuDevice
+{
 public:
     QemuTargetSocket<> socket;
     QemuInitiatorSignalSocket irq_out;
@@ -41,16 +42,13 @@ public:
      *       + qdev-child (this QemuVirtioMMIO object):
      *       + qemu-type: "virtio-net-device"
      */
-    QemuVirtioMMIO(sc_core::sc_module_name nm, QemuInstance &inst, const char* device_type)
-            : QemuDevice(nm, inst, device_type)
-            , virtio_mmio_device("virtio-mmio", inst, "virtio-mmio")
-            , socket("mem", inst)
-            , irq_out("irq-out")
-    {
-    }
+    QemuVirtioMMIO(sc_core::sc_module_name nm, QemuInstance& inst, const char* device_type)
+        : QemuDevice(nm, inst, device_type)
+        , virtio_mmio_device("virtio-mmio", inst, "virtio-mmio")
+        , socket("mem", inst)
+        , irq_out("irq-out") {}
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         virtio_mmio_device.instantiate();
         QemuDevice::before_end_of_elaboration();
 
@@ -60,8 +58,7 @@ public:
         virtio_mmio_device.get_qemu_dev().set_prop_bool("format_transport_address", false);
     }
 
-    void end_of_elaboration() override
-    {
+    void end_of_elaboration() override {
         /*
          * we realize virtio_mmio_device first because
          * it creates the "virtio-mmio-bus" we need below

@@ -27,8 +27,8 @@
 
 #include "test/tester/mmio.h"
 
-
-class CpuTesterExclusive : public CpuTester {
+class CpuTesterExclusive : public CpuTester
+{
 public:
     static constexpr uint64_t MMIO_ADDR = 0x80000000;
     static constexpr size_t MMIO_SIZE = 1024;
@@ -43,18 +43,15 @@ protected:
 public:
     TargetSocket socket;
 
-    CpuTesterExclusive(const sc_core::sc_module_name &n, CpuTesterCallbackIface &cbs)
-        : CpuTester(n, cbs)
-        , m_monitor("exclusive-monitor")
-    {
+    CpuTesterExclusive(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs)
+        : CpuTester(n, cbs), m_monitor("exclusive-monitor") {
         register_b_transport(socket, SOCKET_MMIO);
 
         m_cbs.map_target(m_monitor.front_socket, MMIO_ADDR, MMIO_SIZE);
         socket.bind(m_monitor.back_socket);
     }
 
-    void lock_region_64(uint64_t start)
-    {
+    void lock_region_64(uint64_t start) {
         using namespace tlm;
 
         tlm_generic_payload txn;
@@ -67,7 +64,7 @@ public:
         pid.push_back(0x1337);
 
         txn.set_address(start);
-        txn.set_data_ptr(reinterpret_cast<uint8_t *>(&buf));
+        txn.set_data_ptr(reinterpret_cast<uint8_t*>(&buf));
         txn.set_data_length(sizeof(buf));
         txn.set_command(TLM_READ_COMMAND);
         txn.set_response_status(TLM_INCOMPLETE_RESPONSE);
@@ -79,8 +76,6 @@ public:
         txn.clear_extension(&ext);
         txn.clear_extension(&pid);
     }
-
 };
 
 #endif
-

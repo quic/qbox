@@ -28,26 +28,26 @@
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/components/virtio/virtio-mmio.h"
 
-class QemuVirtioMMIOBlk : public QemuVirtioMMIO {
+class QemuVirtioMMIOBlk : public QemuVirtioMMIO
+{
 private:
     std::string blkdev_id;
     cci::cci_param<std::string> blkdev_str;
+
 public:
-    QemuVirtioMMIOBlk(sc_core::sc_module_name nm, QemuInstance &inst)
-            : QemuVirtioMMIO(nm, inst, "virtio-blk-device")
-            , blkdev_id(std::string(name()) + "-id")
-            , blkdev_str("blkdev_str","","blkdev string for QEMU (do not specify ID)")
-    {
+    QemuVirtioMMIOBlk(sc_core::sc_module_name nm, QemuInstance& inst)
+        : QemuVirtioMMIO(nm, inst, "virtio-blk-device")
+        , blkdev_id(std::string(name()) + "-id")
+        , blkdev_str("blkdev_str", "", "blkdev string for QEMU (do not specify ID)") {
         std::stringstream opts;
         opts << blkdev_str.get_value();
-        opts <<",id="<<blkdev_id;
+        opts << ",id=" << blkdev_id;
 
         m_inst.add_arg("-drive");
         m_inst.add_arg(opts.str().c_str());
     }
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         QemuVirtioMMIO::before_end_of_elaboration();
 
         m_dev.set_prop_parse("drive", blkdev_id.c_str());

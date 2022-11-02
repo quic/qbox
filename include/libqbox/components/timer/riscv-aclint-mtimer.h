@@ -28,7 +28,8 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/components/device.h"
 
-class QemuRiscvAclintMtimer : public QemuDevice {
+class QemuRiscvAclintMtimer : public QemuDevice
+{
 public:
     cci::cci_param<unsigned int> p_num_harts;
     cci::cci_param<uint64_t> p_timecmp_base;
@@ -39,20 +40,19 @@ public:
 
     QemuTargetSocket<> socket;
 
-    QemuRiscvAclintMtimer(sc_core::sc_module_name nm, QemuInstance &inst)
-            : QemuDevice(nm, inst, "riscv.aclint.mtimer")
-            , p_num_harts("num_harts", 0, "Number of HARTS this CLINT is connected to")
-            , p_timecmp_base("timecmp_base", 0, "Base address for the TIMECMP registers")
-            , p_time_base("time_base", 0, "Base address for the TIME registers")
-            , p_aperture_size("aperture_size", 0, "Size of the whole CLINT address space")
-            , p_timebase_freq("timebase_freq", 10000000, "")
-            , p_provide_rdtime("provide_rdtime", false, "If true, provide the CPU with "
-                                                        "a rdtime register")
-            , socket("mem", inst)
-    {}
+    QemuRiscvAclintMtimer(sc_core::sc_module_name nm, QemuInstance& inst)
+        : QemuDevice(nm, inst, "riscv.aclint.mtimer")
+        , p_num_harts("num_harts", 0, "Number of HARTS this CLINT is connected to")
+        , p_timecmp_base("timecmp_base", 0, "Base address for the TIMECMP registers")
+        , p_time_base("time_base", 0, "Base address for the TIME registers")
+        , p_aperture_size("aperture_size", 0, "Size of the whole CLINT address space")
+        , p_timebase_freq("timebase_freq", 10000000, "")
+        , p_provide_rdtime("provide_rdtime", false,
+                           "If true, provide the CPU with "
+                           "a rdtime register")
+        , socket("mem", inst) {}
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         QemuDevice::before_end_of_elaboration();
 
         m_dev.set_prop_int("num-harts", p_num_harts);
@@ -63,8 +63,7 @@ public:
         m_dev.set_prop_bool("provide-rdtime", p_provide_rdtime);
     }
 
-    void end_of_elaboration() override
-    {
+    void end_of_elaboration() override {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 

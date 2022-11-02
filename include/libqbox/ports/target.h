@@ -25,7 +25,8 @@
 #include "libqbox/tlm-extensions/qemu-cpu-hint.h"
 #include "libqbox/tlm-extensions/qemu-mr-hint.h"
 
-class TlmTargetToQemuBridge : public tlm::tlm_fw_transport_if<> {
+class TlmTargetToQemuBridge : public tlm::tlm_fw_transport_if<>
+{
 public:
     using MemTxAttrs = qemu::MemoryRegion::MemTxAttrs;
     using MemTxResult = qemu::MemoryRegion::MemTxResult;
@@ -35,16 +36,14 @@ protected:
     qemu::MemoryRegion m_mr;
     std::shared_ptr<qemu::AddressSpace> m_as;
 
-    void init_as()
-    {
+    void init_as() {
         m_as = m_mr.get_inst().address_space_new();
         m_as->init(m_mr, "qemu-target-socket");
     }
 
-    qemu::Cpu push_current_cpu(TlmPayload &trans)
-    {
+    qemu::Cpu push_current_cpu(TlmPayload& trans) {
         qemu::Cpu ret;
-        QemuCpuHintTlmExtension *ext = nullptr;
+        QemuCpuHintTlmExtension* ext = nullptr;
 
         trans.get_extension(ext);
 
@@ -65,8 +64,7 @@ protected:
         return ret;
     }
 
-    void pop_current_cpu(qemu::Cpu cpu)
-    {
+    void pop_current_cpu(qemu::Cpu cpu) {
         if (!cpu.valid()) {
             return;
         }
@@ -75,23 +73,19 @@ protected:
     }
 
 public:
-    void init(qemu::SysBusDevice sbd, int mmio_idx)
-    {
+    void init(qemu::SysBusDevice sbd, int mmio_idx) {
         m_mr = sbd.mmio_get_region(mmio_idx);
         init_as();
     }
 
-    void init_with_mr(qemu::MemoryRegion mr)
-    {
+    void init_with_mr(qemu::MemoryRegion mr) {
         m_mr = mr;
         init_as();
     }
 
-    virtual void b_transport(TlmPayload& trans,
-                             sc_core::sc_time& t)
-    {
+    virtual void b_transport(TlmPayload& trans, sc_core::sc_time& t) {
         uint64_t addr = trans.get_address();
-        uint64_t *data = reinterpret_cast<uint64_t *>(trans.get_data_ptr());
+        uint64_t* data = reinterpret_cast<uint64_t*>(trans.get_data_ptr());
         unsigned int size = trans.get_data_length();
         MemTxAttrs attrs;
         MemTxResult res;
@@ -142,23 +136,16 @@ public:
         pop_current_cpu(current_cpu_save);
     }
 
-    virtual tlm::tlm_sync_enum nb_transport_fw(TlmPayload& trans,
-                                               tlm::tlm_phase& phase,
-                                               sc_core::sc_time& t)
-    {
+    virtual tlm::tlm_sync_enum nb_transport_fw(TlmPayload& trans, tlm::tlm_phase& phase,
+                                               sc_core::sc_time& t) {
         /* TODO: report an error */
         abort();
         return tlm::TLM_ACCEPTED;
     }
 
-    virtual bool get_direct_mem_ptr(TlmPayload& trans,
-                                    tlm::tlm_dmi& dmi_data)
-    {
-        return false;
-    }
+    virtual bool get_direct_mem_ptr(TlmPayload& trans, tlm::tlm_dmi& dmi_data) { return false; }
 
-    virtual unsigned int transport_dbg(TlmPayload& trans)
-    {
+    virtual unsigned int transport_dbg(TlmPayload& trans) {
         unsigned int size = trans.get_data_length();
         sc_core::sc_time delay = sc_core::SC_ZERO_TIME;
         b_transport(trans, delay);
@@ -170,37 +157,27 @@ public:
 };
 
 template <unsigned int BUSWIDTH = 32>
-class QemuTargetSocket : public tlm::tlm_target_socket<BUSWIDTH,
-                                                       tlm::tlm_base_protocol_types,
-                                                       1, sc_core::SC_ZERO_OR_MORE_BOUND> {
+class QemuTargetSocket : public tlm::tlm_target_socket<BUSWIDTH, tlm::tlm_base_protocol_types, 1,
+                                                       sc_core::SC_ZERO_OR_MORE_BOUND>
+{
 public:
-    using TlmTargetSocket = tlm::tlm_target_socket<BUSWIDTH,
-                                                   tlm::tlm_base_protocol_types,
-                                                   1, sc_core::SC_ZERO_OR_MORE_BOUND>;
+    using TlmTargetSocket = tlm::tlm_target_socket<BUSWIDTH, tlm::tlm_base_protocol_types, 1,
+                                                   sc_core::SC_ZERO_OR_MORE_BOUND>;
     using TlmPayload = tlm::tlm_generic_payload;
 
 protected:
     TlmTargetToQemuBridge m_bridge;
-    QemuInstance &m_inst;
+    QemuInstance& m_inst;
     qemu::SysBusDevice m_sbd;
 
 public:
-    QemuTargetSocket(const char *name, QemuInstance &inst)
-        : TlmTargetSocket(name)
-        , m_inst(inst)
-    {
+    QemuTargetSocket(const char* name, QemuInstance& inst): TlmTargetSocket(name), m_inst(inst) {
         TlmTargetSocket::bind(m_bridge);
     }
 
-    void init(qemu::SysBusDevice sbd, int mmio_idx)
-    {
-        m_bridge.init(sbd, mmio_idx);
-    }
+    void init(qemu::SysBusDevice sbd, int mmio_idx) { m_bridge.init(sbd, mmio_idx); }
 
-    void init_with_mr(qemu::MemoryRegion mr)
-    {
-        m_bridge.init_with_mr(mr);
-    }
+    void init_with_mr(qemu::MemoryRegion mr) { m_bridge.init_with_mr(mr); }
 };
 
 #endif

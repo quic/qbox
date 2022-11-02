@@ -28,27 +28,25 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/components/device.h"
 
-class QemuRiscvAclintSwi : public QemuDevice {
+class QemuRiscvAclintSwi : public QemuDevice
+{
 public:
     cci::cci_param<unsigned int> p_num_harts;
 
     QemuTargetSocket<> socket;
 
-    QemuRiscvAclintSwi(sc_core::sc_module_name nm, QemuInstance &inst)
-            : QemuDevice(nm, inst, "riscv.aclint.swi")
-            , p_num_harts("num_harts", 0, "Number of HARTS this CLINT is connected to")
-            , socket("mem", inst)
-    {}
+    QemuRiscvAclintSwi(sc_core::sc_module_name nm, QemuInstance& inst)
+        : QemuDevice(nm, inst, "riscv.aclint.swi")
+        , p_num_harts("num_harts", 0, "Number of HARTS this CLINT is connected to")
+        , socket("mem", inst) {}
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         QemuDevice::before_end_of_elaboration();
 
         m_dev.set_prop_int("num-harts", p_num_harts);
     }
 
-    void end_of_elaboration() override
-    {
+    void end_of_elaboration() override {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 

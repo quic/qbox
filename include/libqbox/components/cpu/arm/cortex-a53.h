@@ -31,13 +31,13 @@
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
 
-class QemuCpuArmCortexA53 : public QemuCpu {
+class QemuCpuArmCortexA53 : public QemuCpu
+{
 public:
     static constexpr qemu::Target ARCH = qemu::Target::AARCH64;
 
 protected:
-    int get_psci_conduit_val() const
-    {
+    int get_psci_conduit_val() const {
         if (p_psci_conduit.get_value() == "disabled") {
             return 0;
         } else if (p_psci_conduit.get_value() == "smc") {
@@ -50,16 +50,14 @@ protected:
         }
     }
 
-    void add_exclusive_ext(TlmPayload &pl)
-    {
-        ExclusiveAccessTlmExtension *ext = new ExclusiveAccessTlmExtension;
+    void add_exclusive_ext(TlmPayload& pl) {
+        ExclusiveAccessTlmExtension* ext = new ExclusiveAccessTlmExtension;
         ext->add_hop(m_cpu.get_index());
         pl.set_extension(ext);
     }
 
-    static uint64_t extract_data_from_payload(const TlmPayload &pl)
-    {
-        uint8_t *ptr = pl.get_data_ptr() + pl.get_data_length() - 1;
+    static uint64_t extract_data_from_payload(const TlmPayload& pl) {
+        uint8_t* ptr = pl.get_data_ptr() + pl.get_data_length() - 1;
         uint64_t ret = 0;
 
         /* QEMU never accesses more than 64 bits at the same time */
@@ -90,17 +88,19 @@ public:
     QemuInitiatorSignalSocket irq_timer_hyp_out;
     QemuInitiatorSignalSocket irq_timer_sec_out;
 
-    QemuCpuArmCortexA53(sc_core::sc_module_name name, QemuInstance &inst)
+    QemuCpuArmCortexA53(sc_core::sc_module_name name, QemuInstance& inst)
         : QemuCpu(name, inst, "cortex-a53-arm")
         , p_mp_affinity("mp_affinity", 0, "Multi-processor affinity value")
         , p_has_el2("has_el2", true, "ARM virtualization extensions")
         , p_has_el3("has_el3", true, "ARM secure-mode extensions")
-        , p_start_powered_off("start_powered_off", false, "Start and reset the CPU "
-                                                          "in powered-off state")
-        , p_psci_conduit("psci_conduit", "disabled", "Set the QEMU PSCI conduit: "
-                                                     "disabled->no conduit, "
-                                                     "hvc->through hvc call, "
-                                                     "smc->through smc call")
+        , p_start_powered_off("start_powered_off", false,
+                              "Start and reset the CPU "
+                              "in powered-off state")
+        , p_psci_conduit("psci_conduit", "disabled",
+                         "Set the QEMU PSCI conduit: "
+                         "disabled->no conduit, "
+                         "hvc->through hvc call, "
+                         "smc->through smc call")
         , p_rvbar("rvbar", 0ull, "Reset vector base address register value")
 
         , irq_in("irq_in")
@@ -110,16 +110,14 @@ public:
         , irq_timer_phys_out("irq_timer_phys_out")
         , irq_timer_virt_out("irq_timer_virt_out")
         , irq_timer_hyp_out("irq_timer_hyp_out")
-        , irq_timer_sec_out("irq_timer_sec_out")
-    {
+        , irq_timer_sec_out("irq_timer_sec_out") {
         m_external_ev |= irq_in->default_event();
         m_external_ev |= fiq_in->default_event();
         m_external_ev |= virq_in->default_event();
         m_external_ev |= vfiq_in->default_event();
     }
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         QemuCpu::before_end_of_elaboration();
 
         qemu::CpuAarch64 cpu(m_cpu);
@@ -137,8 +135,7 @@ public:
         cpu.set_prop_int("rvbar", p_rvbar);
     }
 
-    void end_of_elaboration() override
-    {
+    void end_of_elaboration() override {
         QemuCpu::end_of_elaboration();
 
         irq_in.init(m_dev, 0);
@@ -152,8 +149,7 @@ public:
         irq_timer_sec_out.init(m_dev, 3);
     }
 
-    void initiator_customize_tlm_payload(TlmPayload &payload) override
-    {
+    void initiator_customize_tlm_payload(TlmPayload& payload) override {
         uint64_t addr;
         qemu::CpuAarch64 arm_cpu(m_cpu);
 
@@ -178,11 +174,10 @@ public:
         add_exclusive_ext(payload);
     }
 
-    void initiator_tidy_tlm_payload(TlmPayload &payload) override
-    {
+    void initiator_tidy_tlm_payload(TlmPayload& payload) override {
         using namespace tlm;
 
-        ExclusiveAccessTlmExtension *ext;
+        ExclusiveAccessTlmExtension* ext;
         qemu::CpuAarch64 arm_cpu(m_cpu);
 
         QemuCpu::initiator_tidy_tlm_payload(payload);
@@ -211,8 +206,8 @@ public:
                 uint64_t exclusive_val = arm_cpu.get_exclusive_val();
                 uint64_t mem_val = extract_data_from_payload(payload);
                 uint64_t mask = (payload.get_data_length() == 8)
-                    ? -1
-                    : (1 << (8 * payload.get_data_length())) - 1;
+                                    ? -1
+                                    : (1 << (8 * payload.get_data_length())) - 1;
 
                 if ((exclusive_val & mask) == mem_val) {
                     arm_cpu.set_exclusive_val(~exclusive_val);

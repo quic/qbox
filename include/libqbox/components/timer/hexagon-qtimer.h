@@ -29,7 +29,8 @@
 #include "libqbox/ports/target-signal-socket.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 
-class QemuHexagonQtimer : public QemuDevice {
+class QemuHexagonQtimer : public QemuDevice
+{
 protected:
     cci::cci_param<unsigned int> p_nr_frames;
     cci::cci_param<unsigned int> p_nr_views;
@@ -50,30 +51,25 @@ public:
     sc_core::sc_vector<QemuInitiatorSignalSocket> irq;
 
 public:
-    QemuHexagonQtimer(sc_core::sc_module_name nm, QemuInstance &inst)
+    QemuHexagonQtimer(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuDevice(nm, inst, "qct-qtimer")
         , p_nr_frames("nr_frames", 2, "Number of frames")
         , p_nr_views("nr_views", 1, "Number of views")
         , p_cnttid("cnttid", 0x11, "Value of cnttid")
         , socket("mem", inst)
         , view_socket("mem_view", inst)
-        , irq("irq", p_nr_frames.get_value(), [] (const char *n, size_t i) {
-                     return new QemuInitiatorSignalSocket(n);
-                 })
-    {}
+        , irq("irq", p_nr_frames.get_value(),
+              [](const char* n, size_t i) { return new QemuInitiatorSignalSocket(n); }) {}
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         QemuDevice::before_end_of_elaboration();
 
         m_dev.set_prop_int("nr_frames", p_nr_frames);
         m_dev.set_prop_int("nr_views", p_nr_views);
         m_dev.set_prop_int("cnttid", p_cnttid);
-
     }
 
-    void end_of_elaboration() override
-    {
+    void end_of_elaboration() override {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 

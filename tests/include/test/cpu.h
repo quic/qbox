@@ -47,8 +47,7 @@ public:
     static constexpr size_t MEM_SIZE = 256 * 1024;
 
 private:
-    ks_arch qemu_to_ks_arch(qemu::Target arch)
-    {
+    ks_arch qemu_to_ks_arch(qemu::Target arch) {
         switch (arch) {
         case qemu::Target::AARCH64:
             return KS_ARCH_ARM64;
@@ -68,12 +67,11 @@ protected:
     gs::Router<> m_router;
     gs::Memory<> m_mem;
 
-    void set_firmware(const char *assembly)
-    {
-        ks_engine *ks;
+    void set_firmware(const char* assembly) {
+        ks_engine* ks;
         ks_err err;
         size_t size, count;
-        uint8_t *fw;
+        uint8_t* fw;
 
         err = ks_open(qemu_to_ks_arch(m_arch), KS_MODE_LITTLE_ENDIAN, &ks);
 
@@ -94,14 +92,13 @@ protected:
     }
 
 public:
-    CpuTestBenchBase(const sc_core::sc_module_name &n, qemu::Target arch)
+    CpuTestBenchBase(const sc_core::sc_module_name& n, qemu::Target arch)
         : TestBench(n)
         , m_arch(arch)
         , p_num_cpu("num_cpu", 1, "Number of CPUs to instantiate in the test")
         , p_quantum_ns("quantum_ns", 1000000, "Value of the global TLM-2.0 quantum in ns")
         , m_router("router")
-        , m_mem("mem", MEM_SIZE)
-    {
+        , m_mem("mem", MEM_SIZE) {
         using tlm_utils::tlm_quantumkeeper;
 
         m_router.add_target(m_mem.socket, MEM_ADDR, MEM_SIZE);
@@ -110,28 +107,21 @@ public:
         tlm_quantumkeeper::set_global_quantum(global_quantum);
     }
 
-    unsigned int get_num_cpus()
-    {
-        return p_num_cpu;
-    }
+    unsigned int get_num_cpus() { return p_num_cpu; }
 
-    void map_target(tlm::tlm_target_socket<> &s, uint64_t addr, uint64_t size)
-    {
+    void map_target(tlm::tlm_target_socket<>& s, uint64_t addr, uint64_t size) {
         m_router.add_target(s, addr, size);
     }
 
-    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len)
-    {
+    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) {
         TEST_FAIL("Unexpected CPU read");
     }
 
-    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len)
-    {
+    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) {
         TEST_FAIL("Unexpected CPU write");
     }
 
-    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi &ret)
-    {
+    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) {
         TEST_FAIL("Unexpected DMI request");
         return false;
     }
@@ -142,36 +132,35 @@ class CpuTestBench : public CpuTestBenchBase
 {
 protected:
     QemuInstanceManager m_inst_manager;
-    QemuInstance &m_inst_a;
-    QemuInstance &m_inst_b;
+    QemuInstance& m_inst_a;
+    QemuInstance& m_inst_b;
 
     sc_core::sc_vector<CPU> m_cpus;
     TESTER m_tester;
-    bool ab=false;
+    bool ab = false;
 
 public:
-    CpuTestBench(const sc_core::sc_module_name &n)
+    CpuTestBench(const sc_core::sc_module_name& n)
         : CpuTestBenchBase(n, CPU::ARCH)
-        , m_inst_a(m_inst_manager.new_instance("inst_a",CPU::ARCH))
-        , m_inst_b(m_inst_manager.new_instance("inst_b",CPU::ARCH))
-        , m_cpus("cpu", p_num_cpu,  [this](const char *n, int i) {
-                   ab = !ab;
-                   return new CPU(n, ab ? m_inst_a : m_inst_b);
+        , m_inst_a(m_inst_manager.new_instance("inst_a", CPU::ARCH))
+        , m_inst_b(m_inst_manager.new_instance("inst_b", CPU::ARCH))
+        , m_cpus("cpu", p_num_cpu,
+                 [this](const char* n, int i) {
+                     ab = !ab;
+                     return new CPU(n, ab ? m_inst_a : m_inst_b);
                  })
-        , m_tester("tester", *this)
-    {
+        , m_tester("tester", *this) {
         int i = 0;
-        for (CPU &cpu: m_cpus) {
+        for (CPU& cpu : m_cpus) {
             cpu.p_mp_affinity = i++;
             m_router.add_initiator(cpu.socket);
         }
     }
 
-    void map_irqs_to_cpus(sc_core::sc_vector< InitiatorSignalSocket<bool> > &irqs)
-    {
+    void map_irqs_to_cpus(sc_core::sc_vector<InitiatorSignalSocket<bool>>& irqs) {
         int i = 0;
 
-        for (auto &cpu: m_cpus) {
+        for (auto& cpu : m_cpus) {
             switch (CPU::ARCH) {
             case qemu::Target::AARCH64:
                 irqs[i++].bind(cpu.irq_in);
@@ -182,14 +171,13 @@ public:
         }
     }
 
-    void map_halt_to_cpus(sc_core::sc_vector<sc_core::sc_out<bool>> &halt){
-
+    void map_halt_to_cpus(sc_core::sc_vector<sc_core::sc_out<bool>>& halt) {
         int i = 0;
 
-        for (auto &cpu: m_cpus) {
-                halt[i++].bind(cpu.halt);
-            }
+        for (auto& cpu : m_cpus) {
+            halt[i++].bind(cpu.halt);
         }
+    }
 };
 
 #endif

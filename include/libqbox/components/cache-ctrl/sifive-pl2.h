@@ -30,22 +30,17 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/target-signal-socket.h"
 
-class QemuRiscvSifivePl2 : public QemuDevice {
+class QemuRiscvSifivePl2 : public QemuDevice
+{
 public:
     QemuTargetSocket<> socket;
 
-    QemuRiscvSifivePl2(sc_core::sc_module_name nm, QemuInstance &inst)
-        : QemuDevice(nm, inst, "sifive,pL2Cache0")
-        , socket("mem", inst)
-    {}
+    QemuRiscvSifivePl2(sc_core::sc_module_name nm, QemuInstance& inst)
+        : QemuDevice(nm, inst, "sifive,pL2Cache0"), socket("mem", inst) {}
 
-    void before_end_of_elaboration() override
-    {
-        QemuDevice::before_end_of_elaboration();
-    }
+    void before_end_of_elaboration() override { QemuDevice::before_end_of_elaboration(); }
 
-    void end_of_elaboration() override
-    {
+    void end_of_elaboration() override {
         QemuDevice::end_of_elaboration();
 
         qemu::SysBusDevice sbd(get_qemu_dev());

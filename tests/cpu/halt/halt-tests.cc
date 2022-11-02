@@ -78,10 +78,8 @@ protected:
 
 public:
     SC_HAS_PROCESS(CpuArmCortexA53SimpleHalt);
-    CpuArmCortexA53SimpleHalt(const sc_core::sc_module_name &n)
-        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>(n)
-        , halt("halt", p_num_cpu)
-    {
+    CpuArmCortexA53SimpleHalt(const sc_core::sc_module_name& n)
+        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>(n), halt("halt", p_num_cpu) {
         char buf[1024];
 
         map_halt_to_cpus(halt);
@@ -93,11 +91,9 @@ public:
             cpu.p_start_powered_off = false;
             cpu.p_start_halted = true;
             im_halted[i] = true;
-            }
+        }
 
-        std::snprintf(buf, sizeof(buf), FIRMWARE,
-                      CpuTesterMmio::MMIO_ADDR,
-                      NUM_WRITES*2);
+        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterMmio::MMIO_ADDR, NUM_WRITES * 2);
         set_firmware(buf);
 
         m_writes.resize(p_num_cpu);
@@ -105,16 +101,15 @@ public:
             m_writes[i] = 0;
         }
 
-        SC_THREAD(halt_ctrl)
-
+        SC_THREAD(halt_ctrl);
     }
 
-    void halt_ctrl(){
-        for (int t = 0; t < 5; t++){
+    void halt_ctrl() {
+        for (int t = 0; t < 5; t++) {
             wait(100000000000, SC_NS);
             sleep(1);
             for (int i = 0; i < m_cpus.size(); i++) {
-                if (im_halted[i]){
+                if (im_halted[i]) {
                     halt[i].write(0);
                     im_halted[i] = false;
                 }
@@ -122,12 +117,9 @@ public:
         }
     }
 
-    virtual ~CpuArmCortexA53SimpleHalt()
-    {
-    }
+    virtual ~CpuArmCortexA53SimpleHalt() {}
 
-    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override
-    {
+    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override {
         int cpuid = addr >> 3;
 
         SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data;
@@ -136,23 +128,21 @@ public:
         TEST_ASSERT(data == m_writes[cpuid]);
 
         m_writes[cpuid]++;
-        std::cout<<"m_writes (mmio_write) = "<<m_writes[cpuid]<<std::endl;
+        std::cout << "m_writes (mmio_write) = " << m_writes[cpuid] << std::endl;
 
         TEST_ASSERT(im_halted[cpuid] == false);
 
-        if(m_writes[cpuid] == 5){
+        if (m_writes[cpuid] == 5) {
             halt[cpuid].write(1);
             im_halted[cpuid] = true;
         }
 
-        if (m_writes[cpuid] == NUM_WRITES){
+        if (m_writes[cpuid] == NUM_WRITES) {
             halt[cpuid].write(1);
         }
-        
     }
 
-    virtual void end_of_simulation() override
-    {
+    virtual void end_of_simulation() override {
         CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>::end_of_simulation();
         for (int i = 0; i < p_num_cpu; i++) {
             SCP_INFO(SCMOD) << "m_writes (end_of_simulation) = " << m_writes[i];
@@ -161,9 +151,8 @@ public:
     }
 };
 
-constexpr const char * CpuArmCortexA53SimpleHalt::FIRMWARE;
+constexpr const char* CpuArmCortexA53SimpleHalt::FIRMWARE;
 
-int sc_main(int argc, char *argv[])
-{
+int sc_main(int argc, char* argv[]) {
     return run_testbench<CpuArmCortexA53SimpleHalt>(argc, argv);
 }

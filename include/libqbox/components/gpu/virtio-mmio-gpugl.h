@@ -28,17 +28,14 @@
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/components/virtio/virtio-mmio.h"
 
-class QemuVirtioMMIOGpuGl : public QemuVirtioMMIO {
+class QemuVirtioMMIOGpuGl : public QemuVirtioMMIO
+{
 private:
 public:
-    QemuVirtioMMIOGpuGl(sc_core::sc_module_name nm, QemuInstance &inst)
-            : QemuVirtioMMIO(nm, inst, "virtio-gpu-gl-device")
-    {
+    QemuVirtioMMIOGpuGl(sc_core::sc_module_name nm, QemuInstance& inst)
+        : QemuVirtioMMIO(nm, inst, "virtio-gpu-gl-device") {
         m_inst.set_display_arg("sdl,gl=on");
     }
 
-    void before_end_of_elaboration() override
-    {
-        QemuVirtioMMIO::before_end_of_elaboration();
-    }
+    void before_end_of_elaboration() override { QemuVirtioMMIO::before_end_of_elaboration(); }
 };

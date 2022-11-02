@@ -28,26 +28,27 @@
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/components/virtio/virtio-mmio.h"
 
-class QemuVirtioMMIONet : public QemuVirtioMMIO {
+class QemuVirtioMMIONet : public QemuVirtioMMIO
+{
 private:
     std::string netdev_id;
     cci::cci_param<std::string> netdev_str;
+
 public:
-    QemuVirtioMMIONet(sc_core::sc_module_name nm, QemuInstance &inst)
-            : QemuVirtioMMIO(nm, inst, "virtio-net-device")
-            , netdev_id(std::string(name()) + "-id")
-            , netdev_str("netdev_str","user,hostfwd=tcp::2222-:22","netdev string for QEMU (do not specify ID)")
-    {
+    QemuVirtioMMIONet(sc_core::sc_module_name nm, QemuInstance& inst)
+        : QemuVirtioMMIO(nm, inst, "virtio-net-device")
+        , netdev_id(std::string(name()) + "-id")
+        , netdev_str("netdev_str", "user,hostfwd=tcp::2222-:22",
+                     "netdev string for QEMU (do not specify ID)") {
         std::stringstream opts;
         opts << netdev_str.get_value();
-        opts <<",id="<<netdev_id;
+        opts << ",id=" << netdev_id;
 
         m_inst.add_arg("-netdev");
         m_inst.add_arg(opts.str().c_str());
     }
 
-    void before_end_of_elaboration() override
-    {
+    void before_end_of_elaboration() override {
         QemuVirtioMMIO::before_end_of_elaboration();
 
         m_dev.set_prop_str("netdev", netdev_id.c_str());
