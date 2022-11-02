@@ -67,8 +67,19 @@ protected:
     gs::Router<> m_router;
     gs::Memory<> m_mem;
 
-    void set_firmware(const char* assembly) {
-        ks_engine* ks;
+
+static constexpr const char* EXCEPTION_FW = R"(
+        _start:
+            mov x0, -1
+            str x0, [x2]
+        end:
+            wfi
+            b end
+    )";
+
+    void set_firmware(const char *assembly, uint64_t addr=0)
+    {
+        ks_engine *ks;
         ks_err err;
         size_t size, count;
         uint8_t* fw;
@@ -79,13 +90,13 @@ protected:
             SCP_FATAL(SCMOD) << "Unable to initialize keystone";
         }
 
-        if (ks_asm(ks, assembly, 0, &fw, &size, &count) != KS_ERR_OK) {
+        if (ks_asm(ks, assembly, addr, &fw, &size, &count) != KS_ERR_OK || size==0) {
             std::cerr << assembly << "\n";
             SCP_INFO() << assembly;
             TEST_FAIL("Unable to assemble the test firmware\n");
         }
 
-        m_mem.load.ptr_load(fw, 0, size);
+        m_mem.load.ptr_load(fw, addr, size);
 
         ks_free(fw);
         ks_close(ks);
@@ -105,6 +116,8 @@ public:
 
         sc_core::sc_time global_quantum(p_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);
+
+        set_firmware(EXCEPTION_FW, 0x200);
     }
 
     unsigned int get_num_cpus() { return p_num_cpu; }
