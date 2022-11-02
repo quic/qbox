@@ -22,6 +22,8 @@
 
 #include <cstring>
 
+#include <scp/report.h>
+
 #include "test/tester/mmio.h"
 
 
@@ -57,8 +59,7 @@ protected:
         uint64_t *ptr = reinterpret_cast<uint64_t *>(txn.get_data_ptr());
         size_t len = txn.get_data_length();
 
-        GS_LOG("CPU access on DMI socket at 0x%" PRIx64 ", "
-               "data: %" PRIu64 ", len: %zu", addr, data, len);
+        SCP_INFO()<< "CPU access on DMI socket at 0x" << std::hex << addr << ", data: " << std::hex << data << ", len: " << len;
 
         if (len > 8) {
             TEST_FAIL("Unsupported b_transport data length");

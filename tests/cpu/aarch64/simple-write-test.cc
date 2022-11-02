@@ -20,6 +20,9 @@
 #include <cstdio>
 #include <vector>
 
+#include <cci/utils/broker.h>
+#include <greensocs/libgsutils.h>
+
 #include "test/cpu.h"
 #include "test/tester/mmio.h"
 
@@ -97,7 +100,7 @@ public:
     {
         int cpuid = addr >> 3;
 
-        GS_LOG("CPU write at 0x%" PRIx64 ", data: %" PRIu64, addr, data);
+        SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data;
 
         TEST_ASSERT(cpuid < p_num_cpu);
         TEST_ASSERT(data == m_writes[cpuid]);

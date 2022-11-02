@@ -32,6 +32,8 @@
 
 #include <greensocs/libgssync.h>
 
+#include <scp/report.h>
+
 #include "libqbox/qemu-instance.h"
 #include "libqbox/tlm-extensions/qemu-mr-hint.h"
 
@@ -115,8 +117,7 @@ protected:
     void add_dmi_mr_alias(DmiRegionAlias::Ptr alias) {
         qemu::MemoryRegion alias_mr = alias->get_alias_mr();
 
-        GS_LOG("Adding DMI alias for region [%08" PRIx64 ", %08" PRIx64 "]",
-               alias->get_start(), alias->get_end());
+        SCP_INFO(SCMOD) << "Adding DMI alias for region [ 0x"<< std::hex << alias->get_start() << ", 0x" << std::hex << alias->get_end() << "]";
 
         m_inst.get().lock_iothread();
         m_r->m_root.add_subregion(alias_mr, alias->get_start());
@@ -130,8 +131,7 @@ protected:
             return;
         }
 
-        GS_LOG("Removing DMI alias for region [%08" PRIx64 ", %08" PRIx64 "]",
-               alias->get_start(), alias->get_end());
+        SCP_INFO(SCMOD) << "Removing DMI alias for region [ 0x" << std::hex << alias->get_start() << ", 0x" << std::hex << alias->get_end() << "]";
 
         m_inst.get().lock_iothread();
         m_r->m_root.del_subregion(alias->get_alias_mr());
@@ -172,7 +172,7 @@ protected:
         }
 
         bool ret;
-        GS_LOG("DMI request for address 0x%16" PRIx64, trans.get_address());
+        SCP_INFO(SCMOD) << "DMI request for address 0x" << std::hex << trans.get_address();
         m_on_sysc.run_on_sysc([this, &trans] {
             m_dmi_data_valid = (*this)->get_direct_mem_ptr(trans, m_dmi_data);
         });
@@ -185,9 +185,7 @@ protected:
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
 
         if (!m_dmi_data_valid) {
-            GS_LOG(
-                "DMI Request invalidated before being committed 0x%16" PRIx64,
-                trans.get_address());
+            SCP_INFO(SCMOD) << "DMI Request invalidated before being committed 0x" << std::hex << trans.get_address();
             // Between SystemC providing the DMI, and us 'accepting' the DMI,
             // an 'invalidation' may arrive from SystemC
             return;
@@ -221,7 +219,7 @@ protected:
                 uint64_t sz = dmi->get_size();
                 if (dmi->get_end() + 1 == start &&
                     dmi->get_dmi_ptr() + sz == m_dmi_data.get_dmi_ptr()) {
-                    GS_LOG("Merge with previous");
+                    SCP_INFO(SCMOD) << "Merge with previous";
                     start = dmi->get_start();
                     m_dmi_data.set_start_address(start);
                     m_dmi_data.set_dmi_ptr(dmi->get_dmi_ptr());
@@ -240,7 +238,7 @@ protected:
                 }
                 if (dmi->get_start() == end + 1 &&
                     m_dmi_data.get_dmi_ptr() + sz == dmi->get_dmi_ptr()) {
-                    GS_LOG("Merge with next");
+                    SCP_INFO(SCMOD) << "Merge with next";
                     end = dmi->get_end();
                     m_dmi_data.set_end_address(end);
 
@@ -249,8 +247,7 @@ protected:
             }
         }
 
-        GS_LOG("Got DMI for range [0x%16" PRIx64 ", 0x%16" PRIx64 "]",
-               m_dmi_data.get_start_address(), m_dmi_data.get_end_address());
+        SCP_INFO(SCMOD) << "Got DMI for range [0x" << std::hex << m_dmi_data.get_start_address() << ", 0x" << std::hex << m_dmi_data.get_end_address() << "]";
 
         DmiRegionAlias::Ptr alias(dmi_mgr.get_new_region_alias(m_dmi_data));
 
@@ -469,8 +466,7 @@ public:
 
     virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start_range,
                                            sc_dt::uint64 end_range) {
-        GS_LOG("DMI invalidate: [0x%16" PRIx64 ", 0x%16" PRIx64 "]",
-               start_range, end_range);
+        SCP_INFO(SCMOD) << "DMI invalidate [0x" << std::hex << start_range << ", 0x" << std::hex << end_range << "]";
 
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
 
@@ -507,8 +503,7 @@ public:
 
             it = remove_alias(it);
 
-            GS_LOG("Invalidated region [%08" PRIx64 ", %08" PRIx64 "]",
-                   uint64_t(r->get_start()), uint64_t(r->get_end()));
+            SCP_INFO(SCMOD) << "Invalidated region [0x" << std::hex << r->get_start() << ", 0x" << std::hex << r->get_end() << "]";
         }
     }
 };

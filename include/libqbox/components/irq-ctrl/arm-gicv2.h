@@ -23,6 +23,8 @@
 #include <systemc>
 #include <cci_configuration>
 
+#include <scp/report.h>
+
 #include "libqbox/components/device.h"
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator-signal-socket.h"
@@ -160,7 +162,7 @@ public:
             unsigned int v2m_num_spis = m_gicv2m->get_num_spis();
             unsigned int v2m_base_spi = m_gicv2m->get_base_spi();
             if (v2m_num_spis + v2m_base_spi > p_num_spi) {
-                SC_REPORT_FATAL("qbox", "Gicv2 does not have enough spis for v2m config");
+                SCP_FATAL(SCMOD) << "Gicv2 does not have enough spis for v2m config";
             }
             for (unsigned int i = 0; i < v2m_num_spis; i++) {
                 m_gicv2m->spi_out[i].bind(spi_in[i + v2m_base_spi]);

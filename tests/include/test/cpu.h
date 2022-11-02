@@ -34,6 +34,8 @@
 
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
 
+#include <scp/report.h>
+
 #include "libqbox/qemu-instance.h"
 #include "test/test.h"
 #include "test/tester/tester.h"
@@ -52,7 +54,7 @@ private:
             return KS_ARCH_ARM64;
 
         default:
-            SC_REPORT_FATAL("CpuTestBench", "Unsupported QEMU architecture for Keystone");
+            SCP_FATAL(SCMOD) << "Unsupported QEMU architecture for Keystone";
             return KS_ARCH_MAX; /* avoid compiler warning */
         }
     }
@@ -76,11 +78,12 @@ protected:
         err = ks_open(qemu_to_ks_arch(m_arch), KS_MODE_LITTLE_ENDIAN, &ks);
 
         if (err != KS_ERR_OK) {
-            SC_REPORT_FATAL("CpuTestBench", "Unable to initialize keystone\n");
+            SCP_FATAL(SCMOD) << "Unable to initialize keystone";
         }
 
         if (ks_asm(ks, assembly, 0, &fw, &size, &count) != KS_ERR_OK) {
             std::cerr << assembly << "\n";
+            SCP_INFO() << assembly;
             TEST_FAIL("Unable to assemble the test firmware\n");
         }
 
@@ -174,7 +177,7 @@ public:
                 irqs[i++].bind(cpu.irq_in);
                 break;
             default:
-                SC_REPORT_FATAL("CpuTestBench", "Don't know how to bind tester IRQs to CPU");
+                SCP_FATAL(SCMOD) << "Don't know how to bind tester IRQs to CPU";
             }
         }
     }

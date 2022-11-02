@@ -159,7 +159,7 @@ public:
     {
         int cpuid = addr >> 3;
 
-        GS_LOG("CPU write at 0x%" PRIx64 ", data: %" PRIu64 ", len: %zu", addr, data, len);
+        SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data <<", len: " << len;
 
         switch (m_state[cpuid]) {
         case ST_START:
@@ -225,7 +225,7 @@ public:
     {
         int cpuid = addr >> 3;
 
-        GS_LOG("CPU DMI request at 0x%" PRIx64 ", len: %zu", addr, len);
+        SCP_INFO(SCMOD) << "CPU DMI request at 0x" << std::hex << addr << ", len: " << len;
 
         /*
          * Restrict the DMI region to the 8 bytes this CPU writes. So when it

@@ -84,7 +84,7 @@ public:
     {
         int cpuid = addr >> 3;
 
-        GS_LOG("CPU %d write, data: %" PRIu64 ", len: %zu", cpuid, data, len);
+        SCP_INFO(SCMOD) << "CPU " << cpuid << "write, data: "<<std::hex<<data<<", len: "<<len;
         passed=false;
     }
 

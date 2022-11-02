@@ -32,6 +32,8 @@
 
 #include <greensocs/libgsutils.h>
 
+#include <scp/report.h>
+
 /**
  * @class QemuInstanceDmiManager
  *
@@ -121,7 +123,7 @@ public:
 
         virtual ~DmiRegion()
         {
-            GS_LOG("Destroying DMI region for host ptr %p", m_ptr);
+            SCP_INFO("Libqbox") << "Destroying DMI region for host ptr " << m_ptr;
         }
 
         uint64_t get_size() const
@@ -206,7 +208,7 @@ public:
         /* helpful for debugging */
         ~DmiRegionAlias()
         {
-            GS_LOG("Destroying DMI region Alias");
+            SCP_INFO("Libqbox") << "Destroying DMI region Alias";
         }
 
         DmiRegionAlias(DmiRegionAlias &&)=delete;

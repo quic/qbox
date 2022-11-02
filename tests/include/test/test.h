@@ -28,6 +28,8 @@
 
 #include <greensocs/gsutils/cciutils.h>
 
+#include <scp/report.h>
+
 class TestFailureException : public std::runtime_error {
 protected:
     std::string *m_what;
@@ -90,7 +92,7 @@ int run_testbench(int argc, char *argv[])
     TESTBENCH test_bench("test-bench");
 
     test_bench.run();
-    std::cout << " Test done\n";
+    SCP_INFO() << "Test done";
     return test_bench.get_rc();
 }
 

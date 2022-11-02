@@ -146,7 +146,7 @@ public:
         int cpuid = addr >> 3;
 
         if (id != CpuTesterDmi::SOCKET_MMIO) {
-            GS_LOG("CPU %d DMI write data: %" PRIu64 ", len: %zu", cpuid, data, len);
+            SCP_INFO(SCMOD) << "CPU " << cpuid << "DMI write data: " << std::hex << data << ", len: " << len;
 
             /*
              * The tester is about to write the new value to memory. Check the
@@ -157,7 +157,7 @@ public:
             return;
         }
 
-        GS_LOG("CPU write at 0x%" PRIx64 ", data: %" PRIu64 ", len: %zu", addr, data, len);
+        SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data <<", len: " << len;
 
         TEST_ASSERT(data != -1);
 
@@ -171,8 +171,7 @@ public:
         /* No read on the control socket */
         TEST_ASSERT(id == CpuTesterDmi::SOCKET_DMI);
 
-        GS_LOG("CPU %d DMI read data: %" PRIu64 ", len: %zu",
-               cpuid, m_tester.get_buf_value(cpuid), len);
+        SCP_INFO(SCMOD) << "CPU " <<cpuid<< "DMI read data: "<< std::hex << m_tester.get_buf_value(cpuid) << ", len: " << len;
 
         /* The return value is ignored by the tester */
         return 0;
@@ -180,7 +179,7 @@ public:
 
     virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi &ret) override
     {
-        GS_LOG("CPU DMI request at 0x%" PRIx64 ", len: %zu", addr, len);
+        SCP_INFO(SCMOD) << "CPU DMI request at 0x" << std::hex << addr << ", len: " << len;
 
         return true;
     }

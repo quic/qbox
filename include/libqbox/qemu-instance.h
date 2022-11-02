@@ -36,6 +36,7 @@
 #include "libqbox/dmi-manager.h"
 #include "libqbox/exceptions.h"
 
+#include <scp/report.h>
 
 class QemuDeviceBaseIF {
 public:
@@ -95,7 +96,7 @@ public:
         if (s == "SINGLE") return TCG_SINGLE;
         if (s == "COROUTINE") return TCG_COROUTINE;
         if (s == "MULTI") return TCG_MULTI;
-        SC_REPORT_WARNING("libqbox",("Unknown TCG mode "+s).c_str());
+        SCP_WARN(SCMOD) << "Unknown TCG mode " << s;
         return TCG_UNSPECIFIED;
     }
 
@@ -131,10 +132,10 @@ protected:
             if (p.second.get_string().is_string()) {
                 const std::string arg_name = p.first.substr(l + strlen(args));
                 const std::string arg_value = p.second.get_string();
-                SC_REPORT_INFO(name(), ("Added QEMU argument : " + arg_name + " " + arg_value).c_str());
+                SCP_INFO(SCMOD) << "Added QEMU argument : " << arg_name << " " << arg_value;
                 m_inst.push_qemu_arg({ arg_name.c_str(), arg_value.c_str() });
             } else {
-                SC_REPORT_FATAL(name(), "The value of the argument is not a string");
+                SCP_FATAL(SCMOD) << "The value of the argument is not a string";
             }
         }
 
@@ -155,7 +156,7 @@ protected:
         p_icount_mips.lock();
         if (!p_icount) return;
         if (m_tcg_mode == TCG_MULTI) {
-            SC_REPORT_FATAL("libqbox", "MULTI threading can not be used with icount");
+            SCP_FATAL(SCMOD) << "MULTI threading can not be used with icount";
             assert(m_tcg_mode != TCG_MULTI);
         }
         m_inst.push_qemu_arg("-icount");
@@ -180,7 +181,7 @@ protected:
         case TCG_MULTI:
             m_inst.push_qemu_arg("tcg,thread=multi");
             if (p_icount) {
-                SC_REPORT_FATAL("libqbox", "MULTI threading can not be used with icount");
+                SCP_FATAL(SCMOD) << "MULTI threading can not be used with icount";
                 assert(!p_icount);
             }
             break;
@@ -292,18 +293,18 @@ public:
         assert(!is_inited());
 
         if (m_tcg_mode == TCG_UNSPECIFIED) {
-            SC_REPORT_FATAL("libqbox", ("Unknown tcg mode : " + std::string(p_tcg_mode)).c_str());
+            SCP_FATAL(SCMOD) << "Unknow tcg mode : " << std::string(p_tcg_mode);
         }
         // By now, if there is a CPU, it would be loaded into QEMU, and we would have a QK
         if (m_first_qk) {
             if (m_first_qk->get_thread_type()==gs::SyncPolicy::SYSTEMC_THREAD) {
                 if (p_tcg_mode.is_preset_value() && m_tcg_mode!=TCG_COROUTINE) {
-                    SC_REPORT_WARNING("libqbox", "This quantum keeper can only be used with TCG_COROUTINES");
+                    SCP_WARN(SCMOD) << "This quantum keeper can only be used with TCG_COROUTINES";
                 }
                 m_tcg_mode=TCG_COROUTINE;
             } else {
                 if (m_tcg_mode == TCG_COROUTINE) {
-                    SC_REPORT_FATAL("libqbox", "Please select a suitable threading mode for this quantum keeper, it can't be used with COROUTINES");
+                    SCP_FATAL(SCMOD) << "Please select a suitable threading mode for this quantum keeper, it can't be used with COROUTINES";
                 }
             }
 
@@ -318,10 +319,10 @@ public:
             });
         }
 
-        GS_LOG("Initializing QEMU instance with args:");
+        SCP_INFO(SCMOD) << "Initializing QEMU instance with args:";
 
         for (const char* arg : m_inst.get_qemu_args()) {
-            GS_LOG("%s", arg);
+            SCP_INFO(SCMOD) << arg;
         }
 
         m_inst.init();
