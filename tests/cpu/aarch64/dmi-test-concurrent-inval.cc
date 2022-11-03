@@ -147,7 +147,9 @@ public:
              * The tester is about to write the new value to memory. Check the
              * old value just in case.
              */
-            TEST_ASSERT(m_tester.get_buf_value(cpuid) == data - 1);
+            // We can not guarantee this, as in MPTCG mode, another CPU could already have written
+            // here we could have used different addresses - which is done in -async
+            // TEST_ASSERT(m_tester.get_buf_value(cpuid) == data - 1);
 
             return;
         }

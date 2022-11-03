@@ -43,7 +43,7 @@
 class CpuArmCortexA53DmiAsyncInvalTest : public CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmiSoak>
 {
 public:
-    static constexpr uint64_t NUM_WRITES = 100000000000;
+    static constexpr uint64_t NUM_WRITES = 10000;
 
     static constexpr const char* FIRMWARE = R"(
         _start:
