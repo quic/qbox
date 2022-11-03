@@ -54,6 +54,7 @@ class QemuInstance : public sc_core::sc_module
 private:
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_first_qk = NULL;
     std::mutex m_lock;
+    bool running = false;
     std::list<QemuDeviceBaseIF*> devices;
 
 public:
@@ -71,6 +72,8 @@ public:
         devices.remove(d);
     }
     bool can_run() {
+        if (!running)
+            return false;
         std::lock_guard<std::mutex> lock(m_lock);
         bool can_run = false;
         // In SINGLE mode, check if another CPU could run
@@ -207,13 +210,14 @@ public:
         , p_icount_mips("icount_mips_shift", 0,
                         "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
         , p_display_argument_set(false) {
+        running = true;
         p_tcg_mode.lock();
         push_default_args();
     }
 
     QemuInstance(const QemuInstance&) = delete;
     QemuInstance(QemuInstance&&) = delete;
-    virtual ~QemuInstance() {}
+    virtual ~QemuInstance() { running = false; }
 
     bool operator==(const QemuInstance& b) const { return this == &b; }
 
