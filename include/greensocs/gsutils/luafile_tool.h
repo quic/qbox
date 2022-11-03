@@ -36,10 +36,10 @@
 #define GC_LUA_DEBUG false
 #endif
 
-#define DEBUG(name, msg)                                                       \
-  std::cout << "@" << sc_core::sc_time_stamp() << " /"                         \
-            << (unsigned)sc_core::sc_delta_count() << " (" << name             \
-            << "): " << msg << std::endl
+#include <scp/report.h>
+
+
+#define DEBUG(name, msg) SCP_INFO(SCMOD) << msg
 
 #define ENABLE_SHORT_COMMAND_LINE_OPTIONS // enables the short synonyms for the
                                           // gs_ options
@@ -452,11 +452,11 @@ protected:
                     lua_typename(L, lua_type(L, -1)), key);
         } else {
           double num = lua_tonumber(L, -1);
-          if ((uint64_t)num == num) {
+          if ((floor(num) == num && num >= 0.0 && num < ldexp(1.0, 64))) {
             std::string keys = key;
             m_broker.set_preset_cci_value(rel(keys),
                                           cci::cci_value((uint64_t)num));
-          } else if ((int64_t)num == num) {
+          } else if (floor(num) == num && num >= -ldexp(1.0, 63) && num < ldexp(1.0, 63)) {
             std::string keys = key;
             m_broker.set_preset_cci_value(rel(keys),
                                           cci::cci_value((int64_t)num));
