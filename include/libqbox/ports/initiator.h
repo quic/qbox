@@ -460,7 +460,7 @@ public:
 
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
 
-        auto it = m_dmi_aliases.lower_bound(start_range);
+        auto it = m_dmi_aliases.upper_bound(start_range);
 
         if (it != m_dmi_aliases.begin()) {
             /*
