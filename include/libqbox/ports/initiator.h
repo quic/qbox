@@ -80,7 +80,6 @@ protected:
     qemu::Device m_dev;
     gs::RunOnSysC m_on_sysc;
 
-    bool m_dmi_data_valid = false;
     tlm::tlm_dmi m_dmi_data;
 
     class m_mem_obj
@@ -170,23 +169,27 @@ protected:
 
         bool ret;
         SCP_INFO(SCMOD) << "DMI request for address 0x" << std::hex << trans.get_address();
-        m_on_sysc.run_on_sysc(
-            [this, &trans] { m_dmi_data_valid = (*this)->get_direct_mem_ptr(trans, m_dmi_data); });
 
-        // check here before taking the lock!
-        if (!m_dmi_data_valid) {
+        // It is 'safer' from the SystemC perspective to  m_on_sysc.run_on_sysc([this,
+        // &trans]{...}). Moving the Lock prior to running on SystemC ensures that no other DMI
+        // activity happens during this time However if another thread is busy trying to invalidate
+        // DMI regions we have a potential deadlock. An alternative is to take the lock _after_ this
+        // call, Then the concern is that the DMI region returned could be in the process of being
+        // invalidated. This is a false dichotomy since even with the lock prior to the call,
+        // depending on the race between the two threads, either the result will be that the DMI
+        // region is inserted or not. This is a 'guest s/w' performance issue causing thrashing in
+        // e.g. an SMMU It is not the 'validity' of the DMI which is in question, (especially if we
+        // run on SystemC).
+
+        bool dmi_data_valid;
+        m_on_sysc.run_on_sysc([this, &trans, &dmi_data_valid]{
+            dmi_data_valid = (*this)->get_direct_mem_ptr(trans, m_dmi_data);
+        });
+        if (!dmi_data_valid) {
             return;
         }
-
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
 
-        if (!m_dmi_data_valid) {
-            SCP_INFO(SCMOD) << "DMI Request invalidated before being committed 0x" << std::hex
-                            << trans.get_address();
-            // Between SystemC providing the DMI, and us 'accepting' the DMI,
-            // an 'invalidation' may arrive from SystemC
-            return;
-        }
 
 // this is relatively arbitary. The upper limit is set within QEMU by the TBU
 // e.g. 4k small pages.
@@ -369,7 +372,14 @@ public:
 
         m_dev = dev;
     }
-    void end_of_simulation() { delete m_r; }
+
+    // This could happen during void end_of_simulation() but there is a race with other units trying
+    // to pull down their DMI's
+    ~QemuInitiatorSocket() {
+        LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
+        delete m_r;
+        m_r=nullptr;
+    }
     void init_global(qemu::Device& dev) {
         using namespace std::placeholders;
 
@@ -449,13 +459,6 @@ public:
                         << end_range << "]";
 
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
-
-        if (m_dmi_data_valid) {
-            if ((start_range < m_dmi_data.get_end_address()) &&
-                (end_range > m_dmi_data.get_start_address())) {
-                m_dmi_data_valid = false;
-            }
-        }
 
         auto it = m_dmi_aliases.lower_bound(start_range);
 
