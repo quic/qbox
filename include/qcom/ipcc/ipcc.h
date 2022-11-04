@@ -152,7 +152,7 @@ private:
         };
     };
     IPC_client client[4][64];
-
+    sc_core::sc_event update_irq_ev;
 protected:
     uint32_t read(IPC_client& src, uint64_t addr)
     {
@@ -318,7 +318,7 @@ protected:
 
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
 
-        update_irq();
+        update_irq_ev.notify();
     }
 
 public:
@@ -326,6 +326,7 @@ public:
     InitiatorSignalSocket<bool> irq[64];
     bool irq_status[64]={false};
 
+    SC_HAS_PROCESS(IPCC);
     IPCC(sc_core::sc_module_name name)
         : socket("socket")
     {
@@ -335,6 +336,9 @@ public:
             }
         }
         socket.register_b_transport(this, &IPCC::b_transport);
+
+        SC_METHOD(update_irq);
+        sensitive << update_irq_ev;
     }
 
     IPCC()
