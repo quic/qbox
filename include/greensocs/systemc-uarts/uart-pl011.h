@@ -1,25 +1,25 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #pragma once
 
@@ -44,19 +44,19 @@
 #define PL011_FLAG_RXFE 0x10
 
 /* Interrupt status bits in UARTRIS, UARTMIS, UARTIMSC */
-#define INT_OE (1 << 10)
-#define INT_BE (1 << 9)
-#define INT_PE (1 << 8)
-#define INT_FE (1 << 7)
-#define INT_RT (1 << 6)
-#define INT_TX (1 << 5)
-#define INT_RX (1 << 4)
+#define INT_OE  (1 << 10)
+#define INT_BE  (1 << 9)
+#define INT_PE  (1 << 8)
+#define INT_FE  (1 << 7)
+#define INT_RT  (1 << 6)
+#define INT_TX  (1 << 5)
+#define INT_RX  (1 << 4)
 #define INT_DSR (1 << 3)
 #define INT_DCD (1 << 2)
 #define INT_CTS (1 << 1)
-#define INT_RI (1 << 0)
-#define INT_E (INT_OE | INT_BE | INT_PE | INT_FE)
-#define INT_MS (INT_RI | INT_DSR | INT_DCD | INT_CTS)
+#define INT_RI  (1 << 0)
+#define INT_E   (INT_OE | INT_BE | INT_PE | INT_FE)
+#define INT_MS  (INT_RI | INT_DSR | INT_DCD | INT_CTS)
 
 typedef struct PL011State {
     uint32_t readbuff;
@@ -92,7 +92,8 @@ class Pl011;
 /* for legacy */
 typedef Pl011 Uart;
 
-class Pl011 : public sc_core::sc_module {
+class Pl011 : public sc_core::sc_module
+{
 public:
     PL011State* s;
 
@@ -105,9 +106,7 @@ public:
     sc_core::sc_event update_event;
 
     SC_HAS_PROCESS(Pl011);
-    Pl011(sc_core::sc_module_name name)
-        : irq("irq")
-    {
+    Pl011(sc_core::sc_module_name name): irq("irq") {
         chr = NULL;
 
         socket.register_b_transport(this, &Pl011::b_transport);
@@ -119,9 +118,8 @@ public:
         s->cr = 0x300;
         s->flags = 0x90;
 
-        static const unsigned char pl011_id_arm[8] = {
-            0x11, 0x10, 0x14, 0x00, 0x0d, 0xf0, 0x05, 0xb1
-        };
+        static const unsigned char pl011_id_arm[8] = { 0x11, 0x10, 0x14, 0x00,
+                                                       0x0d, 0xf0, 0x05, 0xb1 };
 
         s->id = pl011_id_arm;
 
@@ -129,14 +127,12 @@ public:
         sensitive << update_event;
     }
 
-    void set_backend(CharBackend* backend)
-    {
+    void set_backend(CharBackend* backend) {
         chr = backend;
         chr->register_receive(this, pl011_receive, pl011_can_receive);
     }
 
-    void write(uint64_t offset, uint64_t value)
-    {
+    void write(uint64_t offset, uint64_t value) {
         switch (offset >> 2) {
         case 0:
             putchar(value);
@@ -150,8 +146,7 @@ public:
         }
     }
 
-    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
-    {
+    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
         unsigned char* ptr = trans.get_data_ptr();
         uint64_t addr = trans.get_address();
 
@@ -170,13 +165,9 @@ public:
         }
     }
 
-    void pl011_update()
-    {
-        update_event.notify();
-    }
+    void pl011_update() { update_event.notify(); }
 
-    void pl011_update_sysc()
-    {
+    void pl011_update_sysc() {
         uint32_t flags;
         size_t i;
 
@@ -186,8 +177,7 @@ public:
         }
     }
 
-    uint64_t pl011_read(uint64_t offset)
-    {
+    uint64_t pl011_read(uint64_t offset) {
         uint32_t c;
         uint64_t r;
 
@@ -257,8 +247,7 @@ public:
         return r;
     }
 
-    void pl011_set_read_trigger()
-    {
+    void pl011_set_read_trigger() {
 #if 0
         /* The docs say the RX interrupt is triggered when the FIFO exceeds
            the threshold.  However linux only reads the FIFO in response to an
@@ -274,8 +263,7 @@ public:
         s->read_count = 0;
     }
 
-    void pl011_write(uint64_t offset, uint64_t value)
-    {
+    void pl011_write(uint64_t offset, uint64_t value) {
         unsigned char ch;
 
         switch (offset >> 2) {
@@ -338,8 +326,7 @@ public:
         }
     }
 
-    static int pl011_can_receive(void* opaque)
-    {
+    static int pl011_can_receive(void* opaque) {
         PL011State* s = ((Pl011*)opaque)->s;
 
         int r;
@@ -352,8 +339,7 @@ public:
         return r;
     }
 
-    void pl011_put_fifo(uint32_t value)
-    {
+    void pl011_put_fifo(uint32_t value) {
         int slot;
 
         slot = s->read_pos + s->read_count;
@@ -371,8 +357,7 @@ public:
         }
     }
 
-    static void pl011_receive(void* opaque, const uint8_t* buf, int size)
-    {
+    static void pl011_receive(void* opaque, const uint8_t* buf, int size) {
         Pl011* uart = (Pl011*)opaque;
         uart->pl011_put_fifo(*buf);
     }
