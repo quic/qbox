@@ -25,6 +25,8 @@
 
 #include "../char-backend.h"
 
+#include <scp/report.h>
+
 #if 0 /* FIXME */
 #include <ncurses.h>
 
@@ -44,7 +46,7 @@ public:
 
         pthread_t async_thread;
         if (pthread_create(&async_thread, NULL, rcv_thread, this)) {
-            fprintf(stderr, "error creating thread\n");
+            SCP_ERROR(SCMOD) << "error creating thread";
         }
     }
 

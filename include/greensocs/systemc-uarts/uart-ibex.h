@@ -34,6 +34,8 @@
 
 #include <greensocs/libgssync/async_event.h>
 
+#include <scp/report.h>
+
 class IbexUart : public sc_core::sc_module {
 public:
     enum Reg {
@@ -91,8 +93,7 @@ public:
             it_state |= FIELD_IT_RXWATERMARK;
             update_event.notify();
         } else {
-            fprintf(stderr, "IbexUart: rx char overflow, ignoring character 0x%x '%c'\n",
-                    (unsigned) *buf, *buf);
+            SCP_ERR(SCMOD) << "IbexUart: rx char overflow, ignoring chracter 0x" << (unsigned) *buf <<" '"<<*buf<<"'";
         }
     }
 
