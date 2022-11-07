@@ -2,9 +2,8 @@
 Language: Cpp
 BasedOnStyle: Google
 
+ColumnLimit: 100
 UseTab: Never
-ColumnLimit: 0
-
 IndentWidth: 4
 IndentCaseLabels: false
 
@@ -22,7 +21,7 @@ AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 
-BreakConstructorInitializers: AfterColon
+BreakConstructorInitializers: BeforeComma
 BreakBeforeBinaryOperators: None
 BreakStringLiterals: true
 BreakBeforeBraces: Custom
@@ -39,5 +38,3 @@ Cpp11BracedListStyle: false
 PenaltyBreakAssignment: 2000
 
 ForEachMacros: ['SC_MODULE', 'SC_CTOR']
-
-BreakConstructorInitializers: BeforeComma
