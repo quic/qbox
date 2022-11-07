@@ -51,7 +51,8 @@ IPC_PROTOCOLp_CLIENTc_CLIENT_ENABLE_STATUS_1_n, 0x400900, Read, Yes, 0x0
  *
  */
 
-class IPCC : public sc_core::sc_module {
+class IPCC : public sc_core::sc_module
+{
 private:
     enum IPCC_Regs {
         VERSION,
@@ -83,11 +84,11 @@ private:
         CLIENT_ENABLE_STATUS_0_n = 0x800 / 4,
         CLIENT_ENABLE_STATUS_1_n = 0x900 / 4,
     };
-    class IPC_client {
+    class IPC_client
+    {
     public:
         uint32_t regs[0x1000 / 4];
-        bool status(int client, int signal)
-        {
+        bool status(int client, int signal) {
             assert(client < 64);
             assert(signal < 64);
             if (signal < 32)
@@ -95,8 +96,7 @@ private:
             else
                 return (regs[CLIENT_SIGNAL_STATUS_1_n + client] & (1 << (signal - 32))) != 0;
         }
-        bool enable(int client, int signal)
-        {
+        bool enable(int client, int signal) {
             assert(client < 64);
             assert(signal < 64);
             if (signal < 32)
@@ -105,8 +105,7 @@ private:
                 return (regs[CLIENT_ENABLE_STATUS_1_n + client] & (1 << (signal - 32))) != 0;
         }
 
-        void set_status(int client, int signal)
-        {
+        void set_status(int client, int signal) {
             assert(client < 64);
             assert(signal < 64);
             if (signal < 32)
@@ -115,8 +114,7 @@ private:
                 regs[CLIENT_SIGNAL_STATUS_1_n + client] |= (1 << (signal - 32));
         }
 
-        void clear_status(int client, int signal)
-        {
+        void clear_status(int client, int signal) {
             assert(client < 64);
             assert(signal < 64);
             if (signal < 32)
@@ -125,8 +123,7 @@ private:
                 regs[CLIENT_SIGNAL_STATUS_1_n + client] &= ~(1 << (signal - 32));
         }
 
-        void set_enable(int client, int signal)
-        {
+        void set_enable(int client, int signal) {
             assert(client < 64);
             assert(signal < 64);
             if (signal < 32)
@@ -135,8 +132,7 @@ private:
                 regs[CLIENT_ENABLE_STATUS_1_n + client] |= (1 << (signal - 32));
         }
 
-        void clear_enable(int client, int signal)
-        {
+        void clear_enable(int client, int signal) {
             assert(client < 64);
             assert(signal < 64);
             if (signal < 32)
@@ -145,8 +141,7 @@ private:
                 regs[CLIENT_ENABLE_STATUS_1_n + client] &= ~(1 << (signal - 32));
         }
 
-        IPC_client()
-        {
+        IPC_client() {
             memset(regs, 0, sizeof(regs));
             regs[VERSION] = 0x10200;
             regs[RECV_ID] = 0xFFFFFFFF;
@@ -154,9 +149,9 @@ private:
     };
     IPC_client client[4][64];
     sc_core::sc_event update_irq_ev;
+
 protected:
-    uint32_t read(IPC_client& src, uint64_t addr)
-    {
+    uint32_t read(IPC_client& src, uint64_t addr) {
         uint32_t ret = src.regs[addr / 4];
         // Side effects
         switch (addr / 4) {
@@ -175,8 +170,7 @@ protected:
 
         return ret;
     }
-    void write(IPC_client& src, uint64_t addr, uint32_t data)
-    {
+    void write(IPC_client& src, uint64_t addr, uint32_t data) {
         src.regs[addr / 4] = data;
         // side effects
         switch (addr / 4) {
@@ -207,7 +201,7 @@ protected:
         case RECV_SIGNAL_CLEAR: {
             int c = (data >> 16) & 0xffff;
             int s = (data & 0xffff);
-            src.clear_status(c,s);
+            src.clear_status(c, s);
             int sc = (src.regs[ID] >> 16) & 0x3f;
             if (irq_status[sc]) {
                 irq[sc]->write(0);
@@ -217,26 +211,24 @@ protected:
             break;
         }
         case CLIENT_CLEAR: {
-            uint32_t id=src.regs[ID];
-            if (data &0x1) {
+            uint32_t id = src.regs[ID];
+            if (data & 0x1) {
                 memset(src.regs, 0, sizeof(src.regs));
                 src.regs[VERSION] = 0x10200;
                 src.regs[RECV_ID] = 0xFFFFFFFF;
-                src.regs[ID]=id;
+                src.regs[ID] = id;
             }
             break;
         }
         }
     }
-    void send(IPC_client& src, int c, int s)
-    {
+    void send(IPC_client& src, int c, int s) {
         int p = src.regs[ID] & 0x3f;
         int sc = (src.regs[ID] >> 16) & 0x3f;
         IPC_client& dst = client[p][c];
         dst.set_status(sc, s);
     }
-    void update_irq()
-    {
+    void update_irq() {
         for (int c = 0; c < 64; c++) {
             int allirqcount = 0;
             for (int p = 0; p < 3; p++) {
@@ -285,8 +277,7 @@ protected:
             }
         }
     }
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
-    {
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
@@ -302,13 +293,13 @@ protected:
         case tlm::TLM_READ_COMMAND: {
             uint32_t data = read(client[p][c], addr & 0xfff);
             memcpy(ptr, &data, len);
-            SCP_INFO(SCMOD) << "b_transport read "<<std::hex<<addr<<" "<<data;
+            SCP_INFO(SCMOD) << "b_transport read " << std::hex << addr << " " << data;
             break;
         }
         case tlm::TLM_WRITE_COMMAND: {
             uint32_t data;
             memcpy(&data, ptr, len);
-            SCP_INFO(SCMOD) << "b_transport write "<<std::hex<<addr<<" "<<data;
+            SCP_INFO(SCMOD) << "b_transport write " << std::hex << addr << " " << data;
             write(client[p][c], addr & 0xfff, data);
             break;
         }
@@ -325,12 +316,10 @@ protected:
 public:
     tlm_utils::simple_target_socket<IPCC> socket;
     InitiatorSignalSocket<bool> irq[64];
-    bool irq_status[64]={false};
+    bool irq_status[64] = { false };
 
     SC_HAS_PROCESS(IPCC);
-    IPCC(sc_core::sc_module_name name)
-        : socket("socket")
-    {
+    IPCC(sc_core::sc_module_name name): socket("socket") {
         for (int p = 0; p < 3; p++) {
             for (int c = 0; c < 64; c++) {
                 client[p][c].regs[ID] = (c << 16) + p;
@@ -342,11 +331,8 @@ public:
         sensitive << update_irq_ev;
     }
 
-    IPCC()
-        = delete;
+    IPCC() = delete;
     IPCC(const IPCC&) = delete;
 
-    ~IPCC()
-    {
-    }
+    ~IPCC() {}
 };
