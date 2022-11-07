@@ -103,7 +103,9 @@ private:
     {
         auto it = m_dmi_info_map.find(dmi.get_start_address());
         if (it != m_dmi_info_map.end()) {
-            assert(it->second.dmi.get_end_address() == dmi.get_end_address());
+            if (it->second.dmi.get_end_address() != dmi.get_end_address()) {
+                SC_REPORT_ERROR("router", "Can't handle that\n");
+            }
             return &(it->second);
         }
         auto insit = m_dmi_info_map.insert({ dmi.get_start_address(), dmi_info(dmi) });
@@ -111,6 +113,13 @@ private:
     }
     void record_dmi(int id, tlm::tlm_dmi& dmi)
     {
+        auto it = m_dmi_info_map.find(dmi.get_start_address());
+        if (it != m_dmi_info_map.end()) {
+            if (it->second.dmi.get_end_address() != dmi.get_end_address()) {
+                invalidate_direct_mem_ptr(id, dmi.get_start_address(), dmi.get_end_address());
+            }
+        }
+
         std::lock_guard<std::mutex> lock(dmi_mutex);
         dmi_info* dinfo = in_dmi_cache(dmi);
         dinfo->targets.insert(id);
@@ -270,17 +279,34 @@ private:
             bw_end_range = compose_address(id, end);
         }
         std::lock_guard<std::mutex> lock(dmi_mutex);
-        for (auto it=m_dmi_info_map.begin(); it!=m_dmi_info_map.end();) {
-            if ((start <= it->second.dmi.get_start_address() && end >= it->second.dmi.get_start_address()) ||
-                   (start <= it->second.dmi.get_end_address() && end >= it->second.dmi.get_end_address()))
-            {
-                for (auto t: it->second.targets) {
-                    target_socket[t]->invalidate_direct_mem_ptr(it->second.dmi.get_start_address(),it->second.dmi.get_end_address() );
-                }
-                it=m_dmi_info_map.erase(it);
-            } else {
-                it++;
+
+        auto it = m_dmi_info_map.upper_bound(start);
+
+        if (it != m_dmi_info_map.begin()) {
+            /*
+             * Start with the preceding region, as it may already cross the
+             * range we must invalidate.
+             */
+            it--;
+        }
+
+        while (it != m_dmi_info_map.end()) {
+            tlm::tlm_dmi &r = it->second.dmi;
+
+            if (r.get_start_address() > end) {
+                /* We've got out of the invalidation range */
+                break;
             }
+
+            if (r.get_end_address() < start) {
+                /* We are not in yet */
+                it++;
+                continue;
+            }
+            for (auto t: it->second.targets) {
+                target_socket[t]->invalidate_direct_mem_ptr(it->second.dmi.get_start_address(),it->second.dmi.get_end_address() );
+            }
+            it=m_dmi_info_map.erase(it);
         }
     }
 

@@ -116,14 +116,30 @@ class PassRPC : public sc_core::sc_module
     }
     void cache_clean(uint64_t start, uint64_t end)
     {
-        for (auto it=m_dmi_cache.begin(); it!=m_dmi_cache.end();) {
-            if ((start <= it->second.get_start_address() && end >= it->second.get_start_address()) ||
-                   (start <= it->second.get_end_address() && end >= it->second.get_end_address()))
-            {
-                it=m_dmi_cache.erase(it);
-            } else {
-                it++;
+        auto it = m_dmi_cache.upper_bound(start);
+
+        if (it != m_dmi_cache.begin()) {
+            /*
+             * Start with the preceding region, as it may already cross the
+             * range we must invalidate.
+             */
+            it--;
+        }
+
+        while (it != m_dmi_cache.end()) {
+            tlm::tlm_dmi &r = it->second;
+
+            if (r.get_start_address() > end) {
+                /* We've got out of the invalidation range */
+                break;
             }
+
+            if (r.get_end_address() < start) {
+                /* We are not in yet */
+                it++;
+                continue;
+            }
+            it=m_dmi_cache.erase(it);
         }
     }
 #endif
@@ -743,7 +759,7 @@ public:
             m_child_pid = fork();
             if (m_child_pid == 0) {
                 char conf_arg[100];
-                sprintf(conf_arg, "%s=%d", GS_Process_Serve_Port, (int)p_sport);
+                snprintf(conf_arg, 100, "%s=%d", GS_Process_Serve_Port, (int)p_sport);
                 execlp(exec_path.c_str(), exec_path.c_str(), "-p", conf_arg, nullptr);
                 // execlp("lldb", "lldb", "--", exec_path.c_str(), exec_path.c_str(), "-p",
                 // conf_arg, nullptr);
