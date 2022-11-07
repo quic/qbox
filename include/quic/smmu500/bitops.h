@@ -23,8 +23,7 @@
 #define BIT_WORD(nr)      ((nr) / BITS_PER_LONG)
 #define BITS_TO_LONGS(nr) DIV_ROUND_UP(nr, BITS_PER_BYTE * sizeof(long))
 
-#define MAKE_64BIT_MASK(shift, length) \
-    (((~0ULL) >> (64 - (length))) << (shift))
+#define MAKE_64BIT_MASK(shift, length) (((~0ULL) >> (64 - (length))) << (shift))
 
 /**
  * set_bit - Set a bit in memory
@@ -348,8 +347,7 @@ static inline int64_t sextract64(uint64_t value, int start, int length) {
  *
  * Returns: the modified @value.
  */
-static inline uint32_t deposit32(uint32_t value, int start, int length,
-                                 uint32_t fieldval) {
+static inline uint32_t deposit32(uint32_t value, int start, int length, uint32_t fieldval) {
     uint32_t mask;
     assert(start >= 0 && length > 0 && length <= 32 - start);
     mask = (~0U >> (32 - length)) << start;
@@ -373,8 +371,7 @@ static inline uint32_t deposit32(uint32_t value, int start, int length,
  *
  * Returns: the modified @value.
  */
-static inline uint64_t deposit64(uint64_t value, int start, int length,
-                                 uint64_t fieldval) {
+static inline uint64_t deposit64(uint64_t value, int start, int length, uint64_t fieldval) {
     uint64_t mask;
     assert(start >= 0 && length > 0 && length <= 64 - start);
     mask = (~0ULL >> (64 - length)) << start;
@@ -509,10 +506,9 @@ static inline int clz32(uint32_t val) {
 }
 /* count leading zero's */
 int clz32old(uint32_t x) {
-    static const char debruijn32[32] = {
-        0, 31, 9, 30, 3, 8, 13, 29, 2, 5, 7, 21, 12, 24, 28, 19,
-        1, 10, 4, 14, 6, 22, 25, 20, 11, 15, 23, 26, 16, 27, 17, 18
-    };
+    static const char debruijn32[32] = { 0,  31, 9,  30, 3,  8,  13, 29, 2,  5, 7,
+                                         21, 12, 24, 28, 19, 1,  10, 4,  14, 6, 22,
+                                         25, 20, 11, 15, 23, 26, 16, 27, 17, 18 };
     x |= x >> 1;
     x |= x >> 2;
     x |= x >> 4;
