@@ -11,6 +11,8 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
 
+#include <scp/report.h>
+
 template <unsigned int BUSWIDTH = 32>
 class qtb : public sc_core::sc_module {
 private:
@@ -67,7 +69,7 @@ private:
                     trans.set_byte_enable_length(0);
 
                     //                    set SID
-                    std::cout << "Sending to TBU: " << std::hex << infld[2] << "\n";
+                    SCP_INFO(SCMOD) << "Sending to TBU: " << std::hex << infld[2];
                     initiator_socket->b_transport(trans, time);
                 } else {
                     triggered = false;
@@ -75,7 +77,7 @@ private:
                 break;
             default:
                 trans.set_response_status(tlm::TLM_COMMAND_ERROR_RESPONSE);
-                SC_REPORT_FATAL("qtb", "Unknown write");
+                SCP_FATAL(SCMOD) << "Unknown write";
             }
             break;
         case tlm::TLM_READ_COMMAND:
@@ -91,12 +93,12 @@ private:
                 break;
             default:
                 trans.set_response_status(tlm::TLM_COMMAND_ERROR_RESPONSE);
-                SC_REPORT_FATAL("qtb", "Unknown read");
+                SCP_FATAL(SCMOD) << "Unknown read";
                 break;
             }
             break;
         default:
-            SC_REPORT_FATAL("qtb", "Unknown tlm command");
+            SCP_FATAL(SCMOD) << "Unknown tlm command";
         }
     }
 
@@ -105,7 +107,7 @@ private:
     {
         triggered = true;
         sc_dt::uint64 addr = trans.get_address();
-        std::cout << "received from TBU: " << std::hex << addr << "\n";
+        SCP_INFO(SCMOD) << "received from TBU: " << std::hex << addr;
         outfld[0] = addr << 12;
         outfld[1] = addr >> (32 - 12);
     }
