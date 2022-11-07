@@ -24,9 +24,7 @@
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
 
-#define CSR_LOG                    \
-    if (std::getenv("GS_LOG")) \
-    std::cout
+#include <scp/report.h>
 
 #define QDSP6SS_NMI 0x00040
 #define QDSP6SS_BOOT_CORE_START 0x00400
@@ -118,7 +116,7 @@ private:
             ret_cfg=val;
             break;
         default:
-            SC_REPORT_WARNING("CSR", "Unimplemented write");
+            SCP_WARN(SCMOD) << "Unimplemented write";
             break;
         }
 
@@ -188,7 +186,7 @@ private:
         case QDSP6SS_MEM_STAGGER_RESET_STATUS:
             return 0x0;
         default:
-            SC_REPORT_WARNING("CS", "Unimplemented read");
+            SCP_WARN(SCMOD) << "Unimplemented read";
             return 0x0;
         }
         return 0;
@@ -218,19 +216,19 @@ private:
         {
             uint32_t data = csr_read(addr & 0xfff, len);
             memcpy(ptr, &data, len);
-            CSR_LOG << "csr : b_transport read " << std::hex << addr << " " << data << "\n";
+            SCP_INFO(SCMOD) << "b_transport read " << std::hex << addr << " " << data;
             break;
         }
         case tlm::TLM_WRITE_COMMAND:
         {
             uint32_t data;
             memcpy(&data, ptr, len);
-            CSR_LOG << "csr : b_transport write " << std::hex << addr << " " << data << "\n";
+            SCP_INFO(SCMOD) << "b_transport write " << std::hex << addr << " " << data;
             csr_write(addr & 0xfff, data, len);
             break;
         }
         default:
-            SC_REPORT_ERROR("CSR", "TLM command not supported\n");
+            SCP_ERR(SCMOD) << "TLM command not supported";
             break;
         }
 
