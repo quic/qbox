@@ -10,7 +10,8 @@
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
 
-#define LOG if(std::getenv("GS_LOG")) std::cout
+#include <scp/report.h>
+
 /* registers as extracted
 
 IPC_PROTOCOLp_CLIENTc_VERSION, 0x400000, Read, Yes, 0x10200
@@ -166,7 +167,7 @@ protected:
                 if (irq_status[sc]) {
                     irq_status[sc] = false;
                     irq[sc]->write(0);
-                    LOG << "IPCC : CLEAR IRQ (on read) " << sc << "\n";
+                    SCP_INFO(SCMOD) << "CLEAR IRQ (on read) " << sc;
                 }
             }
             break;
@@ -211,7 +212,7 @@ protected:
             if (irq_status[sc]) {
                 irq[sc]->write(0);
                 irq_status[sc] = false;
-                LOG << "IPCC : CLEAR IRQ " << sc << "\n";
+                SCP_INFO(SCMOD) << "CLEAR IRQ " << sc;
             }
             break;
         }
@@ -271,13 +272,13 @@ protected:
             }
             if (allirqcount >= 1) {
                 if (!irq_status[c]) {
-                    LOG << "IPCC : SEND IRQ " << c << "\n";
+                    SCP_INFO(SCMOD) << "SEND IRQ " << c;
                     irq_status[c] = true;
                     irq[c]->write(1);
                 }
             } else {
                 if (irq_status[c]) {
-                    LOG << "IPCC : CLEAR IRQ " << c << "\n";
+                    SCP_INFO(SCMOD) << "CLEAR IRQ " << c;
                     irq_status[c] = false;
                     irq[c]->write(0);
                 }
@@ -301,18 +302,18 @@ protected:
         case tlm::TLM_READ_COMMAND: {
             uint32_t data = read(client[p][c], addr & 0xfff);
             memcpy(ptr, &data, len);
-            LOG << "IPCC : b_transport read "<<std::hex<<addr<<" "<<data<<"\n";
+            SCP_INFO(SCMOD) << "b_transport read "<<std::hex<<addr<<" "<<data;
             break;
         }
         case tlm::TLM_WRITE_COMMAND: {
             uint32_t data;
             memcpy(&data, ptr, len);
-            LOG << "IPCC : b_transport write "<<std::hex<<addr<<" "<<data<<"\n";
+            SCP_INFO(SCMOD) << "b_transport write "<<std::hex<<addr<<" "<<data;
             write(client[p][c], addr & 0xfff, data);
             break;
         }
         default:
-            SC_REPORT_ERROR("IPPC", "TLM command not supported\n");
+            SCP_ERR(SCMOD) << "TLM command not supported";
             break;
         }
 
