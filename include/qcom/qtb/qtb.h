@@ -14,14 +14,15 @@
 #include <scp/report.h>
 
 template <unsigned int BUSWIDTH = 32>
-class qtb : public sc_core::sc_module {
+class qtb : public sc_core::sc_module
+{
 private:
     enum {
-        QTB_OVR_ECATS_INFLD0 = 0x0, // APPS_SMMU_CLIENT_DEBUG_SID_HALT
-        QTB_OVR_ECATS_INFLD1 = 0x8, // APPS_SMMU_CLIENT_DEBUG_VA_ADDR
-        QTB_OVR_ECATS_INFLD2 = 0x10, // APPS_SMMU_CLIENT_DEBUG_SSD_INDEX
+        QTB_OVR_ECATS_INFLD0 = 0x0,   // APPS_SMMU_CLIENT_DEBUG_SID_HALT
+        QTB_OVR_ECATS_INFLD1 = 0x8,   // APPS_SMMU_CLIENT_DEBUG_VA_ADDR
+        QTB_OVR_ECATS_INFLD2 = 0x10,  // APPS_SMMU_CLIENT_DEBUG_SSD_INDEX
         QTB_OVR_ECATS_TRIGGER = 0x18, // APPS_SMMU_CLIENT_DEBUG_TRANSCATION_TRIGG
-        QTB_OVR_ECATS_STATUS = 0x20, // APPS_SMMU_CLIENT_DEBUG_STATUS_HALT_ACK
+        QTB_OVR_ECATS_STATUS = 0x20,  // APPS_SMMU_CLIENT_DEBUG_STATUS_HALT_ACK
         QTB_OVR_ECATS_OUTFLD0 = 0x28, // APPS_SMMU_CLIENT_DEBUG_PAR
         QTB_OVR_ECATS_OUTFLD1 = 0x2C, // APPS_SMMU_CLIENT_DEBUG_PAR
     };
@@ -35,9 +36,7 @@ public:
     tlm_utils::simple_target_socket<qtb, BUSWIDTH> control_socket;
 
 private:
-    void b_transport_control(tlm::tlm_generic_payload& trans,
-        sc_core::sc_time& delay)
-    {
+    void b_transport_control(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
         unsigned char* ptr = trans.get_data_ptr();
         sc_dt::uint64 addr = trans.get_address();
 
@@ -102,9 +101,7 @@ private:
         }
     }
 
-    void b_transport(tlm::tlm_generic_payload& trans,
-        sc_core::sc_time& delay)
-    {
+    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
         triggered = true;
         sc_dt::uint64 addr = trans.get_address();
         SCP_INFO(SCMOD) << "received from TBU: " << std::hex << addr;
@@ -117,14 +114,13 @@ public:
         : sc_core::sc_module(nm)
         , initiator_socket("initiator_socket")
         , target_socket("target_socket")
-        , control_socket("control_socket")
-    {
+        , control_socket("control_socket") {
         control_socket.register_b_transport(this, &qtb::b_transport_control);
         target_socket.register_b_transport(this, &qtb::b_transport);
     }
     qtb() = delete;
     qtb(const qtb&) = delete;
-    ~qtb() { }
+    ~qtb() {}
 };
 
 #endif
