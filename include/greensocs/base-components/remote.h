@@ -113,27 +113,7 @@ class PassRPC : public sc_core::sc_module
             }
         }
         return nullptr;
-#if 0
-        auto it = find_if(dmi_cache.begin(), dmi_cache.end(), [&](tlm::tlm_dmi const& t) {
-            return (t->dmi.get_start_address() <= address) && (t->dmi.get_end_address() >= address);
-        });
-        if (it != dmi_cache.end()) {
-            return &((*it)->dmi);
-        } else {
-            return nullptr;
-        }
-#endif
     }
-    /*tlm::tlm_dmi* in_cache(std::string name)
-    {
-        auto it = find_if(dmi_cache.begin(), dmi_cache.end(),
-                          [&](tlm::tlm_dmi const& t) { return (t->m_shmem_fn == name); });
-        if (it != dmi_cache.end()) {
-            return &((*it)->dmi);
-        } else {
-            return nullptr;
-        }
-    }*/
     void cache_clean(uint64_t start, uint64_t end)
     {
         for (auto it=m_dmi_cache.begin(); it!=m_dmi_cache.end();) {
@@ -158,9 +138,6 @@ class PassRPC : public sc_core::sc_module
         int m_dmi_access; /*tlm::tlm_dmi::dmi_access_e */
         double m_dmi_read_latency;
         double m_dmi_write_latency;
-#if 0
-        std::vector<tlm::tlm_dmi> dmi_cache;
-#endif
 
         MSGPACK_DEFINE_ARRAY(m_shmem_fn, m_shmem_size, m_shmem_offset, m_dmi_start_address,
                              m_dmi_end_address, m_dmi_access, m_dmi_read_latency,
@@ -272,22 +249,6 @@ class PassRPC : public sc_core::sc_module
 
     cci::cci_broker_handle m_broker;
 
-    /* Alias from - to */
-    void alias_preset_param(std::string a, std::string b, bool required = false)
-    {
-        if (m_broker.has_preset_value(a)) {
-            m_broker.set_preset_cci_value(b, m_broker.get_preset_cci_value(a));
-            m_broker.lock_preset_value(a);
-            m_broker.ignore_unconsumed_preset_values(
-                [a](const std::pair<std::string, cci::cci_value>& iv) -> bool {
-                    return iv.first == a;
-                });
-        } else {
-            if (required) {
-                SC_REPORT_FATAL("PassRPC ", (std::string(name()) + " Can't find " + a).c_str());
-            }
-        }
-    }
     class initiator_socket_spying
         : public tlm_utils::simple_initiator_socket_b<MOD, BUSWIDTH, tlm::tlm_base_protocol_types,
                                                       sc_core::SC_ZERO_OR_MORE_BOUND>
@@ -327,23 +288,25 @@ class PassRPC : public sc_core::sc_module
 
     void remote_register_boundto(std::string s)
     {
-        std::string pfx = nameFromSocket(s);
-        std::string n = std::string(name());
-        std::string parent = std::string(n).substr(0, n.find_last_of("."));
-        if (pfx.find(parent) == 0) {
-            pfx = pfx.substr(parent.length() + 1);
-        }
         str_pairs vals;
         std::vector<std::string> todo = { "address", "size", "relative_addresses" };
         for (auto i : todo) {
-            if (m_broker.has_preset_value(s + "." + i)) {
-                vals.push_back(std::make_pair(
-                    pfx + "." + i, "target_socket_" + std::to_string(targets_bound) + "." + i));
-                std::cout << "sending alias " << pfx + "." + i << " target_soceket_"
-                          << targets_bound << "." << i << "\n";
+            std::string name = s + "." + i;
+            if (m_broker.has_preset_value(name)) {
+                m_broker.ignore_unconsumed_preset_values(
+                    [name](const std::pair<std::string, cci::cci_value>& iv) -> bool {
+                        return iv.first == name;
+                    });
+
+                vals.push_back(
+                    std::make_pair("@target_socket_" + std::to_string(targets_bound) + "." + i,
+                                   m_broker.get_preset_cci_value(name).to_json()));
+                std::cout << "sending  "
+                          << "@target_socket_" + std::to_string(targets_bound) + "." + i << " to "
+                          << m_broker.get_preset_cci_value(name).to_json() << "\n";
             }
         }
-        client->call("cci_alias", vals);
+        client->call("cci_db", vals);
         targets_bound++;
     }
 
@@ -603,35 +566,40 @@ private:
 
         str_pairs ret;
         for (auto p : m_broker.get_unconsumed_preset_values()) {
+            std::string name = p.first;
             std::string k = p.first;
             if (k.find(parent) == 0) {
                 k = k.substr(parent.length() + 1);
+                ret.push_back(std::make_pair("$" + k, p.second.to_json()));
+                // mark parameters in the remote as 'used'
+                m_broker.ignore_unconsumed_preset_values(
+                    [name](const std::pair<std::string, cci::cci_value>& iv) -> bool {
+                        return iv.first == name;
+                    });
+            } else if (k.find('.') == std::string::npos) {
+                ret.push_back(std::make_pair(k, p.second.to_json()));
             }
-            ret.push_back(std::make_pair(k, p.second.to_json()));
         }
         return ret;
     }
 
     void set_cci_db(str_pairs db)
     {
-        std::string n = std::string(name());
-        std::string parent = std::string(n).substr(0, n.find_last_of("."));
+        std::string modname = std::string(name());
+        std::string parent = std::string(modname).substr(0, modname.find_last_of("."));
 
         for (auto p : db) {
-            m_broker.set_preset_cci_value(parent + "." + p.first,
-                                          cci::cci_value::from_json(p.second));
-            std::cout << "Setting " << parent + ". " + p.first << "\n";
-        }
-    }
+            std::string parname;
+            if (p.first[0] == '$') {
+                parname = parent + "." + p.first.substr(1);
+            } else if (p.first[0] == '@') {
+                parname = modname + "." + p.first.substr(1);
+            } else {
+                parname = p.first;
+            }
+            m_broker.set_preset_cci_value(parname, cci::cci_value::from_json(p.second));
 
-    void set_cci_alias(str_pairs db)
-    {
-        std::string n = std::string(name());
-        std::string parent = std::string(n).substr(0, n.find_last_of("."));
-        for (auto p : db) {
-            alias_preset_param(parent + "." + p.first, n + "." + p.second, true);
-            std::cout << "Aliasing from " << parent + "." + p.first << " to " << n + "." + p.second
-                      << "\n";
+            std::cout << "Setting " << parname << " to " << p.second << "\n";
         }
     }
 
@@ -694,8 +662,8 @@ public:
 
         // would it be better to have a 'remote cci broker' that connected back,
 
-        server->bind("cci_alias", [&](str_pairs db) {
-            set_cci_alias(db);
+        server->bind("cci_db", [&](str_pairs db) {
+            set_cci_db(db);
             return;
         });
 
