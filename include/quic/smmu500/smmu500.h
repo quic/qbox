@@ -30,6 +30,8 @@
 #include <cci_configuration>
 #include <tlm>
 
+#include <scp/report.h>
+
 #include "bitops.h"
 #include "registerfields.h"
 #include <ar.h>
@@ -54,27 +56,6 @@
     "arm.mmu-500-iommu-memory-region"
 
 #define XILINX_SMMU500(obj) OBJECT_CHECK(SMMU, (obj), TYPE_XILINX_SMMU500)
-
-#define DEBUG_DEV_SMMU     0
-#define DEBUG_DEV_SMMU_PTW 0
-
-#define D(...)                           \
-    do {                                 \
-        if (DEBUG_DEV_SMMU) {            \
-            char tmp[1000];              \
-            sprintf(tmp, __VA_ARGS__);   \
-            SC_REPORT_INFO("smmu", tmp); \
-        }                                \
-    } while (0);
-
-#define D_PTW(...)                           \
-    do {                                     \
-        if (DEBUG_DEV_SMMU_PTW) {            \
-            char tmp[1000];                  \
-            sprintf(tmp, __VA_ARGS__);       \
-            SC_REPORT_INFO("smmu-ptw", tmp); \
-        }                                    \
-    } while (0);
 
 template <unsigned int BUSWIDTH = 32>
 class smmu500_tbu;
@@ -1200,7 +1181,7 @@ private:
             }
         }
 
-        D("SMMU StreamID 0x%x -> CB%d\n", stream_id, cbndx);
+        SCP_INFO(SCMOD) << "SMMU StreamID 0x" << std::hex << stream_id << " -> CB" << cbndx;
         return cbndx;
     }
 
@@ -1300,7 +1281,7 @@ private:
         if (FIELD_EX32(sctlr, SMMU_CB0_SCTLR, M) == 0) {
             req->pa = req->va;
             req->prot = IOMMU_RW;
-            D("SMMU disabled for context %d sctlr=%x\n", cb, sctlr);
+            SCP_INFO(SCMOD) << "SMMU disabled for context " << cb << " sctlr=" << std::hex << sctlr;
             return;
         }
 
@@ -1373,7 +1354,7 @@ private:
             firstblocklevel = 1;
             break;
         default:
-            SC_REPORT_ERROR("SMMU", "Wrong pagesize\n");
+            SCP_ERR(SCMOD) << "Wrong pagesize";
             break;
         }
 
@@ -1461,23 +1442,19 @@ private:
             dma_socket->b_transport(txn, now);
 
             if (txn.get_response_status() != tlm::TLM_OK_RESPONSE) {
-                D("smmu: Bad DMA response\n");
+                SCP_INFO(SCMOD) << "Bad DMA response";
                 goto do_fault;
             }
 
             type = desc & 3;
 
-            D_PTW("smmu: S%d L%d va=0x%" PRIx64 " gz=%d descaddr=0x%" PRIx64
-                  " "
-                  "desc=0x%" PRIx64 " asb=%d index=0x%" PRIx64 " osize=%d\n",
-                  req->stage, level, req->va, grainsize, descaddr, desc,
-                  addrselectbottom, index, outputsize);
+            SCP_INFO(SCMOD) << "S" << req->stage << " L" << level << " va=0x" << std::hex << req->va << " gz=" << grainsize << " descaddr=0x" << std::hex << descaddr << " desc=0x" << std::hex << desc << " asb=" << addrselectbottom << " index=0x" << std::hex << index << " osize=" << outputsize;
             ttbr = extract64(desc, 0, 48);
             ttbr &= ~descmask;
 
             /* special case.  */
             if (!(type & 2) && level == 3) {
-                D("smmu: bad level 3 desc\n");
+                SCP_INFO(SCMOD) << "bad level 3 desc";
                 goto do_fault;
             }
 
@@ -1488,7 +1465,7 @@ private:
             case 2:
             case 0:
                 /* Invalid.  */
-                D("smmu: bad desc\n");
+                SCP_INFO(SCMOD) << "bad desc";
                 goto do_fault;
                 break;
             case 1:
@@ -1537,21 +1514,21 @@ private:
         req->prot = IOMMU_RW;
         if ((attrs & (1 << 8)) == 0) {
             /* Access flag */
-            D("smmu: access forbidden %x\n", attrs);
+            SCP_INFO (SCMOD) << "access forbidden " << std::hex << attrs;
             goto do_fault;
         }
 
         if (req->stage == 1) {
             /* AP[1] SBO.  */
             if (!(attrs & (1 << 4))) {
-                D("smmu: AP[1] should be one but set to zero!\n");
+                SCP_INFO(SCMOD) << "AP[1] should be one but set to zero!";
                 goto do_fault;
             }
 
             if (attrs & (1 << 5)) {
                 /* Write access forbidden */
                 if (req->access == IOMMU_WO) {
-                    D("smmu: Write access forbidden %x\n", attrs);
+                    SCP_INFO (SCMOD) << "Write access forbidden " << std::hex << attrs;
                     goto do_fault;
                 }
                 req->prot &= ~IOMMU_WO;
@@ -1583,11 +1560,11 @@ private:
         }
 
         req->pa = ttbr;
-        D("SMMU: 0x%" PRIx64 " -> 0x%" PRIx64 "\n", req->va, req->pa);
+        SCP_INFO(SCMOD) << "0x" << std::hex << req->va << " -> 0x" << std::hex << req->pa;
         return;
 
     do_fault:
-        D("smmu fault\n");
+        SCP_INFO(SCMOD) << "smmu fault";
         smmu_fault(cb, req, level);
     }
 
@@ -1683,7 +1660,7 @@ private:
         bool err;
         uint64_t page_size;
 
-        D("ATS: va=0x%" PRIx64 " cb=%d wr=%d s2=%d\n", va, cb, wr, s2);
+        SCP_INFO(SCMOD) << "ATS: va=0x" << std::hex << va << " cb=" << cb << " wr=" << wr << " s2=" << s2;
         err = smmu500_at(cb, va, wr, s2, &pa, &prot, &page_size);
 
         regs[R_SMMU_GPAR] = pa | err;
@@ -1873,11 +1850,11 @@ protected:
         unsigned int bel = txn.get_byte_enable_length();
 
         if (txn.get_streaming_width() < len) {
-            SC_REPORT_ERROR("SMMU", "streaming width not supported.\n");
+            SCP_ERR(SCMOD) << "streaming width not supported.";
         }
 
         if (!(len == 4 || len == 8)) {
-            SC_REPORT_ERROR("SMMU", "only 4 or 8 byte transactions supported.\n");
+            SCP_ERR(SCMOD) << "only 4 or 8 byte transactions supported.";
         }
 
         std::stringstream info;
@@ -1952,9 +1929,7 @@ protected:
         } else {
             info << " value 0x" << (*(uint64_t*)ptr);
         }
-        if (DEBUG_DEV_SMMU) {
-            SC_REPORT_INFO("SMMU", info.str().c_str());
-        }
+        SCP_INFO(SCMOD) << info.str();
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
 
         txn.set_dmi_allowed(false);
@@ -2934,7 +2909,7 @@ protected:
         } else {
             //            uint64_t page_size = (te.addr_mask + 1);
             txn.set_address(te.translated_addr | (addr & te.addr_mask)); // FIX better handled in smmu_translate?
-            D("smmu TBU b_transport: translate 0x%" PRIx64 " to 0x%" PRIx64, addr, te.translated_addr);
+            SCP_INFO(SCMOD) << "smmu TBU b_transport: translate 0x" << std::hex << addr << " to 0x" << std::hex << te.translated_addr;
             downstream_socket->b_transport(txn, delay);
             txn.set_address(addr);
         }
@@ -3006,12 +2981,7 @@ protected:
         }
         dmi_range_valid[CB] = true;
 
-        D("smmu TBU DMI: translate 0x%" PRIx64 " to 0x%" PRIx64
-          " pg size=%d pg base 0x%" PRIx64
-          " offset 0x" PRIx64
-          " start 0x" PRIx64
-          " end 0x" PRIx64,
-          addr, te.translated_addr, page_size, page_base, offset, dmi_data.get_start_address(), dmi_data.get_end_address());
+        SCP_INFO(SCMOD) << "smmu TBU DMI: translate 0x%" << std::hex << addr << " to 0x" << std::hex << te.translated_addr << " pg size=" << page_size << " pg base 0x" << std::hex << page_base << " offset 0x" << std::hex << offset << " start 0x" << std::hex << dmi_data.get_start_address() << " end 0x" << std::hex << dmi_data.get_end_address();
 
         txn.set_address(addr);
         return ret;
