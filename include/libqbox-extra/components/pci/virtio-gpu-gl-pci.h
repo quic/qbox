@@ -26,23 +26,16 @@
 
 #include "gpex.h"
 
-class QemuVirtioGpuGlPci : public QemuGPEX::Device {
-
+class QemuVirtioGpuGlPci : public QemuGPEX::Device
+{
 public:
-    QemuVirtioGpuGlPci(const sc_core::sc_module_name &name, QemuInstance &inst)
-        : QemuGPEX::Device(name, inst, "virtio-gpu-gl-pci")
-    {
+    QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, QemuInstance& inst)
+        : QemuGPEX::Device(name, inst, "virtio-gpu-gl-pci") {
         m_inst.set_display_arg("sdl,gl=on");
     }
 
-    void before_end_of_elaboration() override
-    {
-        QemuGPEX::Device::before_end_of_elaboration();
-    }
+    void before_end_of_elaboration() override { QemuGPEX::Device::before_end_of_elaboration(); }
 
-    void gpex_realize(qemu::Bus &bus) override
-    {
-        QemuGPEX::Device::gpex_realize(bus);
-    }
+    void gpex_realize(qemu::Bus& bus) override { QemuGPEX::Device::gpex_realize(bus); }
 };
 #endif
