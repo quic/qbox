@@ -1,25 +1,25 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -28,7 +28,7 @@
 using testing::AnyOf;
 using testing::Eq;
 
-gs::tlm_quantumkeeper_extended *qk = nullptr;
+gs::tlm_quantumkeeper_extended* qk = nullptr;
 bool done;
 void unfinished_quantum() {
     // budget should be 2*quantum
@@ -42,14 +42,15 @@ void unfinished_quantum() {
     EXPECT_EQ(budget, 2 * quantum - inc);
     EXPECT_TRUE(qk->need_sync());
     qk->sync();
-    // Get budget, can be (2 * quanta) or (2 * quanta - inc), depending on how far SystemC has caught up
+    // Get budget, can be (2 * quanta) or (2 * quanta - inc), depending on how far SystemC has
+    // caught up
     budget = qk->time_to_sync();
     EXPECT_THAT(budget, AnyOf(Eq(2 * quantum), Eq(2 * quantum - inc)));
     qk->inc(inc);
     budget = qk->time_to_sync();
     // Same as above
     EXPECT_THAT(budget, AnyOf(Eq(2 * quantum - inc), Eq(2 * quantum - 2 * inc)));
-    done=true;
+    done = true;
     qk->stop();
 }
 
@@ -70,11 +71,11 @@ void finished_quantum() {
     qk->sync();
     budget = qk->time_to_sync();
     EXPECT_LE(budget, 2 * quantum);
-    done=true;
+    done = true;
     qk->stop();
 }
 
-int sc_main(int argc, char **argv) {
+int sc_main(int argc, char** argv) {
     qk = new gs::tlm_quantumkeeper_multithread;
     sc_core::sc_time quantum(1, sc_core::SC_MS);
     tlm_utils::tlm_quantumkeeper::set_global_quantum(quantum);
@@ -84,7 +85,7 @@ int sc_main(int argc, char **argv) {
 }
 
 TEST(qkmultithread, unfinished_quantum) {
-    done=false;
+    done = false;
     qk->start();
     qk->reset();
     std::thread t1(unfinished_quantum);
@@ -98,7 +99,7 @@ TEST(qkmultithread, unfinished_quantum) {
 }
 
 TEST(qkmultithread, finished_quantum) {
-    done=false;
+    done = false;
     qk->start();
     qk->reset();
     std::thread t1(finished_quantum);
