@@ -1,26 +1,26 @@
 /*
-*  This file is part of libgsutils
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ *  This file is part of libgsutils
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #ifndef GREENSOCS_GSUTILS_TESTS_TARGET_TESTER_H
 #define GREENSOCS_GSUTILS_TESTS_TARGET_TESTER_H
@@ -60,22 +60,24 @@
  * need fine control over the transaction. However, Be aware that by doing so,
  * you'll loose the helpers functionnality of this class.
  */
-class TargetTester : public sc_core::sc_module {
+class TargetTester : public sc_core::sc_module
+{
 public:
     using TlmGenericPayload = tlm::tlm_generic_payload;
     using TlmResponseStatus = tlm::tlm_response_status;
     using TlmDmi = tlm::tlm_dmi;
 
-    using AccessCallbackFn = std::function<TlmResponseStatus (uint64_t addr, uint8_t *data, size_t len)>;
-    using DebugAccessCallbackFn = std::function<int (uint64_t addr, uint8_t *data, size_t len)>;
-    using GetDirectMemPtrCallbackFn = std::function<bool (uint64_t addr, TlmDmi &)>;
+    using AccessCallbackFn = std::function<TlmResponseStatus(uint64_t addr, uint8_t* data,
+                                                             size_t len)>;
+    using DebugAccessCallbackFn = std::function<int(uint64_t addr, uint8_t* data, size_t len)>;
+    using GetDirectMemPtrCallbackFn = std::function<bool(uint64_t addr, TlmDmi&)>;
 
 private:
     size_t m_mmio_size;
 
     /* Only valid within a transaction callback */
-    TlmGenericPayload *m_cur_txn = nullptr;
-    sc_core::sc_time *m_cur_txn_delay = nullptr;
+    TlmGenericPayload* m_cur_txn = nullptr;
+    sc_core::sc_time* m_cur_txn_delay = nullptr;
 
     bool m_last_txn_valid = false;
     TlmGenericPayload m_last_txn;
@@ -93,12 +95,11 @@ private:
 
     /* Factorized version of b_transport and transport_dbg */
     template <class RET, RET DEFAULT_RET, RET ADDRESS_ERROR_RET, RET DEFAULT_CB_RET, class CB_FN>
-    RET generic_access(TlmGenericPayload &txn, const CB_FN &read_cb, const CB_FN &write_cb)
-    {
+    RET generic_access(TlmGenericPayload& txn, const CB_FN& read_cb, const CB_FN& write_cb) {
         using namespace tlm;
 
         uint64_t addr;
-        uint8_t *ptr;
+        uint8_t* ptr;
         size_t len;
         RET ret = DEFAULT_RET;
 
@@ -140,7 +141,7 @@ private:
             ADD_FAILURE();
         }
 
-out:
+    out:
         m_cur_txn = nullptr;
 
         m_last_txn.deep_copy_from(txn);
@@ -150,8 +151,7 @@ out:
     }
 
 protected:
-    virtual void b_transport(TlmGenericPayload &txn, sc_core::sc_time &delay)
-    {
+    virtual void b_transport(TlmGenericPayload& txn, sc_core::sc_time& delay) {
         using namespace tlm;
 
         TlmResponseStatus ret;
@@ -167,12 +167,11 @@ protected:
         m_last_txn_delay_valid = true;
     }
 
-    virtual unsigned int transport_dbg(TlmGenericPayload &txn)
-    {
+    virtual unsigned int transport_dbg(TlmGenericPayload& txn) {
         int ret = 0;
 
-        ret = generic_access<int, 0, 0, -1,
-                             DebugAccessCallbackFn>(txn, m_debug_read_cb, m_debug_write_cb);
+        ret = generic_access<int, 0, 0, -1, DebugAccessCallbackFn>(txn, m_debug_read_cb,
+                                                                   m_debug_write_cb);
 
         if (ret == -1) {
             ret = txn.get_data_length();
@@ -181,8 +180,7 @@ protected:
         return ret;
     }
 
-    virtual bool get_direct_mem_ptr(TlmGenericPayload &txn, TlmDmi &dmi_data)
-    {
+    virtual bool get_direct_mem_ptr(TlmGenericPayload& txn, TlmDmi& dmi_data) {
         uint64_t addr;
 
         m_last_txn.deep_copy_from(m_last_txn);
@@ -205,10 +203,8 @@ public:
      * @param[in] n The name of the SystemC module
      * @param[in] mmio_size The size of the memory mapped I/O region of this component
      */
-    TargetTester(const sc_core::sc_module_name &n, size_t mmio_size)
-        : sc_core::sc_module(n)
-        , m_mmio_size(mmio_size)
-    {
+    TargetTester(const sc_core::sc_module_name& n, size_t mmio_size)
+        : sc_core::sc_module(n), m_mmio_size(mmio_size) {
         socket.register_b_transport(this, &TargetTester::b_transport);
         socket.register_transport_dbg(this, &TargetTester::transport_dbg);
         socket.register_get_direct_mem_ptr(this, &TargetTester::get_direct_mem_ptr);
@@ -219,42 +215,27 @@ public:
     /**
      * @brief Register callback called on b_tranport read transaction
      */
-    void register_read_cb(AccessCallbackFn cb)
-    {
-        m_read_cb = cb;
-    }
+    void register_read_cb(AccessCallbackFn cb) { m_read_cb = cb; }
 
     /**
      * @brief Register callback called on b_tranport write transaction
      */
-    void register_write_cb(AccessCallbackFn cb)
-    {
-        m_write_cb = cb;
-    }
+    void register_write_cb(AccessCallbackFn cb) { m_write_cb = cb; }
 
     /**
      * @brief Register callback called on transport_dbg read transaction
      */
-    void register_debug_read_cb(DebugAccessCallbackFn cb)
-    {
-        m_debug_read_cb = cb;
-    }
+    void register_debug_read_cb(DebugAccessCallbackFn cb) { m_debug_read_cb = cb; }
 
     /**
      * @brief Register callback called on transport_dbg write transaction
      */
-    void register_debug_write_cb(DebugAccessCallbackFn cb)
-    {
-        m_debug_write_cb = cb;
-    }
+    void register_debug_write_cb(DebugAccessCallbackFn cb) { m_debug_write_cb = cb; }
 
     /**
      * @brief Register a callback called on a get_direct_mem_ptr call
      */
-    void register_get_direct_mem_ptr_cb(GetDirectMemPtrCallbackFn cb)
-    {
-        m_dmi_cb = cb;
-    }
+    void register_get_direct_mem_ptr_cb(GetDirectMemPtrCallbackFn cb) { m_dmi_cb = cb; }
 
     /**
      * @brief Return true if the copy of the last transaction is valid
@@ -266,10 +247,7 @@ public:
      *
      * @return true if the copy of the last transaction is valid
      */
-    bool last_txn_is_valid() const
-    {
-        return m_last_txn_valid;
-    }
+    bool last_txn_is_valid() const { return m_last_txn_valid; }
 
     /**
      * @brief Return a copy of the last transaction payload
@@ -280,8 +258,7 @@ public:
      * row will trigger a test failure. This ensures that you actually got the
      * transaction you expected to get.
      */
-    const TlmGenericPayload &get_last_txn()
-    {
+    const TlmGenericPayload& get_last_txn() {
         EXPECT_TRUE(m_last_txn_valid);
         m_last_txn_valid = false;
 
@@ -297,8 +274,7 @@ public:
      * in a row will trigger a test failure. This ensures that you actually got
      * the transaction you expected to get.
      */
-    const sc_core::sc_time &get_last_txn_delay()
-    {
+    const sc_core::sc_time& get_last_txn_delay() {
         EXPECT_TRUE(m_last_txn_delay_valid);
         m_last_txn_delay_valid = false;
 
@@ -314,8 +290,7 @@ public:
      *
      * @return the current transaction payload
      */
-    TlmGenericPayload & get_cur_txn()
-    {
+    TlmGenericPayload& get_cur_txn() {
         EXPECT_TRUE(m_cur_txn != nullptr);
         return *m_cur_txn;
     }
@@ -329,8 +304,7 @@ public:
      *
      * @return the current transaction delay
      */
-    sc_core::sc_time & get_cur_txn_delay()
-    {
+    sc_core::sc_time& get_cur_txn_delay() {
         EXPECT_TRUE(m_cur_txn_delay != nullptr);
         return *m_cur_txn_delay;
     }

@@ -1,25 +1,25 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #ifndef _GREENSOCS_GSUTILS_TLM_EXTENSIONS_EXCLUSIVE_ACCESS_H
 #define _GREENSOCS_GSUTILS_TLM_EXTENSIONS_EXCLUSIVE_ACCESS_H
@@ -48,8 +48,7 @@
  * The store status is valid after a TLM_WRITE_COMMAND transaction and indicate
  * whether the exclusive store succeeded or not.
  */
-class ExclusiveAccessTlmExtension
-    : public tlm::tlm_extension<ExclusiveAccessTlmExtension>
+class ExclusiveAccessTlmExtension : public tlm::tlm_extension<ExclusiveAccessTlmExtension>
 {
 public:
     enum ExclusiveStoreStatus {
@@ -58,18 +57,15 @@ public:
         EXCLUSIVE_STORE_FAILURE
     };
 
-    class InitiatorId {
+    class InitiatorId
+    {
     private:
         std::vector<int> m_id;
 
     public:
-        void add_hop(int id)
-        {
-            m_id.push_back(id);
-        }
+        void add_hop(int id) { m_id.push_back(id); }
 
-        bool operator<(const InitiatorId &o) const
-        {
+        bool operator<(const InitiatorId& o) const {
             if (m_id.size() != o.m_id.size()) {
                 return m_id.size() < o.m_id.size();
             }
@@ -85,8 +81,7 @@ public:
             return false;
         }
 
-        bool operator==(const InitiatorId &o) const
-        {
+        bool operator==(const InitiatorId& o) const {
             if (m_id.size() != o.m_id.size()) {
                 return false;
             }
@@ -102,10 +97,7 @@ public:
             return true;
         }
 
-        bool operator!=(const InitiatorId &o) const
-        {
-            return !(*this == o);
-        }
+        bool operator!=(const InitiatorId& o) const { return !(*this == o); }
     };
 
 private:
@@ -114,47 +106,29 @@ private:
 
 public:
     ExclusiveAccessTlmExtension() = default;
-    ExclusiveAccessTlmExtension(const ExclusiveAccessTlmExtension &) = default;
+    ExclusiveAccessTlmExtension(const ExclusiveAccessTlmExtension&) = default;
 
-    virtual tlm_extension_base* clone() const override
-    {
+    virtual tlm_extension_base* clone() const override {
         return new ExclusiveAccessTlmExtension(*this);
     }
 
-    virtual void copy_from(const tlm_extension_base &ext) override
-    {
-        const ExclusiveAccessTlmExtension &other =
-            static_cast<const ExclusiveAccessTlmExtension &>(ext);
+    virtual void copy_from(const tlm_extension_base& ext) override {
+        const ExclusiveAccessTlmExtension& other = static_cast<const ExclusiveAccessTlmExtension&>(
+            ext);
 
         m_id = other.m_id;
         m_store_sta = other.m_store_sta;
     }
 
-    void set_exclusive_store_success()
-    {
-        m_store_sta = EXCLUSIVE_STORE_SUCCESS;
-    }
+    void set_exclusive_store_success() { m_store_sta = EXCLUSIVE_STORE_SUCCESS; }
 
-    void set_exclusive_store_failure()
-    {
-        m_store_sta = EXCLUSIVE_STORE_FAILURE;
-    }
+    void set_exclusive_store_failure() { m_store_sta = EXCLUSIVE_STORE_FAILURE; }
 
-    ExclusiveStoreStatus get_exclusive_store_status() const
-    {
-        return m_store_sta;
-    }
+    ExclusiveStoreStatus get_exclusive_store_status() const { return m_store_sta; }
 
-    void add_hop(int id)
-    {
-        m_id.add_hop(id);
-    }
+    void add_hop(int id) { m_id.add_hop(id); }
 
-    const InitiatorId & get_initiator_id() const
-    {
-        return m_id;
-    }
+    const InitiatorId& get_initiator_id() const { return m_id; }
 };
 
 #endif
-

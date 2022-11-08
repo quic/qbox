@@ -92,24 +92,27 @@
 #include <gtest/gtest.h>
 #include <scp/report.h>
 
-class TestBench : public sc_core::sc_module {
+class TestBench : public sc_core::sc_module
+{
 protected:
-  virtual void test_bench_body() = 0;
+    virtual void test_bench_body() = 0;
 
 public:
-  SC_HAS_PROCESS(TestBench);
-  TestBench(const sc_core::sc_module_name &n) : sc_core::sc_module(n) {
-    SC_THREAD(test_bench_body);
-  }
+    SC_HAS_PROCESS(TestBench);
+    TestBench(const sc_core::sc_module_name& n): sc_core::sc_module(n) {
+        SC_THREAD(test_bench_body);
+    }
 };
-template <class T> class TestBenchEnv : public ::testing::Environment {
-  // Would be nice to be a smart pointer, but sc_bind takes a pointer.
-  T *instance;
+template <class T>
+class TestBenchEnv : public ::testing::Environment
+{
+    // Would be nice to be a smart pointer, but sc_bind takes a pointer.
+    T* instance;
 
 public:
-  void SetUp() override { instance = new T(); }
-  void TearDown() override { delete instance; }
-  T *get() { return instance; }
+    void SetUp() override { instance = new T(); }
+    void TearDown() override { delete instance; }
+    T* get() { return instance; }
 };
 
 #ifndef _WIN32
@@ -117,16 +120,16 @@ public:
 #include <sys/wait.h>
 #include <unistd.h>
 
-template <class T> static inline void run_test_bench(T *instance) {
-  sc_spawn(sc_bind(&T::test_bench_body, instance));
-  sc_core::sc_start();
+template <class T>
+static inline void run_test_bench(T* instance) {
+    sc_spawn(sc_bind(&T::test_bench_body, instance));
+    sc_core::sc_start();
 }
 
 #else /* _WIN32 */
 #include <iostream>
 
-static inline void run_test_bench()
-{
+static inline void run_test_bench() {
     SCP_ERR("test_bench") << "Running tests on Windows is not supported.";
     ASSERT_TRUE(false);
 }
@@ -135,22 +138,20 @@ static inline void run_test_bench()
 
 #define TEST_BENCH_NAME(name) TestBench__##name
 
-#define TEST_BENCH(test_bench, name)                                           \
-  class TEST_BENCH_NAME(name) : public test_bench {                            \
-  public:                                                                   \
-    void test_bench_body() override;                                           \
-                                                                               \
-    TEST_BENCH_NAME(name)() : test_bench(#name) {}                             \
-  };                                                                           \
-  testing::Environment *const test_bench_env##name =                           \
-      testing::AddGlobalTestEnvironment(                                       \
-          new TestBenchEnv<TEST_BENCH_NAME(name)>());                          \
-  TEST(TEST_BENCH_NAME(name), name) {                                          \
-    run_test_bench<TEST_BENCH_NAME(name)>(                                     \
-        static_cast<TestBenchEnv<TEST_BENCH_NAME(name)> *>(                    \
-            test_bench_env##name)                                              \
-            ->get());                                                          \
-  }                                                                            \
-  void TEST_BENCH_NAME(name)::test_bench_body()
+#define TEST_BENCH(test_bench, name)                                                         \
+    class TEST_BENCH_NAME(name): public test_bench                                           \
+    {                                                                                        \
+    public:                                                                                  \
+        void test_bench_body() override;                                                     \
+                                                                                             \
+        TEST_BENCH_NAME(name)(): test_bench(#name) {}                                        \
+    };                                                                                       \
+    testing::Environment* const test_bench_env##name = testing::AddGlobalTestEnvironment(    \
+        new TestBenchEnv<TEST_BENCH_NAME(name)>());                                          \
+    TEST(TEST_BENCH_NAME(name), name) {                                                      \
+        run_test_bench<TEST_BENCH_NAME(name)>(                                               \
+            static_cast<TestBenchEnv<TEST_BENCH_NAME(name)>*>(test_bench_env##name)->get()); \
+    }                                                                                        \
+    void TEST_BENCH_NAME(name)::test_bench_body()
 
 #endif

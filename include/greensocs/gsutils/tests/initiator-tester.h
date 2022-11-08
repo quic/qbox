@@ -1,26 +1,26 @@
 /*
  *  This file is part of libgsutils
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #ifndef _GREENSOCS_GSUTILS_TESTS_INITIATOR_TESTER_H
 #define _GREENSOCS_GSUTILS_TESTS_INITIATOR_TESTER_H
@@ -70,13 +70,14 @@
  * One can also register a callback to catch DMI invalidations on the backward
  * path of the socket, using the `register_invalidate_direct_mem_ptr` method.
  */
-class InitiatorTester : public sc_core::sc_module {
+class InitiatorTester : public sc_core::sc_module
+{
 public:
     using TlmGenericPayload = tlm::tlm_generic_payload;
     using TlmResponseStatus = tlm::tlm_response_status;
     using TlmDmi = tlm::tlm_dmi;
 
-    using InvalidateDirectMemPtrFn = std::function<void (uint64_t, uint64_t)>;
+    using InvalidateDirectMemPtrFn = std::function<void(uint64_t, uint64_t)>;
 
 private:
     sc_core::sc_time m_last_txn_delay;
@@ -87,17 +88,15 @@ private:
 
     InvalidateDirectMemPtrFn m_dmi_inval_cb;
 
-    void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
-    {
+    void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) {
         if (m_dmi_inval_cb) {
             m_dmi_inval_cb(start, end);
         }
     }
 
 protected:
-    virtual void prepare_txn(TlmGenericPayload &txn, bool is_read,
-                             uint64_t addr, uint8_t *data, size_t len)
-    {
+    virtual void prepare_txn(TlmGenericPayload& txn, bool is_read, uint64_t addr, uint8_t* data,
+                             size_t len) {
         using namespace tlm;
 
         tlm_command cmd = is_read ? TLM_READ_COMMAND : TLM_WRITE_COMMAND;
@@ -114,9 +113,7 @@ protected:
 public:
     tlm_utils::simple_initiator_socket<InitiatorTester> socket;
 
-    InitiatorTester(const sc_core::sc_module_name &n)
-        : sc_core::sc_module(n)
-    {
+    InitiatorTester(const sc_core::sc_module_name& n): sc_core::sc_module(n) {
         socket.register_invalidate_direct_mem_ptr(this,
                                                   &InitiatorTester::invalidate_direct_mem_ptr);
     }
@@ -139,8 +136,7 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_b_transport(TlmGenericPayload &txn)
-    {
+    TlmResponseStatus do_b_transport(TlmGenericPayload& txn) {
         socket->b_transport(txn, m_last_txn_delay);
         m_last_dmi_hint = txn.is_dmi_allowed();
 
@@ -158,8 +154,7 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_transport_dbg(TlmGenericPayload &txn)
-    {
+    TlmResponseStatus do_transport_dbg(TlmGenericPayload& txn) {
         m_last_transport_debug_ret = socket->transport_dbg(txn);
 
         return txn.get_response_status();
@@ -177,8 +172,7 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_transaction(TlmGenericPayload &txn, bool debug = false)
-    {
+    TlmResponseStatus do_transaction(TlmGenericPayload& txn, bool debug = false) {
         if (debug) {
             return do_transport_dbg(txn);
         } else {
@@ -204,10 +198,8 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_read_with_txn_and_ptr(TlmGenericPayload &txn,
-                                               uint64_t addr, uint8_t *data,
-                                               size_t len, bool debug = false)
-    {
+    TlmResponseStatus do_read_with_txn_and_ptr(TlmGenericPayload& txn, uint64_t addr, uint8_t* data,
+                                               size_t len, bool debug = false) {
         prepare_txn(txn, true, addr, data, len);
         return do_transaction(txn, debug);
     }
@@ -231,14 +223,12 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_write_with_txn_and_ptr(TlmGenericPayload &txn,
-                                                uint64_t addr, const uint8_t *data,
-                                                size_t len, bool debug = false)
-    {
-        prepare_txn(txn, false, addr, const_cast<uint8_t *>(data), len);
+    TlmResponseStatus do_write_with_txn_and_ptr(TlmGenericPayload& txn, uint64_t addr,
+                                                const uint8_t* data, size_t len,
+                                                bool debug = false) {
+        prepare_txn(txn, false, addr, const_cast<uint8_t*>(data), len);
         return do_transaction(txn, debug);
     }
-
 
     /**
      * @brief Perform a simple read into the buffer pointed by `data`
@@ -250,9 +240,8 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_read_with_ptr(uint64_t addr, uint8_t *data,
-                                       size_t len, bool debug = false)
-    {
+    TlmResponseStatus do_read_with_ptr(uint64_t addr, uint8_t* data, size_t len,
+                                       bool debug = false) {
         TlmGenericPayload txn;
 
         return do_read_with_txn_and_ptr(txn, addr, data, len, debug);
@@ -270,14 +259,12 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_write_with_ptr(uint64_t addr, const uint8_t *data,
-                                        size_t len, bool debug = false)
-    {
+    TlmResponseStatus do_write_with_ptr(uint64_t addr, const uint8_t* data, size_t len,
+                                        bool debug = false) {
         TlmGenericPayload txn;
 
         return do_write_with_txn_and_ptr(txn, addr, data, len, debug);
     }
-
 
     /**
      * @brief Perform a simple read with a pre-set payload
@@ -295,10 +282,9 @@ public:
      * @return the tlm::tlm_response_status value of the transaction
      */
     template <class T>
-    TlmResponseStatus do_read_with_txn(TlmGenericPayload &txn, uint64_t addr,
-                                       T& data, bool debug = false)
-    {
-        uint8_t *ptr = reinterpret_cast<uint8_t*>(&data);
+    TlmResponseStatus do_read_with_txn(TlmGenericPayload& txn, uint64_t addr, T& data,
+                                       bool debug = false) {
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(&data);
 
         return do_read_with_txn_and_ptr(txn, addr, ptr, sizeof(data), debug);
     }
@@ -321,14 +307,12 @@ public:
      * @return the tlm::tlm_response_status value of the transaction
      */
     template <class T>
-    TlmResponseStatus do_write_with_txn(TlmGenericPayload &txn, uint64_t addr,
-                                        const T& data, bool debug = false)
-    {
-        const uint8_t *ptr = reinterpret_cast<const uint8_t*>(&data);
+    TlmResponseStatus do_write_with_txn(TlmGenericPayload& txn, uint64_t addr, const T& data,
+                                        bool debug = false) {
+        const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&data);
 
         return do_write_with_txn_and_ptr(txn, addr, ptr, sizeof(data), debug);
     }
-
 
     /**
      * @brief Perform a simple read into `data`
@@ -340,9 +324,8 @@ public:
      * @return the tlm::tlm_response_status value of the transaction
      */
     template <class T>
-    TlmResponseStatus do_read(uint64_t addr, T& data, bool debug = false)
-    {
-        uint8_t *ptr = reinterpret_cast<uint8_t*>(&data);
+    TlmResponseStatus do_read(uint64_t addr, T& data, bool debug = false) {
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(&data);
 
         return do_read_with_ptr(addr, ptr, sizeof(data), debug);
     }
@@ -359,43 +342,32 @@ public:
      * @return the tlm::tlm_response_status value of the transaction
      */
     template <class T>
-    TlmResponseStatus do_write(uint64_t addr, const T& data, bool debug = false)
-    {
-        const uint8_t *ptr = reinterpret_cast<const uint8_t*>(&data);
+    TlmResponseStatus do_write(uint64_t addr, const T& data, bool debug = false) {
+        const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&data);
 
         return do_write_with_ptr(addr, ptr, sizeof(data), debug);
     }
-
 
     /**
      * @brief Set the delay value to use for the next b_transport call
      *
      * @param[in] delay The delay value to use for the next b_transport call
      */
-    void set_next_txn_delay(const sc_core::sc_time &delay)
-    {
-        m_last_txn_delay = delay;
-    }
+    void set_next_txn_delay(const sc_core::sc_time& delay) { m_last_txn_delay = delay; }
 
     /**
      * @brief Get the delay value resulting of the last b_transport call
      *
      * @return the delay value resulting of the last b_transport call
      */
-    const sc_core::sc_time &get_last_txn_delay() const
-    {
-        return m_last_txn_delay;
-    }
+    const sc_core::sc_time& get_last_txn_delay() const { return m_last_txn_delay; }
 
     /**
      * @brief Get the return value of the last transport_dbg call
      *
      * @return the return value of the last transport_dbg call
      */
-    unsigned int get_last_transport_debug_ret() const
-    {
-        return m_last_transport_debug_ret;
-    }
+    unsigned int get_last_transport_debug_ret() const { return m_last_transport_debug_ret; }
 
     /**
      * @brief Get the DMI hint value of the last transaction (the
@@ -403,10 +375,7 @@ public:
      *
      * @return the DMI hint value of the last transaction
      */
-    bool get_last_dmi_hint() const
-    {
-        return m_last_dmi_hint;
-    }
+    bool get_last_dmi_hint() const { return m_last_dmi_hint; }
 
     /*
      * get_direct_mem_ptr helpers
@@ -421,8 +390,7 @@ public:
      *
      * @return the value returned by the get_direct_mem_ptr call
      */
-    bool do_dmi_request(uint64_t addr)
-    {
+    bool do_dmi_request(uint64_t addr) {
         TlmGenericPayload txn;
 
         prepare_txn(txn, true, addr, nullptr, 0);
@@ -434,10 +402,7 @@ public:
      *
      * @return the DMI data returned by the last get_direct_mem_ptr call
      */
-    const TlmDmi &get_last_dmi_data() const
-    {
-        return m_last_dmi_data;
-    }
+    const TlmDmi& get_last_dmi_data() const { return m_last_dmi_data; }
 
     /*
      * Backward interface helpers
@@ -447,10 +412,7 @@ public:
     /**
      * @brief Register a callback on invalidate_direct_mem_ptr event
      */
-    void register_invalidate_direct_mem_ptr(InvalidateDirectMemPtrFn cb)
-    {
-        m_dmi_inval_cb = cb;
-    }
+    void register_invalidate_direct_mem_ptr(InvalidateDirectMemPtrFn cb) { m_dmi_inval_cb = cb; }
 };
 
 #endif
