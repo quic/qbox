@@ -24,6 +24,7 @@
 #include <systemc>
 #include <tlm>
 #include <cci_configuration>
+#include <scp/report.h>
 
 #include <greensocs/libgsutils.h>
 
@@ -35,7 +36,7 @@
 
 class RemoteTest : public sc_core::sc_module
 {
-    gs::PassRPC<2,0> m_pass;
+    gs::PassRPC<2, 0> m_pass;
     gs::pass<> m_loopback;
 
     gs::Router<> m_router;
@@ -74,10 +75,10 @@ public:
 int sc_main(int argc, char* argv[])
 {
     try {
-        std::cout << "Remote started\n";
+        SCP_INFO("RemoteMain") << "Remote started";
         auto m_broker = new gs::ConfigurableBroker(argc, argv);
         RemoteTest remote("remote");
-        std::cout << "END OF ELAB for remote\n";
+        SCP_INFO("RemoteMain") << "END OF ELAB for remote";
         sc_core::sc_start();
     } catch (std::runtime_error const& e) {
         std::cerr << "Error: '" << e.what() << "'\n";

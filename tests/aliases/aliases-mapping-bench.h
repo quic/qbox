@@ -12,17 +12,16 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-class AliasesMappingTest : public TestBench {
+class AliasesMappingTest : public TestBench
+{
 protected:
-
     InitiatorTester m_initiator;
     gs::Router<> m_router;
     gs::Memory<> m_memory;
     gs::Memory<> m_ram;
     gs::Memory<> m_rom;
 
-    void do_good_dmi_request_and_check(uint64_t addr,
-        int64_t exp_start, uint64_t exp_end)
+    void do_good_dmi_request_and_check(uint64_t addr, int64_t exp_start, uint64_t exp_end)
     {
         using namespace tlm;
 
@@ -48,7 +47,7 @@ protected:
         using namespace tlm;
 
         const tlm_dmi& dmi_data = m_initiator.get_last_dmi_data();
-        addr-=dmi_data.get_start_address();
+        addr -= dmi_data.get_start_address();
 
         if (is_read) {
             ASSERT_TRUE(dmi_data.is_read_allowed());
@@ -59,7 +58,8 @@ protected:
         }
     }
 
-    void do_bus_binding(){
+    void do_bus_binding()
+    {
         m_router.initiator_socket.bind(m_memory.socket);
         m_router.initiator_socket.bind(m_ram.socket);
         m_router.initiator_socket.bind(m_rom.socket);

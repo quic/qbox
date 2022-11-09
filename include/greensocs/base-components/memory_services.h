@@ -58,28 +58,39 @@ private:
         signal(SIGKILL, MemoryServices::cleanupsig);
         signal(SIGSEGV, MemoryServices::cleanupsig);
         signal(SIGBUS, MemoryServices::cleanupsig);
+        // atexit(MemoryServices::cleanupexit);
     }
     struct shmem_info {
-        uint8_t *base;
+        uint8_t* base;
         size_t size;
     };
     std::map<std::string, shmem_info> m_shmem_info_map;
+    bool finished = false;
 
 public:
     ~MemoryServices() { cleanup(); }
 
     void cleanup()
     {
+        if (finished)
+            return;
         for (auto n : m_shmem_info_map) {
-            SC_REPORT_INFO("MemoryServices", ("Deleting " + n.first).c_str());
+            std::cerr << "Deleting " << n.first; // can't use SCP_ in global destructor as it's
+                                                 // probably already destroyed
             shm_unlink(n.first.c_str());
         };
+        finished = true;
     }
     static void cleanupsig(int num)
     {
-        std::cerr<<"Received signal "<<num<<"\n";
+        std::cerr << "Received signal " << num << "\n";
         MemoryServices::get().cleanup();
         exit(num);
+    }
+    static void cleanupexit()
+    {
+        std::cerr << "Received exit\n";
+        MemoryServices::get().cleanup();
     }
     static MemoryServices& get()
     {
@@ -93,38 +104,34 @@ public:
     {
         int fd = open(mapfile, O_RDWR);
         if (fd < 0) {
-            SC_REPORT_FATAL("MemoryServices", "Unable to find backing file\n");
+            SCP_FATAL("MemoryServices") << "Unable to find backing file";
         }
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
         close(fd);
         if (ptr == MAP_FAILED) {
-            SC_REPORT_FATAL("MemoryServices", "Unable to map backing file\n");
+            SCP_FATAL("MemoryServices") << "Unable to map backing file";
         }
         return ptr;
     }
 
     uint8_t* map_mem_create(const char* memname, uint64_t size)
     {
-        assert (m_shmem_info_map.count(memname)==0);
+        assert(m_shmem_info_map.count(memname) == 0);
         int fd = shm_open(memname, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
             shm_unlink(memname);
-            SC_REPORT_FATAL("MemoryServices",
-                            ("can't shm_open create " + std::string(memname)).c_str());
+            SCP_FATAL("MemoryServices") << "can't shm_open create " << memname;
         }
         ftruncate(fd, size);
-        SC_REPORT_INFO("MemoryServices", ("Length " + std::to_string(size)).c_str());
+        SCP_DEBUG("MemoryServices") << "Create Length " << size;
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
         close(fd);
         if (ptr == MAP_FAILED) {
             shm_unlink(memname);
-            SC_REPORT_FATAL("MemoryServices", ("can't mmap(shared memory create) " +
-                                               std::string(memname) + " " + std::to_string(errno))
-                                                  .c_str());
+            SCP_FATAL("MemoryServices")
+                << "can't mmap(shared memory create) " << memname << " " << errno;
         }
-        SC_REPORT_INFO("MemoryServices", ("Shared memory created: " + std::string(memname) +
-                                          " length " + std::to_string(size) + " ")
-                                             .c_str());
+        SCP_DEBUG("MemoryServices") << "Shared memory created: " << memname << " length " << size;
         m_shmem_info_map.insert({ std::string(memname), { ptr, size } });
         return ptr;
     }
@@ -140,20 +147,18 @@ public:
         int fd = shm_open(memname, O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
             shm_unlink(memname);
-            SC_REPORT_FATAL("MemoryServices",
-                            ("can't shm_open join " + std::string(memname)).c_str());
+            SCP_FATAL("MemoryServices") << "can't shm_open join " << memname;
         }
         ftruncate(fd, size);
-        SC_REPORT_INFO("MemoryServices", ("Length " + std::to_string(size)).c_str());
+        SCP_INFO("MemoryServices") << "Join Length " << size;
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
         close(fd);
         if (ptr == MAP_FAILED) {
             shm_unlink(memname);
-            SC_REPORT_FATAL("MemoryServices", ("can't mmap(shared memory join) " +
-                                               std::string(memname) + " " + std::to_string(errno))
-                                                  .c_str());
+            SCP_FATAL("MemoryServices")
+                << "can't mmap(shared memory join) " << memname << " " << errno;
         }
-        m_shmem_info_map.insert({std::string(memname), {ptr, size}});
+        m_shmem_info_map.insert({ std::string(memname), { ptr, size } });
         return ptr;
     }
 
@@ -165,7 +170,7 @@ public:
                 return ptr;
             }
         }
-        SC_REPORT_INFO("MemoryServices", "Aligned allocation failed, using normal allocation");
+        SCP_INFO("MemoryServices") << "Aligned allocation failed, using normal allocation";
         {
             uint8_t* ptr = (uint8_t*)malloc(size);
             if (ptr) {

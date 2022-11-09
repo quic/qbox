@@ -17,7 +17,7 @@ AlignConsecutiveMacros: true
 AlignConsecutiveAssignments: false
 
 AllowAllArgumentsOnNextLine: false
-AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 

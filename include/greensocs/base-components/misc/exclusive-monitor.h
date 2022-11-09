@@ -1,25 +1,25 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #ifndef GREENSOCS_BASE_COMPONENTS_MISC_EXCLUSIVE_MONITOR_H_
 #define GREENSOCS_BASE_COMPONENTS_MISC_EXCLUSIVE_MONITOR_H_
@@ -59,30 +59,30 @@
  *   - DMI hints (the is_dmi_allowed() flag in transactions) is also intercepted
  *     and modified if necessary.
  */
-class ExclusiveMonitor : public sc_core::sc_module {
+class ExclusiveMonitor : public sc_core::sc_module
+{
 private:
     using InitiatorId = gs::PathIDExtension;
 
-    class Region {
+    class Region
+    {
     public:
         uint64_t start;
         uint64_t end;
         InitiatorId id;
 
-        Region(const tlm::tlm_generic_payload &txn, const InitiatorId &id)
-            : start(txn.get_address())
-            , end(start + txn.get_data_length() - 1)
-            , id(id)
-        {}
+        Region(const tlm::tlm_generic_payload& txn, const InitiatorId& id)
+            : start(txn.get_address()), end(start + txn.get_data_length() - 1), id(id)
+        {
+        }
 
         /**
          * @return true if the txn transaction matches exactly with this region,
          * i.e. start and end addresses are equal.
          */
-        bool is_exact_match(const tlm::tlm_generic_payload &txn)
+        bool is_exact_match(const tlm::tlm_generic_payload& txn)
         {
-            return (start == txn.get_address())
-                && (end == start + txn.get_data_length() - 1);
+            return (start == txn.get_address()) && (end == start + txn.get_data_length() - 1);
         }
     };
 
@@ -91,14 +91,14 @@ private:
     std::map<uint64_t, RegionPtr> m_regions;
     std::map<InitiatorId, RegionPtr> m_regions_by_id;
 
-    const InitiatorId get_initiator_id(const tlm::tlm_generic_payload &txn)
+    const InitiatorId get_initiator_id(const tlm::tlm_generic_payload& txn)
     {
         gs::PathIDExtension* ext;
         txn.get_extension(ext);
         return *ext;
     }
 
-    RegionPtr find_region(const tlm::tlm_generic_payload &txn)
+    RegionPtr find_region(const tlm::tlm_generic_payload& txn)
     {
         uint64_t start, end;
 
@@ -134,8 +134,7 @@ private:
         front_socket->invalidate_direct_mem_ptr(region->start, region->end);
     }
 
-    void lock_region(const tlm::tlm_generic_payload &txn,
-                     const InitiatorId &id)
+    void lock_region(const tlm::tlm_generic_payload& txn, const InitiatorId& id)
     {
         RegionPtr region(std::make_shared<Region>(txn, id));
 
@@ -156,7 +155,7 @@ private:
         m_regions_by_id.erase(region->id);
     }
 
-    void unlock_region_by_id(const InitiatorId &id)
+    void unlock_region_by_id(const InitiatorId& id)
     {
         if (m_regions_by_id.find(id) == m_regions_by_id.end()) {
             return;
@@ -167,10 +166,10 @@ private:
         unlock_region(region);
     }
 
-    void handle_exclusive_load(const tlm::tlm_generic_payload &txn,
-                               const ExclusiveAccessTlmExtension &ext)
+    void handle_exclusive_load(const tlm::tlm_generic_payload& txn,
+                               const ExclusiveAccessTlmExtension& ext)
     {
-        const InitiatorId &id = get_initiator_id(txn);
+        const InitiatorId& id = get_initiator_id(txn);
         RegionPtr region = find_region(txn);
 
         if (region) {
@@ -187,8 +186,8 @@ private:
         lock_region(txn, id);
     }
 
-    bool handle_exclusive_store(const tlm::tlm_generic_payload &txn,
-                                ExclusiveAccessTlmExtension &ext)
+    bool handle_exclusive_store(const tlm::tlm_generic_payload& txn,
+                                ExclusiveAccessTlmExtension& ext)
     {
         RegionPtr region = find_region(txn);
 
@@ -216,7 +215,7 @@ private:
         return true;
     }
 
-    void handle_regular_store(const tlm::tlm_generic_payload &txn)
+    void handle_regular_store(const tlm::tlm_generic_payload& txn)
     {
         RegionPtr region;
 
@@ -231,9 +230,9 @@ private:
      * exclusive stores and return true if the b_transport call must be skipped
      * completely (because of a exclusive store failure).
      */
-    bool before_b_transport(const tlm::tlm_generic_payload &txn)
+    bool before_b_transport(const tlm::tlm_generic_payload& txn)
     {
-        ExclusiveAccessTlmExtension *ext;
+        ExclusiveAccessTlmExtension* ext;
         bool is_store = txn.get_command() == tlm::TLM_WRITE_COMMAND;
 
         txn.get_extension(ext);
@@ -260,9 +259,9 @@ private:
      * Called after the actual b_transport forwarding. Handles exclusive loads
      * and return true if the DMI hint must be cleared in the transaction.
      */
-    bool after_b_transport(const tlm::tlm_generic_payload &txn)
+    bool after_b_transport(const tlm::tlm_generic_payload& txn)
     {
-        ExclusiveAccessTlmExtension *ext;
+        ExclusiveAccessTlmExtension* ext;
         bool is_store = txn.get_command() == tlm::TLM_WRITE_COMMAND;
 
         txn.get_extension(ext);
@@ -293,7 +292,7 @@ private:
         return true;
     }
 
-    void b_transport(tlm::tlm_generic_payload &txn, sc_core::sc_time &delay)
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
         tlm::tlm_generic_payload txn_copy;
 
@@ -321,16 +320,16 @@ private:
         }
     }
 
-    unsigned int transport_dbg(tlm::tlm_generic_payload &txn)
+    unsigned int transport_dbg(tlm::tlm_generic_payload& txn)
     {
         return back_socket->transport_dbg(txn);
     }
 
-    bool get_direct_mem_ptr(tlm::tlm_generic_payload &txn, tlm::tlm_dmi &dmi_data)
+    bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
     {
         uint64_t txn_start;
         uint64_t fixed_start, fixed_end;
-        unsigned char *fixed_ptr;
+        unsigned char* fixed_ptr;
         bool ret = back_socket->get_direct_mem_ptr(txn, dmi_data);
 
         if (!ret) {
@@ -396,22 +395,20 @@ public:
     tlm_utils::simple_target_socket<ExclusiveMonitor> front_socket;
     tlm_utils::simple_initiator_socket<ExclusiveMonitor> back_socket;
 
-    ExclusiveMonitor(const sc_core::sc_module_name &name)
-        : sc_core::sc_module(name)
-        , front_socket("front-socket")
-        , back_socket("back-socket")
+    ExclusiveMonitor(const sc_core::sc_module_name& name)
+        : sc_core::sc_module(name), front_socket("front-socket"), back_socket("back-socket")
     {
         front_socket.register_b_transport(this, &ExclusiveMonitor::b_transport);
         front_socket.register_transport_dbg(this, &ExclusiveMonitor::transport_dbg);
         front_socket.register_get_direct_mem_ptr(this, &ExclusiveMonitor::get_direct_mem_ptr);
-        back_socket.register_invalidate_direct_mem_ptr(this, &ExclusiveMonitor::invalidate_direct_mem_ptr);
+        back_socket.register_invalidate_direct_mem_ptr(
+            this, &ExclusiveMonitor::invalidate_direct_mem_ptr);
     }
 
     ExclusiveMonitor() = delete;
     ExclusiveMonitor(const ExclusiveMonitor&) = delete;
 
-    virtual ~ExclusiveMonitor()
-    {}
+    virtual ~ExclusiveMonitor() {}
 };
 
 #endif

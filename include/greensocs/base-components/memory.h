@@ -32,6 +32,7 @@
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
 #include <scp/report.h>
+#include <scp/helpers.h>
 
 #include "loader.h"
 #include "memory_services.h"
@@ -78,7 +79,7 @@ class Memory : public sc_core::sc_module
         uint64_t m_len;     // size of the bloc
         uint64_t m_address; // this is an absolute address and this is the
                             // beginning of the bloc/Memory
-        Memory<BUSWIDTH> &m_mem;
+        Memory<BUSWIDTH>& m_mem;
 
         uint8_t* m_ptr = nullptr;
         std::array<std::unique_ptr<SubBlock>, (1 << N)> m_sub_blocks;
@@ -117,11 +118,11 @@ class Memory : public sc_core::sc_module
                 }
                 if (m_mem.p_shmem) {
                     std::string shmname = ("/foobaa" + (std::string(m_mem.name())) +
-                                 (std::to_string(m_address)));
+                                           (std::to_string(m_address)));
                     if ((m_ptr = MemoryServices::get().map_mem_create(shmname.c_str(), m_len)) !=
                         nullptr) {
                         m_mapped = true;
-                        m_shmemID=ShmemIDExtension(shmname, (uint64_t)m_ptr, m_len);
+                        m_shmemID = ShmemIDExtension(shmname, (uint64_t)m_ptr, m_len);
                         return *this;
                     }
                 }
@@ -134,8 +135,7 @@ class Memory : public sc_core::sc_module
             }
 
             if (m_len < m_mem.p_min_block_size) {
-                SC_REPORT_FATAL("Memory",
-                                "Unable to allocate memory!"); // out of memory!
+                SCP_FATAL(m_mem.name()) << "Unable to allocate memory!"; // out of memory!
             }
 
             // return a index of sub_bloc
@@ -172,26 +172,18 @@ class Memory : public sc_core::sc_module
             return remain_len;
         }
 
-        uint8_t* get_ptr()
-        {
-            return m_ptr;
-        }
+        uint8_t* get_ptr() { return m_ptr; }
 
-        uint64_t get_len()
-        {
-            return m_len;
-        }
+        uint64_t get_len() { return m_len; }
 
-        uint64_t get_address()
-        {
-            return m_address;
-        }
+        uint64_t get_address() { return m_address; }
 
-        ShmemIDExtension * get_extension() {
-            if (m_shmemID.empty()) return nullptr;
+        ShmemIDExtension* get_extension()
+        {
+            if (m_shmemID.empty())
+                return nullptr;
             return &m_shmemID;
         }
-
 
         ~SubBlock()
         {
@@ -225,12 +217,9 @@ protected:
             txn.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return false;
         }
-        if (p_verbose) {
-            std::stringstream info;
-            info << name() << " : DMI access to address "
-                 << "0x" << std::hex << addr;
-            SC_REPORT_INFO("Memory", info.str().c_str());
-        }
+
+        SCP_DEBUG(SCMOD) << " : DMI access to address "
+                         << "0x" << std::hex << addr;
 
         if (p_rom)
             dmi_data.allow_read();
@@ -254,7 +243,7 @@ protected:
         dmi_data.set_read_latency(p_latency);
         dmi_data.set_write_latency(p_latency);
 
-        ShmemIDExtension *ext=blk.get_extension();
+        ShmemIDExtension* ext = blk.get_extension();
         if (ext) {
             txn.set_extension(ext);
         }
@@ -271,30 +260,11 @@ protected:
         unsigned int bel = txn.get_byte_enable_length();
 
         if (txn.get_streaming_width() < len) {
-            std::cout << "sw "<< txn.get_streaming_width() << " "<<len<<"\n";
-            SC_REPORT_WARNING("Memory", "not supported.\n");
+            SCP_FATAL(SCMOD) << "not supported.";
         }
+        if (p_verbose)
+            SCP_WARN(SCMOD) << "b_transport :" << scp::scp_txn_tostring(txn);
 
-        if (p_verbose) {
-            const char* cmd = "unknown";
-            switch (txn.get_command()) {
-            case tlm::TLM_IGNORE_COMMAND:
-                cmd = "ignore";
-                break;
-            case tlm::TLM_WRITE_COMMAND:
-                cmd = "write";
-                break;
-            case tlm::TLM_READ_COMMAND:
-                cmd = "read";
-                break;
-            }
-
-            std::stringstream info;
-
-            info << name() << " : " << cmd << " access to address "
-                 << "0x" << std::hex << addr;
-            SC_REPORT_INFO("Memory", info.str().c_str());
-        }
         if (!m_relative_addresses) {
             if (addr < m_address) {
                 txn.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
@@ -331,7 +301,7 @@ protected:
             }
             break;
         default:
-            SC_REPORT_FATAL("Memory", "TLM command not supported\n");
+            SCP_FATAL(SCMOD) << "TLM command not supported";
             break;
         }
 
@@ -441,11 +411,22 @@ public:
                })
         , m_sub_block(nullptr)
     {
+        auto m_broker = cci::cci_get_broker();
         if (_size) {
-            auto m_broker = cci::cci_get_broker();
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
             if (!m_broker.has_preset_value(ts_name + ".size")) {
                 m_broker.set_preset_cci_value(ts_name + ".size", cci::cci_value(_size));
+            }
+        }
+
+        if (p_verbose) {
+            int level;
+            if (!m_broker.get_preset_cci_value(std::string(name) + "." + SCP_LOG_LEVEL_PARAM_NAME)
+                     .template try_get<int>(level) ||
+                level < (int)(scp::log::WARNING)) {
+                m_broker.set_preset_cci_value(
+                    (std::string(name) + "." + SCP_LOG_LEVEL_PARAM_NAME).c_str(),
+                    cci::cci_value(static_cast<int>(scp::log::WARNING)));
             }
         }
 
@@ -472,8 +453,8 @@ public:
 
         m_sub_block = std::make_unique<Memory<BUSWIDTH>::SubBlock<>>(0, m_size, *this);
 
-        SCP_INFO(SCMOD) << "m_address: " << m_address;
-        SCP_INFO(SCMOD) << "m_size: " << m_size;
+        SCP_DEBUG(SCMOD) << "m_address: " << m_address;
+        SCP_DEBUG(SCMOD) << "m_size: " << m_size;
 
         m_relative_addresses = true;
         if (m_broker.has_preset_value(ts_name + ".relative_addresses")) {
@@ -486,9 +467,7 @@ public:
     Memory() = delete;
     Memory(const Memory&) = delete;
 
-    ~Memory()
-    {
-    }
+    ~Memory() {}
 
     /**
      * @brief this function returns the size of the memory
@@ -501,7 +480,7 @@ public:
             auto m_broker = cci::cci_get_broker();
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
             if (!m_broker.has_preset_value(ts_name + ".size")) {
-                SC_REPORT_FATAL("Memory", ("Can't find " + ts_name + ".size").c_str());
+                SCP_FATAL(SCMOD) << "Can't find " << ts_name << ".size";
             }
             m_size = m_broker.get_preset_cci_value(ts_name + ".size").get_uint64();
             m_broker.lock_preset_value(ts_name + ".size");
@@ -521,7 +500,7 @@ public:
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
             if (!m_broker.has_preset_value(ts_name + ".address")) {
                 m_address = 0; // fine for relative addressing
-                SC_REPORT_WARNING("Memory", ("Can't find " + ts_name + ".address").c_str());
+                SCP_WARN(SCMOD) << "Can't find " << ts_name << ".address";
             } else {
                 m_address = m_broker.get_preset_cci_value(ts_name + ".address").get_uint64();
             }

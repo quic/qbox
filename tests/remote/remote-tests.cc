@@ -23,31 +23,32 @@
 
 #include "remote-bench.h"
 #include <cci/utils/broker.h>
+#include <scp/report.h>
 
 // Simple load and store into the Target 1 and 2
 TEST_BENCH(RemotePassTest, test_bench)
 {
-    std::cout << "Test 1\n";
+    SCP_INFO(SCMOD) << "Test 1";
     for (int i = 0; i < 10; i++) {
         do_write_read_check(0x11000);
     }
-    std::cout << "Test 2\n";
+    SCP_INFO(SCMOD) << "Test 2";
     for (int i = 0; i < 10; i++) {
         do_write_read_check(0x22000);
     }
-    std::cout << "Test 2l\n";
+    SCP_INFO(SCMOD) << "Test 2l";
     for (int i = 0; i < 10; i++) {
-        do_write_read_check_larger(0x22000+(i*8));
+        do_write_read_check_larger(0x22000 + (i * 8));
     }
-    std::cout << "Test 3\n";
+    SCP_INFO(SCMOD) << "Test 3";
     for (int i = 0; i < 10; i++) {
-        //do_remote_write_read_check(0x11000);
+        // do_remote_write_read_check(0x11000);
     }
-    std::cout << "Test 4\n";
+    SCP_INFO(SCMOD) << "Test 4";
     for (int i = 0; i < 10; i++) {
         do_dmi_write_read_check(0x23000);
     }
-    std::cout << "Looks OK\n";
+    SCP_INFO(SCMOD) << "Looks OK";
     sc_core::sc_stop();
 }
 

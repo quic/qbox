@@ -1,25 +1,25 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #include "test-bench.h"
 #include <cci/utils/broker.h>
@@ -30,7 +30,7 @@
  */
 TEST_BENCH(ExclusiveMonitorTestBench, SimpleReadWrite)
 {
-    std::cout << "TEST_BENCH: SimpleReadWrite\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: SimpleReadWrite";
     /* Normal load/store at address 0 */
     do_load_and_check(0, 8);
     do_store_and_check(0, 8);
@@ -45,7 +45,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, SimpleReadWrite)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, SimpleDmi)
 {
-    std::cout << "TEST_BENCH: SimpleDmi\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: SimpleDmi";
     /* Valid DMI request */
     do_good_dmi_request_and_check(0, 0, TARGET_MMIO_SIZE - 1);
 
@@ -59,7 +59,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, SimpleDmi)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclSt)
 {
-    std::cout << "TEST_BENCH: ExclLdExclSt\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: ExclLdExclSt";
     do_good_dmi_request_and_check(0, 0, TARGET_MMIO_SIZE - 1);
     do_excl_load_and_check(0, 0, 8, true);
     do_excl_store_and_check(0, 0, 8, true);
@@ -72,7 +72,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclSt)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclStOutOfBound)
 {
-    std::cout << "TEST_BENCH: ExclLdExclStOutOfBound\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: ExclLdExclStOutOfBound";
     do_excl_load_and_check(0, TARGET_MMIO_SIZE, 8, false);
     do_excl_store_and_check(0, TARGET_MMIO_SIZE, 8, false);
 }
@@ -82,7 +82,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclStOutOfBound)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclStAddrMismatch)
 {
-    std::cout << "TEST_BENCH: ExclLdExclStAddrMismatch\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: ExclLdExclStAddrMismatch";
     do_excl_load_and_check(0, 0, 8, true);
     do_excl_store_and_check(0, 0x20, 8, false);
 }
@@ -92,7 +92,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclStAddrMismatch)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclStUnaligned)
 {
-    std::cout << "TEST_BENCH: ExclLdExclStUnaligned\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: ExclLdExclStUnaligned";
     do_excl_load_and_check(0, 0, 8, true);
     do_excl_store_and_check(0, 4, 8, false);
 }
@@ -102,7 +102,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclStUnaligned)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclStSizeMismatch0)
 {
-    std::cout << "TEST_BENCH: ExclLdExclStSizeMismatch0\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: ExclLdExclStSizeMismatch0";
     do_excl_load_and_check(0, 0, 8, true);
     do_excl_store_and_check(0, 0, 4, false);
 }
@@ -112,7 +112,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclStSizeMismatch0)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclStSizeMismatch1)
 {
-    std::cout << "TEST_BENCH: ExclLdExclStSizeMismatch1\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: ExclLdExclStSizeMismatch1";
     do_excl_load_and_check(0, 0, 8, true);
     do_excl_store_and_check(0, 0, 16, false);
 }
@@ -122,7 +122,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclLdExclStSizeMismatch1)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, ExclStAlone)
 {
-    std::cout << "TEST_BENCH: ExclStAlone\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: ExclStAlone";
     do_excl_store_and_check(0, 0, 8, false);
 }
 
@@ -132,7 +132,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclStAlone)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, ExclLdStandardLdExclSt)
 {
-    std::cout << "TEST_BENCH: ExclLdStandardLdExclSt\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: ExclLdStandardLdExclSt";
     do_good_dmi_request_and_check(0, 0, TARGET_MMIO_SIZE - 1);
     do_excl_load_and_check(0, 0, 8, true);
     do_load_and_check(0, 8);
@@ -145,7 +145,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclLdStandardLdExclSt)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, ExclLdStandardStExclSt)
 {
-    std::cout << "TEST_BENCH: ExclLdStandardStExclSt\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: ExclLdStandardStExclSt";
     do_good_dmi_request_and_check(0, 0, TARGET_MMIO_SIZE - 1);
     do_excl_load_and_check(0, 0, 8, true);
     do_store_and_check(0, 8);
@@ -159,7 +159,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclLdStandardStExclSt)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, MultipleExclLdStandardStExclSt)
 {
-    std::cout << "TEST_BENCH: MultipleExclLdStandardStExclSt\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: MultipleExclLdStandardStExclSt";
     do_good_dmi_request_and_check(0, 0, TARGET_MMIO_SIZE - 1);
 
     do_excl_load_and_check(0, 0, 8, true);
@@ -182,7 +182,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, MultipleExclLdStandardStExclSt)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, TwoDistinctExclPairs)
 {
-    std::cout << "TEST_BENCH: TwoDistinctExclPairs\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: TwoDistinctExclPairs";
     do_excl_load_and_check(0, 0, 8, true);
     do_excl_load_and_check(1, 0x20, 8, true);
     do_excl_store_and_check(0, 0, 8, true);
@@ -195,7 +195,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, TwoDistinctExclPairs)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, TwoDistinctExclPairsSameAddr)
 {
-    std::cout << "TEST_BENCH: TwoDistinctExclPairsSameAddr\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: TwoDistinctExclPairsSameAddr";
     do_excl_load_and_check(0, 0, 8, true);
     do_excl_load_and_check(1, 0, 8, false);
     do_excl_store_and_check(0, 0, 8, true);
@@ -209,7 +209,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, TwoDistinctExclPairsSameAddr)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, TwoDistinctExclPairsSameId)
 {
-    std::cout << "TEST_BENCH: TwoDistinctExclPairsSameId\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: TwoDistinctExclPairsSameId";
     do_excl_load_and_check(0, 0, 8, true);
     do_excl_load_and_check(0, 0x20, 8, true);
     do_excl_store_and_check(0, 0, 8, false);
@@ -223,7 +223,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, TwoDistinctExclPairsSameId)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, ExclLockDmiReq)
 {
-    std::cout << "TEST_BENCH: ExclLockDmiReq\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: ExclLockDmiReq";
     /* First request should return the whole range */
     do_good_dmi_request_and_check(0, 0, TARGET_MMIO_SIZE - 1);
 
@@ -268,7 +268,7 @@ TEST_BENCH(ExclusiveMonitorTestBench, ExclLockDmiReq)
  */
 TEST_BENCH(ExclusiveMonitorTestBench, ExclLockDmiHint)
 {
-    std::cout << "TEST_BENCH: ExclLockDmiHint\n";
+    SCP_INFO(SCMOD) << "TEST_BENCH: ExclLockDmiHint";
     /* Regular load */
     do_load_and_check(0, 8);
     ASSERT_TRUE(get_last_dmi_hint());

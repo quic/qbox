@@ -1,25 +1,25 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #include "router.h"
 #include "pass.h"
@@ -28,13 +28,16 @@
 #include <greensocs/gsutils/tests/test-bench.h>
 #include <systemc>
 #include <tlm>
+#include <scp/report.h>
+
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
 #include <vector>
 
 static constexpr size_t NB_TARGETS = 4;
 
-class RouterTestBenchSimple : public TestBench {
+class RouterTestBenchSimple : public TestBench
+{
 public:
     std::vector<uint64_t> address = { 0, 257, 514, 700 };
     std::vector<size_t> size = { 256, 256, 256, 256 };
@@ -75,7 +78,8 @@ private:
             // Loop to avoid testing the target on itself
             if (id != i) {
                 m_overlap_address = address[id] >= address[i] && address[id] < address[i] + size[i];
-                m_overlap_size = address[id] + size[id] > address[i] && address[id] + size[id] < address[i] + size[i];
+                m_overlap_size = address[id] + size[id] > address[i] &&
+                                 address[id] + size[id] < address[i] + size[i];
             }
         }
     }
@@ -157,7 +161,8 @@ private:
         overlap(id);
 
         if (m_overlap_address || m_overlap_size) {
-            std::cout << "An overlap of address or size was detected during the test" << std::endl;
+            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test"
+                            << std::endl;
         } else {
             if (is_load) {
                 ret = m_initiator.do_read_with_ptr(addr, emptydata, len, debug);
@@ -174,7 +179,8 @@ private:
         overlap(id);
 
         if (m_overlap_address || m_overlap_size) {
-            std::cout << "An overlap of address or size was detected during the test" << std::endl;
+            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test"
+                            << std::endl;
         } else {
             if (is_load) {
                 ret = m_initiator.do_read_with_ptr(addr, emptydata, len, debug);
@@ -219,13 +225,13 @@ protected:
         }
     }
 
-    void do_good_dmi_request_and_check(int id, uint64_t addr,
-        uint64_t exp_start, uint64_t exp_end)
+    void do_good_dmi_request_and_check(int id, uint64_t addr, uint64_t exp_start, uint64_t exp_end)
     {
         overlap(id);
 
         if (m_overlap_address || m_overlap_size) {
-            std::cout << "An overlap of address or size was detected during the test" << std::endl;
+            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test"
+                            << std::endl;
         } else {
             using namespace tlm;
 
@@ -243,7 +249,8 @@ protected:
         overlap(id);
 
         if (m_overlap_address || m_overlap_size) {
-            std::cout << "An overlap of address or size was detected during the test" << std::endl;
+            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test"
+                            << std::endl;
         } else {
             using namespace tlm;
 
@@ -270,17 +277,32 @@ public:
             target_size.push_back(address[i] + size[i]);
         }
 
-        m_initiator.register_invalidate_direct_mem_ptr([this](uint64_t start, uint64_t end) { invalidate_direct_mem_ptr(start, end); });
+        m_initiator.register_invalidate_direct_mem_ptr(
+            [this](uint64_t start, uint64_t end) { invalidate_direct_mem_ptr(start, end); });
         for (auto& t : m_target) {
-            t->register_write_cb([id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus { return target_access(id, addr, data, size); });
+            t->register_write_cb(
+                [id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
+                    return target_access(id, addr, data, size);
+                });
 
-            t->register_read_cb([id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus { return target_access(id, addr, data, size); });
+            t->register_read_cb(
+                [id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
+                    return target_access(id, addr, data, size);
+                });
 
-            t->register_debug_read_cb([id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus { return target_access(id, addr, data, size); });
+            t->register_debug_read_cb(
+                [id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
+                    return target_access(id, addr, data, size);
+                });
 
-            t->register_debug_write_cb([id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus { return target_access(id, addr, data, size); });
+            t->register_debug_write_cb(
+                [id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
+                    return target_access(id, addr, data, size);
+                });
 
-            t->register_get_direct_mem_ptr_cb([id, this](uint64_t addr, TlmDmi& dmi_data) -> bool { return get_direct_mem_ptr(id, addr, dmi_data); });
+            t->register_get_direct_mem_ptr_cb([id, this](uint64_t addr, TlmDmi& dmi_data) -> bool {
+                return get_direct_mem_ptr(id, addr, dmi_data);
+            });
             id++;
         }
 
@@ -293,7 +315,7 @@ public:
 
     virtual ~RouterTestBenchSimple()
     {
-        while(!m_target.empty()){
+        while (!m_target.empty()) {
             delete m_target.back();
             m_target.pop_back();
         }

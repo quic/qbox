@@ -1,30 +1,32 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef _GREENSOCS_BASE_COMPONENTS_PASS_H
 #define _GREENSOCS_BASE_COMPONENTS_PASS_H
 
 #include <cci_configuration>
 #include <systemc>
+#include <scp/report.h>
+#include <scp/helpers.h>
 
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
@@ -33,34 +35,34 @@
 
 namespace gs {
 template <unsigned int BUSWIDTH = 32>
-class pass : public sc_core::sc_module {
-
+class pass : public sc_core::sc_module
+{
     /* Alias from - to */
     void alias_preset_param(std::string a, std::string b, bool required = false)
     {
-
         if (m_broker.has_preset_value(a)) {
             m_broker.set_preset_cci_value(b, m_broker.get_preset_cci_value(a));
             m_broker.lock_preset_value(a);
             m_broker.ignore_unconsumed_preset_values(
-                [a](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == a; });
+                [a](const std::pair<std::string, cci::cci_value>& iv) -> bool {
+                    return iv.first == a;
+                });
         } else {
             if (required) {
-                SC_REPORT_FATAL("pass ", (std::string(name()) + " Can't find " + a).c_str());
+                SCP_FATAL(SCMOD) << " Can't find " << a;
             }
         }
     }
 
     template <typename MOD>
-    class initiator_socket_spying
-        : public tlm_utils::simple_initiator_socket<MOD, BUSWIDTH> {
+    class initiator_socket_spying : public tlm_utils::simple_initiator_socket<MOD, BUSWIDTH>
+    {
         using typename tlm_utils::simple_initiator_socket<MOD, BUSWIDTH>::base_target_socket_type;
 
         const std::function<void(std::string)> register_cb;
 
     public:
-        initiator_socket_spying(const char* name,
-            const std::function<void(std::string)>& f)
+        initiator_socket_spying(const char* name, const std::function<void(std::string)>& f)
             : tlm_utils::simple_initiator_socket<MOD, BUSWIDTH>::simple_initiator_socket(name)
             , register_cb(f)
         {
@@ -73,24 +75,22 @@ class pass : public sc_core::sc_module {
         }
 
         // hierarchial binding
-        void bind(tlm::tlm_initiator_socket<BUSWIDTH> &socket)
+        void bind(tlm::tlm_initiator_socket<BUSWIDTH>& socket)
         {
             tlm_utils::simple_initiator_socket<MOD, BUSWIDTH>::bind(socket);
-            register_cb( socket.get_base_port().name());
+            register_cb(socket.get_base_port().name());
         }
     };
 
     /* NB use the EXPORT name, so as not to be hassled by the _port_0*/
-    std::string nameFromSocket(std::string s)
-    {
-        return s;
-    }
+    std::string nameFromSocket(std::string s) { return s; }
     void register_boundto(std::string s)
     {
         s = nameFromSocket(s);
         alias_preset_param(s + ".address", std::string(name()) + ".target_socket.address");
         alias_preset_param(s + ".size", std::string(name()) + ".target_socket.size");
-        alias_preset_param(s + ".relative_addresses", std::string(name()) + ".target_socket.relative_addresses");
+        alias_preset_param(s + ".relative_addresses",
+                           std::string(name()) + ".target_socket.relative_addresses");
     }
 
 public:
@@ -99,83 +99,34 @@ public:
     cci::cci_param<bool> p_verbose;
 
 private:
-    void b_transport(tlm::tlm_generic_payload& trans,
-        sc_core::sc_time& delay)
+    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
     {
+        if (p_verbose)
+            SCP_WARN(SCMOD) << "calling b_transport: " << scp::scp_txn_tostring(trans);
         initiator_socket->b_transport(trans, delay);
-        if (p_verbose) {
-            std::stringstream info;
-
-            const char* cmd = "unknown";
-            switch (trans.get_command()) {
-            case tlm::TLM_IGNORE_COMMAND:
-                cmd = "ignore";
-                break;
-            case tlm::TLM_WRITE_COMMAND:
-                cmd = "write";
-                break;
-            case tlm::TLM_READ_COMMAND:
-                cmd = "read";
-                break;
-            }
-
-            info << " " << name()
-                 << " b_transport " << cmd << " to address "
-                 << "0x" << std::hex << trans.get_address();
-
-            info << " len:" << trans.get_data_length();
-            unsigned char* ptr = trans.get_data_ptr();
-            info << " returned with data 0x";
-            for (int i = trans.get_data_length(); i; i--) {
-                info << std::setw(2) << std::setfill('0') << std::hex << (unsigned int)(ptr[i-1]);
-            }
-
-            for (int i = 0; i < tlm::max_num_extensions(); i++) {
-                if (trans.get_extension(i)) {
-                    info << " extn " << i;
-                }
-            }
-
-            SC_REPORT_INFO("pass", info.str().c_str());
-        }
+        if (p_verbose)
+            SCP_WARN(SCMOD) << "returning from b_transport: " << scp::scp_txn_tostring(trans);
     }
 
     unsigned int transport_dbg(tlm::tlm_generic_payload& trans)
     {
-        if (p_verbose) {
-            std::stringstream info;
-            info << " " << name()
-                 << " transport_dbg to address "
-                 << "0x" << std::hex << trans.get_address();
-            SC_REPORT_INFO("pass", info.str().c_str());
-        }
+        if (p_verbose)
+            SCP_WARN(SCMOD) << "calling dbg_transport: " << scp::scp_txn_tostring(trans);
         return initiator_socket->transport_dbg(trans);
     }
 
-    bool get_direct_mem_ptr(tlm::tlm_generic_payload& trans,
-        tlm::tlm_dmi& dmi_data)
+    bool get_direct_mem_ptr(tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
-        if (p_verbose) {
-            std::stringstream info;
-            info << " " << name()
-                 << " get_direct_mem_ptr to address "
-                 << "0x" << std::hex << trans.get_address();
-            SC_REPORT_INFO("pass", info.str().c_str());
-        }
+        if (p_verbose)
+            SCP_WARN(SCMOD) << "calling get_direct_mem_ptr: " << scp::scp_txn_tostring(trans);
         return initiator_socket->get_direct_mem_ptr(trans, dmi_data);
     }
 
-    void invalidate_direct_mem_ptr(sc_dt::uint64 start,
-        sc_dt::uint64 end)
+    void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
     {
-        if (p_verbose) {
-            std::stringstream info;
-            info << " " << name()
-                 << " invalidate_direct_mem_ptr "
-                 << " start address 0x" << std::hex << start
-                 << " end address 0x" << std::hex << end;
-            SC_REPORT_INFO("pass", info.str().c_str());
-        }
+        if (p_verbose)
+            SCP_WARN(SCMOD) << std::hex << "calling invalidate_direct_mem_ptr: 0x" << start
+                            << " - 0x" << end;
         target_socket->invalidate_direct_mem_ptr(start, end);
     }
 
@@ -189,6 +140,16 @@ public:
         , p_verbose("verbose", _verbose, "print all transactions as they pass through")
         , m_broker(cci::cci_get_broker())
     {
+        if (p_verbose) {
+            int level;
+            if (!m_broker.get_preset_cci_value(std::string(name()) + "." + SCP_LOG_LEVEL_PARAM_NAME)
+                     .template try_get<int>(level) ||
+                level < (int)(scp::log::WARNING)) {
+                m_broker.set_preset_cci_value(
+                    (std::string(name()) + "." + SCP_LOG_LEVEL_PARAM_NAME).c_str(),
+                    cci::cci_value(static_cast<int>(scp::log::WARNING)));
+            }
+        }
         target_socket.register_b_transport(this, &pass::b_transport);
         target_socket.register_transport_dbg(this, &pass::transport_dbg);
         target_socket.register_get_direct_mem_ptr(this, &pass::get_direct_mem_ptr);
@@ -196,8 +157,8 @@ public:
     }
     pass() = delete;
     pass(const pass&) = delete;
-    ~pass() { }
+    ~pass() {}
 };
 
-}
+} // namespace gs
 #endif

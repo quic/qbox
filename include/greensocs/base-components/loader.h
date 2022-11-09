@@ -1,25 +1,25 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #ifndef _GREENSOCS_BASE_COMPONENTS_LOADER_H
 #define _GREENSOCS_BASE_COMPONENTS_LOADER_H
@@ -30,6 +30,7 @@
 #include <systemc>
 #include <tlm>
 #include <tlm_utils/simple_initiator_socket.h>
+#include <scp/report.h>
 
 #include <cinttypes>
 #include <fcntl.h>
@@ -56,16 +57,14 @@ namespace gs {
  */
 
 /* simple class to load csv file*/
-class CSVRow {
+class CSVRow
+{
 public:
     std::string operator[](std::size_t index) const
     {
         return std::string(&m_line[m_data[index] + 1], m_data[index + 1] - (m_data[index] + 1));
     }
-    std::size_t size() const
-    {
-        return m_data.size() - 1;
-    }
+    std::size_t size() const { return m_data.size() - 1; }
     void readNextRow(std::istream& str)
     {
         std::getline(str, m_line);
@@ -93,24 +92,22 @@ static std::istream& operator>>(std::istream& str, CSVRow& data)
     return str;
 }
 
-namespace loader {
-    static const char* log_enabled = std::getenv("GS_LOG");
-}
-
 template <unsigned int BUSWIDTH = 32>
-class Loader : public sc_core::sc_module {
-
+class Loader : public sc_core::sc_module
+{
     template <typename MODULE, typename TYPES = tlm::tlm_base_protocol_types>
     class simple_initiator_socket_zero
-        : public tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES, sc_core::SC_ZERO_OR_MORE_BOUND> {
-        using typename tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES, sc_core::SC_ZERO_OR_MORE_BOUND>::base_target_socket_type;
-        typedef tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES, sc_core::SC_ZERO_OR_MORE_BOUND> socket_b;
+        : public tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES,
+                                                      sc_core::SC_ZERO_OR_MORE_BOUND>
+    {
+        using typename tlm_utils::simple_initiator_socket_b<
+            MODULE, BUSWIDTH, TYPES, sc_core::SC_ZERO_OR_MORE_BOUND>::base_target_socket_type;
+        typedef tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES,
+                                                     sc_core::SC_ZERO_OR_MORE_BOUND>
+            socket_b;
 
     public:
-        simple_initiator_socket_zero(const char* name)
-            : socket_b(name)
-        {
-        }
+        simple_initiator_socket_zero(const char* name): socket_b(name) {}
     };
 
 public:
@@ -129,14 +126,19 @@ private:
         auto m_broker = cci::cci_get_broker();
         std::string fullname = std::string(sc_module::name()) + "." + name;
         m_broker.ignore_unconsumed_preset_values(
-            [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == fullname; });
+            [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool {
+                return iv.first == fullname;
+            });
     }
 
     std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
     {
         std::list<std::string> children;
         int l = strlen(name) + 1;
-        auto uncon = m_broker.get_unconsumed_preset_values([&name](const std::pair<std::string, cci::cci_value>& iv) { return iv.first.find(std::string(name) + ".") == 0; });
+        auto uncon = m_broker.get_unconsumed_preset_values(
+            [&name](const std::pair<std::string, cci::cci_value>& iv) {
+                return iv.first.find(std::string(name) + ".") == 0;
+            });
         for (auto p : uncon) {
             children.push_back(p.first.substr(l, p.first.find(".", l) - l));
         }
@@ -162,7 +164,7 @@ private:
                 std::stringstream info;
                 info << name() << " : Error loading data to memory @ "
                      << "0x" << std::hex << addr;
-                SC_REPORT_FATAL("Loader", info.str().c_str());
+                SCP_FATAL(SCMOD) << info.str();
             }
         }
     }
@@ -171,11 +173,13 @@ private:
     T cci_get(std::string name)
     {
         m_broker.ignore_unconsumed_preset_values(
-            [name](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == name; });
+            [name](const std::pair<std::string, cci::cci_value>& iv) -> bool {
+                return iv.first == name;
+            });
         m_broker.lock_preset_value(name);
         T ret;
         if (!m_broker.get_preset_cci_value(name).template try_get<T>(ret)) {
-            SC_REPORT_FATAL("Loader", ("Unable to get parameter " + name).c_str());
+            SCP_FATAL(SCMOD) << "Unable to get parameter " << name;
         };
         return ret;
     }
@@ -200,21 +204,21 @@ private:
 public:
     Loader(sc_core::sc_module_name name)
         : m_broker(cci::cci_get_broker())
-        , initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
+        , initiator_socket(
+              "initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
     {
     }
     Loader(sc_core::sc_module_name name,
-        std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> _write)
+           std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> _write)
         : m_broker(cci::cci_get_broker())
-        , initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
+        , initiator_socket(
+              "initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
         , write_cb(_write)
     {
         m_use_callback = true;
     }
 
-    ~Loader()
-    {
-    }
+    ~Loader() {}
 
 protected:
     void load(std::string name)
@@ -222,7 +226,8 @@ protected:
         bool read = false;
         if (m_broker.has_preset_value(name + ".elf_file")) {
             if (m_use_callback) {
-                SC_REPORT_WARNING("loader", "elf file loading into local memory will interpret addresses relative to the memory - probably not what you want?");
+                SCP_WARN(SCMOD) << "elf file loading into local memory will interpret addresses "
+                                   "relative to the memory - probably not what you want?";
             }
             std::string file = cci_get<std::string>(name + ".elf_file");
             elf_load(file);
@@ -233,18 +238,16 @@ protected:
                 if (m_broker.has_preset_value(name + ".offset"))
                     addr = cci_get<uint64_t>(name + ".offset");
                 else
-                    SC_REPORT_FATAL("loader", "No offset found");
+                    SCP_FATAL(SCMOD) << "No offset found";
             } else {
                 if (m_broker.has_preset_value(name + ".address"))
                     addr = cci_get<uint64_t>(name + ".address");
                 else
-                    SC_REPORT_FATAL("loader", "No address found");
+                    SCP_FATAL(SCMOD) << "No address found";
             }
             if (m_broker.has_preset_value(name + ".bin_file")) {
                 std::string file = cci_get<std::string>(name + ".bin_file");
-                if (gs::loader::log_enabled) {
-                    SC_REPORT_INFO("Loader", ("Loading binary file " + file).c_str());
-                }
+                SCP_INFO(SCMOD) << "Loading binary file " << file;
                 file_load(file, addr);
                 read = true;
             }
@@ -256,9 +259,7 @@ protected:
                 if (m_broker.has_preset_value(name + ".byte_swap")) {
                     byte_swap = cci_get<bool>(name + ".byte_swap");
                 }
-                if (gs::loader::log_enabled) {
-                    SC_REPORT_INFO("Loader", ("Loading csv file " + file).c_str());
-                }
+                SCP_INFO(SCMOD) << "Loading csv file " << file;
                 csv_load(file, addr, addr_str, val_str, byte_swap);
                 read = true;
             }
@@ -266,11 +267,9 @@ protected:
                 std::string param = cci_get<std::string>(name + ".param");
                 cci::cci_param_typed_handle<std::string> data(m_broker.get_param_handle(param));
                 if (!data.is_valid()) {
-                    SC_REPORT_FATAL("Loader", ("Unable to find valid source param " + param).c_str());
+                    SCP_FATAL(SCMOD) << "Unable to find valid source param " << param;
                 }
-                if (gs::loader::log_enabled) {
-                    SC_REPORT_INFO("Loader", ("Loading string parameter " + param).c_str());
-                }
+                SCP_INFO(SCMOD) << "Loading string parameter " << param;
                 str_load(data.get_value(), addr);
                 read = true;
             }
@@ -279,22 +278,20 @@ protected:
                 if (m_broker.has_preset_value(name + ".byte_swap")) {
                     byte_swap = cci_get<bool>(name + ".byte_swap");
                 }
-                if (gs::loader::log_enabled) {
-                    SC_REPORT_INFO("Loader", "Loading config data ");
-                }
+                SCP_INFO(SCMOD) << "Loading config data";
                 data_load(name + ".data", addr, byte_swap);
                 read = true;
             }
         }
         if (!read) {
-            SC_REPORT_FATAL("Loader","Unknown loader type");
+            SCP_FATAL(SCMOD) << "Unknown loader type";
         }
     }
     void end_of_elaboration()
     {
         for (std::string s : sc_cci_children(name())) {
             if (std::count_if(s.begin(), s.end(),
-                    [](unsigned char c) { return std::isdigit(c); })) {
+                              [](unsigned char c) { return std::isdigit(c); })) {
                 load(std::string(name()) + "." + s);
             } else {
                 load(name());
@@ -315,8 +312,7 @@ public:
     {
         std::ifstream fin(filename, std::ios::in | std::ios::binary);
         if (!fin.good()) {
-            printf("Memory::load(): error file not found (%s)\n", filename.c_str());
-            exit(1);
+            SCP_FATAL(SCMOD) << "Memory::load(): error file not found (" << filename << ")";
         }
 
         uint8_t buffer[1024];
@@ -330,13 +326,14 @@ public:
         fin.close();
     }
 
-    void csv_load(std::string filename, uint64_t offset, std::string addr_str, std::string value_str, bool byte_swap)
+    void csv_load(std::string filename, uint64_t offset, std::string addr_str,
+                  std::string value_str, bool byte_swap)
     {
         std::ifstream file(filename);
 
         CSVRow row;
         if (!(file >> row)) {
-            SC_REPORT_FATAL("Loader", ("Unable to find " + filename).c_str());
+            SCP_FATAL(SCMOD) << "Unable to find " << filename;
         }
         int addr_i = -1;
         int value_i = -1;
@@ -349,7 +346,7 @@ public:
             }
         }
         if (addr_i == -1 || value_i == -1) {
-            SC_REPORT_FATAL("Loader", ("Unable to find " + filename).c_str());
+            SCP_FATAL(SCMOD) << "Unable to find " << filename;
         }
         while (file >> row) {
             const std::string addr = std::string(row[addr_i]);
@@ -360,14 +357,14 @@ public:
         }
     }
 
-
 private:
-// it makes no sense to expose this function, you could only sensibly use it from a config anyway
+    // it makes no sense to expose this function, you could only sensibly use it from a config
+    // anyway
     void data_load(std::string param, uint64_t addr, bool byte_swap)
     {
         for (std::string s : sc_cci_children(param.c_str())) {
             if (std::count_if(s.begin(), s.end(),
-                    [](unsigned char c) { return std::isdigit(c); })) {
+                              [](unsigned char c) { return std::isdigit(c); })) {
                 union {
                     uint32_t d;
                     uint8_t b[sizeof(uint32_t)];
@@ -378,26 +375,25 @@ private:
                 }
                 send(addr + (stoi(s) * 0x4), &(data.b[0]), 4);
             } else {
-                SC_REPORT_FATAL("Loader", "unknown format for parameter load");
+                SCP_FATAL(SCMOD) << "unknown format for parameter load";
                 break;
             }
         }
     }
-public:
 
+public:
     void str_load(std::string data, uint64_t addr)
     {
         send(addr, reinterpret_cast<uint8_t*>(const_cast<char*>(data.c_str())), data.length());
     }
 
-    void ptr_load(uint8_t *data, uint64_t addr, uint64_t len)
-    {
-        send(addr, data, len);
-    }
+    void ptr_load(uint8_t* data, uint64_t addr, uint64_t len) { send(addr, data, len); }
 
     void elf_load(const std::string& path)
     {
-        elf_reader(path, [&](uint64_t addr, uint8_t* data, uint64_t len) -> void { send(addr, data, len); });
+        elf_reader(path, [&](uint64_t addr, uint8_t* data, uint64_t len) -> void {
+            send(addr, data, len);
+        });
     }
 
     /* Elf reader helper class */
@@ -418,7 +414,8 @@ private:
         const bool r, w, x;
     };
 
-    class elf_reader {
+    class elf_reader
+    {
     private:
         std::string m_filename;
         int m_fd;
@@ -450,20 +447,11 @@ private:
             typedef Elf32_Shdr Elf_Shdr;
             typedef Elf32_Sym Elf_Sym;
 
-            static Elf_Ehdr* elf_getehdr(Elf* elf)
-            {
-                return elf32_getehdr(elf);
-            }
+            static Elf_Ehdr* elf_getehdr(Elf* elf) { return elf32_getehdr(elf); }
 
-            static Elf_Phdr* elf_getphdr(Elf* elf)
-            {
-                return elf32_getphdr(elf);
-            }
+            static Elf_Phdr* elf_getphdr(Elf* elf) { return elf32_getphdr(elf); }
 
-            static Elf_Shdr* elf_getshdr(Elf_Scn* scn)
-            {
-                return elf32_getshdr(scn);
-            }
+            static Elf_Shdr* elf_getshdr(Elf_Scn* scn) { return elf32_getshdr(scn); }
         };
 
         struct elf64_traits {
@@ -472,20 +460,11 @@ private:
             typedef Elf64_Shdr Elf_Shdr;
             typedef Elf64_Sym Elf_Sym;
 
-            static Elf_Ehdr* elf_getehdr(Elf* elf)
-            {
-                return elf64_getehdr(elf);
-            }
+            static Elf_Ehdr* elf_getehdr(Elf* elf) { return elf64_getehdr(elf); }
 
-            static Elf_Phdr* elf_getphdr(Elf* elf)
-            {
-                return elf64_getphdr(elf);
-            }
+            static Elf_Phdr* elf_getphdr(Elf* elf) { return elf64_getphdr(elf); }
 
-            static Elf_Shdr* elf_getshdr(Elf_Scn* scn)
-            {
-                return elf64_getshdr(scn);
-            }
+            static Elf_Shdr* elf_getshdr(Elf_Scn* scn) { return elf64_getshdr(scn); }
         };
 
         static endianess elf_endianess(Elf* elf)
@@ -510,7 +489,7 @@ private:
             size_t count = 0;
             int err = elf_getphdrnum(elf, &count);
             if (err)
-                SC_REPORT_FATAL("Loader", ("elf_begin failed: " + std::string(elf_errmsg(err))).c_str());
+                SCP_FATAL("elf_reader") << "elf_begin failed: " << elf_errmsg(err);
 
             std::vector<elf_segment> segments;
             typename T::Elf_Phdr* hdr = T::elf_getphdr(elf);
@@ -519,8 +498,8 @@ private:
                     bool r = hdr->p_flags & PF_R;
                     bool w = hdr->p_flags & PF_W;
                     bool x = hdr->p_flags & PF_X;
-                    segments.push_back({ hdr->p_vaddr, hdr->p_paddr, hdr->p_memsz,
-                        hdr->p_filesz, hdr->p_offset, r, w, x });
+                    segments.push_back({ hdr->p_vaddr, hdr->p_paddr, hdr->p_memsz, hdr->p_filesz,
+                                         hdr->p_offset, r, w, x });
                 }
             }
 
@@ -574,18 +553,19 @@ private:
             , m_endian(ENDIAN_UNKNOWN)
         {
             if (elf_version(EV_CURRENT) == EV_NONE)
-                SC_REPORT_FATAL("Loader", "failed to read libelf version");
+                SCP_FATAL("elf_reader") << "failed to read libelf version";
 
             m_fd = open(filename(), O_RDONLY, 0);
             if (m_fd < 0)
-                SC_REPORT_FATAL("Loader", ("cannot open elf file " + std::string(filename())).c_str());
+                SCP_FATAL("elf_reader") << "cannot open elf file " << filename();
 
             Elf* elf = elf_begin(m_fd, ELF_C_READ, nullptr);
             if (elf == nullptr)
-                SC_REPORT_FATAL("Loader", ("error reading " + std::string(filename()) + " : " + std::string(elf_errmsg(-1))).c_str());
+                SCP_FATAL("elf_reader")
+                    << "error reading " << filename() << " : " << elf_errmsg(-1);
 
             if (elf_kind(elf) != ELF_K_ELF)
-                SC_REPORT_FATAL("Loader", ("ELF version error in " + std::string(filename())).c_str());
+                SCP_FATAL("elf_reader") << "ELF version error in " << filename();
 
             Elf32_Ehdr* ehdr32 = elf32_getehdr(elf);
             Elf64_Ehdr* ehdr64 = elf64_getehdr(elf);
@@ -621,10 +601,10 @@ private:
         uint64_t read_segment(const elf_segment& segment)
         {
             if (m_fd < 0)
-                SC_REPORT_FATAL("Loader", ("ELF file '" + std::string(filename()) + "' not open").c_str());
+                SCP_FATAL("elf_reader") << "ELF file '" << filename() << "' not open";
 
             if (lseek(m_fd, segment.offset, SEEK_SET) != (ssize_t)segment.offset)
-                SC_REPORT_FATAL("Loader", ("cannot seek within ELF file " + std::string(filename())).c_str());
+                SCP_FATAL("elf_reader") << "cannot seek within ELF file " << filename();
 
             uint8_t buff[1024];
             size_t sz = segment.filesz;
@@ -633,18 +613,18 @@ private:
                 int s = read(m_fd, buff, (sz < sizeof(buff) ? sz : sizeof(buff)));
                 sz -= s;
                 if (!s) {
-                    SC_REPORT_FATAL("Loader", ("cannot read ELF file " + std::string(filename())).c_str());
+                    SCP_FATAL("elf_reader") << "cannot read ELF file " << filename();
                     exit(0);
                 }
                 m_send(segment.phys + offset, buff, s);
                 offset += s;
             }
             if (lseek(m_fd, 0, SEEK_SET) != 0)
-                SC_REPORT_FATAL("Loader", ("cannot seek within ELF file " + std::string(filename())).c_str());
+                SCP_FATAL("elf_reader") << "cannot seek within ELF file " << filename();
 
             return segment.size;
         }
     };
 };
-}
+} // namespace gs
 #endif

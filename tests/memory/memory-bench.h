@@ -1,26 +1,26 @@
 
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #include <systemc>
 #include <tlm>
@@ -32,7 +32,8 @@
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/test-bench.h>
 
-class MemoryTestBench : public TestBench {
+class MemoryTestBench : public TestBench
+{
 public:
     static constexpr size_t MEMORY_SIZE = 256;
 
@@ -46,8 +47,7 @@ protected:
         ADD_FAILURE(); /* we don't expect any invalidation */
     }
 
-    void do_good_dmi_request_and_check(uint64_t addr,
-        int64_t exp_start, uint64_t exp_end)
+    void do_good_dmi_request_and_check(uint64_t addr, int64_t exp_start, uint64_t exp_end)
     {
         using namespace tlm;
 
@@ -73,7 +73,7 @@ protected:
         using namespace tlm;
 
         const tlm_dmi& dmi_data = m_initiator.get_last_dmi_data();
-        addr-=dmi_data.get_start_address();
+        addr -= dmi_data.get_start_address();
 
         if (is_read) {
             ASSERT_TRUE(dmi_data.is_read_allowed());
@@ -86,16 +86,13 @@ protected:
 
 public:
     MemoryTestBench(const sc_core::sc_module_name& n)
-        : TestBench(n)
-        , m_initiator("initiator")
-        , m_target("memory", MEMORY_SIZE)
+        : TestBench(n), m_initiator("initiator"), m_target("memory", MEMORY_SIZE)
     {
-        m_initiator.register_invalidate_direct_mem_ptr([this](uint64_t start, uint64_t end) { invalidate_direct_mem_ptr(start, end); });
+        m_initiator.register_invalidate_direct_mem_ptr(
+            [this](uint64_t start, uint64_t end) { invalidate_direct_mem_ptr(start, end); });
 
         m_initiator.socket.bind(m_target.socket);
     }
 
-    virtual ~MemoryTestBench()
-    {
-    }
+    virtual ~MemoryTestBench() {}
 };

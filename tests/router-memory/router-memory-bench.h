@@ -1,25 +1,25 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #include <systemc>
 #include <tlm>
@@ -34,7 +34,8 @@
 
 static constexpr size_t NB_MEMORY = 4;
 
-class RouterMemoryTestBench : public TestBench {
+class RouterMemoryTestBench : public TestBench
+{
 public:
     std::vector<uint64_t> address = { 0, 257, 524, 700 };
     std::vector<size_t> size = { 256, 256, 256, 256 };
@@ -52,8 +53,7 @@ protected:
         ADD_FAILURE(); /* we don't expect any invalidation */
     }
 
-    void do_good_dmi_request_and_check(uint64_t addr,
-        int64_t exp_start, uint64_t exp_end)
+    void do_good_dmi_request_and_check(uint64_t addr, int64_t exp_start, uint64_t exp_end)
     {
         using namespace tlm;
 
@@ -74,12 +74,12 @@ protected:
         ASSERT_FALSE(ret);
     }
 
-    void dmi_write_or_read(uint64_t addr, uint8_t *data, size_t len, bool is_read)
+    void dmi_write_or_read(uint64_t addr, uint8_t* data, size_t len, bool is_read)
     {
         using namespace tlm;
 
         const tlm_dmi& dmi_data = m_initiator.get_last_dmi_data();
-        addr-=dmi_data.get_start_address();
+        addr -= dmi_data.get_start_address();
 
         if (is_read) {
             ASSERT_TRUE(dmi_data.is_read_allowed());
@@ -92,13 +92,8 @@ protected:
 
 public:
     RouterMemoryTestBench(const sc_core::sc_module_name& n)
-        : TestBench(n)
-        , m_initiator("initiator")
-        , m_router("router")
-        , m_memory()
-        , m_dumper("dumper")
+        : TestBench(n), m_initiator("initiator"), m_router("router"), m_memory(), m_dumper("dumper")
     {
-
         for (int i = 0; i < NB_MEMORY; i++) {
             char txt[20];
             sprintf(txt, "Memory_%d", i);
@@ -106,7 +101,8 @@ public:
             memory_size.push_back(address[i] + size[i]);
         }
 
-        m_initiator.register_invalidate_direct_mem_ptr([this](uint64_t start, uint64_t end) { invalidate_direct_mem_ptr(start, end); });
+        m_initiator.register_invalidate_direct_mem_ptr(
+            [this](uint64_t start, uint64_t end) { invalidate_direct_mem_ptr(start, end); });
 
         m_router.add_initiator(m_initiator.socket);
         for (int i = 0; i < NB_MEMORY; i++) {
@@ -119,7 +115,7 @@ public:
 
     virtual ~RouterMemoryTestBench()
     {
-        while(!m_memory.empty()){
+        while (!m_memory.empty()) {
             delete m_memory.back();
             m_memory.pop_back();
         }

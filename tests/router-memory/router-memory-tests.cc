@@ -1,25 +1,25 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #include "router-memory-bench.h"
 #include <cci/utils/broker.h>
@@ -58,19 +58,21 @@ TEST_BENCH(RouterMemoryTestBench, SimpleOverlapWrite)
 TEST_BENCH(RouterMemoryTestBench, SimpleCrossesBoundary)
 {
     /* Target 1 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[0] - 1, 0xFFFF), tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[0] - 1, 0xFFFF),
+              tlm::TLM_ADDRESS_ERROR_RESPONSE);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[1] - 1, 0xFFFF), tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[1] - 1, 0xFFFF),
+              tlm::TLM_ADDRESS_ERROR_RESPONSE);
 }
 
 // Simple write and read into the memory with the Debug Transport Interface
 TEST_BENCH(RouterMemoryTestBench, SimpleWriteReadDebug)
 {
-    uint8_t data8=0;
-    uint16_t data16=0;
-    uint32_t data32=0;
-    uint64_t data64=0;
+    uint8_t data8 = 0;
+    uint16_t data16 = 0;
+    uint32_t data32 = 0;
+    uint64_t data64 = 0;
 
     // set some data so that we are sure we only get the right amount below
     ASSERT_EQ(m_initiator.do_write<uint64_t>(0, -1, true), tlm ::TLM_OK_RESPONSE);
@@ -125,18 +127,20 @@ TEST_BENCH(RouterMemoryTestBench, SimpleWriteReadDebug)
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), sizeof(data64));
     ASSERT_EQ(data64, 0x04);
 
-    ASSERT_EQ(m_initiator.do_write(0x10000,data32), tlm::TLM_OK_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write(0x10000, data32), tlm::TLM_OK_RESPONSE);
 }
 
 // Debug Transport Interface transaction outside of the target address space
 TEST_BENCH(RouterMemoryTestBench, SimpleOverlapWriteDebug)
 {
     /* Target 1 */
-    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[0], 0x04, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[0], 0x04, true),
+              tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[1], 0x04, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[1], 0x04, true),
+              tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 }
 
@@ -144,11 +148,13 @@ TEST_BENCH(RouterMemoryTestBench, SimpleOverlapWriteDebug)
 TEST_BENCH(RouterMemoryTestBench, SimpleCrossesBoundaryDebug)
 {
     /* Target 1 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[0] - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[0] - 1, 0xFFFF, true),
+              tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[1] - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[1] - 1, 0xFFFF, true),
+              tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 }
 
@@ -193,7 +199,6 @@ TEST_BENCH(RouterMemoryTestBench, WriteDebugReadBlocking)
 // Request for DMI access to memory
 TEST_BENCH(RouterMemoryTestBench, SimpleDmi)
 {
-
     /* Valid DMI request Target 1 */
     do_good_dmi_request_and_check(0, 0, memory_size[0] - 1);
 
