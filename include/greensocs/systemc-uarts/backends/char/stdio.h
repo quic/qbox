@@ -1,25 +1,25 @@
 /*
-* Copyright (c) 2022 GreenSocs
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version, or under the
-* Apache License, Version 2.0 (the "License”) at your discretion.
-*
-* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-* You may obtain a copy of the Apache License at
-* http://www.apache.org/licenses/LICENSE-2.0
-*/
+ * Copyright (c) 2022 GreenSocs
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version, or under the
+ * Apache License, Version 2.0 (the "License”) at your discretion.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You may obtain a copy of the Apache License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
 #pragma once
 
@@ -32,7 +32,8 @@
 #include <termios.h>
 #endif
 
-class CharBackendStdio : public CharBackend, public sc_core::sc_module {
+class CharBackendStdio : public CharBackend, public sc_core::sc_module
+{
 private:
     gs::async_event m_event;
     std::queue<unsigned char> m_queue;
@@ -45,8 +46,7 @@ public:
 #pragma message("CharBackendStdio not yet implemented for WIN32")
 #endif
 
-    static void catch_function(int signo)
-    {
+    static void catch_function(int signo) {
         tty_reset();
 
 #ifndef WIN32
@@ -56,8 +56,7 @@ public:
 #endif
     }
 
-    static void tty_reset()
-    {
+    static void tty_reset() {
 #ifndef WIN32
         struct termios tty;
 
@@ -71,8 +70,7 @@ public:
 #endif
     }
 
-    CharBackendStdio(sc_core::sc_module_name name)
-    {
+    CharBackendStdio(sc_core::sc_module_name name) {
         SC_METHOD(rcv);
         sensitive << m_event;
         dont_initialize();
@@ -99,11 +97,8 @@ public:
         new std::thread(&CharBackendStdio::rcv_thread, this);
     }
 
-    void* rcv_thread()
-    {
-
+    void* rcv_thread() {
         for (;;) {
-
             int c = getchar();
             {
                 std::lock_guard<std::mutex> lock(m_mutex);
@@ -120,8 +115,7 @@ public:
         return NULL;
     }
 
-    void rcv(void)
-    {
+    void rcv(void) {
         unsigned char c;
 
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -139,8 +133,7 @@ public:
         }
     }
 
-    void write(unsigned char c)
-    {
+    void write(unsigned char c) {
         putchar(c);
         fflush(stdout);
     }
