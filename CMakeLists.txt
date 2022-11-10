@@ -4,7 +4,7 @@ project(qup VERSION 1.0)
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
-set(PACKAGE_PATH "greensocs/components/qup")
+set(PACKAGE_PATH "quic/components/qup")
 set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositoies")
 
 execute_process(COMMAND git config --get remote.origin.url
