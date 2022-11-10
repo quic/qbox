@@ -50,7 +50,7 @@
 
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/memory.h>
-#include <greensocs/base-components/connectors.h>
+#include <greensocs/base-components/pass.h>
 #include <greensocs/base-components/memorydumper.h>
 #include "greensocs/systemc-uarts/uart-pl011.h"
 #include "greensocs/systemc-uarts/backends/char-backend.h"
@@ -175,6 +175,8 @@ protected:
     cci::cci_param<unsigned> p_hexagon_num_clusters;
 
     cci::cci_param<bool> p_with_gpu;
+
+    cci::cci_param<int> p_log_level;
 
     gs::ConfigurableBroker m_broker;
 
@@ -333,6 +335,7 @@ public:
         , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
         , p_num_redists("num_redists", 1, "Number of redistribution regions")
         , p_with_gpu("with_gpu", false, "Build platform with GPU")
+        , p_log_level("log_level", 4, "Default log level")
         , m_broker({
               { "gic.num_spi", cci::cci_value(960) }, // 64 seems reasonable, but can be up to
                                                       // 960 or 987 depending on how the gic
@@ -499,9 +502,10 @@ public:
 int sc_main(int argc, char* argv[]) {
     scp::init_logging(
       scp::LogConfig()
+          .fileInfoFrom(sc_core::SC_ERROR)
           .logAsync(false)
           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-          .msgTypeFieldWidth(50)); // make the msg type column a bit tighter
+          .msgTypeFieldWidth(30)); // make the msg type column a bit tighter
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
 
     GreenSocsPlatform* platform = new GreenSocsPlatform("platform");
