@@ -1746,7 +1746,13 @@ private:
         uint64_t val = (*(uint64_t*)ptr);
 
         for (auto tbu : tbus) {
+            tbu->start_invalidates();
+        }
+        for (auto tbu : tbus) {
             tbu->invalidate(val);
+        }
+        for (auto tbu : tbus) {
+            tbu->stop_invalidates();
         }
     }
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> smmu_tlbflush =
@@ -1755,10 +1761,16 @@ private:
         };
 
     void smmu_tlbflush_all_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+        for (auto tbu : tbus) {
+            tbu->start_invalidates();
+        }
         for (int i = 0; i < MAX_CB; i++) {
             for (auto tbu : tbus) {
                 tbu->invalidate(i);
             }
+        }
+        for (auto tbu : tbus) {
+            tbu->stop_invalidates();
         }
     }
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> smmu_tlbflush_all =
@@ -2861,6 +2873,7 @@ template <unsigned int BUSWIDTH>
 class smmu500_tbu : public sc_core::sc_module
 {
     smmu500<BUSWIDTH>* smmu;
+    std::mutex m_dmi_invalidate_lock;
 
     std::pair<uint64_t, uint64_t> dmi_range[MAX_CB] = {};
     bool dmi_range_valid[MAX_CB] = { false };
@@ -2904,6 +2917,9 @@ protected:
     }
 
     virtual bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data) {
+        if (!m_dmi_invalidate_lock.try_lock()) {
+            return false;
+        }
         // We should only get here if the txn from downstream marked a possible DMI
         sc_dt::uint64 addr = txn.get_address();
         typename smmu500<BUSWIDTH>::IOMMUTLBEntry te = smmu->smmu_translate(
@@ -2923,6 +2939,7 @@ protected:
                 dmi_data.set_start_address(newstart);
                 dmi_data.set_dmi_ptr(dmi_data.get_dmi_ptr() + (newstart - start));
             }
+            m_dmi_invalidate_lock.unlock();
             return ret;
         }
         // ignore permissions, just attempt the access
@@ -2933,6 +2950,7 @@ protected:
 
         int ret = downstream_socket->get_direct_mem_ptr(txn, dmi_data);
         if (!ret) {
+            m_dmi_invalidate_lock.unlock();
             return ret;
         }
         uint64_t offset = page_base -
@@ -2963,6 +2981,7 @@ protected:
                         << std::hex << dmi_data.get_end_address();
 
         txn.set_address(addr);
+        m_dmi_invalidate_lock.unlock();
         return ret;
     }
 
@@ -2983,6 +3002,9 @@ public:
         upstream_socket.register_transport_dbg(this, &smmu500_tbu::transport_dbg);
         upstream_socket.register_get_direct_mem_ptr(this, &smmu500_tbu::get_direct_mem_ptr);
     }
+
+    void start_invalidates() { m_dmi_invalidate_lock.lock(); }
+    void stop_invalidates() { m_dmi_invalidate_lock.unlock(); }
 
     void invalidate(uint32_t CB) {
         if (dmi_range_valid[CB]) {
