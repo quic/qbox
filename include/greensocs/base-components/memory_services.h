@@ -120,16 +120,19 @@ public:
         int fd = shm_open(memname, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
             shm_unlink(memname);
-            SCP_FATAL("MemoryServices") << "can't shm_open create " << memname;
+            SCP_FATAL("MemoryServices") << "can't shm_open create " << memname << " " << strerror(errno);;
         }
-        ftruncate(fd, size);
+        if (ftruncate(fd, size)==-1) {
+            shm_unlink(memname);
+            SCP_FATAL("MemoryServices") << "can't truncate " << memname << " " << strerror(errno);;
+        }
         SCP_DEBUG("MemoryServices") << "Create Length " << size;
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
         close(fd);
         if (ptr == MAP_FAILED) {
             shm_unlink(memname);
             SCP_FATAL("MemoryServices")
-                << "can't mmap(shared memory create) " << memname << " " << errno;
+                << "can't mmap(shared memory create) " << memname << " " << strerror(errno);
         }
         SCP_DEBUG("MemoryServices") << "Shared memory created: " << memname << " length " << size;
         m_shmem_info_map.insert({ std::string(memname), { ptr, size } });
@@ -147,7 +150,7 @@ public:
         int fd = shm_open(memname, O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
             shm_unlink(memname);
-            SCP_FATAL("MemoryServices") << "can't shm_open join " << memname;
+            SCP_FATAL("MemoryServices") << "can't shm_open join " << memname << " " << strerror(errno);
         }
         ftruncate(fd, size);
         SCP_INFO("MemoryServices") << "Join Length " << size;
@@ -156,7 +159,7 @@ public:
         if (ptr == MAP_FAILED) {
             shm_unlink(memname);
             SCP_FATAL("MemoryServices")
-                << "can't mmap(shared memory join) " << memname << " " << errno;
+                << "can't mmap(shared memory join) " << memname << " " << strerror(errno);
         }
         m_shmem_info_map.insert({ std::string(memname), { ptr, size } });
         return ptr;

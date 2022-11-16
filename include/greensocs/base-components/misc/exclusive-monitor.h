@@ -342,7 +342,7 @@ private:
         fixed_start = dmi_data.get_start_address();
         fixed_end = dmi_data.get_end_address();
 
-        auto it = m_regions.lower_bound(txn.get_address());
+        auto it = m_regions.upper_bound(txn.get_address());
 
         if (it != m_regions.begin()) {
             it--;

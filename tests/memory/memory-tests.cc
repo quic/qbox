@@ -27,6 +27,7 @@
 // Simple read into the memory
 TEST_BENCH(MemoryTestBench, SimpleWriteRead)
 {
+    SCP_INFO(SCMOD) << "SimpleWriteRead";
     uint8_t data;
     ASSERT_EQ(m_initiator.do_write(0, 0x04), tlm::TLM_OK_RESPONSE);
     ASSERT_EQ(m_initiator.do_read(0, data), tlm::TLM_OK_RESPONSE);

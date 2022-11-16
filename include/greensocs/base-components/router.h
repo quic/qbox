@@ -91,11 +91,11 @@ private:
         sc_dt::uint64 size;
         bool mask_addr;
     };
-    std::string parent(std::string name) { return name.substr(0, name.find_last_of(".") - 1); }
+    std::string parent(std::string name) { return name.substr(0, name.find_last_of(".")); }
 
-    std::mutex dmi_mutex;
+    std::mutex m_dmi_mutex;
     struct dmi_info {
-        std::set<int> targets;
+        std::set<int> initiators;
         tlm::tlm_dmi dmi;
         dmi_info(tlm::tlm_dmi& _dmi) { dmi = _dmi; }
     };
@@ -117,13 +117,13 @@ private:
         auto it = m_dmi_info_map.find(dmi.get_start_address());
         if (it != m_dmi_info_map.end()) {
             if (it->second.dmi.get_end_address() != dmi.get_end_address()) {
-                invalidate_direct_mem_ptr(id, dmi.get_start_address(), dmi.get_end_address());
+                SCP_WARN(SCMOD) << "A new DMI overlaps with an old one, invalidating the old one";
+                invalidate_direct_mem_ptr_ts(0, dmi.get_start_address(), dmi.get_end_address()); // id will be ignored
             }
         }
 
-        std::lock_guard<std::mutex> lock(dmi_mutex);
         dmi_info* dinfo = in_dmi_cache(dmi);
-        dinfo->targets.insert(id);
+        dinfo->initiators.insert(id);
     }
 
     /* NB use the EXPORT name, so as not to be hassled by the _port_0*/
@@ -151,7 +151,7 @@ private:
 #endif
     void stamp_txn(int id, tlm::tlm_generic_payload& txn)
     {
-        PathIDExtension* ext;
+        PathIDExtension* ext=nullptr;
         txn.get_extension(ext);
         if (ext == nullptr) {
 #if THREAD_SAFE == true
@@ -198,7 +198,7 @@ private:
 
         if (ti->mask_addr)
             trans.set_address(addr - ti->address);
-        SCP_DEBUG((ti->name)) << "calling b_transport : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG(parent(ti->name)) << "calling b_transport : " << scp::scp_txn_tostring(trans);
         initiator_socket[ti->index]->b_transport(trans, delay);
         SCP_DEBUG(parent(ti->name)) << "b_transport returned : " << scp::scp_txn_tostring(trans);
         if (ti->mask_addr)
@@ -236,29 +236,38 @@ private:
         if (ti->mask_addr)
             trans.set_address(addr - ti->address);
 
+        if (!m_dmi_mutex.try_lock()) { // if we're busy invalidating, dont grant DMI's
+            return false;
+        }
+
         SCP_DEBUG(parent(ti->name))
             << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
         bool status = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
-        if (ti->mask_addr) {
-            assert(dmi_data.get_start_address() < ti->size);
-            dmi_data.set_start_address(ti->address + dmi_data.get_start_address());
-            dmi_data.set_end_address(ti->address + dmi_data.get_end_address());
-            trans.set_address(addr);
+        if (status) {
+            if (ti->mask_addr) {
+                assert(dmi_data.get_start_address() < ti->size);
+                dmi_data.set_start_address(ti->address + dmi_data.get_start_address());
+                dmi_data.set_end_address(ti->address + dmi_data.get_end_address());
+                trans.set_address(addr);
+            }
+            record_dmi(id, dmi_data);
         }
-        record_dmi(id, dmi_data);
+        m_dmi_mutex.unlock();
         return status;
     }
 
     void invalidate_direct_mem_ptr(int id, sc_dt::uint64 start, sc_dt::uint64 end)
     {
-        sc_dt::uint64 bw_start_range = start;
-        sc_dt::uint64 bw_end_range = end;
         if (targets[id].mask_addr) {
-            bw_start_range = compose_address(id, start);
-            bw_end_range = compose_address(id, end);
+            start = compose_address(id, start);
+            end = compose_address(id, end);
         }
-        std::lock_guard<std::mutex> lock(dmi_mutex);
+        std::lock_guard<std::mutex> lock(m_dmi_mutex);
+        invalidate_direct_mem_ptr_ts( id,  start,  end);
+    }
 
+    void invalidate_direct_mem_ptr_ts(int id, sc_dt::uint64 start, sc_dt::uint64 end)
+    {
         auto it = m_dmi_info_map.upper_bound(start);
 
         if (it != m_dmi_info_map.begin()) {
@@ -282,7 +291,10 @@ private:
                 it++;
                 continue;
             }
-            for (auto t : it->second.targets) {
+            for (auto t : it->second.initiators) {
+                SCP_INFO(SCMOD) << "Invalidating initiator " << t << " [0x" << std::hex
+                                << it->second.dmi.get_start_address() << " - 0x"
+                                << it->second.dmi.get_end_address() << "]";
                 target_socket[t]->invalidate_direct_mem_ptr(it->second.dmi.get_start_address(),
                                                             it->second.dmi.get_end_address());
             }
@@ -394,6 +406,7 @@ protected:
                     struct target_info ati = ti;
                     ati.address = address;
                     ati.size = size;
+                    ati.name = name;
 
                     final_list.push_back(ati);
                 }
