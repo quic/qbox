@@ -217,7 +217,7 @@ protected:
         m_inst.get().lock_iothread();
 
         if (m_inst.get_tcg_mode() == QemuInstance::TCG_SINGLE) {
-            while (!m_inst.can_run()) {
+            while (!m_inst.can_run() && !m_finished) {
                 m_inst.get().unlock_iothread();
                 wait_for_work();
                 m_inst.get().lock_iothread();

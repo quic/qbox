@@ -140,24 +140,22 @@ public:
         int cpuid = addr >> 3;
 
         if (id != CpuTesterDmi::SOCKET_MMIO) {
-            SCP_INFO(SCMOD) << "CPU " << cpuid << "DMI write data: " << std::hex << data
+            SCP_INFO(SCMOD) << "cpu_" << cpuid << " DMI write data: " << std::hex << data
                             << ", len: " << len;
 
             /*
              * The tester is about to write the new value to memory. Check the
              * old value just in case.
              */
-            // We can not guarantee this, as in MPTCG mode, another CPU could already have written
-            // here we could have used different addresses - which is done in -async
-            // TEST_ASSERT(m_tester.get_buf_value(cpuid) == data - 1);
+             TEST_ASSERT(m_tester.get_buf_value(cpuid) == data - 1);
 
             return;
         }
 
-        SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data
+        SCP_INFO(SCMOD) << "cpu_"<<cpuid<<" b_transport write at 0x" << std::hex << addr << ", data: " << std::hex << data
                         << ", len: " << len;
 
-        TEST_ASSERT(data != -1);
+        TEST_ASSERT(data != -1); // -1 indicated a fail from the ASM
 
         m_tester.dmi_invalidate();
     }
@@ -168,7 +166,7 @@ public:
         /* No read on the control socket */
         TEST_ASSERT(id == CpuTesterDmi::SOCKET_DMI);
 
-        SCP_INFO(SCMOD) << "CPU " << cpuid << "DMI read data: " << std::hex
+        SCP_INFO(SCMOD) << "cpu_" << cpuid << "DMI read data: " << std::hex
                         << m_tester.get_buf_value(cpuid) << ", len: " << len;
 
         /* The return value is ignored by the tester */
@@ -176,7 +174,7 @@ public:
     }
 
     virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override {
-        SCP_INFO(SCMOD) << "CPU DMI request at 0x" << std::hex << addr << ", len: " << len;
+        SCP_INFO(SCMOD) << "cpu_"<<(addr>>3)<<" DMI request at 0x" << std::hex << addr << ", len: " << len;
 
         return true;
     }

@@ -43,6 +43,8 @@ public:
     virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) = 0;
 
     virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) = 0;
+
+    virtual void dmi_request_failed(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret){};
 };
 
 class CpuTester : public sc_core::sc_module

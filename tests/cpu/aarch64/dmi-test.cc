@@ -102,16 +102,11 @@ protected:
     std::vector<State> m_state;
     std::vector<bool> m_last_access_io;
     std::vector<bool> m_dmi_enabled;
+    std::vector<int> m_dmi_ok;
 
     bool last_access_was_io(int cpuid) {
-        bool ret;
-
         TEST_ASSERT(cpuid < p_num_cpu);
-        ret = m_last_access_io[cpuid];
-
-        m_last_access_io[cpuid] = false;
-
-        return ret;
+        return m_last_access_io[cpuid];
     }
 
     void enable_dmi(int cpuid) { m_dmi_enabled[cpuid] = true; }
@@ -139,6 +134,9 @@ public:
 
         m_dmi_enabled.resize(p_num_cpu);
         std::fill(m_dmi_enabled.begin(), m_dmi_enabled.end(), true);
+
+        m_dmi_ok.resize(p_num_cpu);
+        std::fill(m_dmi_ok.begin(), m_dmi_ok.end(), 0);
     }
 
     virtual ~CpuArmCortexA53DmiTest() {}
@@ -146,8 +144,13 @@ public:
     void ctrl_write(uint64_t addr, uint64_t data, size_t len) {
         int cpuid = addr >> 3;
 
-        SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data
+        SCP_INFO(SCMOD) << "CPU " << (addr>>3) << " write at 0x" << std::hex << addr << ", data: " << std::hex << data
                         << ", len: " << len;
+
+        if (m_dmi_ok[cpuid]) {
+            if (m_dmi_ok[cpuid]>1) { TEST_ASSERT(!last_access_was_io(cpuid)); }
+            m_dmi_ok[cpuid]++;
+        }
 
         switch (m_state[cpuid]) {
         case ST_START:
@@ -155,12 +158,11 @@ public:
             break;
 
         case ST_READ_DMI:
-            TEST_ASSERT(!last_access_was_io(cpuid));
             break;
 
         case ST_WRITE_DMI:
-            TEST_ASSERT(!last_access_was_io(cpuid));
             m_tester.dmi_invalidate(addr, addr + len - 1);
+            m_dmi_ok[cpuid]=false;
             disable_dmi(cpuid);
             break;
 
@@ -175,12 +177,16 @@ public:
         }
 
         m_state[cpuid] = State((int(m_state[cpuid]) + 1) % 4);
+
+        m_last_access_io[cpuid] = false;
     }
 
     void dmi_access(uint64_t addr) {
         int cpuid = addr >> 3;
 
-        TEST_ASSERT(m_last_access_io[cpuid] == false);
+        SCP_INFO(SCMOD) << "CPU " << (addr>>3) << " DMI accedd at 0x" << std::hex << addr;
+
+        TEST_ASSERT(m_dmi_ok[cpuid]==false || m_last_access_io[cpuid] == false);
         m_last_access_io[cpuid] = true;
     }
 
@@ -206,10 +212,15 @@ public:
         return 0;
     }
 
+    virtual void dmi_request_failed(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override {
+        SCP_INFO(SCMOD) << "CPU " << (addr>>3) << " DMI request failed 0x" << std::hex << addr << ", len: " << len;        
+        m_dmi_ok[addr >> 3]=0;
+    }
+
     virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override {
         int cpuid = addr >> 3;
 
-        SCP_INFO(SCMOD) << "CPU DMI request at 0x" << std::hex << addr << ", len: " << len;
+        SCP_INFO(SCMOD) << "CPU " << (addr>>3) << " DMI request at 0x" << std::hex << addr << ", len: " << len;
 
         /*
          * Restrict the DMI region to the 8 bytes this CPU writes. So when it
@@ -217,7 +228,7 @@ public:
          */
         ret.set_start_address(addr);
         ret.set_end_address(addr + len - 1);
-
+        m_dmi_ok[cpuid]= m_dmi_enabled[cpuid]?1:0;
         return m_dmi_enabled[cpuid];
     }
 

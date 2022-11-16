@@ -81,6 +81,7 @@ protected:
     gs::RunOnSysC m_on_sysc;
 
     tlm::tlm_dmi m_dmi_data;
+    bool m_finished = false;
 
     class m_mem_obj
     {
@@ -109,14 +110,11 @@ protected:
     }
 
     void add_dmi_mr_alias(DmiRegionAlias::Ptr alias) {
-        qemu::MemoryRegion alias_mr = alias->get_alias_mr();
-
         SCP_INFO(SCMOD) << "Adding DMI alias for region [ 0x" << std::hex << alias->get_start()
                         << ", 0x" << std::hex << alias->get_end() << "]";
 
-        m_inst.get().lock_iothread();
+        qemu::MemoryRegion alias_mr = alias->get_alias_mr();
         m_r->m_root.add_subregion(alias_mr, alias->get_start());
-        m_inst.get().unlock_iothread();
 
         alias->set_installed();
     }
@@ -129,9 +127,7 @@ protected:
         SCP_INFO(SCMOD) << "Removing DMI alias for region [ 0x" << std::hex << alias->get_start()
                         << ", 0x" << std::hex << alias->get_end() << "]";
 
-        m_inst.get().lock_iothread();
         m_r->m_root.del_subregion(alias->get_alias_mr());
-        m_inst.get().unlock_iothread();
     }
 
     /*
@@ -148,9 +144,12 @@ protected:
      * immediately by the CPU so the next memory access may go through the I/O
      * path again.
      *
-     * On the other hand we must do a bunch on the SystemC thread to ensure
+     * On the other hand we SHOULD do a bunch on the SystemC thread to ensure
      * validity of the DMI region and thus the alias until the point where we
-     * effectively map the alias onto the root MR. This is why we first create
+     // N.B.
+     // we choose to protect all such areas with a mutex,
+     // allowing us to process everything on the QEMU thread.
+     * DEPRECATED ... effectively map the alias onto the root MR. This is why we first create
      * the alias on the SystemC thread and return it to the CPU thread. Once
      * we're back to the CPU thread, we lock the DMI manager again and check
      * for the alias validity flag. If an invalidation happened in between,
@@ -167,29 +166,20 @@ protected:
             return;
         }
 
-        bool ret;
         SCP_INFO(SCMOD) << "DMI request for address 0x" << std::hex << trans.get_address();
 
         // It is 'safer' from the SystemC perspective to  m_on_sysc.run_on_sysc([this,
-        // &trans]{...}). Moving the Lock prior to running on SystemC ensures that no other DMI
-        // activity happens during this time However if another thread is busy trying to invalidate
-        // DMI regions we have a potential deadlock. An alternative is to take the lock _after_ this
-        // call, Then the concern is that the DMI region returned could be in the process of being
-        // invalidated. This is a false dichotomy since even with the lock prior to the call,
-        // depending on the race between the two threads, either the result will be that the DMI
-        // region is inserted or not. This is a 'guest s/w' performance issue causing thrashing in
-        // e.g. an SMMU It is not the 'validity' of the DMI which is in question, (especially if we
-        // run on SystemC).
+        // &trans]{...}).
 
-        bool dmi_data_valid;
-        m_on_sysc.run_on_sysc([this, &trans, &dmi_data_valid]{
-            dmi_data_valid = (*this)->get_direct_mem_ptr(trans, m_dmi_data);
-        });
-        if (!dmi_data_valid) {
+        LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
+        if (!(*this)->get_direct_mem_ptr(trans, m_dmi_data)) {
             return;
         }
-        LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
 
+        // hold the lock through, as we will be doing several updates
+        m_inst.get().lock_iothread();
+
+        SCP_INFO(SCMOD) << "DMI Adding for address 0x" << std::hex << trans.get_address();
 
 // this is relatively arbitary. The upper limit is set within QEMU by the TBU
 // e.g. 4k small pages.
@@ -214,6 +204,8 @@ protected:
                     // already have the DMI
                     assert(end <= dmi->get_end());
                     assert(m_dmi_data.get_dmi_ptr() == dmi->get_dmi_ptr());
+                    m_inst.get().unlock_iothread();
+                    SCP_INFO(SCMOD) << "Already have region";
                     return;
                 }
                 uint64_t sz = dmi->get_size();
@@ -234,6 +226,8 @@ protected:
                     // already have the DMI
                     assert(end <= dmi->get_end());
                     assert(m_dmi_data.get_dmi_ptr() == dmi->get_dmi_ptr());
+                    m_inst.get().unlock_iothread();
+                    SCP_INFO(SCMOD) << "Already have region(2)";
                     return;
                 }
                 if (dmi->get_start() == end + 1 &&
@@ -247,13 +241,15 @@ protected:
             }
         }
 
-        SCP_INFO(SCMOD) << "Got DMI for range [0x" << std::hex << m_dmi_data.get_start_address()
+        SCP_INFO(SCMOD) << "Adding DMI for range [0x" << std::hex << m_dmi_data.get_start_address()
                         << ", 0x" << std::hex << m_dmi_data.get_end_address() << "]";
 
         DmiRegionAlias::Ptr alias(dmi_mgr.get_new_region_alias(m_dmi_data));
 
         m_dmi_aliases[start] = alias;
         add_dmi_mr_alias(m_dmi_aliases[start]);
+
+        m_inst.get().unlock_iothread();
     }
 
     void check_qemu_mr_hint(TlmPayload& trans) {
@@ -307,6 +303,8 @@ protected:
     MemTxResult qemu_io_access(tlm::tlm_command command, uint64_t addr, uint64_t* val,
                                unsigned int size, MemTxAttrs attrs) {
         TlmPayload trans;
+        if (m_finished)
+            return qemu::MemoryRegionOps::MemTxError;
 
         m_inst.get().unlock_iothread();
 
@@ -373,12 +371,20 @@ public:
         m_dev = dev;
     }
 
+    void end_of_simulation() {
+        m_finished = true;
+        cancel_all();
+    }
+
     // This could happen during void end_of_simulation() but there is a race with other units trying
     // to pull down their DMI's
     ~QemuInitiatorSocket() {
+        //        dmimgr_lock();
         LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
+        cancel_all();
         delete m_r;
-        m_r=nullptr;
+        m_r = nullptr;
+        //        dmimgr_unlock();
     }
     void init_global(qemu::Device& dev) {
         using namespace std::placeholders;
@@ -401,7 +407,9 @@ public:
         m_dev = dev;
     }
 
-    void cancel_all() { m_on_sysc.cancel_all(); }
+    void cancel_all() {
+        m_on_sysc.cancel_all();
+    }
 
     /* tlm::tlm_bw_transport_if<> */
     virtual tlm::tlm_sync_enum nb_transport_bw(tlm::tlm_generic_payload& trans,
@@ -429,14 +437,15 @@ public:
          */
         r->invalidate_region();
 
-        if (!r->is_installed()) {
-            /*
-             * The alias is not mapped onto the QEMU root MR yet. Simply
-             * skip it. It will be removed from m_dmi_aliases by
-             * check_dmi_hint.
-             */
-            return it++;
-        }
+        assert(r->is_installed());
+        //        if (!r->is_installed()) {
+        /*
+         * The alias is not mapped onto the QEMU root MR yet. Simply
+         * skip it. It will be removed from m_dmi_aliases by
+         * check_dmi_hint.
+         */
+        //            return it++;
+        //        }
 
         /*
          * Remove the alias from the root MR. This is enough to perform
@@ -469,7 +478,7 @@ public:
              */
             it--;
         }
-
+        m_inst.get().lock_iothread();
         while (it != m_dmi_aliases.end()) {
             DmiRegionAlias::Ptr r = it->second;
 
@@ -489,6 +498,7 @@ public:
             SCP_INFO(SCMOD) << "Invalidated region [0x" << std::hex << r->get_start() << ", 0x"
                             << std::hex << r->get_end() << "]";
         }
+        m_inst.get().unlock_iothread();
     }
 };
 
