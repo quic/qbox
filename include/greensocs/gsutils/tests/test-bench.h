@@ -99,9 +99,7 @@ protected:
 
 public:
     SC_HAS_PROCESS(TestBench);
-    TestBench(const sc_core::sc_module_name& n): sc_core::sc_module(n) {
-        SC_THREAD(test_bench_body);
-    }
+    TestBench(const sc_core::sc_module_name& n): sc_core::sc_module(n) {}
 };
 template <class T>
 class TestBenchEnv : public ::testing::Environment
