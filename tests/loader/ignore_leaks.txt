@@ -1,0 +1,2 @@
+# ignore leak issues
+leak:cci::cci_impl
