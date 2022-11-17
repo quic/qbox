@@ -184,6 +184,7 @@ public:
             SCP_ERR("lua") << "Error loading lua config file: " << config_file;
             return error;
         }
+        lua_close(L);
         return 0;
 #endif
     }
@@ -357,6 +358,7 @@ protected:
                 break;
             }
         }
+        delete[] argv_cp;
     }
 #endif
 
