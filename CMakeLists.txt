@@ -33,6 +33,7 @@ gs_systemc()
 
 gs_addpackage(greensocs/libgsutils)
 gs_addpackage(greensocs/libgssync)
+gs_addpackage(greensocs/components/systemc-uarts)
 
 add_library(${PROJECT_NAME} INTERFACE)
 
