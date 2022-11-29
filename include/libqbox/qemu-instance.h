@@ -410,6 +410,7 @@ public:
             delete &m_insts.back().get();
             m_insts.pop_back();
         }
+        delete m_loader;
     }
 };
 #endif

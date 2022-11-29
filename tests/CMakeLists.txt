@@ -81,7 +81,12 @@ function(qbox_add_cpu_test target timeout_s)
 
                                                  -p log_level=0
                                                  )
-            set_property(TEST ${test_name} PROPERTY TIMEOUT ${timeout_s})
+            set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout_s})
+            if (GS_ENABLE_SANITIZERS)
+                # Please see this issue https://bugzilla.redhat.com/show_bug.cgi?id=1449604 
+                set_tests_properties(${test_name} PROPERTIES 
+                    ENVIRONMENT LD_LIBRARY_PATH="$ENV{LD_LIBRARY_PATH}":$ENV{LD_LIBRARY_PATH})
+            endif()
             # Alternative solution until the problem is solved with the exclusive access tests
             # --------------------------------------------------------------------------------
             if(("${target}" STREQUAL "aarch64-ld-st-excl-fail-test") AND ( ("${sync_pol}" STREQUAL "tlm2") OR ("${threading}" STREQUAL "SINGLE") ) )

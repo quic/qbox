@@ -181,3 +181,10 @@ _For deterministic execution enable BOTH `tlm2` synchronisation _and_ `icount` m
 The libqbox library allows to manage the halt state of the different CPUs that are used. The halt will allow a cpu to be in "standby".
 
 Indeed, by default the halt state is released (state 0). It is important to note that the halt does not work with the power_off set (parameter p_power_off set to true).
+
+## Memory leaks with Sanitizers
+
+If you want to run the tests and check if sanitizers is correct you may need to export the variable LD_LIBRARY_PATH like this:
+`export LD_LIBRARY_PATH=${libqemu_BINARY_DIR}/qemu-prefix/lib/:/usr/lib/llvm-10/lib/clang/10.0.0/lib/linux`
+
+(PS: This export is only for Linux users)

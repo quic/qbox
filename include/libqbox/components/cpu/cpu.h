@@ -63,7 +63,7 @@ protected:
     std::mutex m_signaled_lock;
     std::condition_variable m_signaled_cond;
 
-    int64_t m_last_vclock;
+    int64_t m_last_vclock = 0;
 
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
     bool m_finished = false;

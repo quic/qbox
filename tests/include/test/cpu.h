@@ -146,9 +146,9 @@ protected:
     QemuInstance& m_inst_a;
     QemuInstance& m_inst_b;
 
+    bool ab = false;
     sc_core::sc_vector<CPU> m_cpus;
     TESTER m_tester;
-    bool ab = false;
 
 public:
     CpuTestBench(const sc_core::sc_module_name& n)
