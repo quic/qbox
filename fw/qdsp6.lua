@@ -245,14 +245,15 @@ end
 
 function get_nspss(base, ahbs_base, cfgtable, start_addr, ahb_size)
     local cfgtable_base_addr = base + 0x180000;
+    local sched_limit = true;
     return {
         hexagon_num_threads = 6;
-        hexagon_thread_0={start_powered_off = false, start_halted=true};
-        hexagon_thread_1={start_powered_off = true};
-        hexagon_thread_2={start_powered_off = true};
-        hexagon_thread_3={start_powered_off = true};
-        hexagon_thread_4={start_powered_off = true};
-        hexagon_thread_5={start_powered_off = true};
+        hexagon_thread_0={start_powered_off = false, start_halted=true, sched_limit=sched_limit};
+        hexagon_thread_1={start_powered_off = true, sched_limit=sched_limit};
+        hexagon_thread_2={start_powered_off = true, sched_limit=sched_limit};
+        hexagon_thread_3={start_powered_off = true, sched_limit=sched_limit};
+        hexagon_thread_4={start_powered_off = true, sched_limit=sched_limit};
+        hexagon_thread_5={start_powered_off = true, sched_limit=sched_limit};
         HexagonQemuInstance = { tcg_mode="SINGLE",
             sync_policy = "multithread-unconstrained"};
         hexagon_start_addr = start_addr;
