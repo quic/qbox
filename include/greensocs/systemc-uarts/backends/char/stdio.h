@@ -50,7 +50,7 @@ public:
 #ifdef WIN32
 #pragma message("CharBackendStdio not yet implemented for WIN32")
 #endif
-
+    static void catch_fn(int signo) {}
     static void catch_function(int signo) {
         tty_reset();
 
@@ -95,7 +95,6 @@ public:
         signal(SIGINT, catch_function);
         signal(SIGKILL, catch_function);
         signal(SIGSEGV, catch_function);
-
         atexit(tty_reset);
 #endif
 
@@ -103,15 +102,19 @@ public:
     }
 
     void* rcv_thread() {
+        struct sigaction act = { 0 };
+        act.sa_handler = &catch_fn;
+        sigaction(SIGURG, &act, NULL);
+
         rcv_pthread_id = pthread_self();
         sigset_t set;
         sigemptyset(&set);
         sigaddset(&set, SIGURG);
         pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+
         int fd = 0;
         char c;
 
-        // for (;m_running;) {
         while (m_running) {
             int r = read(fd, &c, 1);
             if (r == 1) {
