@@ -419,7 +419,8 @@ protected:
                 next_level = level +
                              __mingw_sprintf(level, "%lld", (long long)lua_tonumber(L, -2) - 1);
 #else
-                next_level = level + sprintf(level, "%lld", (long long)lua_tonumber(L, -2) - 1);
+                next_level = level + snprintf(level, MAX_NAME_SIZE - (level - static_key), "%lld",
+                                              (long long)lua_tonumber(L, -2) - 1);
 #endif
                 break;
 
