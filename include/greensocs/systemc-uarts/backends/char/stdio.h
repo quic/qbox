@@ -25,6 +25,8 @@
 
 #include "../char-backend.h"
 
+#include <unistd.h>
+
 #ifndef WIN32
 #include <greensocs/libgssync/async_event.h>
 #include <queue>
@@ -38,6 +40,9 @@ private:
     gs::async_event m_event;
     std::queue<unsigned char> m_queue;
     std::mutex m_mutex;
+    bool m_running = true;
+    std::unique_ptr<std::thread> rcv_thread_id;
+    pthread_t rcv_pthread_id = 0;
 
 public:
     SC_HAS_PROCESS(CharBackendStdio);
@@ -94,13 +99,22 @@ public:
         atexit(tty_reset);
 #endif
 
-        new std::thread(&CharBackendStdio::rcv_thread, this);
+        rcv_thread_id = std::make_unique<std::thread>(&CharBackendStdio::rcv_thread, this);
     }
 
     void* rcv_thread() {
-        for (;;) {
-            int c = getchar();
-            {
+        rcv_pthread_id = pthread_self();
+        sigset_t set;
+        sigemptyset(&set);
+        sigaddset(&set, SIGURG);
+        pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+        int fd = 0;
+        char c;
+
+        // for (;m_running;) {
+        while (m_running) {
+            int r = read(fd, &c, 1);
+            if (r == 1) {
                 std::lock_guard<std::mutex> lock(m_mutex);
 
                 if (c >= 0) {
@@ -109,6 +123,9 @@ public:
                 if (!m_queue.empty()) {
                     m_event.async_notify();
                 }
+            }
+            if (r == 0) {
+                break;
             }
         }
 
@@ -136,5 +153,11 @@ public:
     void write(unsigned char c) {
         putchar(c);
         fflush(stdout);
+    }
+
+    ~CharBackendStdio() {
+        m_running = false;
+        pthread_kill(rcv_pthread_id, SIGURG);
+        rcv_thread_id->join();
     }
 };
