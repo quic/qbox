@@ -335,7 +335,7 @@ public:
         , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
         , p_num_redists("num_redists", 1, "Number of redistribution regions")
         , p_with_gpu("with_gpu", false, "Build platform with GPU")
-        , p_log_level("log_level", 4, "Default log level")
+        , p_log_level("log_level", 2, "Default log level")
         , m_broker({
               { "gic.num_spi", cci::cci_value(960) }, // 64 seems reasonable, but can be up to
                                                       // 960 or 987 depending on how the gic
