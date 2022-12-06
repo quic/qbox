@@ -387,6 +387,9 @@ public:
         , m_loader("load") {
         using tlm_utils::tlm_quantumkeeper;
 
+        int level = p_log_level.get_value();
+        scp::set_logging_level(scp::as_log(level));
+
         sc_core::sc_time global_quantum(p_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);
 
