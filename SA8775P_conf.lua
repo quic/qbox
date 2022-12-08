@@ -154,13 +154,13 @@ platform = {
              irq_global = 65;
            };
 
-    tbu_0 = { topology_id=0x31A0,
+    tbu_0 = { topology_id=0x21c0,
               upstream_socket = { address=NSP0_AHB_HIGH,
                                   size=0xF00000000-NSP0_AHB_HIGH,
                                   relative_addresses=false
              }
             };
-    tbu_1 = { topology_id=0x39A0,
+    tbu_1 = { topology_id=0x29A0,
              upstream_socket = { address=NSP1_AHB_HIGH,
                                  size=0xF00000000-NSP1_AHB_HIGH,
                                  relative_addresses=false
