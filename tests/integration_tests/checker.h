@@ -297,7 +297,7 @@ public:
         //        assert(eventQueue.size_approx()==0);
 
         wd_ok = true;
-        std::unique_lock<std::mutex> lock(mutex);
+        std::lock_guard<std::mutex> lock(mutex);
 
         eventList tmp = std::move(events);
 
@@ -387,9 +387,9 @@ public:
                 }
                 SCP_INFO("checker.h")
                     << "  Average Simulation (sc_)time " << to_us(runtime) / (float)i << "us";
-                if (!ibound)
+                if (!ibound) {
                     SCP_INFO("checker.h") << " Time bound";
-                else if (ibound == iboundi) {
+                } else if (ibound == iboundi) {
                     SCP_INFO("checker.h") << "  Instruction bound";
                 } else {
                     SCP_INFO("checker.h")
@@ -442,7 +442,7 @@ public:
                     } else {
                         if (test_p.second.size() > 5) {
                             if (result)
-                                std::cout << "  Determanistic\n";
+                                SCP_INFO("checker.h") << "  Determanistic\n";
                         } else {
                             SCP_INFO("checker.h") << "  Not enough data to determin determanism";
                         }
@@ -597,15 +597,6 @@ public:
             csv << "\n";
         }
 
-        auto uncon = m_broker.get_unconsumed_preset_values(
-            [](const std::pair<std::string, cci::cci_value>& iv) {
-                return (iv.first.find("tests.") != std::string::npos &&
-                        iv.first.find(".verbose") == std::string::npos);
-            });
-        for (auto v : uncon) {
-            SCP_INFO("checker.h") << "Unconsumed config value: " << v.first;
-        }
-
         if (m_broker.get_preset_cci_value("csvfile").is_string()) {
             std::string csvfilename = m_broker.get_preset_cci_value("csvfile").get_string();
             std::ofstream csvfile;
@@ -630,6 +621,8 @@ public:
         realtimeStart = std::chrono::high_resolution_clock::now();
         realtimeOffset = std::chrono::high_resolution_clock::duration::zero();
 
+        SCP_DEBUG("checker.h") << "checker.h constructor";
+
         verbose = m_broker.get_preset_cci_value("verbose").get_int();
 
         if (verbose != 0) {
@@ -644,6 +637,19 @@ public:
     ~Checker() {
         m_wd_thread.join();
         m_analyse_thread.join();
+
+
+        auto uncon = m_broker.get_unconsumed_preset_values(
+            [](const std::pair<std::string, cci::cci_value>& iv) {
+                return (iv.first.find("tests.") != std::string::npos &&
+                        iv.first.find(".verbose") == std::string::npos);
+            });
+        for (auto v : uncon) {
+            SCP_INFO("checker.h") << "Unconsumed config value: " << v.first;
+        }
+
+
+
     }
 
     void watchdog() {

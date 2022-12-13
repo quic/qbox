@@ -189,9 +189,9 @@ private:
 
         if (ti->mask_addr)
             trans.set_address(addr - ti->address);
-        SCP_DEBUG((ti->name)) << "calling b_transport : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG(ti->name) << "calling b_transport : " << scp::scp_txn_tostring(trans);
         initiator_socket[ti->index]->b_transport(trans, delay);
-        SCP_DEBUG(parent(ti->name)) << "b_transport returned : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG(ti->name) << "b_transport returned : " << scp::scp_txn_tostring(trans);
         if (ti->mask_addr)
             trans.set_address(addr);
 
@@ -208,7 +208,7 @@ private:
 
         if (ti->mask_addr)
             trans.set_address(addr - ti->address);
-        SCP_DEBUG(parent(ti->name)) << "calling dbg_transport : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG(ti->name) << "calling dbg_transport : " << scp::scp_txn_tostring(trans);
         unsigned int ret = initiator_socket[ti->index]->transport_dbg(trans);
         if (ti->mask_addr)
             trans.set_address(addr);
@@ -225,7 +225,7 @@ private:
         if (ti->mask_addr)
             trans.set_address(addr - ti->address);
 
-        SCP_DEBUG(parent(ti->name))
+        SCP_DEBUG(ti->name)
             << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
         bool status = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
         if (ti->mask_addr) {

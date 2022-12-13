@@ -162,6 +162,7 @@ public:
 
 private:
     gs::tlm_quantumkeeper_extended* qk;
+    gs::RunOnSysC m_on_sysc;
 
     bool running;
     bool active;
@@ -235,7 +236,7 @@ private:
                     local_drift);
                     */
 
-                    qk->run_on_systemc([this, &trans] {
+                    m_on_sysc.run_on_sysc([this, &trans] {
                         if (qk->get_current_time() < sc_time_stamp()) {
                             sc_time delay = SC_ZERO_TIME;
                             checker.record(this, Checker::TxnSent, delay);
