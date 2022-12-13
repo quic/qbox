@@ -124,7 +124,9 @@ class Initiator : public Model
 public:
     tlm_utils::simple_initiator_socket<Initiator> initiator_socket;
     Initiator(sc_module_name _name, Checker& _checker)
-        : Model(_name, _checker), initiator_socket("initiatorSocket") {}
+        : Model(_name, _checker), initiator_socket("initiatorSocket") {
+        SCP_DEBUG(SCMOD) << "In the constructor Initiator";
+    }
 };
 class Target : public Model
 {
@@ -140,6 +142,7 @@ public:
         , add_size("add_size", 1)
         , target_socket("targetSocket") {
         target_socket.register_b_transport(this, &Target::b_transport);
+        SCP_DEBUG(SCMOD) << "In the constructor Target";
     }
 };
 
@@ -296,6 +299,7 @@ public:
         , running(false)
         , active(false)
         , m_worker_thread_active(false) {
+        SCP_DEBUG(SCMOD) << "In the constructor QemuLikeMaster";
         SC_HAS_PROCESS(QemuLikeMaster);
         SC_METHOD(stop);
         dont_initialize();
@@ -375,6 +379,7 @@ public:
         , ms_sleep("ms_sleep", 0)
         , ns_per_cycle("ns_per_cycle", 10)
         , running(false) {
+        SCP_DEBUG(SCMOD) << "In the constructor MasterSimple";
         SC_HAS_PROCESS(MasterSimple);
         SC_METHOD(stop);
         dont_initialize();
@@ -430,7 +435,9 @@ private:
 
 public:
     Slave(sc_module_name _name, Checker& _checker)
-        : Target(_name, _checker), ns_wait("ns_wait", 0), ms_sleep("ms_sleep", 0) {}
+        : Target(_name, _checker), ns_wait("ns_wait", 0), ms_sleep("ms_sleep", 0) {
+        SCP_DEBUG(SCMOD) << "In the constructor Slave";
+    }
     bool requires_systemc() { return (ns_wait); }
 };
 GSC_MODULE_REGISTER_1(Slave, Checker&);
@@ -475,6 +482,7 @@ public:
         , ns_delay("ns_delay", 0)
         , ms_sleep("ms_sleep", 0)
         , running(false) {
+        SCP_DEBUG(SCMOD) << "In the constructor TLMClockedSlave";
         SC_HAS_PROCESS(TLMClockedSlave);
         SC_METHOD(stop);
         dont_initialize();
@@ -528,6 +536,7 @@ public:
         , ms_sleep("ms_sleep", 0)
         , record("record", false)
         , running(false) {
+        SCP_DEBUG(SCMOD) << "In the constructor Clock";
         SC_HAS_PROCESS(Clock);
         SC_METHOD(stop);
         dont_initialize();
@@ -553,7 +562,9 @@ public:
 
     cci::cci_param<bool> use;
     RealTimeClockLimiter(sc_module_name _name, Checker& _checker)
-        : Model(_name, _checker), use("use", true) {}
+        : Model(_name, _checker), use("use", true) {
+        SCP_DEBUG(SCMOD) << "In the constructor RealTimeClockLimiter";
+    }
 };
 GSC_MODULE_REGISTER_1(RealTimeClockLimiter, Checker&);
 
@@ -584,6 +595,7 @@ SC_MODULE (tests) {
             , rerun("rerun", 1)
             , seed("seed", 1)
             , description("description", "") {
+            SCP_DEBUG(SCMOD) << "In the constructor atest";
             for (auto name : gs::sc_cci_children(name())) {
                 cci::cci_broker_handle m_broker = cci::cci_get_broker();
                 if (m_broker.has_preset_value(std::string(sc_module::name()) + "." + name +
@@ -661,6 +673,7 @@ SC_MODULE (tests) {
 
 public:
     tests(sc_module_name _name, Checker & _checker): sc_module(_name), checker(_checker) {
+        SCP_DEBUG(SCMOD) << "In the constructor tests";
         for (auto name : gs::sc_cci_children(name())) {
             allTests.push_back(new atest(name.c_str(), checker));
         }
