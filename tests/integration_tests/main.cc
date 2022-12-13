@@ -41,10 +41,10 @@
 #include <tlm_utils/simple_target_socket.h>
 #include <tlm_utils/tlm_quantumkeeper.h>
 #include <cci/utils/broker.h>
-
-#include <greensocs/base-components/router.h>
 #include <greensocs/libgsutils.h>
+
 #include "checker.h"
+#include "router.h"
 
 using namespace sc_core;
 

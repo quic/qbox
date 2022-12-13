@@ -1,7 +1,3 @@
-
-
-gs_addpackage(greensocs/components/base-components)
-
 add_executable(checker main.cc)
 add_test(
    NAME integration_test
@@ -12,9 +8,9 @@ target_link_libraries(checker
       SystemC::systemc
       SystemC::cci
       GreenSocs::libgsutils
-      GreenSocs::base-components
+      scp::reporting
       gssync
 )
 target_include_directories(checker
-   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../include
+   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../include/greensocs/
 )
