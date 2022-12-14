@@ -50,7 +50,7 @@ def fastrpc_calc_test():
                 vp_path.as_posix(),
                 ["--gs_luafile", args.lua, "--param", "platform.with_gpu=false"],
                 env=env,
-                timeout=120
+                timeout=180
             )
 
     child.logfile = stdout.buffer
