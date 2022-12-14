@@ -655,7 +655,7 @@ public:
     void watchdog() {
         while (wd_on) {
             wd_ok = false;
-            std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(4000));
             if (!wd_on)
                 break;
             assert(wd_ok == true);
