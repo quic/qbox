@@ -120,11 +120,12 @@ public:
         int fd = shm_open(memname, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
             shm_unlink(memname);
-            SCP_FATAL("MemoryServices") << "can't shm_open create " << memname << " " << strerror(errno);;
+            SCP_FATAL("MemoryServices")
+                << "can't shm_open create " << memname << " " << strerror(errno);
         }
-        if (ftruncate(fd, size)==-1) {
+        if (ftruncate(fd, size) == -1) {
             shm_unlink(memname);
-            SCP_FATAL("MemoryServices") << "can't truncate " << memname << " " << strerror(errno);;
+            SCP_FATAL("MemoryServices") << "can't truncate " << memname << " " << strerror(errno);
         }
         SCP_DEBUG("MemoryServices") << "Create Length " << size;
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -150,9 +151,13 @@ public:
         int fd = shm_open(memname, O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
             shm_unlink(memname);
-            SCP_FATAL("MemoryServices") << "can't shm_open join " << memname << " " << strerror(errno);
+            SCP_FATAL("MemoryServices")
+                << "can't shm_open join " << memname << " " << strerror(errno);
         }
-        ftruncate(fd, size);
+        if (ftruncate(fd, size) == -1) {
+            shm_unlink(memname);
+            SCP_FATAL("MemoryServices") << "can't truncate " << memname << " " << strerror(errno);
+        }
         SCP_INFO("MemoryServices") << "Join Length " << size;
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
         close(fd);

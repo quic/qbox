@@ -118,7 +118,8 @@ private:
         if (it != m_dmi_info_map.end()) {
             if (it->second.dmi.get_end_address() != dmi.get_end_address()) {
                 SCP_WARN(SCMOD) << "A new DMI overlaps with an old one, invalidating the old one";
-                invalidate_direct_mem_ptr_ts(0, dmi.get_start_address(), dmi.get_end_address()); // id will be ignored
+                invalidate_direct_mem_ptr_ts(0, dmi.get_start_address(),
+                                             dmi.get_end_address()); // id will be ignored
             }
         }
 
@@ -151,7 +152,7 @@ private:
 #endif
     void stamp_txn(int id, tlm::tlm_generic_payload& txn)
     {
-        PathIDExtension* ext=nullptr;
+        PathIDExtension* ext = nullptr;
         txn.get_extension(ext);
         if (ext == nullptr) {
 #if THREAD_SAFE == true
@@ -198,9 +199,9 @@ private:
 
         if (ti->mask_addr)
             trans.set_address(addr - ti->address);
-        SCP_DEBUG(parent(ti->name)) << "calling b_transport : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG(ti->name) << "calling b_transport : " << scp::scp_txn_tostring(trans);
         initiator_socket[ti->index]->b_transport(trans, delay);
-        SCP_DEBUG(parent(ti->name)) << "b_transport returned : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG(ti->name) << "b_transport returned : " << scp::scp_txn_tostring(trans);
         if (ti->mask_addr)
             trans.set_address(addr);
 
@@ -218,7 +219,7 @@ private:
 
         if (ti->mask_addr)
             trans.set_address(addr - ti->address);
-        SCP_DEBUG(parent(ti->name)) << "calling dbg_transport : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG(ti->name) << "calling dbg_transport : " << scp::scp_txn_tostring(trans);
         unsigned int ret = initiator_socket[ti->index]->transport_dbg(trans);
         if (ti->mask_addr)
             trans.set_address(addr);
@@ -236,12 +237,7 @@ private:
         if (ti->mask_addr)
             trans.set_address(addr - ti->address);
 
-        if (!m_dmi_mutex.try_lock()) { // if we're busy invalidating, dont grant DMI's
-            return false;
-        }
-
-        SCP_DEBUG(parent(ti->name))
-            << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG(ti->name) << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
         bool status = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
         if (status) {
             if (ti->mask_addr) {
@@ -263,7 +259,7 @@ private:
             end = compose_address(id, end);
         }
         std::lock_guard<std::mutex> lock(m_dmi_mutex);
-        invalidate_direct_mem_ptr_ts( id,  start,  end);
+        invalidate_direct_mem_ptr_ts(id, start, end);
     }
 
     void invalidate_direct_mem_ptr_ts(int id, sc_dt::uint64 start, sc_dt::uint64 end)
