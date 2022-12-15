@@ -67,8 +67,7 @@ protected:
     gs::Router<> m_router;
     gs::Memory<> m_mem;
 
-
-static constexpr const char* EXCEPTION_FW = R"(
+    static constexpr const char* EXCEPTION_FW = R"(
         _start:
             mov x0, -1
             str x0, [x2]
@@ -77,9 +76,8 @@ static constexpr const char* EXCEPTION_FW = R"(
             b end
     )";
 
-    void set_firmware(const char *assembly, uint64_t addr=0)
-    {
-        ks_engine *ks;
+    void set_firmware(const char* assembly, uint64_t addr = 0) {
+        ks_engine* ks;
         ks_err err;
         size_t size, count;
         uint8_t* fw;
@@ -90,7 +88,7 @@ static constexpr const char* EXCEPTION_FW = R"(
             SCP_FATAL(SCMOD) << "Unable to initialize keystone";
         }
 
-        if (ks_asm(ks, assembly, addr, &fw, &size, &count) != KS_ERR_OK || size==0) {
+        if (ks_asm(ks, assembly, addr, &fw, &size, &count) != KS_ERR_OK || size == 0) {
             std::cerr << assembly << "\n";
             SCP_INFO() << assembly;
             TEST_FAIL("Unable to assemble the test firmware\n");

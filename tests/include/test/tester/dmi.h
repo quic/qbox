@@ -61,7 +61,7 @@ protected:
         uint64_t* ptr = reinterpret_cast<uint64_t*>(txn.get_data_ptr());
         size_t len = txn.get_data_length();
 
-        SCP_INFO() << "cpu_" << (addr >> 3) << " access on DMI socket at 0x" << std::hex << addr
+        SCP_INFO(SCMOD) << "cpu_" << (addr >> 3) << " access on DMI socket at 0x" << std::hex << addr
                    << ", data: " << std::hex << data << ", len: " << len;
 
         if (len > 8) {

@@ -1,1 +1,1 @@
-qbox_add_cpu_test(halt-tests 30 halt-tests.cc)
+qbox_add_cpu_test(halt-tests 40 halt-tests.cc)
