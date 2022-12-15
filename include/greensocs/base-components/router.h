@@ -237,6 +237,10 @@ private:
         if (ti->mask_addr)
             trans.set_address(addr - ti->address);
 
+        if (!m_dmi_mutex.try_lock()) { // if we're busy invalidating, dont grant DMI's
+            return false;
+        }
+
         SCP_DEBUG(ti->name) << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
         bool status = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
         if (status) {
