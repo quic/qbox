@@ -210,6 +210,7 @@ public:
         , p_icount_mips("icount_mips_shift", 0,
                         "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
         , p_display_argument_set(false) {
+        SCP_DEBUG(SCMOD) << "Libqbox QemuInstance constructor";
         running = true;
         p_tcg_mode.lock();
         push_default_args();

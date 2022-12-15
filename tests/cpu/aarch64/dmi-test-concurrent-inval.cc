@@ -126,7 +126,7 @@ public:
     CpuArmCortexA53DmiConcurrentInvalTest(const sc_core::sc_module_name& n)
         : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>(n) {
         char buf[2048];
-
+        SCP_DEBUG(SCMOD) << "CpuArmCortexA53DmiConcurrentInvalTest constructor";
         m_num_write_per_cpu = NUM_WRITES / p_num_cpu;
 
         std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterDmi::MMIO_ADDR, CpuTesterDmi::DMI_ADDR,
@@ -141,7 +141,8 @@ public:
 
         if (id != CpuTesterDmi::SOCKET_MMIO) {
             SCP_INFO(SCMOD) << "cpu_" << cpuid << " DMI write data: " << std::hex << data
-                            << ", len: " << len;
+                            << ", len: " << len << " (old value " << m_tester.get_buf_value(cpuid)
+                            << ")";
 
             /*
              * The tester is about to write the new value to memory. Check the

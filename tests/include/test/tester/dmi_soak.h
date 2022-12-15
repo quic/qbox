@@ -106,6 +106,8 @@ public:
 
     CpuTesterDmiSoak(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs)
         : CpuTesterMmio(n, cbs) {
+        SCP_DEBUG(SCMOD) << "CpuTesterDmiSoak constructor";
+
         dmi_socket.register_b_transport(this, &CpuTesterDmiSoak::dmi_b_transport);
         dmi_socket.register_get_direct_mem_ptr(this, &CpuTesterDmiSoak::get_direct_mem_ptr);
 

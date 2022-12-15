@@ -124,6 +124,9 @@ public:
 
     CpuTesterDmi(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs)
         : CpuTesterMmio(n, cbs) {
+
+        SCP_DEBUG(SCMOD) << "CpuTesterDmi constructor";
+
         dmi_socket.register_b_transport(this, &CpuTesterDmi::dmi_b_transport);
         dmi_socket.register_get_direct_mem_ptr(this, &CpuTesterDmi::get_direct_mem_ptr);
 

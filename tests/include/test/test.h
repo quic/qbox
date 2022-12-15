@@ -83,7 +83,7 @@ int run_testbench(int argc, char* argv[]) {
     TESTBENCH test_bench("test-bench");
 
     test_bench.run();
-    SCP_INFO() << "Test done";
+    SCP_INFO("test.h") << "Test done";
     return test_bench.get_rc();
 }
 

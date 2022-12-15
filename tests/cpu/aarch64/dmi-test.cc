@@ -119,7 +119,7 @@ public:
     CpuArmCortexA53DmiTest(const sc_core::sc_module_name& n)
         : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>(n) {
         char buf[1024];
-
+        SCP_DEBUG(SCMOD) << "CpuArmCortexA53DmiTest constructor";
         m_num_write_per_cpu = NUM_WRITES / p_num_cpu;
 
         std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterDmi::MMIO_ADDR, CpuTesterDmi::DMI_ADDR,

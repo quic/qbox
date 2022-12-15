@@ -122,7 +122,7 @@ public:
         }
 
         virtual ~DmiRegion() {
-            SCP_INFO("Libqbox") << "Destroying DMI region for host ptr " << m_ptr;
+            SCP_INFO("DMI.Libqbox") << "Destroying DMI region for host ptr " << m_ptr;
         }
 
         uint64_t get_size() const { return m_size; }
@@ -184,7 +184,7 @@ public:
         }
 
         /* helpful for debugging */
-        ~DmiRegionAlias() { SCP_INFO("Libqbox") << "Destroying DMI region Alias"; }
+        ~DmiRegionAlias() { SCP_INFO("DMI.Libqbox") << "Destroying DMI region Alias"; }
 
         DmiRegionAlias(DmiRegionAlias&&) = delete;
 
@@ -266,7 +266,9 @@ protected:
     }
 
 public:
-    QemuInstanceDmiManager(qemu::LibQemu& inst): m_inst(inst) {}
+    QemuInstanceDmiManager(qemu::LibQemu& inst): m_inst(inst) {
+        SCP_DEBUG("DMI.Libqbox") << "DmiManager Constructor";
+    }
 
     QemuInstanceDmiManager(const QemuInstanceDmiManager&) = delete;
 

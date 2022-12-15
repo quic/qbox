@@ -122,7 +122,7 @@ public:
     CpuArmCortexA53DmiAsyncInvalTest(const sc_core::sc_module_name& n)
         : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmiSoak>(n) {
         char buf[2048];
-
+        SCP_DEBUG(SCMOD) << "CpuArmCortexA53DmiAsyncInvalTest constructor";
         m_num_write_per_cpu = NUM_WRITES;
 
         std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterDmiSoak::MMIO_ADDR,
