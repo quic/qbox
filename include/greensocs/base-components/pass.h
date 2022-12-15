@@ -140,6 +140,7 @@ public:
         , p_verbose("verbose", _verbose, "print all transactions as they pass through")
         , m_broker(cci::cci_get_broker())
     {
+        SCP_DEBUG(SCMOD) << "pass constructor";
         if (p_verbose) {
             int level;
             if (!m_broker.get_preset_cci_value(std::string(name()) + "." + SCP_LOG_LEVEL_PARAM_NAME)

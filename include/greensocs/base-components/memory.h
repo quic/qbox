@@ -411,6 +411,8 @@ public:
                })
         , m_sub_block(nullptr)
     {
+        SCP_DEBUG(SCMOD) << "Memory constructor";
+        MemoryServices::get().init(); // allow any init required
         auto m_broker = cci::cci_get_broker();
         if (_size) {
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";

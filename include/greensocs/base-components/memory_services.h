@@ -92,6 +92,9 @@ public:
         std::cerr << "Received exit\n";
         MemoryServices::get().cleanup();
     }
+    void init() {
+        SCP_DEBUG("MemoryServices") << "Memory Services Initialization";
+    }
     static MemoryServices& get()
     {
         static MemoryServices instance;

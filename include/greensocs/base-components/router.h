@@ -426,7 +426,7 @@ public:
         , m_broker(cci::cci_get_broker())
         , thread_safe("thread_safe", THREAD_SAFE, "Is this model thread safe")
     {
-        // nothing to do
+        SCP_DEBUG(SCMOD) << "Router constructor";
     }
 
     Router() = delete;
