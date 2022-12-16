@@ -184,7 +184,7 @@ public:
         CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>::end_of_simulation();
 
         for (int i = 0; i < p_num_cpu; i++) {
-            TEST_ASSERT(m_tester.get_buf_value(i) == m_num_write_per_cpu);
+            TEST_ASSERT(m_tester.get_buf_value(i) == ((m_num_write_per_cpu+3)&(-1ull <<2)));
         }
     }
 };
