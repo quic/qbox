@@ -157,7 +157,6 @@ public:
                     halt[i].write(0);
                     im_halted[i] = false;
                     running++;
-                    break;
                 }
             }
         }
