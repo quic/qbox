@@ -61,8 +61,8 @@ protected:
         uint64_t* ptr = reinterpret_cast<uint64_t*>(txn.get_data_ptr());
         size_t len = txn.get_data_length();
 
-        SCP_INFO(SCMOD) << "cpu_" << (addr >> 3) << " access on DMI socket at 0x" << std::hex << addr
-                   << ", data: " << std::hex << data << ", len: " << len;
+        SCP_INFO(SCMOD) << "cpu_" << (addr >> 3) << " access on DMI socket at 0x" << std::hex
+                        << addr << ", data: " << std::hex << data << ", len: " << len;
 
         if (len > 8) {
             TEST_FAIL("Unsupported b_transport data length");
@@ -124,7 +124,6 @@ public:
 
     CpuTesterDmi(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs)
         : CpuTesterMmio(n, cbs) {
-
         SCP_DEBUG(SCMOD) << "CpuTesterDmi constructor";
 
         dmi_socket.register_b_transport(this, &CpuTesterDmi::dmi_b_transport);

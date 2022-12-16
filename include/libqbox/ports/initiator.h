@@ -408,9 +408,7 @@ public:
         m_dev = dev;
     }
 
-    void cancel_all() {
-        m_on_sysc.cancel_all();
-    }
+    void cancel_all() { m_on_sysc.cancel_all(); }
 
     /* tlm::tlm_bw_transport_if<> */
     virtual tlm::tlm_sync_enum nb_transport_bw(tlm::tlm_generic_payload& trans,
