@@ -34,6 +34,7 @@
 
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
 #include <greensocs/libgssync/async_event.h>
+#include <scp/report.h>
 
 #define PL011_INT_TX 0x20
 #define PL011_INT_RX 0x10
@@ -106,7 +107,7 @@ public:
     sc_core::sc_event update_event;
 
     SC_HAS_PROCESS(Pl011);
-    Pl011(sc_core::sc_module_name name): irq("irq") {
+    Pl011(sc_core::sc_module_name name): irq("irq"), s(nullptr) {
         chr = NULL;
 
         socket.register_b_transport(this, &Pl011::b_transport);
@@ -132,7 +133,7 @@ public:
         chr->register_receive(this, pl011_receive, pl011_can_receive);
     }
 
-    void write(uint64_t offset, uint64_t value) {
+    void write(uint64_t offset, uint32_t value) {
         switch (offset >> 2) {
         case 0:
             putchar(value);
@@ -149,16 +150,37 @@ public:
     void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
         unsigned char* ptr = trans.get_data_ptr();
         uint64_t addr = trans.get_address();
+        unsigned int len = trans.get_data_length();
 
         trans.set_dmi_allowed(false);
         trans.set_response_status(tlm::TLM_OK_RESPONSE);
 
         switch (trans.get_command()) {
         case tlm::TLM_WRITE_COMMAND:
-            pl011_write(addr, *(uint32_t*)ptr);
+            switch (len) {
+            case 1:
+                pl011_write(addr, *ptr);
+                break;
+            case 4:
+                pl011_write(addr, *(uint32_t*)ptr);
+                break;
+            default:
+                SCP_FATAL(SCMOD) << "Incorrect transaction size";
+                break;
+            }
             break;
         case tlm::TLM_READ_COMMAND:
-            *(uint32_t*)ptr = pl011_read(addr);
+            switch (len) {
+            case 1:
+                *ptr = (unsigned char)pl011_read(addr);
+                break;
+            case 4:
+                *(uint32_t*)ptr = pl011_read(addr);
+                break;
+            default:
+                SCP_FATAL(SCMOD) << "Incorrect transaction size";
+                break;
+            }
             break;
         default:
             break;
@@ -263,13 +285,13 @@ public:
         s->read_count = 0;
     }
 
-    void pl011_write(uint64_t offset, uint64_t value) {
+    void pl011_write(uint64_t offset, uint32_t value) {
         unsigned char ch;
 
         switch (offset >> 2) {
         case 0: /* UARTDR */
             /* ??? Check if transmitter is enabled.  */
-            ch = value;
+            ch = (unsigned char)(value & 0xff);
             if (chr) {
                 chr->write(ch);
             }
@@ -361,4 +383,6 @@ public:
         Pl011* uart = (Pl011*)opaque;
         uart->pl011_put_fifo(*buf);
     }
+
+    ~Pl011() { delete s; }
 };

@@ -46,7 +46,8 @@
 #include <greensocs/libgssync/async_event.h>
 #endif
 
-class CharBackendSocket : public CharBackend, public sc_core::sc_module {
+class CharBackendSocket : public CharBackend, public sc_core::sc_module
+{
 private:
     gs::async_event m_event;
     std::queue<unsigned char> m_queue;

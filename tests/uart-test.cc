@@ -50,8 +50,8 @@ public:
 };
 
 TEST_BENCH(TestUart, UartWrite) {
-    m_initiator.do_write(0x0, "h");
-    m_initiator.do_write(0x0, "i");
+    m_initiator.do_write(0x0, 'h');
+    m_initiator.do_write(0x0, 'i');
 
     sc_core::wait(1, sc_core::SC_NS);
     sc_core::sc_stop();
