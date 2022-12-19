@@ -161,6 +161,9 @@ public:
             case 1:
                 pl011_write(addr, *ptr);
                 break;
+            case 2:
+                pl011_write(addr, *(uint16_t*)ptr);
+                break;
             case 4:
                 pl011_write(addr, *(uint32_t*)ptr);
                 break;
@@ -172,7 +175,10 @@ public:
         case tlm::TLM_READ_COMMAND:
             switch (len) {
             case 1:
-                *ptr = (unsigned char)pl011_read(addr);
+                *ptr = (uint8_t)pl011_read(addr);
+                break;
+            case 2:
+                *ptr = (uint16_t)pl011_read(addr);
                 break;
             case 4:
                 *(uint32_t*)ptr = pl011_read(addr);
@@ -199,7 +205,7 @@ public:
         }
     }
 
-    uint64_t pl011_read(uint64_t offset) {
+    uint32_t pl011_read(uint64_t offset) {
         uint32_t c;
         uint64_t r;
 
