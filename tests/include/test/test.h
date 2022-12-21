@@ -79,6 +79,11 @@ public:
 template <class TESTBENCH>
 int run_testbench(int argc, char* argv[]) {
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
+    scp::init_logging(scp::LogConfig()
+                          .fileInfoFrom(sc_core::SC_ERROR)
+                          .logAsync(false)
+                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                          .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
 
     TESTBENCH test_bench("test-bench");
 

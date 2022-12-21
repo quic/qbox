@@ -84,7 +84,7 @@ public:
     {
         int cpuid = addr >> 3;
 
-        SCP_INFO(SCMOD) << "CPU " << cpuid << "write, data: "<<std::hex<<data<<", len: "<<len;
+        SCP_INFO(SCMOD) << "FAILED : CPU " << cpuid << " write, data: "<<std::hex<<data<<", len: "<<len;
         passed=false;
     }
 

@@ -75,6 +75,11 @@ function(qbox_add_cpu_test target timeout_s)
                                                  -p test-bench.inst_b.icount=${icount}
                                                  -p test-bench.inst_a.tcg_mode=\"${threading}\"
                                                  -p test-bench.inst_b.tcg_mode=\"${threading}\"
+
+                                                 -p test-bench.mem.max_block_size=256
+                                                 -p test-bench.mem.min_block_size=32
+
+                                                 -p log_level=0
                                                  )
             set_property(TEST ${test_name} PROPERTY TIMEOUT ${timeout_s})
             # Alternative solution until the problem is solved with the exclusive access tests

@@ -76,7 +76,6 @@ protected:
     std::vector<bool> im_halted;
     sc_core::sc_vector<sc_core::sc_out<bool>> halt;
     int finished = 0;
-    int running = 0;
 
 public:
     SC_HAS_PROCESS(CpuArmCortexA53SimpleHalt);
@@ -107,17 +106,19 @@ public:
     }
 
     void halt_ctrl() {
+        // Mark this as unsuspendable, since QEMU may 'suspend' all activity if we mark all cores as halted.
+        sc_core::sc_unsuspendable();
         while (finished < m_cpus.size()) {
             wait(100, SC_MS);
             for (int i = 0; i < m_cpus.size(); i++) {
-                if (im_halted[i] && m_writes[i] < NUM_WRITES) {
+                if ((im_halted[i] || m_writes[i]==5) && m_writes[i] < NUM_WRITES) {
                     SCP_INFO(SCMOD) << "release CPU " << i;
                     halt[i].write(0);
                     im_halted[i] = false;
-                    running++;
                 }
             }
         }
+        sc_core::sc_suspendable();
     }
 
     virtual ~CpuArmCortexA53SimpleHalt() {}
@@ -136,11 +137,10 @@ public:
 
         TEST_ASSERT(m_writes[cpuid] <= NUM_WRITES);
 
-        if (m_writes[cpuid] == 5 && running > 1) {
+        if (m_writes[cpuid] == 5) {
             SCP_INFO(SCMOD) << "halt CPU " << cpuid;
             halt[cpuid].write(1);
             im_halted[cpuid] = true;
-            running--;
         }
 
         if (m_writes[cpuid] == NUM_WRITES) {
@@ -149,16 +149,6 @@ public:
             finished++;
             halt[cpuid].write(1);
             im_halted[cpuid] = true;
-            running--;
-            // release any other CPU's so at least something is running
-            for (int i = 0; i < m_cpus.size(); i++) {
-                if (im_halted[i] && m_writes[i] < NUM_WRITES) {
-                    SCP_INFO(SCMOD) << "release CPU " << i;
-                    halt[i].write(0);
-                    im_halted[i] = false;
-                    running++;
-                }
-            }
         }
     }
 

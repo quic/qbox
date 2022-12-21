@@ -173,12 +173,12 @@ protected:
         } else {
             if (m_inst.get_tcg_mode() != QemuInstance::TCG_SINGLE) {
                 std::unique_lock<std::mutex> lock(m_signaled_lock);
-                m_signaled_cond.wait(lock, [this] { return m_signaled; });
+                m_signaled_cond.wait(lock, [this] { return m_signaled || m_finished; });
                 m_signaled = false;
             } else {
                 std::unique_lock<std::mutex> lock(m_inst.g_signaled_lock);
                 m_inst.g_signaled_cond.wait(lock,
-                                            [this] { return m_inst.g_signaled | m_finished; });
+                                            [this] { return m_inst.g_signaled || m_finished; });
                 m_inst.g_signaled = false;
             }
         }
@@ -223,17 +223,20 @@ protected:
                 m_inst.get().lock_iothread();
             }
         } else {
-            while (!m_cpu.can_run()) {
+            while (!m_cpu.can_run() && !m_finished) {
                 m_inst.get().unlock_iothread();
                 wait_for_work();
                 m_inst.get().lock_iothread();
             }
         }
-        if (m_cpu.can_run()) {
+        if (m_cpu.can_run() && !m_finished) {
             m_cpu.set_soft_stopped(false);
         }
         if (!m_finished)
             rearm_deadline_timer();
+        else {
+            m_inst.finished();
+        }
     }
 
     /*
@@ -337,6 +340,26 @@ public:
     }
 
     virtual ~QemuCpu() {
+        end_of_simulation(); // catch the case we exeted due to an exception
+        if (m_finished != true)
+            SCP_WARN(SCMOD) << "deleting QemuCPU before (m_finished == true)";
+        if (m_inst.get_tcg_mode() == QemuInstance::TCG_SINGLE) {
+            for (int i = 0; i < 10 && m_inst.running; i++) {
+                m_cpu.kick();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            if (m_inst.running != false)
+                SCP_WARN(SCMOD) << "Deleting QemuCPU after trying to force Qemu exit";
+        }
+    }
+
+    // Process shutting down the CPU's at end of simulation, check this was done on destruction.
+    // This gives time for QEMU to exit etc.
+    void end_of_simulation() override {
+        if (m_finished)
+            return;
+        m_finished = true; // assert before taking lock (for co-routines too)
+
         m_inst.del_dev(this);
 
         if (!m_cpu.valid()) {
@@ -352,8 +375,6 @@ public:
             /* No thread to join */
             return;
         }
-
-        m_finished = true; // assert before taking lock
 
         m_inst.get().lock_iothread();
 
@@ -376,8 +397,8 @@ public:
             m_cpu.set_unplug(true);
             m_cpu.halt(true);
         }
-
         m_inst.get().unlock_iothread();
+        m_cpu.kick(); // Just in case the CPU is currently in the big lock waiting
     }
 
     /* NB this is usd to determin if this cpu can run in SINGLE mode
@@ -407,7 +428,13 @@ public:
         m_cpu_hint_ext.set_cpu(m_cpu);
     }
 
-    void halt_cb(const bool& val) { m_cpu.halt(val); }
+    void halt_cb(const bool& val) {
+        m_inst.get().lock_iothread();
+        m_cpu.halt(val);
+        m_inst.get().unlock_iothread();
+        m_qemu_kick_ev
+            .async_notify(); // notify the other thread so that the CPU is allowed to continue
+    }
 
     virtual void end_of_elaboration() override {
         QemuDevice::end_of_elaboration();

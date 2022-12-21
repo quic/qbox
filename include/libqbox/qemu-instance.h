@@ -54,10 +54,10 @@ class QemuInstance : public sc_core::sc_module
 private:
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_first_qk = NULL;
     std::mutex m_lock;
-    bool running = false;
     std::list<QemuDeviceBaseIF*> devices;
 
 public:
+    bool running = false;
     // these will be used by wait_for_work when it needs a global lock
     std::mutex g_signaled_lock;
     std::condition_variable g_signaled_cond;
@@ -85,6 +85,7 @@ public:
         }
         return can_run;
     }
+    void finished() { running=false; }
     using Target = qemu::Target;
     using LibLoader = qemu::LibraryLoaderIface;
 
