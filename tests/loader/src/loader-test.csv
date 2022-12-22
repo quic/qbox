@@ -1,0 +1,7 @@
+x,_addr,y,z, _value
+1,0x00000000,"text",unquoted,11
+2,0x00000004,isosceles,unquoted,12
+3,,missing_fields
+4
+5,0x00000008,clarified, trailing whitespace , 15    
+6,0x0000000c,hex,message, 0xf00afafb5b5

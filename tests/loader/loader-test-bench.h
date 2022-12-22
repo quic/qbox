@@ -42,6 +42,7 @@ protected:
     gs::Router<> m_router;
     gs::Memory<> m_rom1;
     gs::Memory<> m_rom2;
+    gs::Memory<> m_rom3;
 
     gs::Loader<> m_loader;
 
@@ -49,6 +50,7 @@ protected:
     {
         m_router.initiator_socket.bind(m_rom1.socket);
         m_router.initiator_socket.bind(m_rom2.socket);
+        m_router.initiator_socket.bind(m_rom3.socket);
         m_router.add_initiator(m_initiator.socket);
         // General loader
         m_loader.initiator_socket.bind(m_router.target_socket);
@@ -61,6 +63,7 @@ public:
         , m_router("router")
         , m_rom1("rom1")
         , m_rom2("rom2")
+        , m_rom3("rom3")
         , m_loader("load")
     {
         do_bus_binding();

@@ -75,6 +75,27 @@ TEST_BENCH(LoaderTest, SimpleReadBinFile)
     ASSERT_EQ(data, 0xaf);
 }
 
+// Simple read into the memory and write with csv file
+TEST_BENCH(LoaderTest, SimpleReadCSVFile)
+{
+    uint32_t data;
+    /* Target 3 */
+    ASSERT_EQ(m_initiator.do_read(0x2000, data), tlm::TLM_OK_RESPONSE);
+    ASSERT_EQ(data, 11);
+
+    ASSERT_EQ(m_initiator.do_read(0x2004, data), tlm::TLM_OK_RESPONSE);
+    ASSERT_EQ(data, 12);
+
+    ASSERT_EQ(m_initiator.do_read(0x2008, data), tlm::TLM_OK_RESPONSE);
+    ASSERT_EQ(data, 15);
+
+    uint64_t data64;
+    ASSERT_EQ(m_initiator.do_read(0x200c, data), tlm::TLM_OK_RESPONSE);
+    ASSERT_EQ(data, 0xafafb5b5);
+    ASSERT_EQ(m_initiator.do_read(0x200c, data64), tlm::TLM_OK_RESPONSE);
+    ASSERT_EQ(data64, 0xf00afafb5b5);
+}
+
 int sc_main(int argc, char* argv[])
 {
     auto m_broker = new gs::ConfigurableBroker(argc, argv);

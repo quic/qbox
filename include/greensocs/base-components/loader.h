@@ -259,7 +259,7 @@ protected:
                 if (m_broker.has_preset_value(name + ".byte_swap")) {
                     byte_swap = cci_get<bool>(name + ".byte_swap");
                 }
-                SCP_INFO(SCMOD) << "Loading csv file " << file;
+                SCP_INFO(SCMOD) << "Loading csv file " << file << ", " << (name + ".csv_file");
                 csv_load(file, addr, addr_str, val_str, byte_swap);
                 read = true;
             }
@@ -348,12 +348,17 @@ public:
         if (addr_i == -1 || value_i == -1) {
             SCP_FATAL(SCMOD) << "Unable to find " << filename;
         }
+        int min_field_count = std::max(addr_i, value_i);
         while (file >> row) {
+            if (row.size() <= min_field_count) {
+                continue;
+            }
             const std::string addr = std::string(row[addr_i]);
-            uint32_t value = std::stoi(std::string(row[value_i]));
+            uint64_t value = std::stoll(std::string(row[value_i]), nullptr, 0);
             if (byte_swap)
                 value = byte_swap32(value);
-            send(std::stoi(addr), (uint8_t*)(&value), sizeof(value));
+            uint64_t addr_p = std::stoll(addr, nullptr, 0) + offset;
+            send(addr_p, (uint8_t*)(&value), sizeof(value));
         }
     }
 
