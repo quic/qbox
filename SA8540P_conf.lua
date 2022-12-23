@@ -62,6 +62,9 @@ local PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO = 0x40000000
 local UART0 = PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO
 -- local UART0 = 0x10000000
 
+-- QUPv3 uart
+local QUPV3_1_SE2 = 0x00A88000
+
 local TCSR_SOC_HW_VERSION_ADDR = 0x1FC8000;
 local TCSR_SOC_EMULATION_TYPE_ADDR = TCSR_SOC_HW_VERSION_ADDR+4;
 local SMEM_TCSR_TZ_WONCE_ADDR=0x01fd4000;
@@ -135,6 +138,7 @@ platform = {
                   irq0=40;irq1=41;irq2=42;irq3=43;irq4=44;irq5=45;irq6=46;
                   nr_frames=7;nr_views=2;cnttid=0x1111515};
     uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=379};
+    uart_qup= { simple_target_socket_0 = {address= QUPV3_1_SE2, size=0x2000}, irq=355};
 
     ipcc= {  socket        = {address=IPC_ROUTER_TOP, size=0xfc000},
              irqs = {
@@ -209,7 +213,8 @@ platform = {
 --      {data={0x0}, address=TCSR_SOC_EMULATION_TYPE_ADDR}; -- 0=silicon
 --      {data={0x1}, address=TCSR_SOC_EMULATION_TYPE_ADDR}; -- 1=RUMI
     };
-    --uart_backend_port=4001;
+    -- uart_backend_port=4001;
+    -- qup_uart_backend_port=4001;
 };
 
 

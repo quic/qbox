@@ -61,6 +61,7 @@
 #include <qcom/qtb/qtb.h>
 #include <quic/csr/csr.h>
 #include <quic/smmu500/smmu500.h>
+#include <qup/uart/uart-qupv3.h>
 
 #include "wdog.h"
 #include "pll.h"
@@ -182,6 +183,7 @@ protected:
 
     cci::cci_param<int> p_quantum_ns;
     cci::cci_param<int> p_uart_backend;
+    cci::cci_param<int> p_qup_uart_backend;
 
     QemuInstanceManager m_inst_mgr;
     QemuInstanceManager m_inst_mgr_h;
@@ -195,7 +197,8 @@ protected:
     sc_core::sc_vector<gs::Memory<>> m_hexagon_rams;
     //    gs::Memory<> m_system_imem;
     GlobalPeripheralInitiator* m_global_peripheral_initiator_arm;
-    Uart m_uart;
+    Uart* m_uart = nullptr;
+    QUPv3* m_uart_qup = nullptr;
     IPCC m_ipcc;
 #ifdef newsmmu
     smmu500<> m_smmu;
@@ -235,8 +238,11 @@ protected:
         for (auto& ram : m_hexagon_rams) {
             m_router.initiator_socket.bind(ram.socket);
         }
-        m_router.initiator_socket.bind(m_uart.socket);
+        if (m_uart)
+            m_router.initiator_socket.bind(m_uart->socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
+        if (m_uart_qup)
+            m_router.initiator_socket.bind(m_uart_qup->socket);
 #ifdef newsmmu
         m_router.initiator_socket.bind(m_smmu.socket);
 #endif
@@ -264,8 +270,16 @@ protected:
     void setup_irq_mapping() {
         if (p_arm_num_cpus) {
             {
-                int irq = gs::cci_get<int>(std::string(m_uart.name()) + ".irq");
-                m_uart.irq.bind(m_gic->spi_in[irq]);
+                if (m_uart) {
+                    int irq = gs::cci_get<int>(std::string(m_uart->name()) + ".irq");
+                    m_uart->irq.bind(m_gic->spi_in[irq]);
+                }
+            }
+            {
+                if (m_uart_qup) {
+                    int irq = gs::cci_get<int>(std::string(m_uart_qup->name()) + ".irq");
+                    m_uart_qup->irq.bind(m_gic->spi_in[irq]);
+                }
             }
             {
                 int irq = gs::cci_get<int>(std::string(m_virtio_net_0.name()) + ".irq");
@@ -347,7 +361,9 @@ public:
         , p_uart_backend("uart_backend_port", 0,
                          "uart backend port number, either 0 for 'stdio' or a "
                          "port number (e.g. 4001)")
-
+        , p_qup_uart_backend("qup_uart_backend_port", 0,
+                             "qup uart backend port number, either 0 for 'stdio' or a "
+                             "port number (e.g. 4001)")
         , m_router("router")
 
         , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
@@ -368,7 +384,6 @@ public:
                          [this](const char* n, size_t i) { return new gs::Memory<>(n); })
 
         //        , m_system_imem("system_imem")
-        , m_uart("uart")
         , m_ipcc("ipcc")
 #ifdef newsmmu
         , m_smmu("smmu")
@@ -417,6 +432,25 @@ public:
         }
         if (m_rams.size() <= 0) {
             SCP_ERR(SCMOD) << "Please specify at least one memory (ram_0)";
+        }
+
+        if (m_broker.has_preset_value(std::string(this->name()) +
+                                      ".uart.simple_target_socket_0.address")) {
+            uint64_t uart_addr = gs::cci_get<uint64_t>(std::string(this->name()) +
+                                                       ".uart.simple_target_socket_0.address");
+
+            if (uart_addr) {
+                m_uart = new Uart("uart");
+            }
+        }
+
+        if (m_broker.has_preset_value(std::string(this->name()) +
+                                      ".uart_qup.simple_target_socket_0.address")) {
+            uint64_t uart_qup_addr = gs::cci_get<uint64_t>(
+                std::string(this->name()) + ".uart_qup.simple_target_socket_0.address");
+            if (uart_qup_addr) {
+                m_uart_qup = new QUPv3("uart_qup");
+            }
         }
 
         do_bus_binding();
@@ -473,6 +507,8 @@ public:
         setup_irq_mapping();
 
         CharBackend* backend;
+        CharBackend* qup_backend;
+
         if (!p_uart_backend) {
             backend = new CharBackendStdio("backend_stdio");
         } else {
@@ -480,7 +516,21 @@ public:
                 "backend_socket", "tcp", "127.0.0.1:" + std::to_string(p_uart_backend.get_value()));
         }
 
-        m_uart.set_backend(backend);
+        if (!p_qup_uart_backend) {
+            qup_backend = new CharBackendStdio("qup_backend_stdio", p_uart_backend != 0);
+        } else {
+            qup_backend = new CharBackendSocket(
+                "qup_backend_socket", "tcp",
+                "127.0.0.1:" + std::to_string(p_qup_uart_backend.get_value()));
+        }
+
+        if (m_uart && backend) {
+            m_uart->set_backend(backend);
+        }
+
+        if (m_uart_qup && qup_backend) {
+            m_uart_qup->set_backend(qup_backend);
+        }
     }
 
     ~GreenSocsPlatform() {
@@ -499,16 +549,23 @@ public:
             delete m_gpu;
         }
         delete m_gpex;
+
+        if (m_uart) {
+            delete m_uart;
+        }
+
+        if (m_uart_qup) {
+            delete m_uart_qup;
+        }
     }
 };
 
 int sc_main(int argc, char* argv[]) {
-    scp::init_logging(
-      scp::LogConfig()
-          .fileInfoFrom(sc_core::SC_ERROR)
-          .logAsync(false)
-          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-          .msgTypeFieldWidth(30)); // make the msg type column a bit tighter
+    scp::init_logging(scp::LogConfig()
+                          .fileInfoFrom(sc_core::SC_ERROR)
+                          .logAsync(false)
+                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                          .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
 
     GreenSocsPlatform* platform = new GreenSocsPlatform("platform");

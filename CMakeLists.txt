@@ -59,6 +59,7 @@ gs_addpackage(quic/components/ipcc)
 gs_addpackage(quic/components/qtb)
 gs_addpackage(quic/components/csr)
 gs_addpackage(quic/components/smmu500)
+gs_addpackage(quic/components/qup)
 
 add_executable(vp
     src/main.cc

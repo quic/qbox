@@ -97,3 +97,11 @@ CPMDeclarePackage(smmu500
   GIT_TAG v0.2.0
   GIT_SHALLOW on
 )
+
+# qup
+CPMDeclarePackage(qup
+  NAME qup
+  GIT_REPOSITORY ${GREENSOCS_GIT}quic/components/qup.git
+  GIT_TAG main
+  GIT_SHALLOW on
+)
