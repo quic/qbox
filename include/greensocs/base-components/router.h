@@ -33,7 +33,6 @@
 #endif
 
 #include <iomanip>
-//#include <unistd.h>
 
 #include <cci_configuration>
 #include <systemc>
@@ -421,12 +420,16 @@ public:
 
     explicit Router(const sc_core::sc_module_name& nm)
         : sc_core::sc_module(nm)
-        , initiator_socket("initiator_socket", [&](std::string s) -> void { register_boundto(s); })
+        , initiator_socket("initiator_socket",
+                           [&](std::string s) -> void {
+                               register_boundto(s);
+                               SCP_DEBUG(s) << "Connecting to " << s;
+                           })
         , target_socket("target_socket")
         , m_broker(cci::cci_get_broker())
         , thread_safe("thread_safe", THREAD_SAFE, "Is this model thread safe")
     {
-        SCP_DEBUG(SCMOD) << "Router constructor";
+        SCP_DEBUG(SCMOD) << "Router constructed";
     }
 
     Router() = delete;
