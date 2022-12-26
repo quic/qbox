@@ -4,7 +4,7 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG v7.0.0
+  GIT_TAG v7.1.0
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
@@ -49,14 +49,14 @@ CPMDeclarePackage(libqemu
 # base-components
 CPMDeclarePackage(base-components
   NAME base-components
-  GIT_TAG v4.1.0
+  GIT_TAG v4.2.0
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/base-components.git
 #  GIT_SHALLOW on
 )
 
 CPMDeclarePackage(systemc-uarts
   NAME systemc-uarts
-  GIT_TAG v2.4.0
+  GIT_TAG v2.4.1
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/systemc-uarts.git
   GIT_SHALLOW on
 )
