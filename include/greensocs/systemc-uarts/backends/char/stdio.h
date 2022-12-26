@@ -75,7 +75,7 @@ public:
 #endif
     }
 
-    CharBackendStdio(sc_core::sc_module_name name) {
+    CharBackendStdio(sc_core::sc_module_name name, bool read_write = true) {
         SC_METHOD(rcv);
         sensitive << m_event;
         dont_initialize();
@@ -97,8 +97,8 @@ public:
         signal(SIGSEGV, catch_function);
         atexit(tty_reset);
 #endif
-
-        rcv_thread_id = std::make_unique<std::thread>(&CharBackendStdio::rcv_thread, this);
+        if (read_write)
+            rcv_thread_id = std::make_unique<std::thread>(&CharBackendStdio::rcv_thread, this);
     }
 
     void* rcv_thread() {
