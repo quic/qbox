@@ -52,7 +52,7 @@
 #define GS_Process_Serve_Port "GS_Process_Serve_Port"
 namespace gs {
 
-//#define DMICACHE switchthis on - then you need a mutex
+// #define DMICACHE switchthis on - then you need a mutex
 /* rpc pass through should pass through ONE forward connection ? */
 
 template <unsigned int TLMPORTS = 1, unsigned int SIGNALS = 1, unsigned int BUSWIDTH = 32>

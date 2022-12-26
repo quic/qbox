@@ -27,15 +27,10 @@
 #include <fstream>
 #include <memory>
 
-//#include <cci_configuration>
+#include <cci_configuration>
 #include <systemc>
-//#include <tlm>
-//#include <tlm_utils/simple_target_socket.h>
+
 #include <scp/report.h>
-
-//#include "loader.h"
-
-//#include "shmem_extension.h"
 
 #ifndef _WIN32
 #include <fcntl.h>
@@ -93,9 +88,7 @@ public:
         std::cerr << "Received exit\n";
         MemoryServices::get().cleanup();
     }
-    void init() {
-        SCP_DEBUG("MemoryServices") << "Memory Services Initialization";
-    }
+    void init() { SCP_DEBUG("MemoryServices") << "Memory Services Initialization"; }
     static MemoryServices& get()
     {
         static MemoryServices instance;

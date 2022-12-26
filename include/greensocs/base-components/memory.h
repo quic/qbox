@@ -281,13 +281,14 @@ protected:
         case tlm::TLM_READ_COMMAND:
             if (byt) {
                 for (unsigned int i = 0; i < len; i++)
-                    if (byt[i % bel] == TLM_BYTE_ENABLED){
-                        if (!read(&(ptr[i]), (addr + i), 1)){
-                            SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
+                    if (byt[i % bel] == TLM_BYTE_ENABLED) {
+                        if (!read(&(ptr[i]), (addr + i), 1)) {
+                            SCP_FATAL(SCMOD)
+                                << "Address + length is out of range of the memory size";
                         }
                     }
             } else {
-                if (!read(ptr, addr, len)){
+                if (!read(ptr, addr, len)) {
                     SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
                 }
             }
@@ -299,13 +300,14 @@ protected:
             }
             if (byt) {
                 for (unsigned int i = 0; i < len; i++)
-                    if (byt[i % bel] == TLM_BYTE_ENABLED){
-                        if (!write(&(ptr[i]), (addr + i), 1)){
-                            SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
+                    if (byt[i % bel] == TLM_BYTE_ENABLED) {
+                        if (!write(&(ptr[i]), (addr + i), 1)) {
+                            SCP_FATAL(SCMOD)
+                                << "Address + length is out of range of the memory size";
                         }
                     }
             } else {
-                if (!write(ptr, addr, len)){
+                if (!write(ptr, addr, len)) {
                     SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
                 }
             }
