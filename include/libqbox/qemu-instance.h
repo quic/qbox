@@ -85,7 +85,7 @@ public:
         }
         return can_run;
     }
-    void finished() { running=false; }
+    void finished() { running = false; }
     using Target = qemu::Target;
     using LibLoader = qemu::LibraryLoaderIface;
 
