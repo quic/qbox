@@ -281,10 +281,15 @@ protected:
         case tlm::TLM_READ_COMMAND:
             if (byt) {
                 for (unsigned int i = 0; i < len; i++)
-                    if (byt[i % bel] == TLM_BYTE_ENABLED)
-                        read(&(ptr[i]), (addr + i), 1);
+                    if (byt[i % bel] == TLM_BYTE_ENABLED){
+                        if (!read(&(ptr[i]), (addr + i), 1)){
+                            SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
+                        }
+                    }
             } else {
-                read(ptr, addr, len);
+                if (!read(ptr, addr, len)){
+                    SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
+                }
             }
             break;
         case tlm::TLM_WRITE_COMMAND:
@@ -294,10 +299,15 @@ protected:
             }
             if (byt) {
                 for (unsigned int i = 0; i < len; i++)
-                    if (byt[i % bel] == TLM_BYTE_ENABLED)
-                        write(&(ptr[i]), (addr + i), 1);
+                    if (byt[i % bel] == TLM_BYTE_ENABLED){
+                        if (!write(&(ptr[i]), (addr + i), 1)){
+                            SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
+                        }
+                    }
             } else {
-                write(ptr, addr, len);
+                if (!write(ptr, addr, len)){
+                    SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
+                }
             }
             break;
         default:
@@ -332,7 +342,7 @@ protected:
             });
     }
 
-    void read(uint8_t* data, uint64_t offset, uint64_t len)
+    bool read(uint8_t* data, uint64_t offset, uint64_t len)
     {
         // force end of elaboration to ensure we fix the sizes
         // this may happen if another model descides to load data into memory as
@@ -344,7 +354,9 @@ protected:
         uint64_t remain_len = 0;
         uint64_t data_ptr_offset = 0;
 
-        sc_assert(offset + len <= m_size);
+        if (offset + len > m_size) {
+            return false;
+        }
 
         while (len > 0) {
             SubBlock<>& blk = m_sub_block->access(offset + data_ptr_offset);
@@ -354,8 +366,10 @@ protected:
             data_ptr_offset += remain_len;
             len -= remain_len;
         }
+
+        return true;
     }
-    void write(const uint8_t* data, uint64_t offset, uint64_t len)
+    bool write(const uint8_t* data, uint64_t offset, uint64_t len)
     {
         if (!m_sub_block)
             before_end_of_elaboration();
@@ -363,7 +377,9 @@ protected:
         uint64_t remain_len = 0;
         uint64_t data_ptr_offset = 0;
 
-        sc_assert(offset + len <= m_size);
+        if (offset + len > m_size) {
+            return false;
+        }
 
         while (len > 0) {
             SubBlock<>& blk = m_sub_block->access(offset + data_ptr_offset);
@@ -374,6 +390,8 @@ protected:
             data_ptr_offset += remain_len;
             len -= remain_len;
         }
+
+        return true;
     }
 
 public:
@@ -407,7 +425,10 @@ public:
         , p_shmem("shared_memory", false, "Allocate using shared memory")
         , load("load",
                [&](const uint8_t* data, uint64_t offset, uint64_t len) -> void {
-                   write(data, offset, len);
+                   if (!write(data, offset, len)) {
+                       SCP_WARN(SCMOD)
+                           << " Offset : 0x" << std::hex << offset << " of the out of range";
+                   }
                })
         , m_sub_block(nullptr)
     {
