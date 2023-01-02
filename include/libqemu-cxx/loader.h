@@ -37,6 +37,8 @@ public:
     virtual LibraryIfacePtr load_library(const char* lib_name) = 0;
     virtual const char* get_lib_ext() = 0;
     virtual const char* get_last_error() = 0;
+
+    virtual ~LibraryLoaderIface() = default;
 };
 
 LibraryLoaderIface* get_default_lib_loader();
