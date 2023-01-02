@@ -46,6 +46,9 @@ public:
     static constexpr uint64_t MEM_ADDR = 0x0;
     static constexpr size_t MEM_SIZE = 256 * 1024;
 
+    static constexpr uint64_t BULKMEM_ADDR = 0x100000000;
+    static constexpr size_t BULKMEM_SIZE = 1024 * 1024 * 1024;
+
 private:
     ks_arch qemu_to_ks_arch(qemu::Target arch) {
         switch (arch) {
@@ -66,6 +69,7 @@ protected:
 
     gs::Router<> m_router;
     gs::Memory<> m_mem;
+    gs::Memory<> m_bulkmem;
 
     static constexpr const char* EXCEPTION_FW = R"(
         _start:
@@ -107,10 +111,12 @@ public:
         , p_num_cpu("num_cpu", 1, "Number of CPUs to instantiate in the test")
         , p_quantum_ns("quantum_ns", 1000000, "Value of the global TLM-2.0 quantum in ns")
         , m_router("router")
-        , m_mem("mem", MEM_SIZE) {
+        , m_mem("mem", MEM_SIZE)
+        , m_bulkmem("bulkmem", BULKMEM_SIZE) {
         using tlm_utils::tlm_quantumkeeper;
 
         m_router.add_target(m_mem.socket, MEM_ADDR, MEM_SIZE);
+        m_router.add_target(m_bulkmem.socket, BULKMEM_ADDR, BULKMEM_SIZE);
 
         sc_core::sc_time global_quantum(p_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);

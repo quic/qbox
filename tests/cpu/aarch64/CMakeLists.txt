@@ -5,4 +5,4 @@ qbox_add_cpu_test(aarch64-ld-st-excl-fail-test 100 ld-st-excl-fail.cc)
 qbox_add_cpu_test(aarch64-write_read 100 write_read.cc)
 
 #This test will fail for now
-#qbox_add_cpu_test(aarch64-dmi-test-async-inval 30 dmi-test-async-inval.cc)
+qbox_add_cpu_test(aarch64-dmi-test-async-inval 100 dmi-test-async-inval.cc)

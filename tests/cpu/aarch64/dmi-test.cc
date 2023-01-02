@@ -184,7 +184,7 @@ public:
     void dmi_access(uint64_t addr) {
         int cpuid = addr >> 3;
 
-        SCP_INFO(SCMOD) << "CPU " << (addr>>3) << " DMI accedd at 0x" << std::hex << addr;
+        SCP_INFO(SCMOD) << "CPU " << (addr>>3) << " DMI accessed at 0x" << std::hex << addr;
 
         TEST_ASSERT(m_dmi_ok[cpuid]==false || m_last_access_io[cpuid] == false);
         m_last_access_io[cpuid] = true;
@@ -236,6 +236,8 @@ public:
         CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>::end_of_simulation();
 
         for (int i = 0; i < p_num_cpu; i++) {
+            SCP_INFO(SCMOD) << "CPU " << i << " " << m_tester.get_buf_value(i) << " expecting "
+                            << m_num_write_per_cpu;
             TEST_ASSERT(m_tester.get_buf_value(i) == m_num_write_per_cpu);
         }
     }

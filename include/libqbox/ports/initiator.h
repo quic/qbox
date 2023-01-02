@@ -46,6 +46,7 @@ public:
     virtual void initiator_tidy_tlm_payload(TlmPayload& payload) = 0;
     virtual sc_core::sc_time initiator_get_local_time() = 0;
     virtual void initiator_set_local_time(const sc_core::sc_time&) = 0;
+    virtual void initiator_async_run(qemu::Cpu::AsyncJobFn job) = 0;
 };
 
 /**
@@ -80,7 +81,6 @@ protected:
     qemu::Device m_dev;
     gs::RunOnSysC m_on_sysc;
 
-    tlm::tlm_dmi m_dmi_data;
     bool m_finished = false;
 
     class m_mem_obj
@@ -110,12 +110,9 @@ protected:
     }
 
     void add_dmi_mr_alias(DmiRegionAlias::Ptr alias) {
-        SCP_INFO(SCMOD) << "Adding DMI alias for region [ 0x" << std::hex << alias->get_start()
-                        << ", 0x" << std::hex << alias->get_end() << "]";
-
+        SCP_INFO(SCMOD) << "Adding " << *alias;
         qemu::MemoryRegion alias_mr = alias->get_alias_mr();
         m_r->m_root.add_subregion(alias_mr, alias->get_start());
-
         alias->set_installed();
     }
 
@@ -123,10 +120,7 @@ protected:
         if (!alias->is_installed()) {
             return;
         }
-
-        SCP_INFO(SCMOD) << "Removing DMI alias for region [ 0x" << std::hex << alias->get_start()
-                        << ", 0x" << std::hex << alias->get_end() << "]";
-
+        SCP_INFO(SCMOD) << "Removing " << *alias;
         m_r->m_root.del_subregion(alias->get_alias_mr());
     }
 
@@ -161,6 +155,13 @@ protected:
      * @see QemuInstanceDmiManager for more information on why we need a global
      * MR per DMI region.
      */
+
+    /*   **************
+     * NB all DMI activity MUST happen from the CPU thread (from an MMIO read/write or 'safe work')
+     *
+     * For 7.2 this may need to be safe aync work ????????
+     *   ************** */
+
     void check_dmi_hint(TlmPayload& trans) {
         if (!trans.is_dmi_allowed()) {
             return;
@@ -171,24 +172,33 @@ protected:
         // It is 'safer' from the SystemC perspective to  m_on_sysc.run_on_sysc([this,
         // &trans]{...}).
 
-        LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
+        tlm::tlm_dmi m_dmi_data;
+
+        // hold the lock through, as we will be doing several updates and we dont want multiple
+        // DMI's
+        m_inst.get().lock_iothread();
+
         if (!(*this)->get_direct_mem_ptr(trans, m_dmi_data)) {
+            m_inst.get().unlock_iothread();
             return;
         }
 
-        // hold the lock through, as we will be doing several updates
-        m_inst.get().lock_iothread();
-
         SCP_INFO(SCMOD) << "DMI Adding for address 0x" << std::hex << trans.get_address();
 
-// this is relatively arbitary. The upper limit is set within QEMU by the TBU
-// e.g. 4k small pages.
-// Having 2000 separate chunks seems large enough.
-#define MAX_MAP 2000
-        // Prune if the map is to big before we start
+        // The upper limit is set within QEMU by the TBU
+        // e.g. 1k small pages for ARM.
+        // setting to 1/2 the size of the ARM TARGET_PAGE_SIZE,
+        // Comment from QEMU code:
+        /* The physical section number is ORed with a page-aligned
+         * pointer to produce the iotlb entries.  Thus it should
+         * never overflow into the page-aligned value.
+         */
+#define MAX_MAP 250
+
         while (m_dmi_aliases.size() > MAX_MAP) {
             auto d = m_dmi_aliases.begin();
             std::advance(d, std::rand() % m_dmi_aliases.size());
+            SCP_INFO(SCMOD) << "KULLING 0x" << std::hex << d->first;
             d = remove_alias(d);
         }
 
@@ -242,9 +252,9 @@ protected:
         }
 
         SCP_INFO(SCMOD) << "Adding DMI for range [0x" << std::hex << m_dmi_data.get_start_address()
-                        << ", 0x" << std::hex << m_dmi_data.get_end_address() << "]";
+                        << "-0x" << std::hex << m_dmi_data.get_end_address() << "]";
 
-        DmiRegionAlias::Ptr alias(dmi_mgr.get_new_region_alias(m_dmi_data));
+        DmiRegionAlias::Ptr alias = m_inst.get_dmi_manager().get_new_region_alias(m_dmi_data);
 
         m_dmi_aliases[start] = alias;
         add_dmi_mr_alias(m_dmi_aliases[start]);
@@ -380,8 +390,6 @@ public:
     // This could happen during void end_of_simulation() but there is a race with other units trying
     // to pull down their DMI's
     ~QemuInitiatorSocket() {
-        //        dmimgr_lock();
-        LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
         cancel_all();
         delete m_r;
         m_r = nullptr;
@@ -434,7 +442,7 @@ public:
          * invalid before mapping it on the QEMU root MR (see
          * check_dmi_hint comment).
          */
-        r->invalidate_region();
+        // r->invalidate_region();
 
         assert(r->is_installed());
         //        if (!r->is_installed()) {
@@ -462,12 +470,8 @@ public:
         return m_dmi_aliases.erase(it);
     }
 
-    virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start_range, sc_dt::uint64 end_range) {
-        SCP_INFO(SCMOD) << "DMI invalidate [0x" << std::hex << start_range << ", 0x" << std::hex
-                        << end_range << "]";
-
-        LockedQemuInstanceDmiManager dmi_mgr(m_inst.get_dmi_manager());
-
+private:
+    void invalidate_single_range(sc_dt::uint64 start_range, sc_dt::uint64 end_range) {
         auto it = m_dmi_aliases.upper_bound(start_range);
 
         if (it != m_dmi_aliases.begin()) {
@@ -477,7 +481,6 @@ public:
              */
             it--;
         }
-        m_inst.get().lock_iothread();
         while (it != m_dmi_aliases.end()) {
             DmiRegionAlias::Ptr r = it->second;
 
@@ -497,7 +500,37 @@ public:
             SCP_INFO(SCMOD) << "Invalidated region [0x" << std::hex << r->get_start() << ", 0x"
                             << std::hex << r->get_end() << "]";
         }
-        m_inst.get().unlock_iothread();
+    }
+
+    std::mutex m_mutex;
+    std::vector<std::pair<sc_dt::uint64, sc_dt::uint64>> m_ranges;
+
+    void invalidate_ranges_safe_cb() {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        SCP_INFO(SCMOD) << "Invalidating " << m_ranges.size() << " ranges";
+        auto rit = m_ranges.begin();
+        while (rit != m_ranges.end()) {
+            invalidate_single_range(rit->first, rit->second);
+            rit = m_ranges.erase(rit);
+        }
+    }
+
+public:
+    virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start_range, sc_dt::uint64 end_range) {
+        if (m_finished)
+            return;
+
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            SCP_INFO(SCMOD) << "DMI invalidate [0x" << std::hex << start_range << ", 0x" << std::hex
+                            << end_range << "]";
+            m_ranges.push_back(std::make_pair(start_range, end_range));
+        }
+
+        m_initiator.initiator_async_run([&]() { invalidate_ranges_safe_cb(); });
+
+        /* For 7.2 this may need to be safe aync work ???????? */
     }
 };
 

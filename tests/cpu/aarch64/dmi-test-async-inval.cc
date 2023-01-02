@@ -123,7 +123,7 @@ public:
         : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmiSoak>(n) {
         char buf[2048];
         SCP_DEBUG(SCMOD) << "CpuArmCortexA53DmiAsyncInvalTest constructor";
-        m_num_write_per_cpu = NUM_WRITES;
+        m_num_write_per_cpu = NUM_WRITES / p_num_cpu;
 
         std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterDmiSoak::MMIO_ADDR,
                       CpuTesterDmiSoak::DMI_ADDR, CpuTesterDmiSoak::DMI_SIZE - 1,

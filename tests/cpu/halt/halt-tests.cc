@@ -118,6 +118,11 @@ public:
                 }
             }
         }
+        wait(100, SC_MS);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // the halt below will kick the CPU, causing there to be an async run on cpu (kick) to
+        // be pending when we effectively shut down the simulation. This gives a little time to be sure the kick is processed.
+
         sc_core::sc_suspendable();
     }
 

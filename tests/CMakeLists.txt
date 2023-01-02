@@ -64,7 +64,7 @@ function(qbox_add_cpu_test target timeout_s)
 
 
         foreach(num_cpu ${QBOX_CPU_TEST_NUM_CPU_COMBINATION})
-            set(test_name ${target}|sync-pol:${sync_pol}|num-cpu:${num_cpu}|icount:${icount}|threading:${threading})
+            set(test_name ${target}:sync-pol=${sync_pol}:num-cpu=${num_cpu}:icount=${icount}:threading=${threading})
 
             add_test(
                 NAME ${test_name}
@@ -76,8 +76,8 @@ function(qbox_add_cpu_test target timeout_s)
                                                  -p test-bench.inst_a.tcg_mode=\"${threading}\"
                                                  -p test-bench.inst_b.tcg_mode=\"${threading}\"
 
-                                                 -p test-bench.mem.max_block_size=256
-                                                 -p test-bench.mem.min_block_size=32
+                                                 -p test-bench.bulkmem.max_block_size=1024
+                                                 -p test-bench.bulkmem.min_block_size=32
 
                                                  -p log_level=0
                                                  )

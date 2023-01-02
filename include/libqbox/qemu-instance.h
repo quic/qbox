@@ -321,6 +321,7 @@ public:
         }
 
         m_inst.init();
+        m_dmi_mgr.init();
     }
 
     /**
@@ -350,8 +351,8 @@ public:
      * by the fact that the LockedQemuInstanceDmiManager copy constructor is
      * deleted).
      */
-    LockedQemuInstanceDmiManager get_dmi_manager() {
-        return LockedQemuInstanceDmiManager(m_dmi_mgr);
+    QemuInstanceDmiManager& get_dmi_manager() {
+        return m_dmi_mgr;
     }
 
 private:

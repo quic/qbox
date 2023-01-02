@@ -43,13 +43,13 @@
 class CpuArmCortexA53WriteReadTest : public CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>
 {
 public:
-    static constexpr int NUM_WRITES = 1024;
+    static constexpr uint64_t NUM_WRITES = 10*1024;
 
     static constexpr const char* FIRMWARE = R"(
         _start:
             ldr x1, =0x%08)" PRIx64 R"(
             ldr x3, =0x%08)" PRIx64 R"(
-            mov x10, #%d
+            ldr x10,=0x%08)" PRIx64 R"(
 
             mrs x0, mpidr_el1
 
@@ -97,20 +97,14 @@ public:
     )";
 
 protected:
-    std::vector<int> m_writes;
 
 public:
     CpuArmCortexA53WriteReadTest(const sc_core::sc_module_name& n)
         : CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>(n) {
         char buf[1024];
 
-        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterMmio::MMIO_ADDR, (uint64_t)0x1000, NUM_WRITES);
+        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterMmio::MMIO_ADDR, CpuTestBench::BULKMEM_ADDR, NUM_WRITES / p_num_cpu);
         set_firmware(buf);
-
-        m_writes.resize(p_num_cpu);
-        for (int i = 0; i < p_num_cpu; i++) {
-            m_writes[i] = 0;
-        }
     }
 
     virtual ~CpuArmCortexA53WriteReadTest() {}

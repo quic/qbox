@@ -58,6 +58,7 @@ protected:
 
     gs::async_event m_qemu_kick_ev;
     sc_core::sc_event_or_list m_external_ev;
+    sc_core::sc_process_handle m_sc_thread; // used for co-routines
 
     bool m_signaled;
     std::mutex m_signaled_lock;
@@ -143,7 +144,8 @@ protected:
      */
     void kick_cb() {
         if (m_coroutines) {
-            m_qemu_kick_ev.async_notify();
+            if (!m_finished)
+                m_qemu_kick_ev.async_notify();
         } else {
             set_signaled();
         }
@@ -217,19 +219,19 @@ protected:
         m_inst.get().lock_iothread();
 
         if (m_inst.get_tcg_mode() == QemuInstance::TCG_SINGLE) {
-            while (!m_inst.can_run() && !m_finished) {
+            while (!m_finished && !m_inst.can_run()) {
                 m_inst.get().unlock_iothread();
                 wait_for_work();
                 m_inst.get().lock_iothread();
             }
         } else {
-            while (!m_cpu.can_run() && !m_finished) {
+            while (!m_finished && !m_cpu.can_run()) {
                 m_inst.get().unlock_iothread();
                 wait_for_work();
                 m_inst.get().lock_iothread();
             }
         }
-        if (m_cpu.can_run() && !m_finished) {
+        if (!m_finished && m_cpu.can_run()) {
             m_cpu.set_soft_stopped(false);
         }
         if (!m_finished)
@@ -297,7 +299,7 @@ protected:
             m_cpu.register_thread();
         }
 
-        for (;;) {
+        for (; !m_finished;) {
             prepare_run_cpu();
             run_cpu_loop();
             sync_with_kernel();
@@ -371,18 +373,18 @@ public:
             return;
         }
 
+        m_inst.get().lock_iothread();
+        /* Make sure QEMU won't call us anymore */
+        m_cpu.clear_callbacks();
+
         if (m_coroutines) {
-            /* No thread to join */
+            // can't join or wait for sc_event
+            m_inst.get().unlock_iothread();
             return;
         }
 
-        m_inst.get().lock_iothread();
-
         /* Unblock it if it's waiting for run budget */
         m_qk->stop();
-
-        /* Make sure QEMU won't call us anymore */
-        m_cpu.clear_callbacks();
 
         /* Unblock the CPU thread if it's sleeping */
         set_signaled();
@@ -412,7 +414,7 @@ public:
         m_cpu = qemu::Cpu(m_dev);
 
         if (m_coroutines) {
-            sc_core::sc_spawn(std::bind(&QemuCpu::mainloop_thread_coroutine, this));
+            m_sc_thread = sc_core::sc_spawn(std::bind(&QemuCpu::mainloop_thread_coroutine, this));
         }
 
         socket.init(m_dev, "memory");
@@ -429,11 +431,13 @@ public:
     }
 
     void halt_cb(const bool& val) {
-        m_inst.get().lock_iothread();
-        m_cpu.halt(val);
-        m_inst.get().unlock_iothread();
-        m_qemu_kick_ev
-            .async_notify(); // notify the other thread so that the CPU is allowed to continue
+        if (!m_finished) {
+            m_inst.get().lock_iothread();
+            m_cpu.halt(val);
+            m_inst.get().unlock_iothread();
+            m_qemu_kick_ev
+                .async_notify(); // notify the other thread so that the CPU is allowed to continue
+        }
     }
 
     virtual void end_of_elaboration() override {
@@ -457,9 +461,11 @@ public:
 
     virtual void start_of_simulation() override {
         QemuDevice::start_of_simulation();
+        m_inst.get().lock_iothread();
         m_cpu.reset();
         /* By default, we set the halt to release */
         m_cpu.halt(p_start_halted);
+        m_inst.get().unlock_iothread();
         if (!m_coroutines) {
             /* Prepare the CPU for its first run and release it */
             m_cpu.set_soft_stopped(false);
@@ -529,6 +535,12 @@ public:
             m_last_vclock = m_inst.get().get_virtual_clock();
 #endif
         }
+    }
+
+    /* expose async run interface for DMI invalidation */
+    virtual void initiator_async_run(qemu::Cpu::AsyncJobFn job) override {
+        if (!m_finished)
+            m_cpu.async_run(job);
     }
 };
 

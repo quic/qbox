@@ -56,7 +56,9 @@ private:
     bool m_test_success = true;
 
 public:
-    TestBench(const sc_core::sc_module_name& n): sc_core::sc_module(n) {}
+    TestBench(const sc_core::sc_module_name& n): sc_core::sc_module(n) {
+        SCP_INFO(SCMOD)<<"Test Bench Constructor";
+    }
 
     virtual ~TestBench() {}
 
@@ -85,6 +87,7 @@ int run_testbench(int argc, char* argv[]) {
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
 
+    SCP_INFO("test.h") << "Start Test";
     TESTBENCH test_bench("test-bench");
 
     test_bench.run();

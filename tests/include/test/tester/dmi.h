@@ -140,13 +140,13 @@ public:
         SCP_INFO(SCMOD) << "DMI invalidating";
 
         dmi_socket->invalidate_direct_mem_ptr(start, end);
+    }
 
-        if (start == 0 && end == DMI_SIZE - 1) {
-            size_t next_buf = (m_cur_buf + 1) % NUM_BUF;
+    void dmi_invalidate_switch() {
+        size_t next_buf = (m_cur_buf + 1) % NUM_BUF;
 
-            std::memcpy(m_buf[next_buf], m_buf[m_cur_buf], sizeof(m_buf[0]));
-            m_cur_buf = next_buf;
-        }
+        std::memcpy(m_buf[next_buf], m_buf[m_cur_buf], sizeof(m_buf[0]));
+        m_cur_buf = next_buf;
 
         SCP_INFO(SCMOD) << "DMI invalidating DONE";
     }
