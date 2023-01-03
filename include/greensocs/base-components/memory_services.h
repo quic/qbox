@@ -53,6 +53,7 @@ class MemoryServices
 private:
     MemoryServices()
     {
+        SCP_DEBUG("MemoryServices") << "MemoryServices constructor";
         signal(SIGABRT, MemoryServices::cleanupsig);
         signal(SIGINT, MemoryServices::cleanupsig);
         signal(SIGKILL, MemoryServices::cleanupsig);

@@ -143,6 +143,7 @@ public:
         , initiator_socket("initiator_socket")
         , target_socket("target_socket")
     {
+        SCP_DEBUG(SCMOD) << "MemoryDumper constructor";
         p_dump.register_post_write_callback([this](auto ev) { this->dump(); });
         target_socket.register_b_transport(this, &MemoryDumper::b_transport);
     }

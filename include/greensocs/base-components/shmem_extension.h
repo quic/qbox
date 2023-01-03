@@ -49,6 +49,7 @@ public:
     ShmemIDExtension(std::string& s, uint64_t addr, uint64_t size)
         : m_memid(s), m_mapped_addr(addr), m_size(size)
     {
+        SCP_DEBUG("ShmemIDExtension") << "ShmemIDExtension constructor";
     }
     ShmemIDExtension& operator=(ShmemIDExtension o)
     {

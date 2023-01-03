@@ -630,6 +630,7 @@ public:
                       "the bridge")
         , p_sync_policy("sync_policy", "multithread-unconstrained", "Sync policy for the remote")
     {
+        SCP_DEBUG(SCMOD) << "PassRPC constructor";
         SCP_DEBUG(SCMOD) << getpid() << " IS THE RPC PID " << std::this_thread::get_id()
                          << " is the thread ID";
 
