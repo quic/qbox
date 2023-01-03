@@ -40,6 +40,7 @@ public:
 
     CharBackendNCurses(sc_core::sc_module_name name)
     {
+        SCP_DEBUG(SCMOD) << "CharBackendNCurses constructor";
         SC_METHOD(rcv);
         sensitive << m_event;
         dont_initialize();

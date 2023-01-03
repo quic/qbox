@@ -115,6 +115,7 @@ public:
         it_enable = 0;
         it_state = 0;
 
+        SCP_DEBUG(SCMOD) << "IbexUart constructor";
         socket.register_b_transport(this, &IbexUart::b_transport);
 
         SC_METHOD(update_irqs);
