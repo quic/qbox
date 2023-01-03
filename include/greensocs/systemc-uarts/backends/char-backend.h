@@ -20,6 +20,7 @@
  * You may obtain a copy of the Apache License at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <scp/report.h>
 
 #pragma once
 
@@ -32,6 +33,7 @@ protected:
 
 public:
     CharBackend() {
+        SCP_DEBUG("CharBackend") << "Charbackend constructor";
         m_opaque = NULL;
         m_receive = NULL;
         m_can_receive = can_receive;

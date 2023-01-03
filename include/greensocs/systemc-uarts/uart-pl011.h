@@ -108,6 +108,7 @@ public:
 
     SC_HAS_PROCESS(Pl011);
     Pl011(sc_core::sc_module_name name): irq("irq"), s(nullptr) {
+        SCP_DEBUG(SCMOD) << "Pl011 constructor";
         chr = NULL;
 
         socket.register_b_transport(this, &Pl011::b_transport);

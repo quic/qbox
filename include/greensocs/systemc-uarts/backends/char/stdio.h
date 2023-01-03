@@ -76,6 +76,7 @@ public:
     }
 
     CharBackendStdio(sc_core::sc_module_name name, bool read_write = true) {
+        SCP_DEBUG(SCMOD) << "CharBackendStdio constructor";
         SC_METHOD(rcv);
         sensitive << m_event;
         dont_initialize();

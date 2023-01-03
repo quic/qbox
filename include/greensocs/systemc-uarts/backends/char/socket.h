@@ -108,6 +108,7 @@ public:
     CharBackendSocket(sc_core::sc_module_name name, std::string type, std::string address,
                       bool server = true, bool nowait = true)
         : type(type), address(address), m_server(server), m_nowait(nowait) {
+        SCP_DEBUG(SCMOD) << "CharBackendSocket constructor";
         SC_METHOD(rcv);
         sensitive << m_event;
         dont_initialize();
