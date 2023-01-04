@@ -154,13 +154,15 @@ platform = {
              irq_global = 65;
            };
 
+    -- Turing_NSP_0, ARID 14, AC_VM_CDSP_Q6_ELF:
     tbu_0 = { topology_id=0x21C0,
               upstream_socket = { address=NSP0_AHB_HIGH,
                                   size=0xF00000000-NSP0_AHB_HIGH,
                                   relative_addresses=false
              }
             };
-    tbu_1 = { topology_id=0x29A0,
+    -- Turing_NSP_1, ARID 14, AC_VM_CDSP_Q6_ELF:
+    tbu_1 = { topology_id=0x29C0,
              upstream_socket = { address=NSP1_AHB_HIGH,
                                  size=0xF00000000-NSP1_AHB_HIGH,
                                  relative_addresses=false
