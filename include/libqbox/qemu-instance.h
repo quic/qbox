@@ -56,8 +56,9 @@ private:
     std::mutex m_lock;
     std::list<QemuDeviceBaseIF*> devices;
 
+    bool m_running = false;
+
 public:
-    bool running = false;
     // these will be used by wait_for_work when it needs a global lock
     std::mutex g_signaled_lock;
     std::condition_variable g_signaled_cond;
@@ -72,7 +73,7 @@ public:
         devices.remove(d);
     }
     bool can_run() {
-        if (!running)
+        if (!m_running)
             return false;
         std::lock_guard<std::mutex> lock(m_lock);
         bool can_run = false;
@@ -85,7 +86,6 @@ public:
         }
         return can_run;
     }
-    void finished() { running = false; }
     using Target = qemu::Target;
     using LibLoader = qemu::LibraryLoaderIface;
 
@@ -212,14 +212,14 @@ public:
                         "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
         , p_display_argument_set(false) {
         SCP_DEBUG(SCMOD) << "Libqbox QemuInstance constructor";
-        running = true;
+        m_running = true;
         p_tcg_mode.lock();
         push_default_args();
     }
 
     QemuInstance(const QemuInstance&) = delete;
     QemuInstance(QemuInstance&&) = delete;
-    virtual ~QemuInstance() { running = false; }
+    virtual ~QemuInstance() { m_running = false; }
 
     bool operator==(const QemuInstance& b) const { return this == &b; }
 
@@ -351,9 +351,7 @@ public:
      * by the fact that the LockedQemuInstanceDmiManager copy constructor is
      * deleted).
      */
-    QemuInstanceDmiManager& get_dmi_manager() {
-        return m_dmi_mgr;
-    }
+    QemuInstanceDmiManager& get_dmi_manager() { return m_dmi_mgr; }
 
 private:
     void start_of_simulation(void) { get().finish_qemu_init(); }

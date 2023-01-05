@@ -68,6 +68,7 @@ protected:
 
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
     bool m_finished = false;
+    std::mutex m_can_delete;
     QemuCpuHintTlmExtension m_cpu_hint_ext;
 
     /*
@@ -167,9 +168,10 @@ protected:
      *   set_signaled is called.
      */
     void wait_for_work() {
+        m_qk->stop();
         if (m_finished)
             return;
-        m_qk->stop();
+
         if (m_coroutines) {
             m_on_sysc.run_on_sysc([this]() { wait(m_external_ev); });
         } else {
@@ -219,26 +221,25 @@ protected:
         m_inst.get().lock_iothread();
 
         if (m_inst.get_tcg_mode() == QemuInstance::TCG_SINGLE) {
-            while (!m_finished && !m_inst.can_run()) {
+            while (!m_inst.can_run() && !m_finished) {
                 m_inst.get().unlock_iothread();
                 wait_for_work();
                 m_inst.get().lock_iothread();
             }
         } else {
-            while (!m_finished && !m_cpu.can_run()) {
+            while (!m_cpu.can_run() && !m_finished) {
                 m_inst.get().unlock_iothread();
                 wait_for_work();
                 m_inst.get().lock_iothread();
             }
         }
-        if (!m_finished && m_cpu.can_run()) {
+        if (m_finished)
+            return;
+
+        if (m_cpu.can_run()) {
             m_cpu.set_soft_stopped(false);
         }
-        if (!m_finished)
-            rearm_deadline_timer();
-        else {
-            m_inst.finished();
-        }
+        rearm_deadline_timer();
     }
 
     /*
@@ -283,9 +284,11 @@ protected:
      * we use this hook to synchronize with the kernel.
      */
     void end_of_loop_cb() {
+        if (m_finished) return;
         if (m_coroutines) {
             m_inst.get().coroutine_yield();
         } else {
+            std::lock_guard<std::mutex> lock(m_can_delete);
             sync_with_kernel();
             prepare_run_cpu();
         }
@@ -295,9 +298,7 @@ protected:
      * SystemC thread entry when running in coroutine mode.
      */
     void mainloop_thread_coroutine() {
-        if (m_coroutines) {
-            m_cpu.register_thread();
-        }
+        m_cpu.register_thread();
 
         for (; !m_finished;) {
             prepare_run_cpu();
@@ -342,17 +343,9 @@ public:
     }
 
     virtual ~QemuCpu() {
-        end_of_simulation(); // catch the case we exeted due to an exception
-        if (m_finished != true)
-            SCP_WARN(SCMOD) << "deleting QemuCPU before (m_finished == true)";
-        if (m_inst.get_tcg_mode() == QemuInstance::TCG_SINGLE) {
-            for (int i = 0; i < 10 && m_inst.running; i++) {
-                m_cpu.kick();
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            if (m_inst.running != false)
-                SCP_WARN(SCMOD) << "Deleting QemuCPU after trying to force Qemu exit";
-        }
+        end_of_simulation(); // catch the case we exited abnormally
+        std::lock_guard<std::mutex> lock(m_can_delete);
+        m_inst.del_dev(this);
     }
 
     // Process shutting down the CPU's at end of simulation, check this was done on destruction.
@@ -361,8 +354,6 @@ public:
         if (m_finished)
             return;
         m_finished = true; // assert before taking lock (for co-routines too)
-
-        m_inst.del_dev(this);
 
         if (!m_cpu.valid()) {
             /* CPU hasn't been created yet */
