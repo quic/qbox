@@ -188,6 +188,11 @@ public:
      * QemuInitiatorIface
      */
     virtual void initiator_tidy_tlm_payload(TlmPayload& payload) override {}
+
+    /*
+     * QemuInitiatorIface
+     */
+    virtual void initiator_async_run(qemu::Cpu::AsyncJobFn job) override {}
 };
 
 #endif
