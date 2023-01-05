@@ -30,7 +30,8 @@ include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 ##############################################
 
 find_path(LIBELF_INCLUDE_DIR NAMES "libelf.h" "libelf/libelf.h"
-          HINTS $ENV{LIBELF_HOME}/include /usr/include /usr/local/include)
+          HINTS $ENV{LIBELF_HOME}/include /usr/include /usr/local/include
+          REQUIRED)
 
 find_library(LIBELF_LIBRARIES NAMES elf "libelf.a"
           HINTS $ENV{LIBELF_HOME}/lib /usr/lib /lib /usr/local/lib)
