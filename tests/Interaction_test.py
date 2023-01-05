@@ -54,12 +54,17 @@ def fastrpc_calc_test():
             )
 
     child.logfile = stdout.buffer
-    child.expect("DSP Image Creation Date:")
-    child.send("\n")
-    child.expect("#")
-    child.sendline('fastrpc_calc_test 0 100 3')
-    child.expect('- sum = 4950')
-    child.expect('- success')
+    child.expect("DSP Image Creation Date:") # CDSP{0,1}
+    child.expect("DSP Image Creation Date:") # CDSP{0,1}
+
+    cdsp0 = 3
+    cdsp1 = 4
+    for cdsp_index in (cdsp0, cdsp1):
+        child.send("\n")
+        child.expect("#")
+        child.sendline('fastrpc_calc_test 0 100 {}'.format(cdsp_index))
+        child.expect('- sum = 4950')
+        child.expect('- success')
 
     test = True
     return test
