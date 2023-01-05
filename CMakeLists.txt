@@ -8,17 +8,6 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/Packages" AND EXISTS "${PROJECT_SOURCE_DIR}/Pac
     set (gs-cmake_SOURCE_DIR  "${PROJECT_SOURCE_DIR}/Packages/cmake-boilerplate")
 endif()
 
-# gcc 7.5.0 comes with Ubuntu 18.04 and will incorrectly reject
-# the example program. gcc 9.4.0 will not reject the program, the
-# fix may have arrived between these releases. None of the clang versions
-# tested encountered this error.
-try_compile(NO_CAPTURE_BUG ${CMAKE_BINARY_DIR}
-    ${CMAKE_SOURCE_DIR}/checks/lambda_capture.cpp)
-if (NOT NO_CAPTURE_BUG)
-    message(FATAL_ERROR "Your host toolchain has a bug that prevents us from building, please update your toolchain.\n"
-        "See 'lambda_capture.cpp' for a concise example")
-endif()
-
 set(PACKAGE_PATH "quic-vp")
 set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositoies")
 
