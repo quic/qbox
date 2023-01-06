@@ -200,7 +200,9 @@ public:
         SCP_INFO(SCMOD) << "Got " << int(c) << "(" << c << ")";
 #endif
 
-        ::write(m_socket, &c, 1);
+        if ((::write(m_socket, &c, 1)) != 1) {
+            SCP_WARN(SCMOD) << "Write did not complete: " << strerror(errno);
+        }
     }
 
     void setup_tcp_server(std::string ip, std::string port) {
