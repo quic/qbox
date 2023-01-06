@@ -36,7 +36,7 @@ CPMDeclarePackage(libgssync
 # libqemu-cxx
 CPMDeclarePackage(libqemu-cxx
   NAME libqemu-cxx
-  GIT_TAG v4.2.1
+  GIT_TAG v4.2.2
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqemu-cxx.git
 )
 # libqemu
@@ -56,7 +56,7 @@ CPMDeclarePackage(base-components
 
 CPMDeclarePackage(systemc-uarts
   NAME systemc-uarts
-  GIT_TAG v2.4.1
+  GIT_TAG v2.4.2
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/systemc-uarts.git
   GIT_SHALLOW on
 )
