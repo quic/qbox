@@ -154,6 +154,7 @@ platform = {
              num_tbu=2;  -- for now, this needs to match the expected number of TBU's
              num_pages=128;
              num_cb=128;
+             num_smr=224;
              irq_context = 103;
              irq_global = 65;
            };
