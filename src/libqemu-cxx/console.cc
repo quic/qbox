@@ -89,7 +89,7 @@ DisplayGLCtx* SDL2Console::get_dgc() const {
 }
 
 void SDL2Console::register_dcl() const {
-    m_int->exports().displaychangelistener_register(get_dcl());
+    m_int->exports().dcl_register(get_dcl());
 }
 
 DisplayGLCtxOps::DisplayGLCtxOps(::DisplayGLCtxOps* ops,
@@ -110,23 +110,23 @@ DclOps::DclOps(DisplayChangeListenerOps* ops, std::shared_ptr<LibQemuInternals>&
 }
 
 void DclOps::set_name(const char* name) {
-    m_int->exports().displaychangelistenerops_set_name(m_ops, name);
+    m_int->exports().dcl_ops_set_name(m_ops, name);
 }
 
 bool DclOps::is_used_by(DisplayChangeListener* dcl) const {
-    return m_int->exports().displaychangelistener_get_ops(dcl) == m_ops;
+    return m_int->exports().dcl_get_ops(dcl) == m_ops;
 }
 
 void DclOps::set_gfx_update(LibQemuGfxUpdateFn gfx_update_fn) {
-    m_int->exports().displaychangelistenerops_set_gfx_update(m_ops, gfx_update_fn);
+    m_int->exports().dcl_ops_set_gfx_update(m_ops, gfx_update_fn);
 }
 
 void DclOps::set_gfx_switch(LibQemuGfxSwitchFn gfx_switch_fn) {
-    m_int->exports().displaychangelistenerops_set_gfx_switch(m_ops, gfx_switch_fn);
+    m_int->exports().dcl_ops_set_gfx_switch(m_ops, gfx_switch_fn);
 }
 
 void DclOps::set_refresh(LibQemuRefreshFn refresh_fn) {
-    m_int->exports().displaychangelistenerops_set_refresh(m_ops, refresh_fn);
+    m_int->exports().dcl_ops_set_refresh(m_ops, refresh_fn);
 }
 
 } // namespace qemu

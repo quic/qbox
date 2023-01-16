@@ -247,7 +247,7 @@ Dcl LibQemu::dcl_new(DisplayChangeListener* dcl) {
 }
 
 DclOps LibQemu::dcl_ops_new() {
-    DisplayChangeListenerOps* ops = m_int->exports().displaychangelistenerops_new();
+    DisplayChangeListenerOps* ops = m_int->exports().dcl_ops_new();
     return DclOps(ops, m_int);
 }
 
