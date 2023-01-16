@@ -98,3 +98,15 @@ function(qbox_add_cpu_test target timeout_s)
 endfunction(qbox_add_cpu_test)
 
 add_subdirectory(cpu)
+
+set(QBOX_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
+function(qbox_extra_add_test target)
+    add_executable(${target} ${ARGN})
+    install(TARGETS ${target} DESTINATION bin)
+    target_include_directories(${target} PRIVATE ${QBOX_TEST_DIR}/include)
+    target_link_libraries(${target} PRIVATE ${TARGET_LIBS})
+    add_test(NAME ${target} COMMAND $<TARGET_FILE:${target}>)
+endfunction(qbox_extra_add_test)
+
+add_subdirectory(display)

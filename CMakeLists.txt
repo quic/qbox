@@ -138,11 +138,14 @@ endif (APPLE)
 # using main branch as it has fixes for cmake
 gs_addexpackage("gh:google/googletest#main")
 
+find_package(SDL2 REQUIRED)
+
 target_include_directories(
    ${PROJECT_NAME} PUBLIC
    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
    ${LIBELF_INCLUDE_DIR}
+   ${SDL2_INCLUDE_DIRS}
    PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
@@ -154,6 +157,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
      ${TARGET_LIBS}
      ${LIBELF_LIBRARIES}
      Threads::Threads
+     ${SDL2_LIBRARIES}
      libqemu
      rpc
      ${CMAKE_DL_LIBS}

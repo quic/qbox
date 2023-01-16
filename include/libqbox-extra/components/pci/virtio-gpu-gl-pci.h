@@ -31,7 +31,11 @@ class QemuVirtioGpuGlPci : public QemuGPEX::Device
 public:
     QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, QemuInstance& inst)
         : QemuGPEX::Device(name, inst, "virtio-gpu-gl-pci") {
+#ifndef __APPLE__
+        // Use QEMU's integrated display only if we are NOT on MacOS.
+        // On MacOS use libqbox's QemuDisplay SystemC module.
         m_inst.set_display_arg("sdl,gl=on");
+#endif
     }
 
     void before_end_of_elaboration() override { QemuGPEX::Device::before_end_of_elaboration(); }
