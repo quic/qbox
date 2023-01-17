@@ -33,10 +33,33 @@
 /* libqemu types forward declaration */
 struct LibQemuExports;
 struct QemuObject;
+struct DisplayGLCtxOps;
+struct DisplayGLCtx;
+struct QemuConsole;
+struct DisplaySurface;
+struct DisplayOptions;
+struct QEMUCursor;
+struct SDL_Window;
+struct sdl2_console;
+struct DisplayChangeListenerOps;
+struct DisplayChangeListener;
 struct MemTxAttrs;
 struct QemuMemoryRegionOps;
 struct QemuAddressSpace;
 struct QemuTimer;
+typedef void* QEMUGLContext;
+struct QEMUGLParams;
+typedef void (*LibQemuGfxUpdateFn)(DisplayChangeListener*, int, int, int, int);
+typedef void (*LibQemuGfxSwitchFn)(DisplayChangeListener*, DisplaySurface*);
+typedef void (*LibQemuRefreshFn)(DisplayChangeListener*);
+typedef void (*LibQemuMouseSetFn)(DisplayChangeListener*, int, int, int);
+typedef void (*LibQemuCursorDefineFn)(DisplayChangeListener*, QEMUCursor*);
+typedef void (*LibQemuGLScanoutDisableFn)(DisplayChangeListener*);
+typedef void (*LibQemuGLScanoutTextureFn)(DisplayChangeListener*, uint32_t, bool, uint32_t,
+                                          uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+typedef void (*LibQemuGLUpdateFn)(DisplayChangeListener*, uint32_t, uint32_t, uint32_t, uint32_t);
+
+typedef bool (*LibQemuIsCompatibleDclFn)(DisplayGLCtx*, DisplayChangeListener*);
 
 namespace qemu {
 
@@ -48,6 +71,12 @@ class Gpio;
 class Timer;
 class Bus;
 class Chardev;
+class DisplayOptions;
+class DisplayGLCtxOps;
+class Console;
+class SDL2Console;
+class Dcl;
+class DclOps;
 
 class LibQemu
 {
@@ -122,6 +151,27 @@ public:
     Chardev chardev_new(const char* label, const char* type);
 
     void tb_invalidate_phys_range(uint64_t start, uint64_t end);
+
+    void enable_opengl();
+    DisplayOptions display_options_new();
+    std::vector<Console> get_all_consoles();
+    Console console_lookup_by_index(int index);
+    SDL2Console sdl2_console_new(Console& con, void* user_data);
+    DisplayGLCtxOps display_gl_ctx_ops_new(LibQemuIsCompatibleDclFn);
+    Dcl dcl_new(DisplayChangeListener* dcl);
+    DclOps dcl_ops_new();
+
+    void sdl2_2d_update(DisplayChangeListener* dcl, int x, int y, int w, int h);
+    void sdl2_2d_switch(DisplayChangeListener* dcl, DisplaySurface* new_surface);
+    void sdl2_2d_refresh(DisplayChangeListener* dcl);
+
+    void sdl2_gl_update(DisplayChangeListener* dcl, int x, int y, int w, int h);
+    void sdl2_gl_switch(DisplayChangeListener* dcl, DisplaySurface* new_surface);
+    void sdl2_gl_refresh(DisplayChangeListener* dcl);
+
+    QEMUGLContext sdl2_gl_create_context(DisplayGLCtx* dgc, QEMUGLParams* p);
+    void sdl2_gl_destroy_context(DisplayGLCtx* dgc, QEMUGLContext gl_ctx);
+    int sdl2_gl_make_context_current(DisplayGLCtx* dgc, QEMUGLContext gl_ctx);
 };
 
 class Object
@@ -321,6 +371,97 @@ public:
 
     MemTxResult read(uint64_t addr, void* data, size_t size, MemTxAttrs attrs);
     MemTxResult write(uint64_t addr, const void* data, size_t size, MemTxAttrs attrs);
+};
+
+class DisplayOptions
+{
+public:
+    ::DisplayOptions* m_opts;
+    std::shared_ptr<LibQemuInternals> m_int;
+
+    DisplayOptions() = default;
+    DisplayOptions(::DisplayOptions* opts, std::shared_ptr<LibQemuInternals>& internals);
+    DisplayOptions(const DisplayOptions&) = default;
+};
+
+class DisplayGLCtxOps
+{
+public:
+    ::DisplayGLCtxOps* m_ops;
+    std::shared_ptr<LibQemuInternals> m_int;
+
+    DisplayGLCtxOps() = default;
+    DisplayGLCtxOps(::DisplayGLCtxOps* ops, std::shared_ptr<LibQemuInternals>& internals);
+    DisplayGLCtxOps(const DisplayGLCtxOps&) = default;
+};
+
+class Console
+{
+public:
+    QemuConsole* m_cons;
+    std::shared_ptr<LibQemuInternals> m_int;
+
+    Console() = default;
+    Console(QemuConsole* cons, std::shared_ptr<LibQemuInternals>& internals);
+    Console(const Console&) = default;
+
+    int get_index() const;
+    bool is_graphic() const;
+    void set_display_gl_ctx(DisplayGLCtx*);
+    void set_window_id(int id);
+};
+
+class SDL2Console
+{
+public:
+    struct sdl2_console* m_cons;
+    std::shared_ptr<LibQemuInternals> m_int;
+
+    SDL2Console() = default;
+    SDL2Console(struct sdl2_console* cons, std::shared_ptr<LibQemuInternals>& internals);
+    SDL2Console(const SDL2Console&) = default;
+
+    void set_hidden(bool hidden);
+    void set_idx(int idx);
+    void set_opts(DisplayOptions& opts);
+    void set_opengl(bool opengl);
+    void set_dcl_ops(DclOps& dcl_ops);
+    void set_dgc_ops(DisplayGLCtxOps& dgc_ops);
+
+    SDL_Window* get_real_window() const;
+    DisplayChangeListener* get_dcl() const;
+    DisplayGLCtx* get_dgc() const;
+
+    void register_dcl() const;
+};
+
+class Dcl
+{
+private:
+    DisplayChangeListener* m_dcl;
+    std::shared_ptr<LibQemuInternals> m_int;
+
+public:
+    Dcl(DisplayChangeListener* dcl, std::shared_ptr<LibQemuInternals>& internals);
+
+    void* get_user_data();
+};
+
+class DclOps
+{
+public:
+    DisplayChangeListenerOps* m_ops;
+    std::shared_ptr<LibQemuInternals> m_int;
+
+    DclOps() = default;
+    DclOps(DisplayChangeListenerOps* ops, std::shared_ptr<LibQemuInternals>& internals);
+    DclOps(const DclOps&) = default;
+
+    void set_name(const char* name);
+    bool is_used_by(DisplayChangeListener* dcl) const;
+    void set_gfx_update(LibQemuGfxUpdateFn gfx_update_fn);
+    void set_gfx_switch(LibQemuGfxSwitchFn gfx_switch_fn);
+    void set_refresh(LibQemuRefreshFn refresh_fn);
 };
 
 class Device : public Object

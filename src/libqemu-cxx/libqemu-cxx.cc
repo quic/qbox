@@ -207,4 +207,84 @@ Bus LibQemu::sysbus_get_default() {
     return Bus(obj);
 }
 
+void LibQemu::enable_opengl() {
+    m_int->exports().enable_opengl();
+}
+
+DisplayOptions LibQemu::display_options_new() {
+    ::DisplayOptions* opts = m_int->exports().display_options_new();
+    return DisplayOptions(opts, m_int);
+}
+
+Console LibQemu::console_lookup_by_index(int index) {
+    QemuConsole* qemu_cons = m_int->exports().console_lookup_by_index(index);
+    return Console(qemu_cons, m_int);
+}
+
+std::vector<Console> LibQemu::get_all_consoles() {
+    std::vector<Console> consoles;
+    int i = 0;
+    while (QemuConsole* qemu_cons = m_int->exports().console_lookup_by_index(i)) {
+        consoles.push_back(Console(qemu_cons, m_int));
+        ++i;
+    }
+    return consoles;
+}
+
+SDL2Console LibQemu::sdl2_console_new(Console& con, void* user_data) {
+    sdl2_console* sdl2_cons = m_int->exports().sdl2_console_new(con.m_cons, user_data);
+    return SDL2Console(sdl2_cons, m_int);
+}
+
+DisplayGLCtxOps LibQemu::display_gl_ctx_ops_new(LibQemuIsCompatibleDclFn is_compatible_dcl_fn) {
+    ::DisplayGLCtxOps* ops = m_int->exports().display_gl_ctx_ops_new(is_compatible_dcl_fn);
+    return DisplayGLCtxOps(ops, m_int);
+}
+
+Dcl LibQemu::dcl_new(DisplayChangeListener* dcl) {
+    assert(dcl != nullptr);
+    return Dcl(dcl, m_int);
+}
+
+DclOps LibQemu::dcl_ops_new() {
+    DisplayChangeListenerOps* ops = m_int->exports().displaychangelistenerops_new();
+    return DclOps(ops, m_int);
+}
+
+void LibQemu::sdl2_2d_update(DisplayChangeListener* dcl, int x, int y, int w, int h) {
+    m_int->exports().sdl2_2d_update(dcl, x, y, w, h);
+}
+
+void LibQemu::sdl2_2d_switch(DisplayChangeListener* dcl, DisplaySurface* new_surface) {
+    m_int->exports().sdl2_2d_switch(dcl, new_surface);
+}
+
+void LibQemu::sdl2_2d_refresh(DisplayChangeListener* dcl) {
+    m_int->exports().sdl2_2d_refresh(dcl);
+}
+
+void LibQemu::sdl2_gl_update(DisplayChangeListener* dcl, int x, int y, int w, int h) {
+    m_int->exports().sdl2_gl_update(dcl, x, y, w, h);
+}
+
+void LibQemu::sdl2_gl_switch(DisplayChangeListener* dcl, DisplaySurface* new_surface) {
+    m_int->exports().sdl2_gl_switch(dcl, new_surface);
+}
+
+void LibQemu::sdl2_gl_refresh(DisplayChangeListener* dcl) {
+    m_int->exports().sdl2_gl_refresh(dcl);
+}
+
+QEMUGLContext LibQemu::sdl2_gl_create_context(DisplayGLCtx* dgc, QEMUGLParams* p) {
+    return m_int->exports().sdl2_gl_create_context(dgc, p);
+}
+
+void LibQemu::sdl2_gl_destroy_context(DisplayGLCtx* dgc, QEMUGLContext gl_ctx) {
+    m_int->exports().sdl2_gl_destroy_context(dgc, gl_ctx);
+}
+
+int LibQemu::sdl2_gl_make_context_current(DisplayGLCtx* dgc, QEMUGLContext gl_ctx) {
+    return m_int->exports().sdl2_gl_make_context_current(dgc, gl_ctx);
+}
+
 } // namespace qemu
