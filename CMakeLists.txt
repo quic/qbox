@@ -72,6 +72,7 @@ set(LIBQBOX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqbox)
 
 set(srcs
     src/libqemu-cxx/callbacks.cc
+    src/libqemu-cxx/console.cc
     src/libqemu-cxx/cpu.cc
     src/libqemu-cxx/device.cc
     src/libqemu-cxx/gpex.cc
