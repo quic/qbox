@@ -184,6 +184,7 @@ platform = {
 
     fallback_memory = { target_socket={address=0x0, size=0x40000000},
                         dmi_allow=false, verbose=true,
+                        log_level=3,
                         load={csv_file=MAKENA_REGS_CSV,
                         offset=0, addr_str="Address",
                         value_str="Reset Value", byte_swap=true}
