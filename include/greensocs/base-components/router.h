@@ -56,6 +56,9 @@ class Router : public sc_core::sc_module
                                                        tlm::tlm_bw_transport_if<>>;
     using InitiatorSocket = tlm::tlm_base_initiator_socket_b<BUSWIDTH, tlm::tlm_fw_transport_if<>,
                                                              tlm::tlm_bw_transport_if<>>;
+    SCP_LOGGER_VECTOR(D);
+    SCP_LOGGER(());
+    SCP_LOGGER((DMI), "dmi");
 
 private:
     template <typename MOD>
@@ -104,7 +107,7 @@ private:
         auto it = m_dmi_info_map.find(dmi.get_start_address());
         if (it != m_dmi_info_map.end()) {
             if (it->second.dmi.get_end_address() != dmi.get_end_address()) {
-                SCP_FATAL(SCMOD) << "Can't handle that";
+                SCP_FATAL((DMI)) << "Can't handle that";
             }
             return &(it->second);
         }
@@ -116,7 +119,7 @@ private:
         auto it = m_dmi_info_map.find(dmi.get_start_address());
         if (it != m_dmi_info_map.end()) {
             if (it->second.dmi.get_end_address() != dmi.get_end_address()) {
-                SCP_WARN(SCMOD) << "A new DMI overlaps with an old one, invalidating the old one";
+                SCP_WARN((DMI)) << "A new DMI overlaps with an old one, invalidating the old one";
                 invalidate_direct_mem_ptr_ts(0, dmi.get_start_address(),
                                              dmi.get_end_address()); // id will be ignored
             }
@@ -134,6 +137,8 @@ private:
         struct target_info ti = { 0 };
         ti.name = s;
         ti.index = targets.size();
+        SCP_LOGGER_VECTOR_PUSH_BACK(D, ti.name);
+        SCP_DEBUG((D[ti.index])) << "Connecting : " << ti.name;
         targets.push_back(ti);
     }
 
@@ -188,7 +193,7 @@ private:
         sc_dt::uint64 addr = trans.get_address();
         auto ti = decode_address(addr);
         if (!ti) {
-            SCP_WARN(SCMOD) << "Access to unmapped address " << scp::scp_txn_tostring(trans);
+            SCP_WARN(()) << "Access to unmapped address " << scp::scp_txn_tostring(trans);
 
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return;
@@ -198,9 +203,11 @@ private:
 
         if (ti->mask_addr)
             trans.set_address(addr - ti->address);
-        SCP_DEBUG(ti->name) << "calling b_transport : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG((D[ti->index]), ti->name)
+            << "calling b_transport : " << scp::scp_txn_tostring(trans);
         initiator_socket[ti->index]->b_transport(trans, delay);
-        SCP_DEBUG(ti->name) << "b_transport returned : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG((D[ti->index]), ti->name)
+            << "b_transport returned : " << scp::scp_txn_tostring(trans);
         if (ti->mask_addr)
             trans.set_address(addr);
 
@@ -218,7 +225,8 @@ private:
 
         if (ti->mask_addr)
             trans.set_address(addr - ti->address);
-        SCP_DEBUG(ti->name) << "calling dbg_transport : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG((D[ti->index]), ti->name)
+            << "calling dbg_transport : " << scp::scp_txn_tostring(trans);
         unsigned int ret = initiator_socket[ti->index]->transport_dbg(trans);
         if (ti->mask_addr)
             trans.set_address(addr);
@@ -240,7 +248,8 @@ private:
             return false;
         }
 
-        SCP_DEBUG(ti->name) << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG((D[ti->index]), ti->name)
+            << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
         bool status = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
         if (status) {
             if (ti->mask_addr) {
@@ -291,7 +300,7 @@ private:
                 continue;
             }
             for (auto t : it->second.initiators) {
-                SCP_INFO(SCMOD) << "Invalidating initiator " << t << " [0x" << std::hex
+                SCP_INFO((DMI)) << "Invalidating initiator " << t << " [0x" << std::hex
                                 << it->second.dmi.get_start_address() << " - 0x"
                                 << it->second.dmi.get_end_address() << "]";
                 target_socket[t]->invalidate_direct_mem_ptr(it->second.dmi.get_start_address(),
@@ -340,7 +349,7 @@ protected:
 
         for (auto& ti : targets) {
             if (!m_broker.has_preset_value(ti.name + ".address")) {
-                SCP_FATAL(SCMOD) << "Can't find " << ti.name << ".address";
+                SCP_FATAL((D[ti.index])) << "Can't find " << ti.name << ".address";
             }
             uint64_t address = get_uint64(ti.name + ".address");
             m_broker.lock_preset_value(ti.name + ".address");
@@ -349,7 +358,7 @@ protected:
                     return iv.first == (ti.name + ".address");
                 });
             if (!m_broker.has_preset_value(ti.name + ".size")) {
-                SCP_FATAL(SCMOD) << "Can't find " << ti.name << ".size";
+                SCP_FATAL((D[ti.index])) << "Can't find " << ti.name << ".size";
             }
             uint64_t size = get_uint64(ti.name + ".size");
             m_broker.lock_preset_value(ti.name + ".size");
@@ -368,11 +377,11 @@ protected:
                     });
             }
 
-            SCP_INFO(SCMOD) << "Address map " << ti.name + " at"
-                            << " address "
-                            << "0x" << std::hex << address << " size "
-                            << "0x" << std::hex << size
-                            << (mask ? " (with relative address) " : "");
+            SCP_INFO((D[ti.index]))
+                << "Address map " << ti.name + " at"
+                << " address "
+                << "0x" << std::hex << address << " size "
+                << "0x" << std::hex << size << (mask ? " (with relative address) " : "");
 
             ti.address = address;
             ti.size = size;
@@ -420,11 +429,7 @@ public:
 
     explicit Router(const sc_core::sc_module_name& nm)
         : sc_core::sc_module(nm)
-        , initiator_socket("initiator_socket",
-                           [&](std::string s) -> void {
-                               register_boundto(s);
-                               SCP_DEBUG(s) << "Connecting to " << s;
-                           })
+        , initiator_socket("initiator_socket", [&](std::string s) -> void { register_boundto(s); })
         , target_socket("target_socket")
         , m_broker(cci::cci_get_broker())
         , thread_safe("thread_safe", THREAD_SAFE, "Is this model thread safe")
