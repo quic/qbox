@@ -177,8 +177,6 @@ protected:
 
     cci::cci_param<bool> p_with_gpu;
 
-    cci::cci_param<int> p_log_level;
-
     gs::ConfigurableBroker m_broker;
 
     cci::cci_param<int> p_quantum_ns;
@@ -349,7 +347,6 @@ public:
         , p_arm_num_cpus("arm_num_cpus", 8, "Number of ARM cores")
         , p_num_redists("num_redists", 1, "Number of redistribution regions")
         , p_with_gpu("with_gpu", false, "Build platform with GPU")
-        , p_log_level("log_level", 2, "Default log level")
         , m_broker({
               { "gic.num_spi", cci::cci_value(960) }, // 64 seems reasonable, but can be up to
                                                       // 960 or 987 depending on how the gic
@@ -402,8 +399,7 @@ public:
         , m_loader("load") {
         using tlm_utils::tlm_quantumkeeper;
 
-        int level = p_log_level.get_value();
-        scp::set_logging_level(scp::as_log(level));
+        SCP_DEBUG(()) << "Constructor";
 
         sc_core::sc_time global_quantum(p_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);
@@ -533,6 +529,8 @@ public:
         }
     }
 
+    SCP_LOGGER(());
+
     ~GreenSocsPlatform() {
         if (m_global_peripheral_initiator_arm) {
             delete m_global_peripheral_initiator_arm;
@@ -567,7 +565,8 @@ int sc_main(int argc, char* argv[]) {
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
-
+    cci::cci_originator orig("sc_main");
+    cci::cci_param<int> p_log_level{"log_level", 0, "Default log level", cci::CCI_ABSOLUTE_NAME, orig};
     GreenSocsPlatform* platform = new GreenSocsPlatform("platform");
 
     auto start = std::chrono::system_clock::now();
