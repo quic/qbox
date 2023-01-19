@@ -24,6 +24,8 @@
 #ifndef _GREENSOCS_BASE_COMPONENTS_UUTILS
 #define _GREENSOCS_BASE_COMPONENTS_UUTILS
 
+#ifndef WIN32
+
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -349,5 +351,6 @@ class ProcAliveHandler{
 
 }
 
+#endif // WIN32
 
-#endif
+#endif // _GREENSOCS_BASE_COMPONENTS_UUTILS
