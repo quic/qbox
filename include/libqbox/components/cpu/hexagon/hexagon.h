@@ -82,6 +82,7 @@ public:
         // in case of additional reset, this value will be loaded for PC
         cpu.set_prop_int("start-evb", m_exec_start_addr);
         cpu.set_prop_bool("sched-limit", p_sched_limit);
+        cpu.set_prop_bool("virtual-platform-mode", true);
     }
 
     void end_of_elaboration() override {
