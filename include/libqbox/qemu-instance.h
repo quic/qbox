@@ -169,7 +169,7 @@ protected:
         }
         m_inst.push_qemu_arg("-icount");
 
-        ss << p_icount_mips << ",nosleep";
+        ss << p_icount_mips << ",sleep=off";
         m_inst.push_qemu_arg(ss.str().c_str());
     }
 
