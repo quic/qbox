@@ -101,12 +101,12 @@ class LuaFile_Tool : public sc_core::sc_module
 public:
     /// Constructor
     LuaFile_Tool(sc_core::sc_module_name name, const char* config_file, std::string _orig_name = "")
-        : LuaFile_Tool(name) {
+        : LuaFile_Tool(name, _orig_name) {
         config(config_file);
     }
     LuaFile_Tool(sc_core::sc_module_name name, const int argc, char* const argv[],
                  std::string _orig_name = "")
-        : LuaFile_Tool(name) {
+        : LuaFile_Tool(name, _orig_name) {
         parseCommandLine(argc, argv);
     }
     LuaFile_Tool(sc_core::sc_module_name name, std::string _orig_name = "")
