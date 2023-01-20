@@ -29,6 +29,7 @@
 
 #ifndef WIN32
 #include <greensocs/libgssync/async_event.h>
+#include <greensocs/gsutils/uutils.h>
 #include <queue>
 #include <signal.h>
 #include <termios.h>
@@ -51,15 +52,6 @@ public:
 #pragma message("CharBackendStdio not yet implemented for WIN32")
 #endif
     static void catch_fn(int signo) {}
-    static void catch_function(int signo) {
-        tty_reset();
-
-#ifndef WIN32
-        /* reset to default handler and raise the signal */
-        signal(signo, SIG_DFL);
-        raise(signo);
-#endif
-    }
 
     static void tty_reset() {
 #ifndef WIN32
@@ -92,11 +84,18 @@ public:
 
         tcsetattr(fd, TCSANOW, &tty);
 
-        signal(SIGABRT, catch_function);
-        signal(SIGINT, catch_function);
-        signal(SIGKILL, catch_function);
-        signal(SIGSEGV, catch_function);
         atexit(tty_reset);
+
+        gs::SigHandler::get().add_sig_handler(SIGINT, gs::SigHandler::Handler_CB::PASS);
+        gs::SigHandler::get().register_handler([&](int signo) {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            if (signo == SIGINT) {
+                char ch = '\x03';
+                m_queue.push(ch);
+                if (!m_queue.empty())
+                    m_event.async_notify();
+            }
+        });
 #endif
         if (read_write)
             rcv_thread_id = std::make_unique<std::thread>(&CharBackendStdio::rcv_thread, this);
