@@ -29,6 +29,8 @@
 #include <regex>
 
 #include "luafile_tool.h"
+#include "registers.h"
+
 #include <cci_configuration>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include <systemc>
@@ -390,6 +392,9 @@ public:
 
         std::string ending = "childbroker";
         for (auto p : get_param_handles(get_cci_originator("Command line help"))) {
+            if (find_register(p.name()))
+                continue;
+
             if (!std::equal(ending.rbegin(), ending.rend(), std::string(p.name()).rbegin())) {
                 std::cerr << p.name() << " : " << p.get_description() << " (configured value "
                           << p.get_cci_value() << ") " << std::endl;
@@ -402,6 +407,11 @@ public:
             }
         }
         if (top) {
+            std::cerr << std::endl << "Logging parameters :" << std::endl;
+            for (auto p : scp::get_logging_parameters()) {
+                std::cerr << p << std::endl;
+            }
+
             std::cerr << "---" << std::endl;
         }
     }

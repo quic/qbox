@@ -150,16 +150,16 @@ public:
         case 0:
             break;
         case LUA_ERRSYNTAX:
-            SCP_ERR("lua") << "Syntax error reading config file: " << config_file;
+            SCP_INFO("lua") << "Syntax error reading config file: " << config_file;
             return 1;
         case LUA_ERRMEM:
-            SCP_ERR("lua") << "Error allocating memory to read config file: " << config_file;
+            SCP_INFO("lua") << "Error allocating memory to read config file: " << config_file;
             return 1;
         case LUA_ERRFILE:
-            SCP_ERR("lua") << "Error opening/reading the config file: " << config_file;
+            SCP_INFO("lua") << "Error opening/reading the config file: " << config_file;
             return 1;
         default:
-            SCP_ERR("lua") << "Unknown error loading config file: " << config_file;
+            SCP_INFO("lua") << "Unknown error loading config file: " << config_file;
             return 1;
         }
         lua_setglobal(L, "config_chunk");
@@ -171,7 +171,7 @@ public:
 
         // run
         if (luaL_dostring(L, config_loader)) {
-            SCP_ERR("lua") << lua_tostring(L, -1);
+            SCP_INFO("lua") << lua_tostring(L, -1);
             lua_pop(L, 1); /* pop error message from the stack */
         }
 
@@ -181,7 +181,7 @@ public:
         lua_getglobal(L, "_G");
         error = setParamsFromLuaTable(L, lua_gettop(L));
         if (error < 0) {
-            SCP_ERR("lua") << "Error loading lua config file: " << config_file;
+            SCP_INFO("lua") << "Error loading lua config file: " << config_file;
             return error;
         }
         lua_close(L);
@@ -388,13 +388,13 @@ protected:
          * for sanity) */
         if (level - static_key > MAX_NAME_SIZE) {
             static_key[MAX_NAME_SIZE - 1] = 0;
-            SCP_ERR("lua") << "FATAL Error: parameter name too big (bigger then " << MAX_NAME_SIZE
+            SCP_INFO("lua") << "FATAL Error: parameter name too big (bigger then " << MAX_NAME_SIZE
                            << "): " << static_key;
         }
 
         /* is it really a table? */
         if (lua_type(L, t) != LUA_TTABLE) {
-            SCP_ERR("lua") << "Error: argument is not a table";
+            SCP_INFO("lua") << "Error: argument is not a table";
             return -1;
         }
 
@@ -432,7 +432,7 @@ protected:
                 break;
 
             default:
-                SCP_ERR("lua") << "Error loading lua file: invalid key";
+                SCP_INFO("lua") << "Error loading lua file: invalid key";
                 return -1;
             }
 
@@ -442,7 +442,7 @@ protected:
                 // Avoid setting some Lua specific values as parameters
                 if (strcmp(key, "math.huge") == 0 || strcmp(key, "math.pi") == 0 || 0) {
                     if (GC_LUA_DEBUG)
-                        SCP_ERR("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key
+                        SCP_INFO("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key
                                        << "   (ignored because it's Lua specific)";
                 } else {
                     double num = lua_tonumber(L, -1);
@@ -460,7 +460,7 @@ protected:
 
                     if (GC_LUA_VERBOSE) {
                         std::string keys = key;
-                        SCP_ERR("lua")
+                        SCP_INFO("lua")
                             << "(SET " << lua_typename(L, lua_type(L, -1)) << ") "
                             << rel(keys).c_str() << " = " << cci::cci_value(num).to_json().c_str();
                     }
@@ -474,7 +474,7 @@ protected:
                 m_broker.set_preset_cci_value(rel(keys),
                                               cci::cci_value((bool)lua_toboolean(L, -1)));
                 if (GC_LUA_VERBOSE)
-                    SCP_ERR("lua")
+                    SCP_INFO("lua")
                         << "(SET " << lua_typename(L, lua_type(L, -1)) << ") " << rel(keys).c_str()
                         << " = " << (lua_toboolean(L, -1) ? "true" : "false");
                 if (should_inc_integer_index_count)
@@ -486,14 +486,14 @@ protected:
                 if (strcmp(key, "_VERSION") == 0 || strcmp(key, "package.cpath") == 0 ||
                     strcmp(key, "package.config") == 0 || strcmp(key, "package.path") == 0 || 0) {
                     if (GC_LUA_DEBUG)
-                        SCP_ERR("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key
+                        SCP_INFO("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key
                                        << "   (ignored because it's Lua specific)";
                 } else {
                     std::string keys = key;
                     m_broker.set_preset_cci_value(rel(keys),
                                                   cci::cci_value(std::string(lua_tostring(L, -1))));
                     if (GC_LUA_VERBOSE)
-                        SCP_ERR("lua") << "(SET " << lua_typename(L, lua_type(L, -1)) << ") "
+                        SCP_INFO("lua") << "(SET " << lua_typename(L, lua_type(L, -1)) << ") "
                                        << rel(keys).c_str() << " = " << lua_tostring(L, -1);
                     if (should_inc_integer_index_count)
                         ++integer_index_count;
@@ -505,11 +505,11 @@ protected:
                 if (strcmp(key, "_G") == 0 || strcmp(key, "package.loaded") == 0 ||
                     strcmp(level, "__index") == 0) {
                     if (GC_LUA_DEBUG)
-                        SCP_ERR("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key
+                        SCP_INFO("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key
                                        << "   (ignored to avoid recursion)";
                 } else {
                     if (GC_LUA_DEBUG)
-                        SCP_ERR("lua") << "(table) " << key;
+                        SCP_INFO("lua") << "(table) " << key;
                     *next_level++ = '.';
                     // CS
                     // int int_index_count =
@@ -533,7 +533,7 @@ protected:
             default:
                 // Ignore other types
                 if (GC_LUA_DEBUG)
-                    SCP_ERR("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key;
+                    SCP_INFO("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key;
             }
 
             /* removes 'value'; keeps 'key' for next iteration */
