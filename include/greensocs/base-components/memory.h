@@ -117,8 +117,10 @@ class Memory : public sc_core::sc_module
                     }
                 }
                 if (m_mem.p_shmem) {
-                    std::string shmname = ("/foobaa" + (std::string(m_mem.name())) +
-                                           (std::to_string(m_address)));
+                    std::stringstream shmname_stream;
+                    shmname_stream << "/" << getpid() << "-" << std::string(m_mem.name())
+                                   << std::to_string(m_address);
+                    std::string shmname = shmname_stream.str();
                     if ((m_ptr = MemoryServices::get().map_mem_create(shmname.c_str(), m_len)) !=
                         nullptr) {
                         m_mapped = true;

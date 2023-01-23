@@ -35,11 +35,15 @@
 #include <tlm_utils/multi_passthrough_target_socket.h>
 
 #include <greensocs/libgsutils.h>
+#include <greensocs/gsutils/uutils.h>
 #include <greensocs/libgssync.h>
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
 #include <greensocs/gsutils/ports/target-signal-socket.h>
 #include <iomanip>
 #include <unistd.h>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
 #include "memory_services.h"
 
@@ -350,6 +354,11 @@ private:
     rpc::client* client = nullptr;
     rpc::server* server = nullptr;
     int m_child_pid = 0;
+    ProcAliveHandler pahandler;
+    std::condition_variable is_clinet_connected;
+    std::condition_variable is_sc_status_set;
+    std::mutex client_conncted_mut;
+    std::mutex sc_status_mut;
 
     sc_core::sc_status m_remote_status = static_cast<sc_core::sc_status>(0);
 
@@ -647,7 +656,6 @@ public:
         if (p_cport) {
             SCP_INFO(SCMOD) << "Connecting client on port " << p_cport;
             client = new rpc::client("localhost", p_cport);
-            client->set_timeout(5000);
             set_cci_db(client->call("reg", (int)p_sport).as<str_pairs>());
         }
 
@@ -658,7 +666,10 @@ public:
             assert(p_cport == 0 && client == nullptr);
             p_cport = port;
             client = new rpc::client("localhost", p_cport);
-            client->set_timeout(5000);
+            std::unique_lock<std::mutex> ul(client_conncted_mut);
+            is_clinet_connected.notify_one();
+            ul.unlock();
+            client->send("sock_pair", pahandler.get_sockpair_fd0(), pahandler.get_sockpair_fd1());
             return get_cci_db();
         });
 
@@ -673,6 +684,8 @@ public:
             SCP_DEBUG(SCMOD) << "SIMULATION STATE " << name() << " to status " << s;
             assert(s > m_remote_status);
             m_remote_status = static_cast<sc_core::sc_status>(s);
+            std::lock_guard<std::mutex> lg(sc_status_mut);
+            is_sc_status_set.notify_one();
             return;
         });
 
@@ -689,8 +702,6 @@ public:
                 std::cerr << "Unknown error (main.cc)!\n";
                 exit(1);
             }
-
-            return PassRPC::b_transport_rpc(id, txn);
         });
 
         server->bind("dbg_tspt", [&](int id, tlm_generic_payload_rpc txn) {
@@ -723,6 +734,15 @@ public:
             return;
         });
 
+        server->bind("sock_pair", [&](int sock_fd0, int sock_fd1) {
+            pahandler.recv_sockpair_fds_from_remote(sock_fd0, sock_fd1);
+            pahandler.check_parent_conn_nth([&]() {
+                std::cerr << "remote process (" << getpid() << ") detected parent ("
+                          << pahandler.get_ppid() << ") exit!" << std::endl;
+            });
+            return;
+        });
+
         for (int i = 0; i < TLMPORTS; i++) {
             target_sockets[i].register_b_transport(this, &PassRPC::b_transport, i);
             target_sockets[i].register_transport_dbg(this, &PassRPC::transport_dbg, i);
@@ -739,25 +759,33 @@ public:
 
         m_qk = tlm_quantumkeeper_factory(p_sync_policy);
         m_qk->reset();
-        server->async_run(8);
+        server->async_run(1);
 
         if (!exec_path.empty()) {
             SCP_INFO(SCMOD) << "Forking remote " << exec_path;
+            pahandler.init_peer_conn_checker();
             m_child_pid = fork();
-            if (m_child_pid == 0) {
+            if (m_child_pid > 0) {
+                pahandler.setup_parent_conn_checker();
+                SigHandler::get().set_nosig_chld_stop();
+                SigHandler::get().add_sig_handler(SIGCHLD, SigHandler::Handler_CB::EXIT);
+            } else if (m_child_pid == 0) {
                 char conf_arg[100];
                 snprintf(conf_arg, 100, "%s=%d", GS_Process_Serve_Port, (int)p_sport);
                 execlp(exec_path.c_str(), exec_path.c_str(), "-p", conf_arg, nullptr);
                 // execlp("lldb", "lldb", "--", exec_path.c_str(), exec_path.c_str(), "-p",
                 // conf_arg, nullptr);
                 SCP_FATAL(SCMOD) << "Unable to find executable for remote";
+            } else {
+                perror("fork");
+                exit(EXIT_FAILURE);
             }
         }
 
         // Make sure by now the client is connected so we can send/recieve.
-        for (int i = 0; i < 10 && !p_cport; i++)
-            sleep(1);
-        assert(p_cport);
+        std::unique_lock<std::mutex> ul(client_conncted_mut);
+        is_clinet_connected.wait(ul, [&]() { return p_cport > 0; });
+        ul.unlock();
         send_status();
     }
     PassRPC(const sc_core::sc_module_name& nm, int port)
@@ -768,12 +796,9 @@ public:
         SCP_DEBUG(SCMOD) << "SIMULATION STATE send " << name() << " to status "
                          << sc_core::sc_get_status();
         client->call("status", static_cast<int>(sc_core::sc_get_status()));
-        for (int i = 0; i < 10 && m_remote_status < sc_core::sc_get_status(); i++) {
-            SCP_DEBUG(SCMOD) << "SIMULATION STATE waiting " << name() << " to status "
-                             << sc_core::sc_get_status();
-            sleep(1);
-        }
-        assert(m_remote_status >= sc_core::sc_get_status());
+        std::unique_lock<std::mutex> ul(sc_status_mut);
+        is_sc_status_set.wait(ul, [&]() { return m_remote_status >= sc_core::sc_get_status(); });
+        ul.unlock();
         SCP_DEBUG(SCMOD) << "SIMULATION STATE synced " << name() << " to status "
                          << sc_core::sc_get_status();
     }
