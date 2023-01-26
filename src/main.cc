@@ -564,7 +564,7 @@ int sc_main(int argc, char* argv[]) {
                           .logAsync(false)
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
+    gs::ConfigurableBroker m_broker(argc, argv);
     cci::cci_originator orig("sc_main");
     cci::cci_param<int> p_log_level{"log_level", 0, "Default log level", cci::CCI_ABSOLUTE_NAME, orig};
     GreenSocsPlatform* platform = new GreenSocsPlatform("platform");
