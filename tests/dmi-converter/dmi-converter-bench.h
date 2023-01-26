@@ -1,0 +1,153 @@
+#include <systemc>
+#include <tlm>
+#include <tlm_utils/simple_initiator_socket.h>
+#include <tlm_utils/simple_target_socket.h>
+
+#include "dmi-converter.h"
+#include <greensocs/gsutils/tests/initiator-tester.h>
+#include <greensocs/gsutils/tests/test-bench.h>
+#include <vector>
+#include <sstream>
+
+#define MEM_SIZE       4096
+#define MIN_ALLOC_UNIT 8
+
+template <unsigned int BUSWIDTH = 32>
+class SimpleMemory : public sc_core::sc_module
+{
+public:
+    using MOD = SimpleMemory<BUSWIDTH>;
+    using tlm_target_socket_t = tlm_utils::simple_target_socket_b<
+        MOD, BUSWIDTH, tlm::tlm_base_protocol_types, sc_core::SC_ZERO_OR_MORE_BOUND>;
+    tlm_target_socket_t target_socket;
+
+    SimpleMemory(const sc_core::sc_module_name& nm)
+        : sc_core::sc_module(nm), m_mem(new unsigned char[MEM_SIZE])
+    {
+        target_socket.register_b_transport(this, &SimpleMemory::b_transport);
+        target_socket.register_get_direct_mem_ptr(this, &SimpleMemory::get_direct_mem_ptr);
+    }
+    ~SimpleMemory() { delete[] m_mem; }
+
+private:
+    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
+    {
+        sc_dt::uint64 addr = trans.get_address();
+        tlm::tlm_command cmd = trans.get_command();
+        unsigned char* data = trans.get_data_ptr();
+        unsigned int len = trans.get_data_length();
+
+        if ((addr + len) > MEM_SIZE) {
+            trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
+            return;
+        }
+
+        switch (cmd) {
+        case tlm::TLM_WRITE_COMMAND:
+            memcpy(&m_mem[addr], data, len);
+            break;
+        case tlm::TLM_READ_COMMAND:
+            memcpy(data, &m_mem[addr], len);
+            break;
+        case tlm::TLM_IGNORE_COMMAND:
+            return;
+        }
+        trans.set_response_status(tlm::TLM_OK_RESPONSE);
+    }
+
+    /**
+     * Grant read/write DMI access if address is in range: 0 - MEM_SIZE/2.
+     * The DMI granted adress range is allocated in MIN_ALLOC_UNIT bytes chunks.
+     */
+
+    bool get_direct_mem_ptr(tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
+    {
+        sc_dt::uint64 addr = trans.get_address();
+        tlm::tlm_command cmd = trans.get_command();
+        unsigned char* data = trans.get_data_ptr();
+        unsigned int len = trans.get_data_length();
+
+        if ((addr + len - 1) > MEM_SIZE) {
+            trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
+            return false;
+        } else if ((addr + len - 1) >= (3 * MEM_SIZE / 4) && (addr + len - 1) < MEM_SIZE) {
+            trans.set_dmi_allowed(false);
+            dmi_data.allow_none();
+            return false;
+        } else if ((addr + len - 1) >= (MEM_SIZE / 2) && (addr + len - 1) < (3 * MEM_SIZE / 4)) {
+            dmi_data.allow_read();
+        } else if ((addr + len - 1) < (MEM_SIZE / 2)) {
+            dmi_data.allow_read_write();
+        }
+
+        trans.set_dmi_allowed(true);
+        sc_dt::uint64 start_addr = static_cast<uint64_t>(addr / MIN_ALLOC_UNIT) * MIN_ALLOC_UNIT;
+        sc_dt::uint64 end_addr = (static_cast<uint64_t>((addr + len - 1) / MIN_ALLOC_UNIT) + 1) *
+                                     MIN_ALLOC_UNIT -
+                                 1;
+        dmi_data.set_start_address(start_addr);
+        dmi_data.set_end_address(end_addr);
+        dmi_data.set_dmi_ptr(reinterpret_cast<unsigned char*>(&m_mem[start_addr]));
+        return true;
+    }
+
+public:
+    uint8_t read_byte(uint64_t addr) const { return static_cast<uint8_t>(m_mem[addr]); }
+
+private:
+    unsigned char* m_mem;
+};
+
+class DMIConverterTestBench : public TestBench
+{
+public:
+    SCP_LOGGER();
+    DMIConverterTestBench(const sc_core::sc_module_name& n)
+        : TestBench(n)
+        , m_initiator("initiator")
+        , m_simple_mem("SimpleMemory")
+        , m_dmi_converter("DMIConverter")
+    {
+        m_initiator.socket.bind(m_dmi_converter.target_sockets[0]);
+        m_dmi_converter.initiator_sockets[0].bind(m_simple_mem.target_socket);
+    }
+
+    void do_write_read_check(uint64_t addr, u_int8_t* w_data, size_t len)
+    {
+        std::stringstream sstr;
+        u_int8_t* r_data = new uint8_t[len];
+        ASSERT_EQ(m_initiator.do_write_with_ptr(addr, w_data, len, false), tlm::TLM_OK_RESPONSE);
+        sstr << "Written data: {";
+        for (int i = 0; i < len; i++) {
+            ASSERT_EQ(m_simple_mem.read_byte(addr + i), w_data[i]);
+            sstr << "0x" << std::hex << static_cast<uint64_t>(m_simple_mem.read_byte(addr + i))
+                 << (i < (len - 1) ? "," : "");
+        }
+        sstr << "}";
+        SCP_INFO(()) << sstr.str();
+        sstr.str("");
+
+        ASSERT_EQ(m_initiator.do_read_with_ptr(addr, r_data, len, false), tlm::TLM_OK_RESPONSE);
+        sstr << "Read data: {";
+        for (int i = 0; i < len; i++) {
+            ASSERT_EQ(m_simple_mem.read_byte(addr + i), r_data[i]);
+            sstr << "0x" << std::hex << static_cast<uint64_t>(r_data[i])
+                 << (i < (len - 1) ? "," : "");
+        }
+        sstr << "}";
+        SCP_INFO(()) << sstr.str();
+        delete[] r_data;
+    }
+
+    void print_dashes()
+    {
+        std::cout << "-----------------------------------------------------------------------------"
+                     "--------------------------------"
+                  << std::endl;
+    }
+
+protected:
+    InitiatorTester m_initiator;
+    ::SimpleMemory<> m_simple_mem;
+    gs::DMIConverter<1> m_dmi_converter;
+};
