@@ -46,14 +46,14 @@ local IPC_ROUTER_TOP = 0x00400000
 local APSS_GIC600_GICD_APSS = 0x17A00000
 local OFFSET_APSS_ALIAS0_GICR_CTLR = 0x60000
 
--- Makena VBSP, system UART addr: reallocated space at
+-- Lemans VBSP, pl011 UART addr: reallocated space at
 --   PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO:
 local PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO = 0x40000000
 local UART0 = PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO
--- local UART0 = 0x10000000
 
 -- QUPv3 uart
-local QUPV3_1_SE2 = 0x00A88000
+local QUPV3_1_SE3 = 0x00A8C000
+
 
 local TCSR_SOC_HW_VERSION_ADDR = 0x1FC8000;
 local TCSR_SOC_EMULATION_TYPE_ADDR = TCSR_SOC_HW_VERSION_ADDR+4;
@@ -130,7 +130,7 @@ platform = {
                   irq0=40;irq1=41;irq2=42;irq3=43;irq4=44;irq5=45;irq6=46;
                   nr_frames=7;nr_views=2;cnttid=0x1111515};
     uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=379};
-    uart_qup= {  simple_target_socket_0 = {address=QUPV3_1_SE2, size=0x2000}, irq=355};
+    uart_qup= { simple_target_socket_0 = {address=QUPV3_1_SE3, size=0x2000}, irq=356};
 
     ipcc= {  socket        = {address=IPC_ROUTER_TOP, size=0xfc000},
              irqs = {
