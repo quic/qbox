@@ -653,23 +653,20 @@ public:
             p_cport = gs::cci_get<int>(GS_Process_Serve_Port);
         }
 
-        if (p_cport) {
-            SCP_INFO(SCMOD) << "Connecting client on port " << p_cport;
-            client = new rpc::client("localhost", p_cport);
-            set_cci_db(client->call("reg", (int)p_sport).as<str_pairs>());
-        }
-
         // other end contacted us, connect to their port
         // and return back the cci database
         server->bind("reg", [&](int port) {
             SCP_DEBUG(SCMOD) << "reg " << name() << " 1";
             assert(p_cport == 0 && client == nullptr);
             p_cport = port;
-            client = new rpc::client("localhost", p_cport);
+            if (!client)
+                client = new rpc::client("localhost", p_cport);
             std::unique_lock<std::mutex> ul(client_conncted_mut);
             is_clinet_connected.notify_one();
             ul.unlock();
-            client->send("sock_pair", pahandler.get_sockpair_fd0(), pahandler.get_sockpair_fd1());
+            // we are not interested in the return future from async_call
+            client->async_call("sock_pair", pahandler.get_sockpair_fd0(),
+                               pahandler.get_sockpair_fd1());
             return get_cci_db();
         });
 
@@ -761,6 +758,13 @@ public:
         m_qk->reset();
         server->async_run(1);
 
+        if (p_cport) {
+            SCP_INFO(SCMOD) << "Connecting client on port " << p_cport;
+            if (!client)
+                client = new rpc::client("localhost", p_cport);
+            set_cci_db(client->call("reg", (int)p_sport).as<str_pairs>());
+        }
+
         if (!exec_path.empty()) {
             SCP_INFO(SCMOD) << "Forking remote " << exec_path;
             pahandler.init_peer_conn_checker();
@@ -817,10 +821,12 @@ public:
         m_qk->stop();
         SCP_DEBUG(SCMOD) << "EXIT " << name();
         if (client) {
-            client->call("exit", 0);
+            client->async_call("exit", 0);
             delete client;
             client = nullptr;
         }
+        if (server)
+            delete server;
 #ifdef DMICACHE
         m_dmi_cache.clear();
 #endif
@@ -830,7 +836,7 @@ public:
     {
         m_qk->stop();
         if (client) {
-            client->call("exit", 0);
+            client->async_call("exit", 0);
             delete client;
             client = nullptr;
             sleep(1);
