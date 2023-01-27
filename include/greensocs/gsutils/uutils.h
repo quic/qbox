@@ -37,17 +37,12 @@
 #include <unistd.h>
 #include <poll.h>
 #include <sys/wait.h>
-#include <sys/prctl.h>
 #include <cassert>
 #include <iostream>
 #include <thread>
-#include <condition_variable>
-#include <mutex>
-#include <chrono>
 #include <map>
 #include <utility>
 #include <functional>
-#include <termios.h>
 #include <vector>
 #include <atomic>
 
@@ -55,7 +50,6 @@
 #define DEFAULT_SIG_VAL -1
 
 namespace gs {
-using namespace std::chrono_literals;
 
 class SigHandler
 {
@@ -185,7 +179,7 @@ private:
         , pass_act{ 0 }
         , ign_act{ 0 }
         , dfl_act{ 0 } {
-        if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, self_sockpair_fd) == -1) {
+        if (socketpair(AF_UNIX, SOCK_STREAM, 0, self_sockpair_fd) == -1) {
             perror("SigHnadler socketpair");
             std::exit(EXIT_FAILURE);
         }
@@ -290,7 +284,7 @@ public:
     }
 
     inline void init_peer_conn_checker() {
-        if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, m_sock_pair_fds) == -1) {
+        if (socketpair(AF_UNIX, SOCK_STREAM, 0, m_sock_pair_fds) == -1) {
             perror("ProcAliveHandler socketpair");
             std::exit(EXIT_FAILURE);
         }
