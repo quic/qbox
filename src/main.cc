@@ -502,30 +502,39 @@ public:
 
         setup_irq_mapping();
 
-        CharBackend* backend;
-        CharBackend* qup_backend;
+        CharBackend* backend = nullptr;
+        CharBackend* qup_backend = nullptr;
 
-        if (!p_uart_backend) {
-            backend = new CharBackendStdio("backend_stdio");
-        } else {
-            backend = new CharBackendSocket(
-                "backend_socket", "tcp", "127.0.0.1:" + std::to_string(p_uart_backend.get_value()));
+        bool used_stdio = false;
+        if (m_uart_qup) {
+            if (!p_qup_uart_backend) {
+                if (!used_stdio) {
+                    qup_backend = new CharBackendStdio("qup_backend_stdio");
+                    used_stdio = true;
+                }
+            } else {
+                qup_backend = new CharBackendSocket(
+                    "qup_backend_socket", "tcp",
+                    "127.0.0.1:" + std::to_string(p_qup_uart_backend.get_value()));
+            }
+            if (qup_backend) {
+                m_uart_qup->set_backend(qup_backend);
+            }
         }
-
-        if (!p_qup_uart_backend) {
-            qup_backend = new CharBackendStdio("qup_backend_stdio", p_uart_backend != 0);
-        } else {
-            qup_backend = new CharBackendSocket(
-                "qup_backend_socket", "tcp",
-                "127.0.0.1:" + std::to_string(p_qup_uart_backend.get_value()));
-        }
-
-        if (m_uart && backend) {
-            m_uart->set_backend(backend);
-        }
-
-        if (m_uart_qup && qup_backend) {
-            m_uart_qup->set_backend(qup_backend);
+        if (m_uart) {
+            if (!p_uart_backend) {
+                if (!used_stdio) {
+                    backend = new CharBackendStdio("qup_backend_stdio");
+                    used_stdio = true;
+                }
+            } else {
+                backend = new CharBackendSocket(
+                    "backend_socket", "tcp",
+                    "127.0.0.1:" + std::to_string(p_uart_backend.get_value()));
+            }
+            if (backend) {
+                m_uart->set_backend(backend);
+            }
         }
     }
 
