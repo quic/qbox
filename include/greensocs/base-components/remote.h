@@ -355,7 +355,7 @@ private:
     rpc::server* server = nullptr;
     int m_child_pid = 0;
     ProcAliveHandler pahandler;
-    std::condition_variable is_clinet_connected;
+    std::condition_variable is_client_connected;
     std::condition_variable is_sc_status_set;
     std::mutex client_conncted_mut;
     std::mutex sc_status_mut;
@@ -662,7 +662,7 @@ public:
             if (!client)
                 client = new rpc::client("localhost", p_cport);
             std::unique_lock<std::mutex> ul(client_conncted_mut);
-            is_clinet_connected.notify_one();
+            is_client_connected.notify_one();
             ul.unlock();
             // we are not interested in the return future from async_call
             client->async_call("sock_pair", pahandler.get_sockpair_fd0(),
@@ -788,7 +788,7 @@ public:
 
         // Make sure by now the client is connected so we can send/recieve.
         std::unique_lock<std::mutex> ul(client_conncted_mut);
-        is_clinet_connected.wait(ul, [&]() { return p_cport > 0; });
+        is_client_connected.wait(ul, [&]() { return p_cport > 0; });
         ul.unlock();
         send_status();
     }
