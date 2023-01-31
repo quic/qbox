@@ -40,6 +40,9 @@
 #include <csignal>
 #include <cstdlib>
 #include <greensocs/gsutils/uutils.h>
+#include <cerrno>
+#include <cstring>
+
 namespace gs {
 // Singleton class that handles memory allocation, alignment, file mapping and shared memory
 
@@ -49,10 +52,12 @@ namespace gs {
 
 class MemoryServices
 {
+    SCP_LOGGER((), "MemoryServices");
+
 private:
-    MemoryServices()
+    MemoryServices(): m_name("MemoryServices")
     {
-        SCP_DEBUG("MemoryServices") << "MemoryServices constructor";
+        SCP_DEBUG(()) << "MemoryServices constructor";
         SigHandler::get().register_on_exit_cb(MemoryServices::cleanupexit);
         SigHandler::get().add_sig_handler(SIGINT, SigHandler::Handler_CB::PASS);
     }
@@ -70,26 +75,31 @@ private:
     pid_t m_cpid;
     ProcAliveHandler pahandler;
     shm_cleaner_info* cl_info = nullptr;
+    std::string m_name;
 
 public:
     ~MemoryServices()
     {
+        SCP_DEBUG(()) << "MemoryServices Destructor";
         cleanup();
         if (cl_info) {
             if (munmap(cl_info, sizeof(shm_cleaner_info)) == -1) {
-                perror("munmap");
-                exit(EXIT_FAILURE);
+                SCP_FATAL(()) << "failed to munmap shm_cleaner_info struct at: 0x" << std::hex
+                              << cl_info << " with size: 0x" << std::hex << sizeof(shm_cleaner_info)
+                              << " error: " << std::strerror(errno);
             }
         }
     }
+
+    const char* name() const { return m_name.c_str(); }
 
     void cleanup()
     {
         if (finished || !child_cleaner_forked)
             return;
         for (auto n : m_shmem_info_map) {
-            std::cerr << "Deleting " << n.first << std::endl; // can't use SCP_ in global destructor
-                                                              // as it's probably already destroyed
+            SCP_INFO(()) << "Deleting " << n.first; // can't use SCP_ in global destructor
+                                                    // as it's probably already destroyed
             shm_unlink(n.first.c_str());
         };
         if (cl_info)
@@ -98,7 +108,7 @@ public:
     }
 
     static void cleanupexit() { MemoryServices::get().cleanup(); }
-    void init() { SCP_DEBUG("MemoryServices") << "Memory Services Initialization"; }
+    void init() { SCP_DEBUG(()) << "Memory Services Initialization"; }
     static MemoryServices& get()
     {
         static MemoryServices instance;
@@ -154,8 +164,8 @@ public:
 
         } // else child process
         else {
-            perror("fork");
-            exit(EXIT_FAILURE);
+            SCP_FATAL(()) << "failed to fork (shm_cleaner) child process, error: "
+                          << std::strerror(errno);
         }
     } // start_shm_cleaner_proc()
 
@@ -163,12 +173,12 @@ public:
     {
         int fd = open(mapfile, O_RDWR);
         if (fd < 0) {
-            SCP_FATAL("MemoryServices") << "Unable to find backing file";
+            SCP_FATAL(()) << "Unable to find backing file";
         }
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
         close(fd);
         if (ptr == MAP_FAILED) {
-            SCP_FATAL("MemoryServices") << "Unable to map backing file";
+            SCP_FATAL(()) << "Unable to map backing file";
         }
         return ptr;
     }
@@ -176,33 +186,31 @@ public:
     uint8_t* map_mem_create(const char* memname, uint64_t size)
     {
         if (cl_info && cl_info->count == MAX_SHM_SEGS_NUM)
-            SCP_FATAL("MemoryServices") << "can't shm_open create " << memname
-                                        << ", exceeded: " << MAX_SHM_SEGS_NUM << std::endl;
+            SCP_FATAL(()) << "can't shm_open create " << memname
+                          << ", exceeded: " << MAX_SHM_SEGS_NUM << std::endl;
         assert(m_shmem_info_map.count(memname) == 0);
         int fd = shm_open(memname, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
             shm_unlink(memname);
-            SCP_FATAL("MemoryServices")
-                << "can't shm_open create " << memname << " " << strerror(errno);
+            SCP_FATAL(()) << "can't shm_open create " << memname << " " << strerror(errno);
         }
         if (ftruncate(fd, size) == -1) {
             shm_unlink(memname);
-            SCP_FATAL("MemoryServices") << "can't truncate " << memname << " " << strerror(errno);
+            SCP_FATAL(()) << "can't truncate " << memname << " " << strerror(errno);
         }
-        SCP_DEBUG("MemoryServices") << "Create Length " << size;
+        SCP_DEBUG(()) << "Create Length " << size;
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
         close(fd);
         if (ptr == MAP_FAILED) {
             shm_unlink(memname);
-            SCP_FATAL("MemoryServices")
-                << "can't mmap(shared memory create) " << memname << " " << strerror(errno);
+            SCP_FATAL(()) << "can't mmap(shared memory create) " << memname << " "
+                          << strerror(errno);
         }
-        SCP_DEBUG("MemoryServices") << "Shared memory created: " << memname << " length " << size;
+        SCP_DEBUG(()) << "Shared memory created: " << memname << " length " << size;
         m_shmem_info_map.insert({ std::string(memname), { ptr, size } });
         if ((strlen(memname) + 1) > MAX_SHM_STR_LENGTH)
-            SCP_FATAL("MemoryServices")
-                << "shm name length exceeded max allowed length: " << MAX_SHM_STR_LENGTH
-                << std::endl;
+            SCP_FATAL(()) << "shm name length exceeded max allowed length: " << MAX_SHM_STR_LENGTH
+                          << std::endl;
         start_shm_cleaner_proc();
         strncpy(cl_info->name[cl_info->count++], memname,
                 strlen(memname) + 1); // must be called after start_shm_cleaner_proc() to make sure
@@ -221,16 +229,14 @@ public:
         int fd = shm_open(memname, O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
             shm_unlink(memname);
-            SCP_FATAL("MemoryServices")
-                << "can't shm_open join " << memname << " " << strerror(errno);
+            SCP_FATAL(()) << "can't shm_open join " << memname << " " << strerror(errno);
         }
-        SCP_INFO("MemoryServices") << "Join Length " << size;
+        SCP_INFO(()) << "Join Length " << size;
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
         close(fd);
         if (ptr == MAP_FAILED) {
             shm_unlink(memname);
-            SCP_FATAL("MemoryServices")
-                << "can't mmap(shared memory join) " << memname << " " << strerror(errno);
+            SCP_FATAL(()) << "can't mmap(shared memory join) " << memname << " " << strerror(errno);
         }
         m_shmem_info_map.insert({ std::string(memname), { ptr, size } });
         return ptr;
@@ -244,7 +250,7 @@ public:
                 return ptr;
             }
         }
-        SCP_INFO("MemoryServices") << "Aligned allocation failed, using normal allocation";
+        SCP_INFO(()) << "Aligned allocation failed, using normal allocation";
         {
             uint8_t* ptr = (uint8_t*)malloc(size);
             if (ptr) {
@@ -253,6 +259,6 @@ public:
         }
         return nullptr;
     }
-}; // namespace gs
+};
 } // namespace gs
 #endif
