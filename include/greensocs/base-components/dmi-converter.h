@@ -113,6 +113,9 @@ private:
                     memcpy(reinterpret_cast<unsigned char*>(trans_data_ptr),
                            reinterpret_cast<unsigned char*>(&dmi_ptr[addr - start_addr]), iter_len);
                     break;
+                default:
+                    SCP_FATAL(()) << "invalid tlm_command at address: 0x" << std::hex << addr;
+                    break;
                 }
                 remaining_len = (iter_len == remaining_len ? 0 : remaining_len - iter_len);
                 addr += iter_len;
@@ -168,8 +171,7 @@ private:
         return initiator_sockets[id]->transport_dbg(trans);
     }
 
-    bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans,
-                            tlm::tlm_dmi& dmi_data) // scp_fatal
+    bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
         SCP_DEBUG(()) << "DMI to " << trans.get_address() << " range " << std::hex
                       << dmi_data.get_start_address() << " - " << std::hex
@@ -222,6 +224,9 @@ private:
             break;
         case tlm::TLM_IGNORE_COMMAND:
             ret_str = "(ignore request)";
+            break;
+        default:
+            ret_str = "(invalid tlm_command)";
             break;
         }
         return ret_str;
