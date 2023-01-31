@@ -73,7 +73,10 @@ typedef enum {
     GENI_DMA_MODE_EN    = ((GENI4_IMAGE_REGS) + 0x158),
     GENI_S_CMD0         = ((GENI4_DATA) + 0x30),
     SE_HW_PARAM_0       = ((QUPV3_SE_DMA) + 0x224),
+    SE_HW_PARAM_1       = ((QUPV3_SE_DMA) + 0x228),
     UNKNOWN_TX_FIFO     = ((GENI4_DATA) + 0x144),
+    GENI_RX_WATERMARK_REG = ((GENI4_DATA) + 0x210),
+    GENI_RX_RFR_WATERMARK_REG = ((GENI4_DATA) + 0x214),
 
 } qupv3_reg;
 

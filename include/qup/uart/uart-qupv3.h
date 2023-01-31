@@ -93,7 +93,8 @@ public:
         { GENI_S_IRQ_STATUS, 0x0 },
         { GENI_FW_REVISION_RO, 0x2ff },
         { GENI_RX_FIFO_STATUS, 0x0 },
-        { SE_HW_PARAM_0, 0x20102A64 },
+        { SE_HW_PARAM_0, 0x20102864 },
+        { SE_HW_PARAM_1, 0x20204800 },
     };
 
 #ifdef QUP_UART_TEST
@@ -164,11 +165,11 @@ public:
             r = qupv3_handle[GENI_M_IRQ_STATUS];
             break;
         case GENI_TX_FIFO_STATUS:
-            SCP_DEBUG() << hex << "Ignore for now Addr(GENI_TX_FIFO_STATUS)" << endl;
+            SCP_DEBUG(SCMOD) << hex << "Ignore for now Addr(GENI_TX_FIFO_STATUS)" << endl;
             r = 0;
             break;
         case GENI_S_IRQ_STATUS:
-            SCP_DEBUG() << hex << "Ignore for now Addr(GENI_S_IRQ_STATUS)" << endl;
+            SCP_DEBUG(SCMOD) << hex << "Ignore for now Addr(GENI_S_IRQ_STATUS)" << endl;
             r = qupv3_handle[GENI_S_IRQ_STATUS];
             irq->write(0);
             break;
@@ -186,10 +187,14 @@ public:
             break;
         case SE_HW_PARAM_0:
             r = qupv3_handle[SE_HW_PARAM_0];
-            SCP_DEBUG() << hex << "Unhandled READ at offset :" << offset << endl;
+            SCP_DEBUG(SCMOD) << hex << "Unhandled READ at offset :" << offset << endl;
+            break;
+        case SE_HW_PARAM_1:
+            r = qupv3_handle[SE_HW_PARAM_1];
+            SCP_DEBUG(SCMOD) << hex << "Unhandled READ at offset :" << offset << endl;
             break;
         default:
-            SCP_ERR("QUP UART") << "Error: qupv3_read() Unhandled read(" << hex << offset << ") :  " << SE_HW_PARAM_0 << endl;
+            SCP_WARN(SCMOD) << "Error: qupv3_read() Unhandled read(" << hex << offset << ") :  " << SE_HW_PARAM_0 << endl;
             break;
             r = 0;
             break;
@@ -200,24 +205,24 @@ public:
 
     void qupv3_write(uint64_t offset, uint32_t value) {
         unsigned char ch;
-        SCP_DEBUG() << "in qupv3_write() " << endl;
+        SCP_DEBUG(SCMOD) << "in qupv3_write() " << endl;
         switch (offset) {
         case GENI_M_CMD_0:
             /* Handle start of the UART Tx transection */
-            SCP_DEBUG() << hex << "Addr(GENI_M_CMD_0):" << value << endl;
+            SCP_DEBUG(SCMOD) << hex << "Addr(GENI_M_CMD_0):" << value << endl;
             if ((qupv3_handle[GENI_M_CMD_0] == 0x0) && (value == 0x08000000)) {
                 qupv3_handle[GENI_M_CMD_0] = value;
             }
             break;
         case GENI_M_IRQ_CLEAR:
             /* Clear interrupt before starting UART Tx transection */
-            SCP_DEBUG() << hex << "Addr(GENI_M_IRQ_CLEAR):" << value << endl;
+            SCP_DEBUG(SCMOD) << hex << "Addr(GENI_M_IRQ_CLEAR):" << value << endl;
             qupv3_handle[GENI_M_IRQ_STATUS] &= ~(value);
             irq->write(0);
             break;
         case GENI_S_IRQ_CLEAR:
             /* Clear interrupt before starting UART Tx transection */
-            SCP_DEBUG() << hex << "Addr(GENI_M_IRQ_CLEAR):" << value << endl;
+            SCP_DEBUG(SCMOD) << hex << "Addr(GENI_M_IRQ_CLEAR):" << value << endl;
             qupv3_handle[GENI_S_IRQ_STATUS] &= ~(value);
             break;
         case GENI_TX_FIFO_0:
@@ -243,11 +248,11 @@ public:
                 }
             } else
                 SCP_ERR() << "Error: M_CMD_0 and UART_TX_LEN is not set properly" << endl;
-            SCP_DEBUG() << "Char to Tx Addr(GENI_TX_FIFO_0): \"" << ch << "\" " << endl;
+            SCP_DEBUG(SCMOD) << "Char to Tx Addr(GENI_TX_FIFO_0): \"" << ch << "\" " << endl;
             break;
         case UART_TX_TRANS_LEN:
             /* Number of bytes to transfer in single transection, for now it should be one byte */
-            SCP_DEBUG() << hex << "Addr(UART_TX_TRANS_LEN):" << value;
+            SCP_DEBUG(SCMOD) << hex << "Addr(UART_TX_TRANS_LEN):" << value;
             if (value >= 0x1)
                 qupv3_handle[UART_TX_TRANS_LEN] = value;
             else
@@ -263,10 +268,12 @@ public:
         case GENI_DMA_MODE_EN:
         case GENI_S_CMD0:
         case UNKNOWN_TX_FIFO:
-            SCP_DEBUG() << hex << "Unhandled WRITE at offset :" << offset << endl;
+        case GENI_RX_WATERMARK_REG:
+        case GENI_RX_RFR_WATERMARK_REG:
+            SCP_DEBUG(SCMOD) << hex << "Unhandled WRITE at offset :" << offset << endl;
             break;
         default:
-            SCP_ERR() << hex << "Error: qupv3_write() Unhandled write(" << offset << "): " << value << endl;
+            SCP_WARN(SCMOD) << hex << "Error: qupv3_write() Unhandled write(" << offset << "): " << value << endl;
         }
     }
 
