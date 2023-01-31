@@ -8,6 +8,7 @@
 #include <greensocs/gsutils/tests/test-bench.h>
 #include <vector>
 #include <sstream>
+#include <memory>
 
 #define MEM_SIZE       4096
 #define MIN_ALLOC_UNIT 8
@@ -15,6 +16,8 @@
 template <unsigned int BUSWIDTH = 32>
 class SimpleMemory : public sc_core::sc_module
 {
+    SCP_LOGGER();
+
 public:
     using MOD = SimpleMemory<BUSWIDTH>;
     using tlm_target_socket_t = tlm_utils::simple_target_socket_b<
@@ -51,6 +54,8 @@ private:
             break;
         case tlm::TLM_IGNORE_COMMAND:
             return;
+        default:
+            SCP_FATAL(()) << "invalid tlm_command at address: 0x" << std::hex << addr;
         }
         trans.set_response_status(tlm::TLM_OK_RESPONSE);
     }
@@ -115,7 +120,7 @@ public:
     void do_write_read_check(uint64_t addr, u_int8_t* w_data, size_t len)
     {
         std::stringstream sstr;
-        u_int8_t* r_data = new uint8_t[len];
+        std::unique_ptr<uint8_t[]> r_data{ new uint8_t[len] };
         ASSERT_EQ(m_initiator.do_write_with_ptr(addr, w_data, len, false), tlm::TLM_OK_RESPONSE);
         sstr << "Written data: {";
         for (int i = 0; i < len; i++) {
@@ -127,7 +132,8 @@ public:
         SCP_INFO(()) << sstr.str();
         sstr.str("");
 
-        ASSERT_EQ(m_initiator.do_read_with_ptr(addr, r_data, len, false), tlm::TLM_OK_RESPONSE);
+        ASSERT_EQ(m_initiator.do_read_with_ptr(addr, r_data.get(), len, false),
+                  tlm::TLM_OK_RESPONSE);
         sstr << "Read data: {";
         for (int i = 0; i < len; i++) {
             ASSERT_EQ(m_simple_mem.read_byte(addr + i), r_data[i]);
@@ -136,14 +142,12 @@ public:
         }
         sstr << "}";
         SCP_INFO(()) << sstr.str();
-        delete[] r_data;
     }
 
     void print_dashes()
     {
-        std::cout << "-----------------------------------------------------------------------------"
-                     "--------------------------------"
-                  << std::endl;
+        SCP_INFO(())
+            << "-----------------------------------------------------------------------------";
     }
 
 protected:
