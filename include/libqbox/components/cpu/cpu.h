@@ -451,7 +451,7 @@ public:
         }
 
         for (auto p : gs::sc_cci_children(sc_module::name())) {
-            SCP_WARN(SCMOD) << "Unexpected parameter " + p + " to" + sc_module::name();
+            SCP_WARN(SCMOD) << "Unexpected parameter " + p + " to " + sc_module::name();
         }
     }
 
