@@ -60,20 +60,20 @@ void qupv3_write(uint64_t offset, uint32_t value);
 uint32_t qupv3_read(uint64_t offset);
 
 typedef struct SPIState_M {
-    int read_pos;    //Current read_fifo slot position
-    int read_slots;  //Total slots to be read
-    int read_count;  //Number of current bytes received from slave
-    int read_start;  //Rx from Slave started
-    int read_done;   //Rx from Slave completed
-    int read_len;    //storing Master write length
-    int write_pos;   //current write_fifo slot position
-    int write_slots; //Total slots to be written
-    int write_count; //Number of current bytes sent to slave
-    int write_start; //Tx to slave started
-    int write_done;  //Tx to slave completed
-    int write_len;   //storing slave write length
-    int opcode;      //store current opcode of transaction
-    int loopback;    //loopback information
+    int read_pos;    // Current read_fifo slot position
+    int read_slots;  // Total slots to be read
+    int read_count;  // Number of current bytes received from slave
+    int read_start;  // Rx from Slave started
+    int read_done;   // Rx from Slave completed
+    int read_len;    // storing Master write length
+    int write_pos;   // current write_fifo slot position
+    int write_slots; // Total slots to be written
+    int write_count; // Number of current bytes sent to slave
+    int write_start; // Tx to slave started
+    int write_done;  // Tx to slave completed
+    int write_len;   // storing slave write length
+    int opcode;      // store current opcode of transaction
+    int loopback;    // loopback information
 } SPIState_M;
 
 class QUPv3_SpiM : public sc_core::sc_module
@@ -86,7 +86,7 @@ public:
     tlm_utils::simple_initiator_socket<QUPv3_SpiM> m2s_socket;
 
     InitiatorSignalSocket<bool> irq;
-    TargetSignalSocket<bool> dummy_target; //only for testing purpose
+    TargetSignalSocket<bool> dummy_target; // only for testing purpose
 
     /* Queues for storing data */
     std::queue<uint8_t> read_queue;
@@ -141,10 +141,10 @@ public:
         { DMA_TX_IRQ_CLR, 0x0 },
         { DMA_RX_IRQ_CLR, 0x0 },
         { SE_GSI_EVENT_EN, 0x0 },
-        { SE_IRQ_EN, 0x0 }, //Forcing reset values of DMA IRQ to zero
+        { SE_IRQ_EN, 0x0 }, // Forcing reset values of DMA IRQ to zero
         { HW_PARAM_0, 0x201029E4 },
         { HW_PARAM_1, 0x20104800 },
-        { DMA_GENERAL_CFG, 0x0 }, //Forcing contents to zero since DMA mode is not enabled
+        { DMA_GENERAL_CFG, 0x0 }, // Forcing contents to zero since DMA mode is not enabled
     };
 
     SC_HAS_PROCESS(QUPv3_SpiM);
@@ -198,7 +198,7 @@ public:
         }
     }
 
-    void trigger_irq() { //sending positive edge pulse
+    void trigger_irq() { // sending positive edge pulse
         SCP_DEBUG() << "MASTER-Triggering IRQ";
         irq->write(0);
         irq->write(1);
@@ -219,9 +219,9 @@ public:
         trans.set_dmi_allowed(false);
         trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
 
-        m2s_socket->b_transport(trans, delay); //sending packet payload
+        m2s_socket->b_transport(trans, delay); // sending packet payload
 
-        //Check for transaction error
+        // Check for transaction error
         if (trans.is_response_error())
             SC_REPORT_ERROR("TLM-2", "Response error from b_transport");
     }
@@ -236,14 +236,14 @@ public:
         uint8_t num_bytes            = 0;
         uint32_t rx_last_bytes_valid = 0x0;
 
-        if (length == 0x0) { //Input length to read=0x0
+        if (length == 0x0) { // Input length to read=0x0
             SCP_INFO() << "MASTER-Rx length to read is 0x0. Hence skipping Rx";
             return;
         }
 
         SCP_DEBUG() << "****MASTER Getting Rx data from Slave into Internal RX FIFO****";
-        s->read_pos   = 0x0; //Initializing position to zero
-        s->read_count = 0x0; //current readcount to zero
+        s->read_pos   = 0x0; // Initializing position to zero
+        s->read_count = 0x0; // current readcount to zero
 
         trans.set_command(tlm::TLM_READ_COMMAND);
         trans.set_data_length(FIFO_ENTRY_SIZE);
@@ -252,18 +252,18 @@ public:
         trans.set_dmi_allowed(false);
         trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
 
-        //Reading data length that slave willing to send
+        // Reading data length that slave willing to send
         trans.set_address(SPI_TX_TRANS_LEN);
         trans.set_data_ptr(reinterpret_cast<unsigned char*>(&read_data));
-        m2s_socket->b_transport(trans, delay); //sending packet payload
+        m2s_socket->b_transport(trans, delay); // sending packet payload
 
-        //Check for transaction error
+        // Check for transaction error
         if (trans.is_response_error())
             SC_REPORT_ERROR("TLM-2", "Response error from b_transport");
 
-        slave_tx_len = read_data; //Update slave transmission length
+        slave_tx_len = read_data; // Update slave transmission length
 
-        //Update RX_TRANS_LEN if slave transmission length is different from requested length
+        // Update RX_TRANS_LEN if slave transmission length is different from requested length
         if (slave_tx_len != length) {
             SCP_INFO() << std::hex << "MASTER-Requested length for reading:0x" << length << " and slave TX len:0x" << slave_tx_len << " not matching.";
             if (length > slave_tx_len) {
@@ -273,20 +273,20 @@ public:
             }
         }
 
-        s->read_slots = (length / FIFO_ENTRY_SIZE) + ((length % FIFO_ENTRY_SIZE != 0) ? 1 : 0); //Number of slots to be read. Each slot = 4bytes
+        s->read_slots = (length / FIFO_ENTRY_SIZE) + ((length % FIFO_ENTRY_SIZE != 0) ? 1 : 0); // Number of slots to be read. Each slot = 4bytes
 
-        //Reading TX FIFO Slave Data
+        // Reading TX FIFO Slave Data
         trans.set_address(GENI_TX_FIFO_0);
         SCP_DEBUG() << std::hex << "MASTER-slave_tx_len:" << slave_tx_len;
 
         while (s->read_pos != s->read_slots) {
-            m2s_socket->b_transport(trans, delay); //sending packet payload
+            m2s_socket->b_transport(trans, delay); // sending packet payload
 
-            //Check for transaction error
+            // Check for transaction error
             if (trans.is_response_error())
                 SC_REPORT_ERROR("TLM-2", "Response error from b_transport");
 
-            //Calculate current read_count
+            // Calculate current read_count
             if ((length == FIFO_ENTRY_SIZE) || ((length - s->read_count) >= FIFO_ENTRY_SIZE)) {
                 s->read_count = s->read_count + FIFO_ENTRY_SIZE;
                 num_bytes     = FIFO_ENTRY_SIZE;
@@ -297,7 +297,7 @@ public:
 
             SCP_DEBUG() << std::hex << "MASTER-read_data:" << read_data;
 
-            //storing received data from slave
+            // storing received data from slave
             s->read_pos++;
             while (num_bytes != 0) {
                 read_queue.push(read_data & 0xff);
@@ -310,9 +310,9 @@ public:
         SCP_DEBUG()<< "MASTER-Rx FIFO Data(S->M): ");       //Print Rx Fifo data contents
         showq(read_queue);
 */
-        s->read_pos   = 0x0; //Clearing pos to zero
-        s->read_count = 0x0; //clearing read_count
-        s->read_start = 0x1; //Rx process can be started
+        s->read_pos   = 0x0; // Clearing pos to zero
+        s->read_count = 0x0; // clearing read_count
+        s->read_start = 0x1; // Rx process can be started
     }
 
     /* TLM Read handler for transactions from socket */
@@ -391,14 +391,14 @@ public:
             /* Return Rx FIFO data which we have read from slave */
             if (s->read_pos == 0x0) {
                 SCP_INFO() << std::hex << "****MASTER RX Started with RX_TRANS_LEN: " << qupv3_handle[SPI_RX_TRANS_LEN] << " ****";
-                s->read_slots                     = (qupv3_handle[SPI_RX_TRANS_LEN] / FIFO_ENTRY_SIZE) + ((qupv3_handle[SPI_RX_TRANS_LEN] % FIFO_ENTRY_SIZE != 0) ? 1 : 0); //Storing FIFO slots in structure. Each slot = 4 bytes
-                qupv3_handle[GENI_RX_FIFO_STATUS] = s->read_slots;                                                                                                          //Initialize with total word count
+                s->read_slots                     = (qupv3_handle[SPI_RX_TRANS_LEN] / FIFO_ENTRY_SIZE) + ((qupv3_handle[SPI_RX_TRANS_LEN] % FIFO_ENTRY_SIZE != 0) ? 1 : 0); // Storing FIFO slots in structure. Each slot = 4 bytes
+                qupv3_handle[GENI_RX_FIFO_STATUS] = s->read_slots;                                                                                                          // Initialize with total word count
             }
 
             words_to_read = qupv3_handle[GENI_RX_FIFO_STATUS] & 0x1ffffff;
             words_to_read = words_to_read - 1;
 
-            //Calculate current read_count
+            // Calculate current read_count
             if ((qupv3_handle[SPI_RX_TRANS_LEN] == FIFO_ENTRY_SIZE) || ((qupv3_handle[SPI_RX_TRANS_LEN] - s->read_count) >= FIFO_ENTRY_SIZE)) {
                 s->read_count = s->read_count + FIFO_ENTRY_SIZE;
                 num_bytes     = FIFO_ENTRY_SIZE;
@@ -415,14 +415,14 @@ public:
                 num_bytes--;
                 i++;
             }
-            //Get data from read_fifo which was written by Master
+            // Get data from read_fifo which was written by Master
             s->read_pos++;
             qupv3_handle[GENI_RX_FIFO_0] = value;
             r                            = qupv3_handle[GENI_RX_FIFO_0];
             SCP_INFO() << std::hex << "MASTER READ - Addr and value:" << offset << "  " << r;
 
             if (words_to_read == 0x1) {
-                //Calculate valid bytes in final transaction
+                // Calculate valid bytes in final transaction
                 if (qupv3_handle[SPI_RX_TRANS_LEN] == FIFO_ENTRY_SIZE) {
                     rx_last_bytes_valid = FIFO_ENTRY_SIZE;
                 } else if ((qupv3_handle[SPI_RX_TRANS_LEN] - s->read_count) == FIFO_ENTRY_SIZE) {
@@ -433,33 +433,33 @@ public:
                     rx_last_bytes_valid = 0x0;
                 }
 
-                //Update Rx_LAST and valid bytes to be read in final transaction
-                qupv3_handle[GENI_RX_FIFO_STATUS] = ((qupv3_handle[GENI_RX_FIFO_STATUS] & 0x0fffffff) | (rx_last_bytes_valid << RX_LAST_BYTE_VALID_OFF)) | RX_LAST; //Modifying last bytes valid
+                // Update Rx_LAST and valid bytes to be read in final transaction
+                qupv3_handle[GENI_RX_FIFO_STATUS] = ((qupv3_handle[GENI_RX_FIFO_STATUS] & 0x0fffffff) | (rx_last_bytes_valid << RX_LAST_BYTE_VALID_OFF)) | RX_LAST; // Modifying last bytes valid
             }
 
             if (s->read_count == qupv3_handle[SPI_RX_TRANS_LEN]) {
-                //Setting RX_FIFO_LAST in status register
+                // Setting RX_FIFO_LAST in status register
                 if (qupv3_handle[GENI_M_IRQ_ENABLE] & RX_FIFO_LAST) {
                     qupv3_handle[GENI_M_IRQ_STATUS] |= RX_FIFO_LAST;
                 }
 
                 SCP_INFO() << "****MASTER RX Ended****";
-                //print_reg();
-                s->read_done                      = 0x1; //setting done to one since Rx completed
-                s->read_start                     = 0x0; //clearing start
-                s->read_pos                       = 0x0; //clearing read_pos
-                s->write_done                     = 0x0; //clearing write_done
-                qupv3_handle[GENI_M_CMD_0]        = 0x0; //clearing for next transaction
-                qupv3_handle[GENI_RX_FIFO_STATUS] = 0x0; //Clearing FIFO status
+                // print_reg();
+                s->read_done                      = 0x1; // setting done to one since Rx completed
+                s->read_start                     = 0x0; // clearing start
+                s->read_pos                       = 0x0; // clearing read_pos
+                s->write_done                     = 0x0; // clearing write_done
+                qupv3_handle[GENI_M_CMD_0]        = 0x0; // clearing for next transaction
+                qupv3_handle[GENI_RX_FIFO_STATUS] = 0x0; // Clearing FIFO status
 
-                //update CMD_DONE and trigger_irq
+                // update CMD_DONE and trigger_irq
                 if ((qupv3_handle[GENI_M_IRQ_ENABLE] & M_CMD_DONE) && (qupv3_handle[SPI_RX_TRANS_LEN] != 0)) {
                     qupv3_handle[GENI_M_IRQ_STATUS] |= (M_CMD_DONE);
                     trigger_irq();
                 }
             } else {
-                //Updating wordcount needed to be read by software
-                qupv3_handle[GENI_RX_FIFO_STATUS] = ((qupv3_handle[GENI_RX_FIFO_STATUS] & 0xfe000000) | (words_to_read)); //Modifying Wordcount
+                // Updating wordcount needed to be read by software
+                qupv3_handle[GENI_RX_FIFO_STATUS] = ((qupv3_handle[GENI_RX_FIFO_STATUS] & 0xfe000000) | (words_to_read)); // Modifying Wordcount
             }
 
             break;
@@ -472,19 +472,19 @@ public:
         case GENI_RX_FIFO_STATUS:
             /* Read GENI_RX_FIFO_STATUS register */
             rx_last_bytes_valid = 0x0;
-            //Initialize FIFO status for read transaction
+            // Initialize FIFO status for read transaction
             if ((s->read_pos == 0x0) && (s->read_start == 0x1)) {
-                s->read_slots                     = (qupv3_handle[SPI_RX_TRANS_LEN] / FIFO_ENTRY_SIZE) + ((qupv3_handle[SPI_RX_TRANS_LEN] % FIFO_ENTRY_SIZE != 0) ? 1 : 0); //Storing FIFO slots in structure. Each slot = 4 bytes
-                qupv3_handle[GENI_RX_FIFO_STATUS] = s->read_slots;                                                                                                          //Initialize with total word count
+                s->read_slots                     = (qupv3_handle[SPI_RX_TRANS_LEN] / FIFO_ENTRY_SIZE) + ((qupv3_handle[SPI_RX_TRANS_LEN] % FIFO_ENTRY_SIZE != 0) ? 1 : 0); // Storing FIFO slots in structure. Each slot = 4 bytes
+                qupv3_handle[GENI_RX_FIFO_STATUS] = s->read_slots;                                                                                                          // Initialize with total word count
 
-                //Calculate valid bytes in final transaction for wordcount=1 or total length <=4
+                // Calculate valid bytes in final transaction for wordcount=1 or total length <=4
                 if (s->read_slots == 0x1) {
                     rx_last_bytes_valid               = qupv3_handle[SPI_RX_TRANS_LEN];
-                    qupv3_handle[GENI_RX_FIFO_STATUS] = ((qupv3_handle[GENI_RX_FIFO_STATUS] & 0x0fffffff) | (rx_last_bytes_valid << RX_LAST_BYTE_VALID_OFF)) | RX_LAST; //Modifying last bytes valid
+                    qupv3_handle[GENI_RX_FIFO_STATUS] = ((qupv3_handle[GENI_RX_FIFO_STATUS] & 0x0fffffff) | (rx_last_bytes_valid << RX_LAST_BYTE_VALID_OFF)) | RX_LAST; // Modifying last bytes valid
                 }
             }
             r = qupv3_handle[GENI_RX_FIFO_STATUS];
-            if ((r & 0x1ffffff) == 0x0) { //check Wordcount=0. All words are read and hence clearing status
+            if ((r & 0x1ffffff) == 0x0) { // check Wordcount=0. All words are read and hence clearing status
                 r                                 = 0x0;
                 qupv3_handle[GENI_RX_FIFO_STATUS] = 0x0;
             }
@@ -518,7 +518,7 @@ public:
         unsigned char ch;
         switch (offset) {
         case GENI_FORCE_DEFAULT_REG:
-            //TODO: force all GENI register to default values if value is one
+            // TODO: force all GENI register to default values if value is one
             qupv3_handle[GENI_FORCE_DEFAULT_REG] = value;
             SCP_DEBUG() << std::hex << "MASTER WRITE - Addr and value:" << offset << "  " << value;
 
@@ -542,8 +542,8 @@ public:
         case SPI_CPHA:
         case SPI_CPOL:
         case SPI_DEMUX_OUTPUT_INV:
-            //Based on cs_demux_output_inv, output polarity should be changed
-        case SPI_DEMUX_SEL: //SlaveID. As of now, only one slave is present
+            // Based on cs_demux_output_inv, output polarity should be changed
+        case SPI_DEMUX_SEL: // SlaveID. As of now, only one slave is present
         case GENI_TX_PACKING_CFG0:
         case GENI_TX_PACKING_CFG1:
         case SPI_WORD_LEN:
@@ -566,7 +566,7 @@ public:
 
         case GENI_DMA_MODE_EN:
             /* Write to GENI_DMA_MODE_EN register */
-            //Only FIFO mode suported.
+            // Only FIFO mode suported.
             qupv3_handle[GENI_DMA_MODE_EN] = 0;
             SCP_DEBUG() << std::hex << "MASTER WRITE - Addr and value:" << offset << "  " << value;
 
@@ -577,14 +577,14 @@ public:
             SCP_INFO() << std::hex << "MASTER WRITE - Addr(SPI_TX_TRANS_LEN) and value:" << offset << "  " << value;
             if (value >= 0x1) {
                 qupv3_handle[SPI_TX_TRANS_LEN]    = value;
-                s->write_slots                    = (value / FIFO_ENTRY_SIZE) + ((value % FIFO_ENTRY_SIZE != 0) ? 1 : 0); //Storing FIFO slots in structure. Each slot = 4 bytes
-                qupv3_handle[GENI_TX_FIFO_STATUS] = s->write_slots;                                                       //Initialize with word count
-                send_slave(SPI_RX_TRANS_LEN, value);                                                                      //sending transaction length to slave
+                s->write_slots                    = (value / FIFO_ENTRY_SIZE) + ((value % FIFO_ENTRY_SIZE != 0) ? 1 : 0); // Storing FIFO slots in structure. Each slot = 4 bytes
+                qupv3_handle[GENI_TX_FIFO_STATUS] = s->write_slots;                                                       // Initialize with word count
+                send_slave(SPI_RX_TRANS_LEN, value);                                                                      // sending transaction length to slave
 
-                s->write_pos   = 0x0; //Initializing position to zero
-                s->write_start = 0x0; //Setting start to zero
-                s->write_done  = 0x0; //Setting done to zero
-                s->write_count = 0x0; //Initialize current byte count to zero
+                s->write_pos   = 0x0; // Initializing position to zero
+                s->write_start = 0x0; // Setting start to zero
+                s->write_done  = 0x0; // Setting done to zero
+                s->write_count = 0x0; // Initialize current byte count to zero
             } else {
                 qupv3_handle[SPI_TX_TRANS_LEN] = 0x0;
                 SCP_ERR() << std::hex << "Addr(SPI_TX_TRANS_LEN):" << value;
@@ -596,10 +596,10 @@ public:
             if (value >= 0x1) {
                 qupv3_handle[SPI_RX_TRANS_LEN] = value;
 
-                s->read_pos   = 0x0; //Initializing starting index number for reading data from FIFO
-                s->read_start = 0x0; //Setting start to zero
-                s->read_done  = 0x0; //Setting done to zero
-                s->read_count = 0x0; //Initialize current byte count to zero
+                s->read_pos   = 0x0; // Initializing starting index number for reading data from FIFO
+                s->read_start = 0x0; // Setting start to zero
+                s->read_done  = 0x0; // Setting done to zero
+                s->read_count = 0x0; // Initialize current byte count to zero
             } else {
                 qupv3_handle[SPI_RX_TRANS_LEN] = 0x0;
                 SCP_ERR() << std::hex << "Addr(SPI_RX_TRANS_LEN):" << value;
@@ -608,25 +608,25 @@ public:
         case GENI_M_CMD_0:
             /* Handle Opcodes of the SPI transaction */
             SCP_INFO() << std::hex << "MASTER Addr(GENI_M_CMD_0):" << value;
-            s->opcode = value >> M_CMD_OPCODE_START; //Extract incoming opcode
+            s->opcode = value >> M_CMD_OPCODE_START; // Extract incoming opcode
 
             if (qupv3_handle[GENI_M_CMD_0] != 0x0) {
                 SCP_DEBUG() << "MASTER Active transfer. Trying to modify M_CMD0 register. Making register value as per new value";
                 qupv3_handle[GENI_M_CMD_0] = 0x0;
             }
 
-            if ((qupv3_handle[GENI_M_CMD_0] == 0x0)) { //Feed the value only if register is cleared from previous transaction
+            if (qupv3_handle[GENI_M_CMD_0] == 0x0) { // Feed the value only if register is cleared from previous transaction
 
-                //clear IRQ status before starting transactions
+                // clear IRQ status before starting transactions
                 qupv3_handle[GENI_M_IRQ_STATUS] = 0x0;
                 qupv3_handle[GENI_S_IRQ_STATUS] = 0x0;
 
-                //opcode handling
+                // opcode handling
                 switch (s->opcode) {
                 case SPI_TX_ONLY_OPCODE:
                     qupv3_handle[GENI_M_CMD_0] = value;
 
-                    //Update watermark IRQ and trigger IRQ
+                    // Update watermark IRQ and trigger IRQ
                     qupv3_handle[GENI_M_IRQ_STATUS] = (qupv3_handle[GENI_M_IRQ_STATUS] | TX_FIFO_WATERMARK);
                     trigger_irq();
                     break;
@@ -636,14 +636,14 @@ public:
                     qupv3_handle[GENI_M_CMD_0] = value;
                     if (qupv3_handle[SPI_TX_TRANS_LEN] == 0x0) {
                         SCP_INFO() << "MASTER SPI_TX_TRANS_LEN=0x0. Hence skipping Tx";
-                        rcv_slave(qupv3_handle[SPI_RX_TRANS_LEN]); //Get data from slave
+                        rcv_slave(qupv3_handle[SPI_RX_TRANS_LEN]); // Get data from slave
 
-                        //Update watermark IRQ and trigger IRQ
+                        // Update watermark IRQ and trigger IRQ
                         qupv3_handle[GENI_M_IRQ_STATUS] = (qupv3_handle[GENI_M_IRQ_STATUS] | RX_FIFO_WATERMARK);
                         s->read_start                   = 0x1;
                         trigger_irq();
                     } else {
-                        //Update watermark IRQ and trigger IRQ
+                        // Update watermark IRQ and trigger IRQ
                         qupv3_handle[GENI_M_IRQ_STATUS] = (qupv3_handle[GENI_M_IRQ_STATUS] | TX_FIFO_WATERMARK);
                         trigger_irq();
                     }
@@ -651,9 +651,9 @@ public:
 
                 case SPI_RX_ONLY_OPCODE:
                     qupv3_handle[GENI_M_CMD_0] = value;
-                    rcv_slave(qupv3_handle[SPI_RX_TRANS_LEN]); //Get data from slave
+                    rcv_slave(qupv3_handle[SPI_RX_TRANS_LEN]); // Get data from slave
 
-                    //Update watermark IRQ and trigger IRQ
+                    // Update watermark IRQ and trigger IRQ
                     qupv3_handle[GENI_M_IRQ_STATUS] = (qupv3_handle[GENI_M_IRQ_STATUS] | RX_FIFO_WATERMARK);
                     s->read_start                   = 0x1;
                     trigger_irq();
@@ -681,27 +681,27 @@ public:
             /* Write to GENI_M_CMD_CTRL_REG register */
             SCP_INFO() << std::hex << "MASTER WRITE - Addr and value:" << offset << "  " << value;
 
-            //handle abort and cancel transmission bits
+            // handle abort and cancel transmission bits
             qupv3_handle[GENI_M_CMD_CTRL_REG] = value;
             if (qupv3_handle[GENI_M_CMD_CTRL_REG] & M_CMD_CTRL_ABORT) {
-                qupv3_handle[GENI_M_IRQ_STATUS] |= M_CMD_ABORT; //Abort sequence steps
+                qupv3_handle[GENI_M_IRQ_STATUS] |= M_CMD_ABORT; // Abort sequence steps
                 trigger_irq();
             } else if (qupv3_handle[GENI_M_CMD_CTRL_REG] & M_CMD_CTRL_CANCEL) {
-                qupv3_handle[GENI_M_IRQ_STATUS] |= M_CMD_CANCEL; //Cancel sequence steps
+                qupv3_handle[GENI_M_IRQ_STATUS] |= M_CMD_CANCEL; // Cancel sequence steps
                 trigger_irq();
             }
 
-            qupv3_handle[GENI_M_CMD_CTRL_REG] = 0; //Request is handled
+            qupv3_handle[GENI_M_CMD_CTRL_REG] = 0; // Request is handled
             break;
 
         case GENI_M_IRQ_ENABLE:
-            //Setting IRQ enable
+            // Setting IRQ enable
             SCP_DEBUG() << std::hex << "MASTER WRITE - Addr and value:" << offset << "  " << value;
             if (qupv3_handle[SE_IRQ_EN] & GEN_M_EN)
                 qupv3_handle[offset] = value;
             break;
         case GENI_S_IRQ_ENABLE:
-            //Setting IRQ enable
+            // Setting IRQ enable
             SCP_DEBUG() << std::hex << "MASTER WRITE - Addr and value:" << offset << "  " << value;
             if (qupv3_handle[SE_IRQ_EN] & GEN_S_EN)
                 qupv3_handle[offset] = value;
@@ -712,17 +712,17 @@ public:
             qupv3_handle[GENI_M_IRQ_STATUS] &= ~(value);
             irq->write(0);
 
-            if (value & TX_FIFO_WATERMARK) { //Once TX_FIFO_Watermark is cleared from TX, start Rx process
+            if (value & TX_FIFO_WATERMARK) { // Once TX_FIFO_Watermark is cleared from TX, start Rx process
                 SCP_DEBUG() << std::hex << "s->write_done: " << s->write_done << " and opcode: " << s->opcode;
                 if ((s->write_done == 0x1) && ((s->opcode == SPI_FULL_DUPLEX_OPCODE) || (s->opcode == SPI_TX_RX_OPCODE))) {
                     if (s->loopback == 0x0)
-                        rcv_slave(qupv3_handle[SPI_RX_TRANS_LEN]); //Get Data from slave
+                        rcv_slave(qupv3_handle[SPI_RX_TRANS_LEN]); // Get Data from slave
                     else
-                        s->read_start = 0x1; //start reading process
+                        s->read_start = 0x1; // start reading process
 
-                    //Update Rx watermark IRQ and trigger IRQ
+                    // Update Rx watermark IRQ and trigger IRQ
                     qupv3_handle[GENI_M_IRQ_STATUS] |= RX_FIFO_WATERMARK;
-                    //qupv3_handle[GENI_S_IRQ_STATUS] |= RX_FIFO_WATERMARK;
+                    // qupv3_handle[GENI_S_IRQ_STATUS] |= RX_FIFO_WATERMARK;
                     trigger_irq();
                 }
             }
@@ -745,13 +745,13 @@ public:
                 break;
             }
 
-            if ((qupv3_handle[SPI_LOOPBACK_CFG] == 0x1) && (s->opcode != SPI_TX_ONLY_OPCODE)) //supported only in full duplex modes
+            if ((qupv3_handle[SPI_LOOPBACK_CFG] == 0x1) && (s->opcode != SPI_TX_ONLY_OPCODE)) // supported only in full duplex modes
                 s->loopback = 0x1;
             else
                 s->loopback = 0x0;
 
             if (qupv3_handle[SPI_TX_TRANS_LEN] >= 0x1) {
-                if ((s->opcode == SPI_TX_ONLY_OPCODE) || (s->opcode == SPI_FULL_DUPLEX_OPCODE) || (s->opcode = SPI_TX_RX_OPCODE)) { //Opcodes supported for Tx
+                if ((s->opcode == SPI_TX_ONLY_OPCODE) || (s->opcode == SPI_FULL_DUPLEX_OPCODE) || (s->opcode = SPI_TX_RX_OPCODE)) { // Opcodes supported for Tx
                     if (s->write_start == 0x0) {
                         s->write_done  = 0x0;
                         s->write_start = 0x1;
@@ -763,15 +763,15 @@ public:
                     int data      = 0;
                     int num_bytes = 0;
 
-                    //Check for extracting data from last 4bytes as per Tx_len
+                    // Check for extracting data from last 4bytes as per Tx_len
                     if ((qupv3_handle[SPI_TX_TRANS_LEN] / FIFO_ENTRY_SIZE) > 0)
                         data = value;
                     else
-                        data = value & ((1 << (qupv3_handle[SPI_TX_TRANS_LEN] * 8)) - 1); //1 byte - 0xff, 2bytes - 0xffff, 3 bytes - 0xffffff
+                        data = value & ((1 << (qupv3_handle[SPI_TX_TRANS_LEN] * 8)) - 1); // 1 byte - 0xff, 2bytes - 0xffff, 3 bytes - 0xffffff
 
-                    //Track current write bytes received
+                    // Track current write bytes received
                     if ((qupv3_handle[SPI_TX_TRANS_LEN] / FIFO_ENTRY_SIZE) > 0) {
-                        s->write_count = s->write_count + FIFO_ENTRY_SIZE; //Max 4bytes can be FIFO at a time
+                        s->write_count = s->write_count + FIFO_ENTRY_SIZE; // Max 4bytes can be FIFO at a time
                         num_bytes      = FIFO_ENTRY_SIZE;
                     } else {
                         s->write_count = s->write_count + qupv3_handle[SPI_TX_TRANS_LEN];
@@ -779,9 +779,9 @@ public:
                     }
 
                     if (s->loopback == 0x0)
-                        send_slave(GENI_RX_FIFO_0, data); //send data to slave
+                        send_slave(GENI_RX_FIFO_0, data); // send data to slave
                     else {
-                        s->write_pos++; //Loopback: store data in read_fifo
+                        s->write_pos++; // Loopback: store data in read_fifo
                         while (num_bytes != 0) {
                             read_queue.push(data & 0xff);
                             SCP_DEBUG() << "data_byte:" << (data & 0xff);
@@ -792,13 +792,13 @@ public:
 
                     /* Loop for debug purpose Write up to 4 bytes from single FIFO on every request from software */
                     while ((count != FIFO_ENTRY_SIZE) && qupv3_handle[SPI_TX_TRANS_LEN] != 0) {
-                        //ch = ( (value >> (count*8)) & 0xff );
-                        //chr->write(ch);
+                        // ch = ( (value >> (count*8)) & 0xff );
+                        // chr->write(ch);
                         count++;
                         qupv3_handle[SPI_TX_TRANS_LEN] -= 1;
                     }
 
-                    qupv3_handle[GENI_TX_FIFO_STATUS]--; //Decreasing word count
+                    qupv3_handle[GENI_TX_FIFO_STATUS]--; // Decreasing word count
                     /* If no more data is left to write then set CMD_DONE irq bit */
                     if (qupv3_handle[SPI_TX_TRANS_LEN] == 0) {
                         s->write_done  = 0x1;
@@ -807,11 +807,11 @@ public:
 
                         SCP_INFO() << "****MASTER TX Ended****";
 
-                        //Clear IRQ status and line before setting bits
+                        // Clear IRQ status and line before setting bits
                         qupv3_handle[GENI_M_IRQ_STATUS] = 0x0;
                         irq->write(0);
 
-                        if (s->opcode == SPI_TX_ONLY_OPCODE) { //Set IRQ for TX only opcode. For rest opcodes, CMD_DONE will be set post Rx completion
+                        if (s->opcode == SPI_TX_ONLY_OPCODE) { // Set IRQ for TX only opcode. For rest opcodes, CMD_DONE will be set post Rx completion
                             if (qupv3_handle[GENI_M_IRQ_ENABLE] & M_CMD_DONE) {
                                 qupv3_handle[GENI_M_IRQ_STATUS] |= M_CMD_DONE;
                                 qupv3_handle[GENI_M_CMD_0] = 0x0;
@@ -828,7 +828,7 @@ public:
             qupv3_handle[offset] = value;
             SCP_DEBUG() << std::hex << "MASTER WRITE - Addr and value:" << offset << "  " << value;
 
-            if (value == 0) { //Clear watermark bit from status
+            if (value == 0) { // Clear watermark bit from status
                 qupv3_handle[GENI_M_IRQ_STATUS] &= ~(TX_FIFO_WATERMARK);
             }
             break;
@@ -838,7 +838,7 @@ public:
             qupv3_handle[offset] = value;
             SCP_DEBUG() << std::hex << "MASTER WRITE - Addr and value:" << offset << "  " << value;
 
-            if (value == 0) { //Clear watermark bit from status
+            if (value == 0) { // Clear watermark bit from status
                 qupv3_handle[GENI_M_IRQ_STATUS] &= ~(RX_FIFO_WATERMARK);
             }
             break;
@@ -849,7 +849,7 @@ public:
         case SE_IRQ_EN:
         case DMA_GENERAL_CFG:
             /* Write registers based on offset */
-            //Currently, DMA mode is not enabled.
+            // Currently, DMA mode is not enabled.
             SCP_DEBUG() << std::hex << "MASTER WRITE - Addr and value:" << offset << "  " << value;
             qupv3_handle[offset] = value;
             break;
