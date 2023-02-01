@@ -3,7 +3,7 @@ Language: Cpp
 BasedOnStyle: Google
 
 UseTab: Never
-ColumnLimit: 0
+ColumnLimit: 100
 
 IndentWidth: 4
 IndentCaseLabels: false

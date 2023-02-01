@@ -63,19 +63,19 @@ typedef enum {
     GENI_S_IRQ_CLEAR    = ((GENI4_DATA) + 0x48),
 
     // Unhandled register behaviours
-    SE_GSI_EVENT_EN     = ((QUPV3_SE_DMA) + 0x218),
-    GENI_S_IRQ_ENABLE   = ((GENI4_DATA) + 0x44),
-    SE_IRQ_EN           = ((QUPV3_SE_DMA) + 0x21c),
-    GENI_M_IRQ_EN_CLEAR = ((GENI4_DATA) + 0x20),
-    GENI_S_IRQ_EN_CLEAR = ((GENI4_DATA) + 0x50),
-    GENI_M_IRQ_EN_SET   = ((GENI4_DATA) + 0x1c),
-    GENI_S_IRQ_EN_SET   = ((GENI4_DATA) + 0x4c),
-    GENI_DMA_MODE_EN    = ((GENI4_IMAGE_REGS) + 0x158),
-    GENI_S_CMD0         = ((GENI4_DATA) + 0x30),
-    SE_HW_PARAM_0       = ((QUPV3_SE_DMA) + 0x224),
-    SE_HW_PARAM_1       = ((QUPV3_SE_DMA) + 0x228),
-    UNKNOWN_TX_FIFO     = ((GENI4_DATA) + 0x144),
-    GENI_RX_WATERMARK_REG = ((GENI4_DATA) + 0x210),
+    SE_GSI_EVENT_EN           = ((QUPV3_SE_DMA) + 0x218),
+    GENI_S_IRQ_ENABLE         = ((GENI4_DATA) + 0x44),
+    SE_IRQ_EN                 = ((QUPV3_SE_DMA) + 0x21c),
+    GENI_M_IRQ_EN_CLEAR       = ((GENI4_DATA) + 0x20),
+    GENI_S_IRQ_EN_CLEAR       = ((GENI4_DATA) + 0x50),
+    GENI_M_IRQ_EN_SET         = ((GENI4_DATA) + 0x1c),
+    GENI_S_IRQ_EN_SET         = ((GENI4_DATA) + 0x4c),
+    GENI_DMA_MODE_EN          = ((GENI4_IMAGE_REGS) + 0x158),
+    GENI_S_CMD0               = ((GENI4_DATA) + 0x30),
+    SE_HW_PARAM_0             = ((QUPV3_SE_DMA) + 0x224),
+    SE_HW_PARAM_1             = ((QUPV3_SE_DMA) + 0x228),
+    UNKNOWN_TX_FIFO           = ((GENI4_DATA) + 0x144),
+    GENI_RX_WATERMARK_REG     = ((GENI4_DATA) + 0x210),
     GENI_RX_RFR_WATERMARK_REG = ((GENI4_DATA) + 0x214),
 
 } qupv3_reg;
@@ -90,5 +90,7 @@ typedef enum {
 
 #define RX_LAST            (1 << 31)
 #define RX_LAST_BYTE_VALID (1 << 28)
+
+#define GENI_RX_FIFO_MAX 4    /* Must be power of 2 */
 
 #endif

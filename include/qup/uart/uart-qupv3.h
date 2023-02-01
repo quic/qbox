@@ -49,8 +49,6 @@
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
 #include <greensocs/gsutils/ports/target-signal-socket.h>
 
-#include <greensocs/libgssync/async_event.h>
-
 #include "qupv3_regs.h"
 #include <unordered_map>
 #include <scp/report.h>
@@ -67,6 +65,8 @@ typedef QUPv3 uart_qup;
 
 class QUPv3 : public sc_core::sc_module
 {
+    SCP_LOGGER();
+
 public:
     CharBackend* chr;
 
@@ -83,30 +83,24 @@ public:
     /* QUPv3 : <address, data> Handle entity to used in Software */
     /* QUPv3 : Handle entity to used in model */
     unordered_map<uint32_t, uint32_t> qupv3_handle = {
-        { GENI_M_CMD_0, 0x0 },
-        { GENI_M_IRQ_STATUS, 0x0 },
-        { GENI_M_IRQ_CLEAR, 0x0 },
-        { GENI_TX_FIFO_0, 0x0 },
-        { GENI_TX_FIFO_STATUS, 0x0 },
-        { UART_TX_TRANS_LEN, 0x0 },
-        { GENI_RX_FIFO_0, 0x0 },
-        { GENI_S_IRQ_STATUS, 0x0 },
-        { GENI_FW_REVISION_RO, 0x2ff },
-        { GENI_RX_FIFO_STATUS, 0x0 },
-        { SE_HW_PARAM_0, 0x20102864 },
-        { SE_HW_PARAM_1, 0x20204800 },
+        { GENI_M_CMD_0, 0x0 },        { GENI_M_IRQ_STATUS, 0x0 },    { GENI_M_IRQ_CLEAR, 0x0 },
+        { GENI_TX_FIFO_0, 0x0 },      { GENI_TX_FIFO_STATUS, 0x0 },  { UART_TX_TRANS_LEN, 0x0 },
+        { GENI_RX_FIFO_0, 0x0 },      { GENI_S_IRQ_STATUS, 0x0 },    { GENI_FW_REVISION_RO, 0x2ff },
+        { GENI_RX_FIFO_STATUS, 0x0 }, { SE_HW_PARAM_0, 0x20102864 }, { SE_HW_PARAM_1, 0x20204800 },
     };
 
 #ifdef QUP_UART_TEST
     SC_HAS_PROCESS(QUPv3);
     QUPv3(sc_core::sc_module_name name)
-        : irq("irq"), dummy_target("dummy_target")
+        : irq("irq")
+        , dummy_target("dummy_target")
 #else
     SC_HAS_PROCESS(QUPv3);
     QUPv3(sc_core::sc_module_name name)
         : irq("irq")
 #endif
     {
+        SCP_DEBUG(())("Constructor");
         chr = NULL;
 
         socket.register_b_transport(this, &QUPv3::b_transport);
@@ -144,15 +138,24 @@ public:
     }
 
     void qupv3_update() {
-        if ((qupv3_handle[GENI_M_IRQ_STATUS] == M_CMD_DONE) ||
-            (qupv3_handle[GENI_S_IRQ_STATUS] == (RX_FIFO_LAST))) {
-            update_event.notify();
-        }
+        update_event.notify();
     }
 
+    int irq_level() {
+        return (qupv3_handle[GENI_M_IRQ_STATUS] & M_CMD_DONE) ||
+               (qupv3_handle[GENI_S_IRQ_STATUS] & (RX_FIFO_LAST));
+    }
     void qupv3_update_sysc() {
-        irq->write(0);
-        irq->write(1);
+        SCP_DEBUG(())("Writing IRQ = 0x{:x}", irq_level());
+        irq->write(irq_level());
+
+        /* If the s/w has requested a clear, but there is still an outstanding RX, then reset and
+         * resent the IRQ*/
+        if (!irq_level() && qupv3_handle[GENI_RX_FIFO_STATUS]) {
+            qupv3_handle[GENI_S_IRQ_STATUS] |= (RX_FIFO_LAST);
+            SCP_DEBUG(())("Writing IRQ = 0x{:x}", irq_level());
+            irq->write(irq_level());
+        }
     }
 
     uint32_t qupv3_read(uint64_t offset) {
@@ -165,36 +168,50 @@ public:
             r = qupv3_handle[GENI_M_IRQ_STATUS];
             break;
         case GENI_TX_FIFO_STATUS:
-            SCP_DEBUG(SCMOD) << hex << "Ignore for now Addr(GENI_TX_FIFO_STATUS)" << endl;
+            SCP_DEBUG(()) << hex << "Ignore for now Addr(GENI_TX_FIFO_STATUS)";
             r = 0;
             break;
         case GENI_S_IRQ_STATUS:
-            SCP_DEBUG(SCMOD) << hex << "Ignore for now Addr(GENI_S_IRQ_STATUS)" << endl;
+            SCP_DEBUG(()) << hex << "Ignore for now Addr(GENI_S_IRQ_STATUS)";
             r = qupv3_handle[GENI_S_IRQ_STATUS];
-            irq->write(0);
             break;
         case GENI_RX_FIFO_0:
             /* Return Rx FIFO data which we have read using stdout via backend */
-            r                            = qupv3_handle[GENI_RX_FIFO_0];
-            qupv3_handle[GENI_RX_FIFO_0] = 0x0;
+            r = qupv3_handle[GENI_RX_FIFO_0];
+            qupv3_handle[GENI_S_IRQ_STATUS] &= ~RX_FIFO_LAST;
+            {
+                int n = (qupv3_handle[GENI_RX_FIFO_STATUS] >> 28) & (GENI_RX_FIFO_MAX - 1);
+                if (n)
+                    n--;
+                if (n) {
+                    qupv3_handle[GENI_RX_FIFO_STATUS] = (RX_LAST) | (n << 28);
+                    for (int i = 0; i < n; i++) {
+                        qupv3_handle[GENI_RX_FIFO_0] = qupv3_handle[GENI_RX_FIFO_0 + 1];
+                    }
+                } else {
+                    qupv3_handle[GENI_RX_FIFO_STATUS] = 0x0;
+                }
+            }
+            qupv3_update();
             break;
         case GENI_FW_REVISION_RO:
             r = qupv3_handle[GENI_FW_REVISION_RO];
             break;
         case GENI_RX_FIFO_STATUS:
-            r                                 = qupv3_handle[GENI_RX_FIFO_STATUS];
-            qupv3_handle[GENI_RX_FIFO_STATUS] = 0x0;
+            r = qupv3_handle[GENI_RX_FIFO_STATUS];
+            //            qupv3_handle[GENI_RX_FIFO_STATUS] = 0x0;
             break;
         case SE_HW_PARAM_0:
             r = qupv3_handle[SE_HW_PARAM_0];
-            SCP_DEBUG(SCMOD) << hex << "Unhandled READ at offset :" << offset << endl;
+            SCP_DEBUG(()) << hex << "Unhandled READ at offset :" << offset;
             break;
         case SE_HW_PARAM_1:
             r = qupv3_handle[SE_HW_PARAM_1];
-            SCP_DEBUG(SCMOD) << hex << "Unhandled READ at offset :" << offset << endl;
+            SCP_DEBUG(()) << hex << "Unhandled READ at offset :" << offset;
             break;
         default:
-            SCP_WARN(SCMOD) << "Error: qupv3_read() Unhandled read(" << hex << offset << ") :  " << SE_HW_PARAM_0 << endl;
+            SCP_WARN(()) << "Error: qupv3_read() Unhandled read(" << hex << offset
+                         << ") :  " << SE_HW_PARAM_0;
             break;
             r = 0;
             break;
@@ -205,30 +222,34 @@ public:
 
     void qupv3_write(uint64_t offset, uint32_t value) {
         unsigned char ch;
-        SCP_DEBUG(SCMOD) << "in qupv3_write() " << endl;
+        SCP_DEBUG(()) << "in qupv3_write()";
         switch (offset) {
         case GENI_M_CMD_0:
             /* Handle start of the UART Tx transection */
-            SCP_DEBUG(SCMOD) << hex << "Addr(GENI_M_CMD_0):" << value << endl;
+            SCP_DEBUG(()) << hex << "Addr(GENI_M_CMD_0):" << value;
             if ((qupv3_handle[GENI_M_CMD_0] == 0x0) && (value == 0x08000000)) {
                 qupv3_handle[GENI_M_CMD_0] = value;
             }
             break;
         case GENI_M_IRQ_CLEAR:
             /* Clear interrupt before starting UART Tx transection */
-            SCP_DEBUG(SCMOD) << hex << "Addr(GENI_M_IRQ_CLEAR):" << value << endl;
+            SCP_DEBUG(()) << hex << "Addr(GENI_M_IRQ_CLEAR):" << value;
             qupv3_handle[GENI_M_IRQ_STATUS] &= ~(value);
-            irq->write(0);
+            qupv3_update();
             break;
         case GENI_S_IRQ_CLEAR:
             /* Clear interrupt before starting UART Tx transection */
-            SCP_DEBUG(SCMOD) << hex << "Addr(GENI_M_IRQ_CLEAR):" << value << endl;
+            SCP_DEBUG(()) << hex << "Addr(GENI_S_IRQ_CLEAR):" << value;
             qupv3_handle[GENI_S_IRQ_STATUS] &= ~(value);
+            qupv3_update();
             break;
         case GENI_TX_FIFO_0:
-            /* Put single byte to this FIFO register and it should needs to reflect on UART Tx line */
+            /* Put single byte to this FIFO register and it should needs to reflect on UART Tx
+             * line
+             */
             ch = value;
-            if ((qupv3_handle[GENI_M_CMD_0] == 0x08000000) && (qupv3_handle[UART_TX_TRANS_LEN] >= 0x1)) {
+            if ((qupv3_handle[GENI_M_CMD_0] == 0x08000000) &&
+                (qupv3_handle[UART_TX_TRANS_LEN] >= 0x1)) {
                 int count = 0;
 
                 /* Write up to 4 bytes from single FIFO on every request from software */
@@ -246,17 +267,19 @@ public:
                     qupv3_handle[GENI_M_IRQ_STATUS] |= M_CMD_DONE;
                     qupv3_update();
                 }
-            } else
-                SCP_ERR() << "Error: M_CMD_0 and UART_TX_LEN is not set properly" << endl;
-            SCP_DEBUG(SCMOD) << "Char to Tx Addr(GENI_TX_FIFO_0): \"" << ch << "\" " << endl;
+            } else {
+                SCP_ERR() << "Error: M_CMD_0 and UART_TX_LEN is not set properly";
+            }
+            SCP_DEBUG(()) << "Char to Tx Addr(GENI_TX_FIFO_0): \"" << ch << "\" ";
             break;
         case UART_TX_TRANS_LEN:
-            /* Number of bytes to transfer in single transection, for now it should be one byte */
-            SCP_DEBUG(SCMOD) << hex << "Addr(UART_TX_TRANS_LEN):" << value;
+            /* Number of bytes to transfer in single transection, for now it should be one byte
+             */
+            SCP_DEBUG(()) << hex << "Addr(UART_TX_TRANS_LEN):" << value;
             if (value >= 0x1)
                 qupv3_handle[UART_TX_TRANS_LEN] = value;
             else
-                SCP_ERR() << hex << "Error: Addr(UART_TX_TRANS_LEN):" << value << endl;
+                SCP_ERR() << hex << "Error: Addr(UART_TX_TRANS_LEN):" << value;
             break;
         case SE_GSI_EVENT_EN:
         case GENI_S_IRQ_ENABLE:
@@ -270,21 +293,28 @@ public:
         case UNKNOWN_TX_FIFO:
         case GENI_RX_WATERMARK_REG:
         case GENI_RX_RFR_WATERMARK_REG:
-            SCP_DEBUG(SCMOD) << hex << "Unhandled WRITE at offset :" << offset << endl;
+            SCP_DEBUG(()) << hex << "Unhandled WRITE at offset :" << offset;
             break;
         default:
-            SCP_WARN(SCMOD) << hex << "Error: qupv3_write() Unhandled write(" << offset << "): " << value << endl;
+            SCP_WARN(()) << hex << "Error: qupv3_write() Unhandled write(" << offset
+                         << "): " << value;
         }
     }
-
+    int get_fifo_has_space() {
+        return ((qupv3_handle[GENI_RX_FIFO_STATUS] >> 28) < (GENI_RX_FIFO_MAX - 1));
+    }
     static int qupv3_can_receive(void* opaque) {
-        return 1;
+        QUPv3* uart = (QUPv3*)opaque;
+        return uart->get_fifo_has_space();
     }
 
     void qupv3_put_fifo(uint32_t value) {
-        qupv3_handle[GENI_RX_FIFO_0]      = value;
-        qupv3_handle[GENI_S_IRQ_STATUS]   = (RX_FIFO_LAST);
-        qupv3_handle[GENI_RX_FIFO_STATUS] = (RX_LAST) | (RX_LAST_BYTE_VALID);
+        int n = (qupv3_handle[GENI_RX_FIFO_STATUS] >> 28) & (GENI_RX_FIFO_MAX - 1);
+        assert(n < GENI_RX_FIFO_MAX);
+        qupv3_handle[GENI_RX_FIFO_0 + n] = value;
+        n++;
+        qupv3_handle[GENI_S_IRQ_STATUS] |= (RX_FIFO_LAST);
+        qupv3_handle[GENI_RX_FIFO_STATUS] = (RX_LAST) | (n << 28);
         qupv3_update();
     }
 
