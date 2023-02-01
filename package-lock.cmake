@@ -56,7 +56,7 @@ CPMDeclarePackage(base-components
 
 CPMDeclarePackage(systemc-uarts
   NAME systemc-uarts
-  GIT_TAG v2.4.2
+  GIT_TAG v2.4.3
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/components/systemc-uarts.git
   GIT_SHALLOW on
 )
