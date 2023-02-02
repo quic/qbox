@@ -105,3 +105,10 @@ CPMDeclarePackage(qup
   GIT_TAG v0.1.2
   GIT_SHALLOW on
 )
+# SCP
+CPMDeclarePackage(SCP
+  NAME SCP
+  GIT_REPOSITORY ${GREENSOCS_GIT}accellera/systemc-common-practices.git
+  GIT_TAG v0.2.0
+  GIT_SHALLOW on
+)
