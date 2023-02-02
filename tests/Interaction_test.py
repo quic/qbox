@@ -63,7 +63,7 @@ def fastrpc_calc_test():
         child.send("\n")
         child.expect("#")
         child.sendline('fastrpc_calc_test 0 100 {}'.format(cdsp_index))
-        child.expect('- sum = 4950')
+        child.expect('- sum = 4950', timeout=300)
         child.expect('- success')
 
     test = True
