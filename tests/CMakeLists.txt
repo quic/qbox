@@ -12,7 +12,7 @@ macro(gs_add_test test conf_lua image_dir)
 endmacro()
 
 gs_add_test(Makena_fastrpc_calc_test SA8540P_conf.lua "makena/default")
-#gs_add_test(LeMans_fastrpc_calc_test SA8775P_conf.lua "lemans")
+gs_add_test(LeMans_fastrpc_calc_test SA8775P_conf.lua "lemans")
 
 add_test(
     NAME Linux_boot_test
