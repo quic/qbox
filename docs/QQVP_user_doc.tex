@@ -873,6 +873,28 @@ QQVP.
 \end{lstlisting}
 \normalsize
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Example of a problem while running QQVP: virtio-gpu}
+
+The following error indicates that an unspecified error ({\small{\lstinline!VIRTIO_GPU_RESP_ERR_UNSPEC=0x1200!}})
+was generated while processing a virtio-gpu command ({\mbox{{\small{\lstinline!VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING=0x106!}}}).
+
+\small
+\begin{lstlisting}[language=bash]
+    virtio_gpu_virgl_process_cmd: ctrl 0x106, error 0x1200
+\end{lstlisting}
+\normalsize
+
+This could mean that the guest kernel requires a more recent version of QEMU or
+virglrenderer with support to such a command or some of its parameters.
+In this case, you could either:
+
+\begin{itemize}
+\item update the virglrenderer library installed in your system and recompile quic-vp
+\item downgrade the guest kernel to an older version
+\item disable the GPU device by setting the {\small{\lstinline!platform["with_gpu"]!}} option to {\small{\lstinline!false!}}
+\end{itemize}
+
 \clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Verify that QQVP is working}

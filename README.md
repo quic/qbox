@@ -117,6 +117,24 @@ Once the kernel has booted, you can log in with the 'root' account (no password 
 ```
     glxgears
 ```
+
+#### 6.1 Troubleshooting
+
+The following error indicates that an unspecified error (`VIRTIO_GPU_RESP_ERR_UNSPEC = 0x1200`)
+was generated while processing a virtio-gpu command (`VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING = 0x106`).
+
+```sh
+virtio_gpu_virgl_process_cmd: ctrl 0x106, error 0x1200
+```
+
+This could mean that the guest kernel requires a more recent version of QEMU or
+virglrenderer with support to such a command or some of its parameters.
+In this case, you could either:
+
+- update the virglrenderer library installed in your system and recompile quic-vp
+- downgrade the guest kernel to an older version
+- disable the GPU device by setting the `platform["with_gpu"]` option to `false`
+
 ### 7. Explore Sources
 
 The sc_main(), where the virtual platform is created is in `src/main.cc`.
