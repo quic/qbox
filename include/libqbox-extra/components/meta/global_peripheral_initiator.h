@@ -46,6 +46,8 @@ public:
         m_initiator.init_global(dev);
     }
 
+    virtual void initiator_async_run(qemu::Cpu::AsyncJobFn job) override {}
+
 private:
     QemuDevice& m_owner;
 };
