@@ -21,6 +21,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include "greensocs/gsutils/report.h"
+//#include "greensocs/gsutils/report.h"
 #include "greensocs/gsutils/cciutils.h"
+#include "greensocs/gsutils/registers.h"
 #include "greensocs/gsutils/luafile_tool.h"

@@ -389,7 +389,7 @@ protected:
         if (level - static_key > MAX_NAME_SIZE) {
             static_key[MAX_NAME_SIZE - 1] = 0;
             SCP_INFO("lua") << "FATAL Error: parameter name too big (bigger then " << MAX_NAME_SIZE
-                           << "): " << static_key;
+                            << "): " << static_key;
         }
 
         /* is it really a table? */
@@ -443,7 +443,7 @@ protected:
                 if (strcmp(key, "math.huge") == 0 || strcmp(key, "math.pi") == 0 || 0) {
                     if (GC_LUA_DEBUG)
                         SCP_INFO("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key
-                                       << "   (ignored because it's Lua specific)";
+                                        << "   (ignored because it's Lua specific)";
                 } else {
                     double num = lua_tonumber(L, -1);
                     if ((floor(num) == num && num >= 0.0 && num < ldexp(1.0, 64))) {
@@ -487,14 +487,14 @@ protected:
                     strcmp(key, "package.config") == 0 || strcmp(key, "package.path") == 0 || 0) {
                     if (GC_LUA_DEBUG)
                         SCP_INFO("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key
-                                       << "   (ignored because it's Lua specific)";
+                                        << "   (ignored because it's Lua specific)";
                 } else {
                     std::string keys = key;
                     m_broker.set_preset_cci_value(rel(keys),
                                                   cci::cci_value(std::string(lua_tostring(L, -1))));
                     if (GC_LUA_VERBOSE)
                         SCP_INFO("lua") << "(SET " << lua_typename(L, lua_type(L, -1)) << ") "
-                                       << rel(keys).c_str() << " = " << lua_tostring(L, -1);
+                                        << rel(keys).c_str() << " = " << lua_tostring(L, -1);
                     if (should_inc_integer_index_count)
                         ++integer_index_count;
                 }
@@ -506,7 +506,7 @@ protected:
                     strcmp(level, "__index") == 0) {
                     if (GC_LUA_DEBUG)
                         SCP_INFO("lua") << "(" << lua_typename(L, lua_type(L, -1)) << ") " << key
-                                       << "   (ignored to avoid recursion)";
+                                        << "   (ignored to avoid recursion)";
                 } else {
                     if (GC_LUA_DEBUG)
                         SCP_INFO("lua") << "(table) " << key;
