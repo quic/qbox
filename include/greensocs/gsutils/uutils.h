@@ -136,10 +136,10 @@ public:
     inline void set_sig_num(int val) { sig_num = val; }
 
     ~SigHandler() {
-        close(self_sockpair_fd[1]); // terminate the pass_notifier and pass_handler threads.
+        close(self_sockpair_fd[0]); // this should terminate the pass_handler thread.
+        close(self_sockpair_fd[1]);
         if (pass_handler.joinable())
             pass_handler.join();
-        close(self_sockpair_fd[0]);
     }
 
 private:
@@ -240,11 +240,11 @@ public:
 
     ~ProcAliveHandler() {
         close(m_sock_pair_fds[0]);
+        close(m_sock_pair_fds[1]);
         if (parent_alive_checker.joinable())
             parent_alive_checker.join();
         if (child_waiter.joinable())
             child_waiter.join();
-        close(m_sock_pair_fds[1]);
     }
 
     void wait_child(pid_t cpid) {
