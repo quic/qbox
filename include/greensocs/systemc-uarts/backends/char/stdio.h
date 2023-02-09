@@ -86,6 +86,7 @@ public:
 
         atexit(tty_reset);
 
+        gs::SigHandler::get().register_on_exit_cb(tty_reset);
         gs::SigHandler::get().add_sig_handler(SIGINT, gs::SigHandler::Handler_CB::PASS);
         gs::SigHandler::get().register_handler([&](int signo) {
             std::lock_guard<std::mutex> lock(m_mutex);
