@@ -98,7 +98,7 @@ private:
                 case tlm::TLM_IGNORE_COMMAND:
                     return;
                 case tlm::TLM_WRITE_COMMAND:
-                    SCP_INFO(()) << "(write request) cache is used to write " << std::hex
+                    SCP_DEBUG(()) << "(write request) cache is used to write " << std::hex
                                  << iter_len << " bytes starting from: 0x" << std::hex << addr
                                  << ", cache block used starts at: 0x" << std::hex << start_addr
                                  << " and ends at: 0x" << std::hex << end_addr;
@@ -106,7 +106,7 @@ private:
                            reinterpret_cast<unsigned char*>(trans_data_ptr), iter_len);
                     break;
                 case tlm::TLM_READ_COMMAND:
-                    SCP_INFO(()) << "(read request) cache is used to read " << std::hex << iter_len
+                    SCP_DEBUG(()) << "(read request) cache is used to read " << std::hex << iter_len
                                  << " bytes starting from: 0x" << std::hex << addr
                                  << ", cache block used starts at: 0x" << std::hex << start_addr
                                  << " and ends at: 0x" << std::hex << end_addr;
@@ -126,7 +126,7 @@ private:
                     trans.set_response_status(tlm::TLM_OK_RESPONSE);
                 }
                 is_cache_used = true;
-                SCP_INFO(()) << "remaining_len: " << remaining_len;
+                SCP_DEBUG(()) << "remaining_len: " << remaining_len;
             } else {
                 tlm::tlm_dmi t_dmi_data;
                 tlm::tlm_generic_payload t_trans;
@@ -140,7 +140,7 @@ private:
                 bool dmi_ptr_valid = initiator_sockets[id]->get_direct_mem_ptr(
                     (is_cache_used ? t_trans : trans), t_dmi_data);
                 if (dmi_ptr_valid && is_dmi_access_type_granted(t_dmi_data, cmd)) {
-                    SCP_INFO(())
+                    SCP_DEBUG(())
                         << get_access_type_str(cmd)
                         << " data is not in cache, DMI request is successful, granted start addr: "
                            "0x"
@@ -149,7 +149,7 @@ private:
                     m_dmi_cache[t_dmi_data.get_start_address()] = t_dmi_data;
                 } else {
                     initiator_sockets[id]->b_transport((is_cache_used ? t_trans : trans), delay);
-                    SCP_INFO(())
+                    SCP_DEBUG(())
                         << get_access_type_str(cmd)
                         << " data is not in cache, DMI request failed, b_transport used, len: "
                         << std::hex
