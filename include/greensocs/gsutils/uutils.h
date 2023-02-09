@@ -68,14 +68,14 @@ public:
 
     static void exit_sig_handler(int sig) {
         gs::SigHandler::get().set_sig_num(sig);
-        std::exit(EXIT_SUCCESS);
+        std::quick_exit(EXIT_SUCCESS);
     }
 
     static void pass_sig_handler(int sig) {
         gs::SigHandler::get().set_sig_num(sig);
         char ch[1] = { 's' };
         if (::write(gs::SigHandler::get().get_write_sock_end(), &ch, 1) == -1 && errno != EAGAIN)
-            std::exit(EXIT_FAILURE);
+            std::quick_exit(EXIT_FAILURE);
     }
 
     inline void add_sig_handler(int signum, Handler_CB s_cb = Handler_CB::EXIT) {
@@ -95,7 +95,7 @@ public:
     typedef void (*at_exit_cb)();
     inline void register_on_exit_cb(at_exit_cb e_cb) {
         assert(e_cb);
-        std::atexit(e_cb);
+        std::at_quick_exit(e_cb);
     }
 
     inline void add_to_block_set(int signum) { sigaddset(&m_sigs_to_block, signum); }
