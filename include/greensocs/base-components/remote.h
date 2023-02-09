@@ -487,7 +487,7 @@ private:
     bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
         tlm::tlm_dmi* c;
-        SCP_INFO(()) << " " << name() << " get_direct_mem_ptr to address "
+        SCP_DEBUG(()) << " " << name() << " get_direct_mem_ptr to address "
                      << "0x" << std::hex << trans.get_address();
 
 #ifdef DMICACHE
@@ -534,7 +534,7 @@ private:
         tlm::tlm_generic_payload trans;
         t.deep_copy_to_tlm(trans);
 
-        SCP_INFO(()) << " " << name() << " get_direct_mem_ptr " << txn_str(trans);
+        SCP_DEBUG(()) << " " << name() << " get_direct_mem_ptr " << txn_str(trans);
 
         tlm::tlm_dmi dmi_data;
         tlm_dmi_rpc ret;
@@ -551,14 +551,14 @@ private:
     /* Invalidate DMI Interface */
     void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
     {
-        SCP_INFO(()) << " " << name() << " invalidate_direct_mem_ptr "
+        SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
                      << " start address 0x" << std::hex << start << " end address 0x" << std::hex
                      << end;
         client->call("dmi_inv", start, end);
     }
     void invalidate_direct_mem_ptr_rpc(sc_dt::uint64 start, sc_dt::uint64 end)
     {
-        SCP_INFO(()) << " " << name() << " invalidate_direct_mem_ptr "
+        SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
                      << " start address 0x" << std::hex << start << " end address 0x" << std::hex
                      << end;
 #ifdef DMICACHE
@@ -639,6 +639,7 @@ public:
                       "the bridge")
         , p_sync_policy("sync_policy", "multithread-unconstrained", "Sync policy for the remote")
     {
+        SigHandler::get().add_sig_handler(SIGINT, SigHandler::Handler_CB::PASS);
         SCP_DEBUG(()) << "PassRPC constructor";
         SCP_DEBUG(()) << getpid() << " IS THE RPC PID " << std::this_thread::get_id()
                       << " is the thread ID";
