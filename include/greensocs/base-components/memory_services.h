@@ -88,6 +88,7 @@ public:
                               << cl_info << " with size: 0x" << std::hex << sizeof(shm_cleaner_info)
                               << " error: " << std::strerror(errno);
             }
+            cl_info = nullptr;
         }
     }
 
