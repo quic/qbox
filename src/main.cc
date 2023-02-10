@@ -199,7 +199,7 @@ protected:
     QUPv3* m_uart_qup = nullptr;
     IPCC m_ipcc;
 #ifdef newsmmu
-    smmu500<> m_smmu;
+    sc_core::sc_vector<smmu500<>> m_smmus;
     sc_core::sc_vector<smmu500_tbu<>> m_tbus;
 #else
     QemuArmSmmu* m_smmu = nullptr;
@@ -242,7 +242,9 @@ protected:
         if (m_uart_qup)
             m_router.initiator_socket.bind(m_uart_qup->socket);
 #ifdef newsmmu
-        m_router.initiator_socket.bind(m_smmu.socket);
+        for (auto& smmu : m_smmus) {
+            m_router.initiator_socket.bind(smmu.socket);
+        }
 #endif
         m_router.initiator_socket.bind(m_virtio_net_0.socket);
 
@@ -383,9 +385,10 @@ public:
         //        , m_system_imem("system_imem")
         , m_ipcc("ipcc")
 #ifdef newsmmu
-        , m_smmu("smmu")
+        , m_smmus("smmu", gs::sc_cci_list_items(sc_module::name(), "smmu").size(),
+                  [this](const char* n, size_t i) { return new smmu500<>(n); })
         , m_tbus("tbu", p_hexagon_num_clusters,
-                 [this](const char* n, size_t i) { return new smmu500_tbu<>(n, &m_smmu); })
+                 [this](const char* n, size_t i) { return new smmu500_tbu<>(n, &m_smmus[0]); })
 #endif
         , m_virtio_net_0("virtionet0", m_qemu_inst)
         , m_virtio_blks(
@@ -452,14 +455,18 @@ public:
         do_bus_binding();
 
 #ifdef newsmmu
-        // Always bind the SMMU even if there are no hexagones, to ensure
+        // Always bind the SMMU even if there are no hexagons, to ensure
         // complete binding
-        m_smmu.dma_socket.bind(m_router.target_socket);
+        for (auto& smmu : m_smmus) {
+            smmu.dma_socket.bind(m_router.target_socket);
+        }
 #endif
 
         if (p_hexagon_num_clusters) {
             for (int N = 0; N < p_hexagon_num_clusters; N++) {
 #ifndef newsmmu
+                abort(); // fixme multiple SMMU support
+
                 m_smmu = new QemuArmSmmu("smmu", m_hexagon_clusters[N].m_qemu_hex_inst);
                 m_hexagon_clusters[N].m_router.initiator_socket.bind(m_smmu->upstream_socket[N]);
                 m_smmu->downstream_socket[N].bind(m_router.target_socket);
@@ -470,24 +477,26 @@ public:
 #endif
             }
 #ifdef newsmmu
-            {
-                int irq = gs::cci_get<int>(std::string(m_smmu.name()) + ".irq_context");
-                int girq = gs::cci_get<int>(std::string(m_smmu.name()) + ".irq_global");
-                for (int i = 0; i < m_smmu.p_num_cb; i++) {
-                    m_smmu.irq_context[i].bind(m_gic->spi_in[irq + i]);
+            int smmu_index = 0;
+            for (auto& smmu : m_smmus) {
+                /* FIXME: the ARM GIC model cannot support all of the
+                ** interrupts required for all SMMUs, let's just bypass
+                ** this for now.
+                */
+                if (smmu_index > 0) {
+                    break;
                 }
-                m_smmu.irq_global.bind(m_gic->spi_in[girq]);
+
+                int irq = gs::cci_get<int>(std::string(smmu.name()) + ".irq_context");
+                int girq = gs::cci_get<int>(std::string(smmu.name()) + ".irq_global");
+                for (int i = 0; i < smmu.p_num_cb; i++) {
+                    smmu.irq_context[i].bind(m_gic->spi_in[irq + i]);
+                }
+                smmu.irq_global.bind(m_gic->spi_in[girq]);
+                smmu_index++;
             }
 #else
-            m_smmu->dma_socket.bind(m_router.target_socket);
-            {
-                int irq = gs::cci_get<int>(std::string(m_smmu->name()) + ".irq_context");
-                int girq = gs::cci_get<int>(std::string(m_smmu->name()) + ".irq_global");
-                for (int i = 0; i < m_smmu->p_num_cb; i++) {
-                    m_smmu->irq_context[i].bind(m_gic->spi_in[irq + i]);
-                }
-                m_smmu->irq_global.bind(m_gic->spi_in[girq]);
-            }
+            abort(); // FIXME
 #endif
         }
 

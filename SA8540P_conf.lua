@@ -157,7 +157,7 @@ platform = {
     -- qtb = { control_socket = {address=0x15180000, size=0x80000}};
     -- The QTB model is not active in the system, left here for debug purposes.
 
-    smmu = { socket = {address=0x15000000, size=0x100000};
+    smmu_0 = { socket = {address=0x15000000, size=0x100000};
              num_tbu=2;  -- for now, this needs to match the expected number of TBU's
              num_pages=128;
              num_cb=128;
