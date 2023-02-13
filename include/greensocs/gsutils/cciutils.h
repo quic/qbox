@@ -128,7 +128,7 @@ static std::list<std::string> sc_cci_list_items(sc_core::sc_module_name module_n
                                      ? cci_get_broker()
                                      : cci_get_global_broker(cci_originator("gs__sc_cci_children"));
     std::string name = std::string(module_name) + "." + list_name;
-    std::regex search(name + "_[0-9]+\\.");
+    std::regex search(name + "_[0-9]+(\\.|$)");
     std::list<std::string> children;
     int l = strlen(module_name) + 1;
     auto uncon = m_broker.get_unconsumed_preset_values(
