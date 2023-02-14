@@ -17,6 +17,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#include <cassert>
+
 #include <libqemu/libqemu.h>
 
 #include "libqemu-cxx/libqemu-cxx.h"
@@ -125,6 +127,11 @@ uint64_t MemoryRegion::get_size() {
     return m_int->exports().memory_region_size(mr);
 }
 
+void MemoryRegion::init(const Object& owner, const char* name, uint64_t size) {
+    QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
+    m_int->exports().memory_region_init(mr, owner.get_qemu_obj(), name, size);
+}
+
 void MemoryRegion::init_io(Object owner, const char* name, uint64_t size, MemoryRegionOpsPtr ops) {
     QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegionOps* qemu_ops = ops->get_qemu_mr_ops();
@@ -154,7 +161,17 @@ void MemoryRegion::add_subregion(MemoryRegion& mr, uint64_t offset) {
     QemuMemoryRegion* this_mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegion* sub_mr = reinterpret_cast<QemuMemoryRegion*>(mr.m_obj);
 
+    assert(mr.m_priority == 0 && "For priorities use add_subregion_overlap()");
     m_int->exports().memory_region_add_subregion(this_mr, offset, sub_mr);
+    m_subregions.insert(mr);
+    mr.container = this;
+}
+
+void MemoryRegion::add_subregion_overlap(MemoryRegion& mr, uint64_t offset) {
+    QemuMemoryRegion* this_mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
+    QemuMemoryRegion* sub_mr = reinterpret_cast<QemuMemoryRegion*>(mr.m_obj);
+
+    m_int->exports().memory_region_add_subregion_overlap(this_mr, offset, sub_mr, mr.m_priority);
     m_subregions.insert(mr);
     mr.container = this;
 }

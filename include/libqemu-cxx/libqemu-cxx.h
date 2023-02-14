@@ -152,7 +152,7 @@ public:
 
     Object get_prop_link(const char* name);
 
-    QemuObject* get_qemu_obj() { return m_obj; }
+    QemuObject* get_qemu_obj() const { return m_obj; }
 
     LibQemu& get_inst();
     uintptr_t get_inst_id() const { return reinterpret_cast<uintptr_t>(m_int.get()); }
@@ -259,6 +259,7 @@ class MemoryRegion : public Object
 private:
     MemoryRegionOpsPtr m_ops;
     std::set<MemoryRegion> m_subregions;
+    int m_priority = 0;
 
     void internal_del_subregion(const MemoryRegion& mr);
 
@@ -277,13 +278,18 @@ public:
     ~MemoryRegion();
 
     uint64_t get_size();
+    int get_priority() const { return m_priority; }
+    /* Make sure to set the priority before calling `add_subregion_overlap()` */
+    void set_priority(int priority) { m_priority = priority; }
 
+    void init(const Object& owner, const char* name, uint64_t size);
     void init_io(Object owner, const char* name, uint64_t size, MemoryRegionOpsPtr ops);
     void init_ram_ptr(Object owner, const char* name, uint64_t size, void* ptr);
     void init_alias(Object owner, const char* name, const MemoryRegion& root, uint64_t offset,
                     uint64_t size);
 
     void add_subregion(MemoryRegion& mr, uint64_t offset);
+    void add_subregion_overlap(MemoryRegion& mr, uint64_t offset);
     void del_subregion(const MemoryRegion& mr);
 
     MemTxResult dispatch_read(uint64_t addr, uint64_t* data, uint64_t size, MemTxAttrs attrs);
