@@ -53,7 +53,8 @@
 #include "rpc/this_handler.h"
 #include "rpc/this_session.h"
 
-#define GS_Process_Serve_Port "GS_Process_Serve_Port"
+#define GS_Process_Server_Port "GS_Process_Server_Port"
+
 namespace gs {
 
 // #define DMICACHE switchthis on - then you need a mutex
@@ -613,8 +614,30 @@ private:
         }
     }
 
+    using char_array_ptr = std::unique_ptr<char[]>;
+    using array_of_char_array_ptr = std::unique_ptr<char_array_ptr[]>;
+
+    char** add_args(const std::string& exec_path, array_of_char_array_ptr& args,
+                    const std::vector<std::string>& extra_argv)
+    {
+        args = std::make_unique<char_array_ptr[]>(extra_argv.size() + 2);
+        args[0] = std::make_unique<char[]>(exec_path.length() + 1);
+        strcpy(args[0].get(), exec_path.c_str());
+        uint32_t args_counter = 1;
+        if (!extra_argv.empty()) {
+            for (const auto& extra_arg : extra_argv) {
+                args[args_counter] = std::make_unique<char[]>(extra_arg.length() + 1);
+                strcpy(args[args_counter].get(), extra_arg.c_str());
+                args_counter++;
+            }
+        }
+        args[args_counter] = nullptr;
+        return reinterpret_cast<char**>(args.get());
+    }
+
 public:
-    PassRPC(const sc_core::sc_module_name& nm, std::string exec_path = "", int port = 0)
+    PassRPC(const sc_core::sc_module_name& nm, std::string exec_path = "",
+            const std::vector<std::string>& extra_args = std::vector<std::string>())
         : sc_core::sc_module(nm)
         , m_broker(cci::cci_get_broker())
         , initiator_sockets("initiator_socket", TLMPORTS,
@@ -630,7 +653,7 @@ public:
         , target_signal_sockets(
               "target_signal_socket", SIGNALS,
               [this](const char* n, int i) { return new TargetSignalSocket<bool>(n); })
-        , p_cport("client_port", port,
+        , p_cport("client_port", 0,
                   "The port that should be used to connect this client to the "
                   "remote server")
         , p_sport("server_port", 0, "The port that should be used to server on")
@@ -650,8 +673,8 @@ public:
         p_sport = server->port();
         assert(p_sport > 0);
 
-        if (p_cport.get_value() == 0 && m_broker.has_preset_value(GS_Process_Serve_Port)) {
-            p_cport = gs::cci_get<int>(GS_Process_Serve_Port);
+        if (p_cport.get_value() == 0 && getenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str())) {
+            p_cport = std::stoi(std::string(getenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str())));
         }
 
         // other end contacted us, connect to their port
@@ -775,9 +798,9 @@ public:
                 SigHandler::get().set_nosig_chld_stop();
                 SigHandler::get().add_sig_handler(SIGCHLD, SigHandler::Handler_CB::EXIT);
             } else if (m_child_pid == 0) {
-                char conf_arg[100];
-                snprintf(conf_arg, 100, "%s=%d", GS_Process_Serve_Port, (int)p_sport);
-                execlp(exec_path.c_str(), exec_path.c_str(), "-p", conf_arg, nullptr);
+                array_of_char_array_ptr args;
+                setenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str(), std::to_string(p_sport).c_str(), 1);
+                execv(exec_path.c_str(), add_args(exec_path, args, extra_args));
                 // execlp("lldb", "lldb", "--", exec_path.c_str(), exec_path.c_str(), "-p",
                 // conf_arg, nullptr);
                 SCP_FATAL(()) << "Unable to find executable for remote";
