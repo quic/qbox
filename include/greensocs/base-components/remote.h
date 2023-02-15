@@ -44,6 +44,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <algorithm>
 
 #include "memory_services.h"
 
@@ -614,27 +615,6 @@ private:
         }
     }
 
-    using char_array_ptr = std::unique_ptr<char[]>;
-    using array_of_char_array_ptr = std::unique_ptr<char_array_ptr[]>;
-
-    char** add_args(const std::string& exec_path, array_of_char_array_ptr& args,
-                    const std::vector<std::string>& extra_argv)
-    {
-        args = std::make_unique<char_array_ptr[]>(extra_argv.size() + 2);
-        args[0] = std::make_unique<char[]>(exec_path.length() + 1);
-        strcpy(args[0].get(), exec_path.c_str());
-        uint32_t args_counter = 1;
-        if (!extra_argv.empty()) {
-            for (const auto& extra_arg : extra_argv) {
-                args[args_counter] = std::make_unique<char[]>(extra_arg.length() + 1);
-                strcpy(args[args_counter].get(), extra_arg.c_str());
-                args_counter++;
-            }
-        }
-        args[args_counter] = nullptr;
-        return reinterpret_cast<char**>(args.get());
-    }
-
 public:
     PassRPC(const sc_core::sc_module_name& nm, std::string exec_path = "",
             const std::vector<std::string>& extra_args = std::vector<std::string>())
@@ -798,12 +778,17 @@ public:
                 SigHandler::get().set_nosig_chld_stop();
                 SigHandler::get().add_sig_handler(SIGCHLD, SigHandler::Handler_CB::EXIT);
             } else if (m_child_pid == 0) {
-                array_of_char_array_ptr args;
+                std::vector<const char*> argp;
+                argp.reserve(extra_args.size() + 2);
+                argp.push_back(exec_path.c_str());
+                std::transform(extra_args.begin(), extra_args.end(),std::back_inserter(argp), [](const std::string &s){return s.c_str();});
+                argp.push_back(0);
                 setenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str(), std::to_string(p_sport).c_str(), 1);
-                execv(exec_path.c_str(), add_args(exec_path, args, extra_args));
+                execv(exec_path.c_str(), const_cast<char**>(&argp[0]));
+
                 // execlp("lldb", "lldb", "--", exec_path.c_str(), exec_path.c_str(), "-p",
                 // conf_arg, nullptr);
-                SCP_FATAL(()) << "Unable to find executable for remote";
+                SCP_FATAL(()) << "Unable to exec the remote child process, error: " << std::strerror(errno);
             } else {
                 SCP_FATAL(()) << "failed to fork remote process, error: " << std::strerror(errno);
             }
