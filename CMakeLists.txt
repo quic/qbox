@@ -10,7 +10,8 @@ set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repo
 
 execute_process(COMMAND git config --get remote.origin.url
     OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE GIT_URL)
+    OUTPUT_VARIABLE GIT_URL
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 string(REGEX REPLACE "(.*)/${PACKAGE_PATH}.git$" "\\1/" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
 string(REGEX REPLACE "(.*)/sandboxes/[^\/]*/(.*)" "\\1/" GREENSOCS_GIT_ORIGIN "${GREENSOCS_GIT_ORIGIN}")
