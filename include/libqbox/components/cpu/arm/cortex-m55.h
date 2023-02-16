@@ -1,6 +1,6 @@
 /*
  *  This file is part of libqbox
- *  Copyright (c) 2021 Greensocs
+ * Copyright(c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -27,7 +27,7 @@
 #include "libqbox/components/cpu/cpu.h"
 #include "libqbox/ports/target-signal-socket.h"
 
-class CpuArmCortexM7 : public QemuCpu
+class CpuArmCortexM55 : public QemuCpu
 {
 public:
     static constexpr qemu::Target ARCH = qemu::Target::AARCH64;
@@ -36,8 +36,8 @@ public:
     QemuNvicArmv7m m_nvic;
     cci::cci_param<uint64_t> p_init_nsvtor;
 
-    CpuArmCortexM7(sc_core::sc_module_name name, QemuInstance& inst)
-        : QemuCpu(name, inst, "cortex-m7-arm")
+    CpuArmCortexM55(sc_core::sc_module_name name, QemuInstance& inst)
+        : QemuCpu(name, inst, "cortex-m55-arm")
         , m_nvic("nvic", inst)
         , p_start_powered_off("start_powered_off", false,
                               "Start and reset the CPU "
