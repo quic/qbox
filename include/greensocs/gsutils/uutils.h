@@ -138,6 +138,7 @@ public:
     ~SigHandler() {
         close(self_sockpair_fd[0]); // this should terminate the pass_handler thread.
         close(self_sockpair_fd[1]);
+        stop_running = true;
         if (pass_handler.joinable())
             pass_handler.join();
     }
@@ -152,7 +153,7 @@ private:
                 ret = poll(&self_pipe_monitor, 1, 300);
                 if ((ret == -1 && errno == EINTR) || (ret == 0) /*timeout*/)
                     continue;
-                else if (self_pipe_monitor.revents & POLLHUP) {
+                else if (self_pipe_monitor.revents & (POLLHUP | POLLERR | POLLNVAL)) {
                     return;
                 } else if (self_pipe_monitor.revents & POLLIN) {
                     char ch[1];
@@ -309,7 +310,7 @@ public:
             ret = poll(&parent_connected_monitor, 1, -1);
             if (ret == -1 && errno == EINTR)
                 continue;
-            else if (parent_connected_monitor.revents & POLLHUP) {
+            else if (parent_connected_monitor.revents & (POLLHUP | POLLERR | POLLNVAL)) {
                 on_parent_exit();
                 exit(EXIT_SUCCESS);
             } else {
