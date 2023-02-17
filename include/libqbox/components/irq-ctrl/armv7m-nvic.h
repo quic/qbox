@@ -66,6 +66,7 @@ public:
          * depending on cpu features (See hw/intc/armv7m_nvic.c realize
          * function in qemu code).
          */
+        QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 
         qemu::SysBusDevice sbd(m_dev);
