@@ -896,6 +896,41 @@ In this case, you could either:
 \end{itemize}
 
 \clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Example of a problem while running QQVP: port forwards}
+
+The following error indicates that QQVP could not setup a port forwarding
+rule.  This is generally due to a failed attempt to bind a given listening port
+to {\small{\lstinline!INADDR_ANY!}} on the host.
+
+\small
+\begin{lstlisting}[language=bash]
+    Could not set up host forwarding rule `tcp::9999-:9999'
+\end{lstlisting}
+\normalsize
+
+Typical causes are: another instance of QQVP is already running and has
+claimed this port, a system service is using this ports.
+
+To avoid this issue, you should edit your
+{\small{\lstinline!$QQVP_IMAGE_DIR/conf.lua!}} to use different host ports
+instead -- for example, ``9998'' instead of ``9999''.
+
+\small
+\begin{lstlisting}[language=bash]
+tableMerge(platform, {
+    ...
+    virtionet0 = { mem = {address=0x1c120000, size=0x10000}, irq=18, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21,hostfwd=tcp::9998-:1919"};
+    ...
+});
+\end{lstlisting}
+\normalsize
+
+The {\small{\lstinline!netstat!}} command on many hosts can show which
+ports are already in use.  Consult your host system's manuals for details
+on how to query for TCP ports.
+
+\clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Verify that QQVP is working}
 
