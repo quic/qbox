@@ -23,6 +23,7 @@
 
 #include "libqbox/components/device.h"
 #include "libqbox/ports/target.h"
+#include "libqbox/ports/target-signal-socket.h"
 
 class QemuNvicArmv7m : public QemuDevice
 {

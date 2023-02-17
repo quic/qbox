@@ -25,7 +25,6 @@
 
 #include "libqbox/components/irq-ctrl/armv7m-nvic.h"
 #include "libqbox/components/cpu/cpu.h"
-#include "libqbox/ports/target-signal-socket.h"
 
 class CpuArmCortexM7 : public QemuCpu
 {
