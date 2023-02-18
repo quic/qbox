@@ -10,7 +10,7 @@ CPMDeclarePackage(libqbox
 # libgsutils
 CPMDeclarePackage(libgsutils
   NAME libgsutils
-  GIT_TAG v2.6.2
+  GIT_TAG v2.6.3
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgsutils.git
   GIT_SHALLOW on
 )
