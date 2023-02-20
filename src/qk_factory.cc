@@ -37,6 +37,8 @@ std::shared_ptr<gs::tlm_quantumkeeper_extended> tlm_quantumkeeper_factory(std::s
         return std::make_shared<gs::tlm_quantumkeeper_multi_rolling>();
     if (name == "multithread-unconstrained")
         return std::make_shared<gs::tlm_quantumkeeper_unconstrained>();
+    if (name == "multithread-freerunning")
+        return std::make_shared<gs::tlm_quantumkeeper_freerunning>();
     return nullptr;
 }
 } // namespace gs

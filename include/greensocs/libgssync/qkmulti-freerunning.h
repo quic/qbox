@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 GreenSocs
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,14 +21,27 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include "greensocs/libgssync/async_event.h"
-#include "greensocs/libgssync/inlinesync.h"
-#include "greensocs/libgssync/runonsysc.h"
+#ifndef QKMULTI_FREERUNNING_H
+#define QKMULTI_FREERUNNING_H
+
 #include "greensocs/libgssync/qkmultithread.h"
-#include "greensocs/libgssync/qkmulti-quantum.h"
-#include "greensocs/libgssync/qkmulti-rolling.h"
-#include "greensocs/libgssync/qkmulti-adaptive.h"
-#include "greensocs/libgssync/qkmulti-unconstrained.h"
-#include "greensocs/libgssync/qkmulti-freerunning.h"
-#include "greensocs/libgssync/realtimelimiter.h"
-#include "greensocs/libgssync/qk_factory.h"
+
+namespace gs {
+class tlm_quantumkeeper_freerunning : public tlm_quantumkeeper_multithread
+{
+    virtual void sync() override {
+        if (is_sysc_thread()) {
+            assert(m_local_time >= sc_core::sc_time_stamp());
+            sc_core::sc_time t = m_local_time - sc_core::sc_time_stamp();
+            m_tick.notify();
+            sc_core::wait(t);
+        } else {
+            /* Wake up the SystemC thread if it's waiting for us to keep up */
+            m_tick.notify();
+        }
+    }
+
+    virtual bool need_sync() override { return false; }
+};
+} // namespace gs
+#endif

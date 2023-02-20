@@ -196,6 +196,7 @@ The libgssync library allows you to set several values to the `p_sync_policy` pa
 - `multithread-quantum`
 - `multithread-rolling`
 - `multithread-unconstrained`
+- `multithread-freerunning`
 
 By default the parameter is set to `multithread-quantum`.
 
