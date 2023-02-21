@@ -778,14 +778,18 @@ public:
             argp.push_back(exec_path.c_str());
             std::transform(extra_args.begin(), extra_args.end(),std::back_inserter(argp), [](const std::string &s){return s.c_str();});
             argp.push_back(0);
-
+            char val[21]; // can't be bigger than this.
+            sprintf(val,"%d",p_sport.get_value());
             m_child_pid = fork();
             if (m_child_pid > 0) {
                 pahandler.setup_parent_conn_checker();
                 SigHandler::get().set_nosig_chld_stop();
                 SigHandler::get().add_sig_handler(SIGCHLD, SigHandler::Handler_CB::EXIT);
             } else if (m_child_pid == 0) {
-                setenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str(), std::to_string(p_sport).c_str(), 1);
+                char key[strlen(GS_Process_Server_Port) + 20 + 1]; // can't be bigger than this.
+                sprintf(key, "%s%d", GS_Process_Server_Port, getpid());
+                setenv(key, val, 1);
+
                 execv(exec_path.c_str(), const_cast<char**>(&argp[0]));
 
                 // execlp("lldb", "lldb", "--", exec_path.c_str(), exec_path.c_str(), "-p",
