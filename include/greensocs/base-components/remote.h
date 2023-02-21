@@ -772,17 +772,19 @@ public:
         if (!exec_path.empty()) {
             SCP_INFO(()) << "Forking remote " << exec_path;
             pahandler.init_peer_conn_checker();
+
+            std::vector<const char*> argp;
+            argp.reserve(extra_args.size() + 2);
+            argp.push_back(exec_path.c_str());
+            std::transform(extra_args.begin(), extra_args.end(),std::back_inserter(argp), [](const std::string &s){return s.c_str();});
+            argp.push_back(0);
+
             m_child_pid = fork();
             if (m_child_pid > 0) {
                 pahandler.setup_parent_conn_checker();
                 SigHandler::get().set_nosig_chld_stop();
                 SigHandler::get().add_sig_handler(SIGCHLD, SigHandler::Handler_CB::EXIT);
             } else if (m_child_pid == 0) {
-                std::vector<const char*> argp;
-                argp.reserve(extra_args.size() + 2);
-                argp.push_back(exec_path.c_str());
-                std::transform(extra_args.begin(), extra_args.end(),std::back_inserter(argp), [](const std::string &s){return s.c_str();});
-                argp.push_back(0);
                 setenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str(), std::to_string(p_sport).c_str(), 1);
                 execv(exec_path.c_str(), const_cast<char**>(&argp[0]));
 
