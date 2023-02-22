@@ -45,13 +45,11 @@
 #include <functional>
 #include <vector>
 #include <atomic>
-
-#define QUIT_SIG_VAL    -2
-#define DEFAULT_SIG_VAL -1
+#include <systemc>
 
 namespace gs {
 
-class SigHandler
+class SigHandler : public sc_core::sc_prim_channel
 {
 public:
     static SigHandler& get() {
@@ -66,16 +64,10 @@ public:
         DFL,  // default
     };
 
-    static void exit_sig_handler(int sig) {
-        gs::SigHandler::get().set_sig_num(sig);
-        std::quick_exit(EXIT_SUCCESS);
-    }
-
     static void pass_sig_handler(int sig) {
         gs::SigHandler::get().set_sig_num(sig);
         char ch[1] = { 's' };
-        if (::write(gs::SigHandler::get().get_write_sock_end(), &ch, 1) == -1 && errno != EAGAIN)
-            std::quick_exit(EXIT_FAILURE);
+        ::write(gs::SigHandler::get().get_write_sock_end(), &ch, 1);
     }
 
     inline void add_sig_handler(int signum, Handler_CB s_cb = Handler_CB::EXIT) {
@@ -92,11 +84,7 @@ public:
         _update_sig_cb(signum, s_cb);
     }
 
-    typedef void (*at_exit_cb)();
-    inline void register_on_exit_cb(at_exit_cb e_cb) {
-        assert(e_cb);
-        std::at_quick_exit(e_cb);
-    }
+    inline void register_on_exit_cb(std::function<void()> cb) { exit_handlers.push_back(cb); }
 
     inline void add_to_block_set(int signum) { sigaddset(&m_sigs_to_block, signum); }
 
@@ -125,10 +113,7 @@ public:
 
     inline void register_handler(std::function<void(int)> handler) {
         handlers.push_back(handler);
-        if (!is_pass_handler_requested) {
-            _start_pass_signal_handler();
-            is_pass_handler_requested = true;
-        }
+        _start_pass_signal_handler();
     }
 
     inline int get_write_sock_end() const { return self_sockpair_fd[1]; }
@@ -145,12 +130,14 @@ public:
 
 private:
     void _start_pass_signal_handler() {
+        if (is_pass_handler_requested)
+            return;
         pass_handler = std::thread([this]() {
             self_pipe_monitor.fd = self_sockpair_fd[0];
             self_pipe_monitor.events = POLLIN;
             int ret;
             while (!stop_running) {
-                ret = poll(&self_pipe_monitor, 1, 300);
+                ret = poll(&self_pipe_monitor, 1, 500);
                 if ((ret == -1 && errno == EINTR) || (ret == 0) /*timeout*/)
                     continue;
                 else if (self_pipe_monitor.revents & (POLLHUP | POLLERR | POLLNVAL)) {
@@ -161,17 +148,33 @@ private:
                         perror("pipe read");
                         exit(EXIT_FAILURE);
                     }
-                    for (auto handler : handlers)
-                        handler(sig_num);
+                    if (m_signals[sig_num] == Handler_CB::EXIT) {
+                        for (auto on_exit_cb : exit_handlers)
+                            on_exit_cb();
+                        if (sc_core::sc_get_status() < sc_core::SC_START_OF_SIMULATION)
+                            _Exit(EXIT_SUCCESS);
+                        stop_running = true;
+                        async_request_update();
+                    } else {
+                        for (auto handler : handlers)
+                            handler(sig_num);
+                    }
                 } else {
                     exit(EXIT_FAILURE);
                 }
             }
         });
+        is_pass_handler_requested = true;
+    }
+
+    void update() {
+        if (stop_running)
+            sc_core::sc_stop();
     }
 
     SigHandler()
-        : m_signals{ { SIGINT, Handler_CB::EXIT },  { SIGTERM, Handler_CB::EXIT },
+        : sc_core::sc_prim_channel("SigHandler")
+        , m_signals{ { SIGINT, Handler_CB::EXIT },  { SIGTERM, Handler_CB::EXIT },
                      { SIGQUIT, Handler_CB::EXIT }, { SIGSEGV, Handler_CB::EXIT },
                      { SIGABRT, Handler_CB::EXIT }, { SIGBUS, Handler_CB::EXIT } }
         , is_pass_handler_requested{ false }
@@ -194,8 +197,9 @@ private:
     inline void _update_sig_cb(int signum, Handler_CB s_cb) {
         switch (s_cb) {
         case Handler_CB::EXIT:
-            exit_act.sa_handler = SigHandler::exit_sig_handler;
+            exit_act.sa_handler = SigHandler::pass_sig_handler;
             sigaction(signum, &exit_act, NULL);
+            _start_pass_signal_handler();
             break;
         case Handler_CB::PASS:
             pass_act.sa_handler = SigHandler::pass_sig_handler;
@@ -224,6 +228,7 @@ private:
     struct pollfd self_pipe_monitor;
     std::thread pass_handler;
     std::vector<std::function<void(int)>> handlers;
+    std::vector<std::function<void()>> exit_handlers;
     bool is_pass_handler_requested;
     std::atomic_bool stop_running;
     std::atomic_int32_t sig_num;
@@ -237,11 +242,13 @@ private:
 class ProcAliveHandler
 {
 public:
-    ProcAliveHandler(): m_is_ppid_set{ false }, m_is_parent_setup_called{ false } {}
+    ProcAliveHandler()
+        : stop_running(false), m_is_ppid_set{ false }, m_is_parent_setup_called{ false } {}
 
     ~ProcAliveHandler() {
         close(m_sock_pair_fds[0]);
         close(m_sock_pair_fds[1]);
+        stop_running = true;
         if (parent_alive_checker.joinable())
             parent_alive_checker.join();
         if (child_waiter.joinable())
@@ -306,9 +313,9 @@ public:
         parent_connected_monitor.fd = m_sock_pair_fds[1];
         parent_connected_monitor.events = POLLIN;
         int ret = 0;
-        for (;;) {
-            ret = poll(&parent_connected_monitor, 1, -1);
-            if (ret == -1 && errno == EINTR)
+        while (!stop_running) {
+            ret = poll(&parent_connected_monitor, 1, 500);
+            if ((ret == -1 && errno == EINTR) || (ret == 0) /*timeout*/)
                 continue;
             else if (parent_connected_monitor.revents & (POLLHUP | POLLERR | POLLNVAL)) {
                 on_parent_exit();
@@ -335,6 +342,7 @@ private:
     }
 
 private:
+    std::atomic_bool stop_running;
     pid_t m_ppid;
     std::thread child_waiter;
     std::thread parent_alive_checker;
