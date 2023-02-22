@@ -490,7 +490,7 @@ private:
     {
         tlm::tlm_dmi* c;
         SCP_DEBUG(()) << " " << name() << " get_direct_mem_ptr to address "
-                     << "0x" << std::hex << trans.get_address();
+                      << "0x" << std::hex << trans.get_address();
 
 #ifdef DMICACHE
         c = in_cache(trans.get_address());
@@ -554,15 +554,15 @@ private:
     void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
     {
         SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
-                     << " start address 0x" << std::hex << start << " end address 0x" << std::hex
-                     << end;
+                      << " start address 0x" << std::hex << start << " end address 0x" << std::hex
+                      << end;
         client->call("dmi_inv", start, end);
     }
     void invalidate_direct_mem_ptr_rpc(sc_dt::uint64 start, sc_dt::uint64 end)
     {
         SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
-                     << " start address 0x" << std::hex << start << " end address 0x" << std::hex
-                     << end;
+                      << " start address 0x" << std::hex << start << " end address 0x" << std::hex
+                      << end;
 #ifdef DMICACHE
         cache_clean(start, end);
 #endif
@@ -653,8 +653,10 @@ public:
         p_sport = server->port();
         assert(p_sport > 0);
 
-        if (p_cport.get_value() == 0 && getenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str())) {
-            p_cport = std::stoi(std::string(getenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str())));
+        if (p_cport.get_value() == 0 &&
+            getenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str())) {
+            p_cport = std::stoi(std::string(
+                getenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str())));
         }
 
         // other end contacted us, connect to their port
@@ -776,10 +778,11 @@ public:
             std::vector<const char*> argp;
             argp.reserve(extra_args.size() + 2);
             argp.push_back(exec_path.c_str());
-            std::transform(extra_args.begin(), extra_args.end(),std::back_inserter(argp), [](const std::string &s){return s.c_str();});
+            std::transform(extra_args.begin(), extra_args.end(), std::back_inserter(argp),
+                           [](const std::string& s) { return s.c_str(); });
             argp.push_back(0);
             char val[21]; // can't be bigger than this.
-            sprintf(val,"%d",p_sport.get_value());
+            sprintf(val, "%d", p_sport.get_value());
             m_child_pid = fork();
             if (m_child_pid > 0) {
                 pahandler.setup_parent_conn_checker();
@@ -794,7 +797,8 @@ public:
 
                 // execlp("lldb", "lldb", "--", exec_path.c_str(), exec_path.c_str(), "-p",
                 // conf_arg, nullptr);
-                SCP_FATAL(()) << "Unable to exec the remote child process, error: " << std::strerror(errno);
+                SCP_FATAL(()) << "Unable to exec the remote child process, error: "
+                              << std::strerror(errno);
             } else {
                 SCP_FATAL(()) << "failed to fork remote process, error: " << std::strerror(errno);
             }
