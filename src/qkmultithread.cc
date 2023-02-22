@@ -35,6 +35,7 @@
 #include "greensocs/libgssync/qk_extendedif.h"
 #include "greensocs/libgssync/qkmultithread.h"
 #include <greensocs/libgsutils.h>
+#include <greensocs/gsutils/uutils.h>
 
 namespace gs {
 /* constantly monitor SystemC and dont let it get ahead of the
@@ -82,6 +83,7 @@ tlm_quantumkeeper_multithread::tlm_quantumkeeper_multithread()
                       &opt);
 
     reset();
+    SigHandler::get().register_on_exit_cb([this](){stop();});
 }
 
 bool tlm_quantumkeeper_multithread::is_sysc_thread() const {

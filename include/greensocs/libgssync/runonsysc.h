@@ -31,6 +31,7 @@
 #include <future>
 
 #include "greensocs/libgssync/async_event.h"
+#include <greensocs/gsutils/uutils.h>
 
 namespace gs {
 class RunOnSysC : public sc_core::sc_module
@@ -129,6 +130,7 @@ public:
     {
         SC_HAS_PROCESS(RunOnSysC);
         SC_THREAD(jobs_handler);
+        SigHandler::get().register_on_exit_cb([this](){cancel_all();});
     }
 
     /**
