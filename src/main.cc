@@ -52,6 +52,7 @@
 #include <greensocs/base-components/memory.h>
 #include <greensocs/base-components/pass.h>
 #include <greensocs/base-components/memorydumper.h>
+#include <greensocs/base-components/remote.h>
 #include "greensocs/systemc-uarts/uart-pl011.h"
 #include "greensocs/systemc-uarts/backends/char-backend.h"
 #include <greensocs/systemc-uarts/backends/char/stdio.h>
@@ -74,6 +75,8 @@
 #define ARCH_TIMER_NS_EL1_IRQ (16 + 14)
 #define ARCH_TIMER_NS_EL2_IRQ (16 + 10)
 
+#define PASSRPC_TLM_PORTS_NUM 20
+#define PASSRPC_SIGNALS_NUM   20
 #define newsmmu
 
 class hexagon_cluster : public sc_core::sc_module
@@ -168,6 +171,65 @@ public:
     }
 };
 
+/*
+ ** Plugin for remote connected models.
+ ** FIXME: for now smmu500 is the only model which can be
+ ** configured from a conf.lua and added to the local PassRPC
+ ** hierarchy. The plugin should be more generic in future.
+ */
+#ifdef newsmmu
+class SMMUConnectedPassRPC : public sc_core::sc_module
+{
+public:
+    SMMUConnectedPassRPC(const sc_core::sc_module_name& p_name, smmu500<>* p_smmu)
+        : sc_core::sc_module(p_name)
+        , m_irqs_num(gs::sc_cci_list_items(name(), "irq").size())
+        , m_smmu500_tbus_num(gs::sc_cci_list_items(name(), "smmu500_tbu").size())
+        , argv(get_argv())
+        , remote_exec_path("remote_exec_path", "", "Remote process executable path")
+        , m_smmu500_tbus("smmu500_tbu", m_smmu500_tbus_num,
+                         [&](const char* n, size_t i) { return new smmu500_tbu<>(n, p_smmu); })
+        , m_remote("local_pass", remote_exec_path.get_value(), argv) {}
+
+    void bind_tlm_ports(gs::Router<>& router) {
+        for (int i = 0; i < m_smmu500_tbus_num; i++) {
+            m_remote.initiator_sockets[i].bind(m_smmu500_tbus[i].upstream_socket);
+            m_smmu500_tbus[i].downstream_socket.bind(router.target_socket);
+        }
+        router.initiator_socket.bind(m_remote.target_sockets[0]);
+    }
+
+    void bind_irqs(QemuArmGicv3* gic) {
+        for (uint32_t i = 0; i < m_irqs_num; ++i) {
+            int irq = gs::cci_get<int>(std::string(this->name()) + ".irq_" + std::to_string(i));
+            m_remote.initiator_signal_sockets[i].bind(gic->spi_in[irq]);
+        }
+    }
+
+private:
+    std::vector<std::string> get_argv() {
+        std::vector<std::string> argv;
+        std::list<std::string> argv_cci_children = gs::sc_cci_children(
+            (std::string(name()) + ".remote_argv").c_str());
+        std::transform(argv_cci_children.begin(), argv_cci_children.end(), std::back_inserter(argv),
+                       [this](std::string arg) {
+                           std::string args = (std::string(name()) + ".remote_argv." + arg);
+                           return gs::cci_get<std::string>(args + ".key") + "=" +
+                                  gs::cci_get<std::string>(args + ".val");
+                       });
+        return argv;
+    }
+
+private:
+    uint32_t m_irqs_num;
+    uint32_t m_smmu500_tbus_num;
+    std::vector<std::string> argv;
+    cci::cci_param<std::string> remote_exec_path;
+    sc_core::sc_vector<smmu500_tbu<>> m_smmu500_tbus;
+    gs::PassRPC<PASSRPC_TLM_PORTS_NUM, PASSRPC_SIGNALS_NUM> m_remote;
+};
+#endif
+
 class GreenSocsPlatform : public sc_core::sc_module
 {
 protected:
@@ -218,6 +280,10 @@ protected:
     gs::Loader<> m_loader;
 
     qtb<>* m_qtb;
+
+#ifdef newsmmu
+    sc_core::sc_vector<SMMUConnectedPassRPC> m_smmu_connd_remotes;
+#endif
 
     void do_bus_binding() {
         if (p_arm_num_cpus) {
@@ -285,6 +351,11 @@ protected:
                 int irq = gs::cci_get<int>(std::string(m_virtio_net_0.name()) + ".irq");
                 m_virtio_net_0.irq_out.bind(m_gic->spi_in[irq]);
             }
+#ifdef newsmmu
+            for (int i = 0; i < m_smmu_connd_remotes.size(); i++) {
+                m_smmu_connd_remotes[i].bind_irqs(m_gic);
+            }
+#endif
             for (auto& vblk : m_virtio_blks) {
                 int irq = gs::cci_get<int>(std::string(vblk.name()) + ".irq");
                 vblk.irq_out.bind(m_gic->spi_in[irq]);
@@ -389,6 +460,9 @@ public:
                   [this](const char* n, size_t i) { return new smmu500<>(n); })
         , m_tbus("tbu", p_hexagon_num_clusters,
                  [this](const char* n, size_t i) { return new smmu500_tbu<>(n, &m_smmus[0]); })
+        , m_smmu_connd_remotes(
+              "remote", gs::sc_cci_list_items(sc_module::name(), "remote").size(),
+              [this](const char* n, size_t i) { return new SMMUConnectedPassRPC(n, &m_smmus[0]); })
 #endif
         , m_virtio_net_0("virtionet0", m_qemu_inst)
         , m_virtio_blks(
@@ -499,6 +573,12 @@ public:
             abort(); // FIXME
 #endif
         }
+
+#ifdef newsmmu
+        for (int i = 0; i < m_smmu_connd_remotes.size(); i++) {
+            m_smmu_connd_remotes[i].bind_tlm_ports(m_router);
+        }
+#endif
 
         // General loader
         m_loader.initiator_socket.bind(m_router.target_socket);

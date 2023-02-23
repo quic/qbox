@@ -101,7 +101,10 @@ assert((SA8775P_nsp1_config_table[3] << 16) == TURING_SS_1TURING_QDSP6V68SS_CSR)
 local NSP1_VTCM_BASE_ADDR = (SA8775P_nsp1_config_table[15] << 16)
 local NSP1_VTCM_SIZE_BYTES = (SA8775P_nsp1_config_table[16] * 1024)
 
-
+local IS_SHARED_MEM = false
+if os.getenv("QQVP_PLUGIN_DIR") ~= nil then
+    IS_SHARED_MEM = true
+end
 
 
 platform = {
@@ -116,8 +119,8 @@ platform = {
 
     ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
 
-    ram_0=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE/2}};
-    ram_1=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB+(DDR_SPACE_SIZE/2), size=DDR_SPACE_SIZE/2}};
+    ram_0=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE/2}, shared_memory=IS_SHARED_MEM};
+    ram_1=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB+(DDR_SPACE_SIZE/2), size=DDR_SPACE_SIZE/2}, shared_memory=IS_SHARED_MEM};
     hexagon_ram_0={target_socket={address=NSP0_VTCM_BASE_ADDR, size=NSP0_VTCM_SIZE_BYTES}};
     hexagon_ram_1={target_socket={address=NSP1_VTCM_BASE_ADDR, size=NSP1_VTCM_SIZE_BYTES}};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
@@ -261,6 +264,18 @@ else
     os.exit(1);
 end
 
+local PLUGIN_DIR;
+if os.getenv("QQVP_PLUGIN_DIR") == nil then
+    PLUGIN_DIR = "./"
+else
+    PLUGIN_DIR = os.getenv("QQVP_PLUGIN_DIR").."/"
+end
+
+if (file_exists(PLUGIN_DIR.."conf.lua"))
+then
+    print ("Running local "..PLUGIN_DIR.."conf.lua");
+    dofile(PLUGIN_DIR.."conf.lua");
+end
 
 -- convenience switches
 if (platform.with_gpu) then
