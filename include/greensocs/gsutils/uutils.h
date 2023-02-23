@@ -67,7 +67,7 @@ public:
     static void pass_sig_handler(int sig) {
         gs::SigHandler::get().set_sig_num(sig);
         char ch[1] = { 's' };
-        ::write(gs::SigHandler::get().get_write_sock_end(), &ch, 1);
+        ssize_t ret = ::write(gs::SigHandler::get().get_write_sock_end(), &ch, 1);
     }
 
     inline void add_sig_handler(int signum, Handler_CB s_cb = Handler_CB::EXIT) {
