@@ -4,7 +4,7 @@
 # libqbox
 CPMDeclarePackage(libqbox
   NAME libqbox
-  GIT_TAG v7.2.0
+  GIT_TAG v7.3.0
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqbox.git
 )
 # libgsutils
@@ -36,13 +36,13 @@ CPMDeclarePackage(libgssync
 # libqemu-cxx
 CPMDeclarePackage(libqemu-cxx
   NAME libqemu-cxx
-  GIT_TAG v4.2.2
+  GIT_TAG v4.2.3
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/libqemu-cxx.git
 )
 # libqemu
 CPMDeclarePackage(libqemu
   NAME libqemu
-  GIT_TAG libqemu-v7.0.50-v1.3.1
+  GIT_TAG libqemu-v7.0.50-v1.3.2
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/qemu.git
   GIT_SUBMODULES CMakeLists.txt
 )
@@ -64,7 +64,7 @@ CPMDeclarePackage(systemc-uarts
 # extra-components
 CPMDeclarePackage(extra-components
   NAME extra-components
-  GIT_TAG v4.2.0
+  GIT_TAG v4.3.0
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/extra-components.git
   GIT_SHALLOW on
 )
