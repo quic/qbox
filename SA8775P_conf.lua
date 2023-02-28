@@ -46,14 +46,7 @@ local IPC_ROUTER_TOP = 0x00400000
 local APSS_GIC600_GICD_APSS = 0x17A00000
 local OFFSET_APSS_ALIAS0_GICR_CTLR = 0x60000
 
--- Lemans VBSP, pl011 UART addr: reallocated space at
---   PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO:
-local PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO = 0x40000000
-local UART0 = PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO
-
--- QUPv3 uart
-local QUPV3_1_SE3 = 0x00A8C000
-
+local UART0 = 0x10000000
 
 local TCSR_SOC_HW_VERSION_ADDR = 0x1FC8000;
 local TCSR_SOC_EMULATION_TYPE_ADDR = TCSR_SOC_HW_VERSION_ADDR+4;
@@ -132,8 +125,12 @@ platform = {
                   mem_view=   {address=0x17c21000, size=0x1000*2*7}; -- 0x1000*nr_frames*nr_views
                   irq0=40;irq1=41;irq2=42;irq3=43;irq4=44;irq5=45;irq6=46;
                   nr_frames=7;nr_views=2;cnttid=0x1111515};
-    uart= {  simple_target_socket_0 = {address= UART0, size=0x1000}, irq=379};
-    uart_qup= { simple_target_socket_0 = {address=QUPV3_1_SE3, size=0x2000}, irq=356};
+    uart = {  simple_target_socket_0 = {address= UART0, size=0x1000},
+        irq=379,
+        stdio=true,
+        input=false,
+        port=nil,
+    };
 
     ipcc= {  socket        = {address=IPC_ROUTER_TOP, size=0xfc000},
              irqs = {
@@ -224,12 +221,46 @@ platform = {
 --      {data={0x0}, address=TCSR_SOC_EMULATION_TYPE_ADDR}; -- 0=silicon
 --      {data={0x1}, address=TCSR_SOC_EMULATION_TYPE_ADDR}; -- 1=RUMI
     };
-    -- uart_backend_port=4001;
-    -- qup_uart_backend_port=4001;
 };
 
 
 if (platform.arm_num_cpus > 0) then
+    local QUP_PITCH = 0x4000;
+    local QUP_SIZE = 0x2000;
+    local QUP_BANKS = {
+        -- QUPV3_2 / u_qupv3_wrapper_2 / qupv3_se_irq[*]:
+        { addr = 0x880000, primary_idx = nil,
+          qgic_spi_irqs = { 373, 583, 584, 585, 586, 587, 834, },
+        },
+        -- QUPV3_0 / u_qupv3_wrapper_0 / qupv3_se_irq[*]:
+        { addr = 0x980000, primary_idx = nil,
+          qgic_spi_irqs = { 550, 551, 529, 530, 531, 535, 536, },
+        },
+        -- QUPV3_1 / u_qupv3_wrapper_1 / qupv3_se_irq[*]:
+        { addr = 0xa80000, primary_idx = 3,
+          qgic_spi_irqs = { 353, 354, 355, 356, 357, 358, 836, },
+        },
+    };
+
+    local qup_index = 0;
+    for bank_index, bank in next, QUP_BANKS do
+        -- assert(bank.count == #bank.qgic_spi_irqs)
+        for i, spi_irq in next, bank.qgic_spi_irqs do
+            local i_0 = i - 1;
+            local qup = {
+                simple_target_socket_0 = {address=bank.addr + (i_0*QUP_PITCH),
+                    size=QUP_SIZE},
+                irq=spi_irq,
+                stdio=true,
+                input=(i_0 == bank.primary_idx),
+                port=nil,
+            };
+            platform["uart_qup_"..tostring(qup_index)] = qup;
+            qup_index = qup_index + 1;
+        end
+    end
+
+
     for i=0,(platform.arm_num_cpus-1) do
         local cpu = {
             has_el3 = true;

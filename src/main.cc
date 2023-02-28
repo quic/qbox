@@ -243,7 +243,6 @@ protected:
 
     cci::cci_param<int> p_quantum_ns;
     cci::cci_param<int> p_uart_backend;
-    cci::cci_param<int> p_qup_uart_backend;
 
     QemuInstanceManager m_inst_mgr;
     QemuInstanceManager m_inst_mgr_h;
@@ -258,7 +257,8 @@ protected:
     //    gs::Memory<> m_system_imem;
     GlobalPeripheralInitiator* m_global_peripheral_initiator_arm;
     Uart* m_uart = nullptr;
-    QUPv3* m_uart_qup = nullptr;
+    sc_core::sc_vector<QUPv3> m_uart_qups;
+
     IPCC m_ipcc;
 #ifdef newsmmu
     sc_core::sc_vector<smmu500<>> m_smmus;
@@ -305,8 +305,9 @@ protected:
         if (m_uart)
             m_router.initiator_socket.bind(m_uart->socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
-        if (m_uart_qup)
-            m_router.initiator_socket.bind(m_uart_qup->socket);
+        for (auto& qup : m_uart_qups) {
+            m_router.initiator_socket.bind(qup.socket);
+        }
 #ifdef newsmmu
         for (auto& smmu : m_smmus) {
             m_router.initiator_socket.bind(smmu.socket);
@@ -341,11 +342,9 @@ protected:
                     m_uart->irq.bind(m_gic->spi_in[irq]);
                 }
             }
-            {
-                if (m_uart_qup) {
-                    int irq = gs::cci_get<int>(std::string(m_uart_qup->name()) + ".irq");
-                    m_uart_qup->irq.bind(m_gic->spi_in[irq]);
-                }
+            for (auto& qup : m_uart_qups) {
+                int irq = gs::cci_get<int>(std::string(qup.name()) + ".irq");
+                qup.irq.bind(m_gic->spi_in[irq]);
             }
             {
                 int irq = gs::cci_get<int>(std::string(m_virtio_net_0.name()) + ".irq");
@@ -431,9 +430,6 @@ public:
         , p_uart_backend("uart_backend_port", 0,
                          "uart backend port number, either 0 for 'stdio' or a "
                          "port number (e.g. 4001)")
-        , p_qup_uart_backend("qup_uart_backend_port", 0,
-                             "qup uart backend port number, either 0 for 'stdio' or a "
-                             "port number (e.g. 4001)")
         , m_router("router")
 
         , m_qemu_inst(m_inst_mgr.new_instance("ArmQemuInstance", QemuInstance::Target::AARCH64))
@@ -454,6 +450,8 @@ public:
                          [this](const char* n, size_t i) { return new gs::Memory<>(n); })
 
         //        , m_system_imem("system_imem")
+        , m_uart_qups("uart_qup", gs::sc_cci_list_items(sc_module::name(), "uart_qup").size(),
+                      [this](const char* n, size_t i) { return new QUPv3(n); })
         , m_ipcc("ipcc")
 #ifdef newsmmu
         , m_smmus("smmu", gs::sc_cci_list_items(sc_module::name(), "smmu").size(),
@@ -514,15 +512,6 @@ public:
 
             if (uart_addr) {
                 m_uart = new Uart("uart");
-            }
-        }
-
-        if (m_broker.has_preset_value(std::string(this->name()) +
-                                      ".uart_qup.simple_target_socket_0.address")) {
-            uint64_t uart_qup_addr = gs::cci_get<uint64_t>(
-                std::string(this->name()) + ".uart_qup.simple_target_socket_0.address");
-            if (uart_qup_addr) {
-                m_uart_qup = new QUPv3("uart_qup");
             }
         }
 
@@ -591,39 +580,57 @@ public:
 
         setup_irq_mapping();
 
-        CharBackend* backend = nullptr;
-        CharBackend* qup_backend = nullptr;
-
-        bool used_stdio = false;
-        if (m_uart_qup) {
-            if (!p_qup_uart_backend) {
-                if (!used_stdio) {
-                    qup_backend = new CharBackendStdio("qup_backend_stdio");
-                    used_stdio = true;
+        bool used_stdin = false;
+        int stdio_index = 0;
+        for (auto& qup : m_uart_qups) {
+            bool be = gs::cci_get<bool>(std::string(qup.name()) + ".stdio");
+            if (be) {
+                const std::string input(std::string(qup.name()) + ".input");
+                const bool excl_stdin = m_broker.has_preset_value(input) &&
+                                        gs::cci_get<bool>(input);
+                if (used_stdin && excl_stdin) {
+                    SCP_FATAL(())("Only one Uart may claim INPUT at any one time\n");
                 }
+                used_stdin = used_stdin || excl_stdin;
+
+                const std::string stdio_name("backend_stdio_" + std::to_string(stdio_index++));
+                qup.set_backend(new CharBackendStdio(stdio_name.c_str(), excl_stdin));
             } else {
-                qup_backend = new CharBackendSocket(
-                    "qup_backend_socket", "tcp",
-                    "127.0.0.1:" + std::to_string(p_qup_uart_backend.get_value()));
-            }
-            if (qup_backend) {
-                m_uart_qup->set_backend(qup_backend);
+                bool has_port = m_broker.has_preset_value(std::string(qup.name()) + ".port");
+                if (!has_port) {
+                    SCP_WARN(())("Uart '{}' not connected", qup.name());
+                } else {
+                    int port = gs::cci_get<int>(std::string(qup.name()) + ".port");
+                    qup.set_backend(new CharBackendSocket("qup_backend_socket", "tcp",
+                                                          "127.0.0.1:" + std::to_string(port)));
+                }
             }
         }
+
         if (m_uart) {
-            if (!p_uart_backend) {
-                if (!used_stdio) {
-                    backend = new CharBackendStdio("qup_backend_stdio");
-                    used_stdio = true;
+            bool be = gs::cci_get<bool>(std::string(m_uart->name()) + ".stdio");
+            if (be) {
+                const std::string input(std::string(m_uart->name()) + ".input");
+                const bool excl_stdin = m_broker.has_preset_value(input) &&
+                                        gs::cci_get<bool>(input);
+                if (used_stdin && excl_stdin) {
+                    SCP_FATAL(())("Only one Uart may claim INPUT at any one time\n");
                 }
+                used_stdin = used_stdin || excl_stdin;
+                m_uart->set_backend(new CharBackendStdio("uart_backend_stdio", excl_stdin));
             } else {
-                backend = new CharBackendSocket(
-                    "backend_socket", "tcp",
-                    "127.0.0.1:" + std::to_string(p_uart_backend.get_value()));
+                bool has_port = m_broker.has_preset_value(std::string(m_uart->name()) + ".port");
+                if (!has_port) {
+                    SCP_WARN(())("Uart '{}' not connected", m_uart->name());
+                } else {
+                    int port = gs::cci_get<int>(std::string(m_uart->name()) + ".port");
+                    m_uart->set_backend(new CharBackendSocket("qup_backend_socket", "tcp",
+                                                              "127.0.0.1:" + std::to_string(port)));
+                }
             }
-            if (backend) {
-                m_uart->set_backend(backend);
-            }
+        }
+        if (!used_stdin) {
+            SCP_WARN(())("No UART configured to use STDIO");
         }
     }
 
@@ -649,10 +656,6 @@ public:
         if (m_uart) {
             delete m_uart;
         }
-
-        if (m_uart_qup) {
-            delete m_uart_qup;
-        }
     }
 };
 
@@ -664,7 +667,8 @@ int sc_main(int argc, char* argv[]) {
                           .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
     gs::ConfigurableBroker m_broker(argc, argv);
     cci::cci_originator orig("sc_main");
-    cci::cci_param<int> p_log_level{"log_level", 0, "Default log level", cci::CCI_ABSOLUTE_NAME, orig};
+    cci::cci_param<int> p_log_level{ "log_level", 0, "Default log level", cci::CCI_ABSOLUTE_NAME,
+                                     orig };
     GreenSocsPlatform* platform = new GreenSocsPlatform("platform");
 
     auto start = std::chrono::system_clock::now();
