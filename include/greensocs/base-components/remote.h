@@ -45,6 +45,7 @@
 #include <mutex>
 #include <thread>
 #include <algorithm>
+#include <atomic>
 
 #include "memory_services.h"
 
@@ -54,7 +55,10 @@
 #include "rpc/this_handler.h"
 #include "rpc/this_session.h"
 
-#define GS_Process_Server_Port "GS_Process_Server_Port"
+#define GS_Process_Server_Port     "GS_Process_Server_Port"
+#define GS_Process_Server_Port_Len 22
+#define DECIMAL_PORT_NUM_STR_LEN   20
+#define DECIMAL_PID_T_STR_LEN      20
 
 namespace gs {
 
@@ -362,6 +366,8 @@ private:
     std::condition_variable is_sc_status_set;
     std::mutex client_conncted_mut;
     std::mutex sc_status_mut;
+    std::atomic_bool cancel_waiting;
+
 
     sc_core::sc_status m_remote_status = static_cast<sc_core::sc_status>(0);
 
@@ -641,8 +647,10 @@ public:
                       "The path to the executable that should be started by "
                       "the bridge")
         , p_sync_policy("sync_policy", "multithread-unconstrained", "Sync policy for the remote")
+        , cancel_waiting(false)
     {
         SigHandler::get().add_sig_handler(SIGINT, SigHandler::Handler_CB::PASS);
+        SigHandler::get().register_on_exit_cb([this](){stop();});
         SCP_DEBUG(()) << "PassRPC constructor";
         SCP_DEBUG(()) << getpid() << " IS THE RPC PID " << std::this_thread::get_id()
                       << " is the thread ID";
@@ -781,16 +789,18 @@ public:
             std::transform(extra_args.begin(), extra_args.end(), std::back_inserter(argp),
                            [](const std::string& s) { return s.c_str(); });
             argp.push_back(0);
-            char val[21]; // can't be bigger than this.
-            sprintf(val, "%d", p_sport.get_value());
+            char val[DECIMAL_PORT_NUM_STR_LEN + 1]; // can't be bigger than this.
+            snprintf(val, DECIMAL_PORT_NUM_STR_LEN + 1, "%d", p_sport.get_value());
             m_child_pid = fork();
             if (m_child_pid > 0) {
                 pahandler.setup_parent_conn_checker();
                 SigHandler::get().set_nosig_chld_stop();
                 SigHandler::get().add_sig_handler(SIGCHLD, SigHandler::Handler_CB::EXIT);
             } else if (m_child_pid == 0) {
-                char key[strlen(GS_Process_Server_Port) + 20 + 1]; // can't be bigger than this.
-                sprintf(key, "%s%d", GS_Process_Server_Port, getpid());
+                char key[GS_Process_Server_Port_Len + DECIMAL_PID_T_STR_LEN +
+                         1]; // can't be bigger than this.
+                snprintf(key, GS_Process_Server_Port_Len + DECIMAL_PID_T_STR_LEN + 1, "%s%d",
+                         GS_Process_Server_Port, getpid());
                 setenv(key, val, 1);
 
                 execv(exec_path.c_str(), const_cast<char**>(&argp[0]));
@@ -806,7 +816,7 @@ public:
 
         // Make sure by now the client is connected so we can send/recieve.
         std::unique_lock<std::mutex> ul(client_conncted_mut);
-        is_client_connected.wait(ul, [&]() { return p_cport > 0; });
+        is_client_connected.wait(ul, [&]() { return (p_cport > 0 || cancel_waiting); });
         ul.unlock();
         send_status();
     }
@@ -819,11 +829,30 @@ public:
                       << sc_core::sc_get_status();
         client->call("status", static_cast<int>(sc_core::sc_get_status()));
         std::unique_lock<std::mutex> ul(sc_status_mut);
-        is_sc_status_set.wait(ul, [&]() { return m_remote_status >= sc_core::sc_get_status(); });
+        is_sc_status_set.wait(ul, [&]() { return (m_remote_status >= sc_core::sc_get_status() || cancel_waiting); });
         ul.unlock();
         SCP_DEBUG(()) << "SIMULATION STATE synced " << name() << " to status "
                       << sc_core::sc_get_status();
     }
+
+    void stop()
+    {
+        cancel_waiting = true;
+        {
+            std::lock_guard<std::mutex> cc_lg(client_conncted_mut);
+            is_client_connected.notify_one();
+        }
+        {
+            std::lock_guard<std::mutex> scs_lg(sc_status_mut);
+            is_sc_status_set.notify_one();
+        }
+        if (client) {
+            client->async_call("exit", 0);
+            delete client;
+            client = nullptr;
+        }
+    }
+
     void before_end_of_elaboration() { send_status(); }
     void end_of_elaboration() { send_status(); }
     void start_of_simulation()
@@ -857,7 +886,6 @@ public:
             client->async_call("exit", 0);
             delete client;
             client = nullptr;
-            sleep(1);
         }
     }
 };
