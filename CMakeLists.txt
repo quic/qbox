@@ -79,5 +79,6 @@ if(UNIX AND NOT APPLE)
 endif()
 
 gs_export()
+install(TARGETS rpc DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 
 gs_enable_testing()
