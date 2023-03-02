@@ -167,7 +167,9 @@ platform = {
 
     hexagon_ram = { target_socket = { address = 0x0000000000, size = 0x0008000000 } };
     ipcc = { socket = { address = 0x0000410000, size = 0x00000fc000 } };
-    uart = { simple_target_socket_0 = { address = 0x0009000000, size = 0x0000001000 }, irq = 1 };
+    uart = { simple_target_socket_0 = { address = 0x0009000000, size = 0x0000001000 }, irq = 1,
+             stdio=true, input=true,
+           };
     virtioblk_0 = { mem = { address = 0x000a003c00, size = 0x0000002000 }, irq = 0x2e,
         blkdev_str = "file=" .. filesystem_image .. ",format=raw,if=none" };
     virtionet0 = { mem = { address = 0x000a003e00, size = 0x0000002000 }, irq = 0x2d,
