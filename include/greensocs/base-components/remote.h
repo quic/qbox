@@ -46,7 +46,11 @@
 #include <thread>
 #include <algorithm>
 #include <atomic>
-
+#include <future>
+#include <queue>
+#include <utility>
+#include <type_traits>
+#include <chrono>
 #include "memory_services.h"
 
 #include "rpc/client.h"
@@ -54,11 +58,13 @@
 #include "rpc/server.h"
 #include "rpc/this_handler.h"
 #include "rpc/this_session.h"
+#include "greensocs/libgssync/async_event.h"
 
 #define GS_Process_Server_Port     "GS_Process_Server_Port"
 #define GS_Process_Server_Port_Len 22
 #define DECIMAL_PORT_NUM_STR_LEN   20
 #define DECIMAL_PID_T_STR_LEN      20
+#define RPC_TIMEOUT                500
 
 namespace gs {
 
@@ -333,7 +339,7 @@ class PassRPC : public sc_core::sc_module
                               << " to " << m_broker.get_preset_cci_value(name).to_json();
             }
         }
-        client->call("cci_db", vals);
+        do_rpc_call("cci_db", vals);
         targets_bound++;
     }
 
@@ -368,13 +374,171 @@ private:
     std::mutex sc_status_mut;
     std::atomic_bool cancel_waiting;
 
-
     sc_core::sc_status m_remote_status = static_cast<sc_core::sc_status>(0);
 
     int targets_bound = 0;
 
-    std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
+    // std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
     gs::RunOnSysC m_sc;
+    class trans_waiter
+    {
+    public:
+        gs::async_event async_ev[TLMPORTS];
+        std::condition_variable is_rpc_execed;
+        std::mutex rpc_execed_mut;
+
+    private:
+        std::queue<std::function<void()>> notifiers;
+        std::thread notifier_thread;
+        std::atomic_bool is_stopped;
+        std::atomic_bool is_started;
+        /**
+         * FIXME: this is a temp solution for making the b_transport reentrant.
+         * This thread should wait for the future and notify the systemc waiting
+         * thread by executing the enqueued notifiers.
+         * This solution should be revisted in future.
+         */
+    private:
+        void notifier_task()
+        {
+            while (!is_stopped) {
+                std::unique_lock<std::mutex> ul(rpc_execed_mut);
+                is_rpc_execed.wait_for(ul, std::chrono::milliseconds(RPC_TIMEOUT),
+                                   [this]() { return (!notifiers.empty() || is_stopped); });
+                while (!notifiers.empty()) {
+                    notifiers.front()();
+                    notifiers.pop();
+                }
+                ul.unlock();
+            }
+        }
+
+    public:
+        trans_waiter(): is_stopped(false), is_started(false) {}
+
+        void start()
+        {
+            if (is_started)
+                return;
+
+            is_started = true;
+
+            notifier_thread = std::thread(&trans_waiter::notifier_task, this);
+        }
+
+        void stop()
+        {
+            if (is_stopped)
+                return;
+
+            is_stopped = true;
+            {
+                std::lock_guard<std::mutex> lg(rpc_execed_mut);
+                is_rpc_execed.notify_one();
+            }
+
+            if (notifier_thread.joinable())
+                notifier_thread.join();
+        }
+
+        ~trans_waiter() { stop(); }
+
+        void enqueue_notifier(std::function<void()> notifier) { notifiers.push(notifier); }
+    };
+
+    trans_waiter btspt_waiter;
+    trans_waiter dmi_waiter;
+    trans_waiter dbg_waiter;
+
+    template <typename... Args>
+    std::future<RPCLIB_MSGPACK::object_handle> do_rpc_async_call(std::string const& func_name,
+                                                                 Args... args)
+    {
+        if (!client) {
+            stop_and_exit();
+        }
+        std::future<RPCLIB_MSGPACK::object_handle> ret;
+        try {
+            ret = client->async_call(func_name, std::forward<Args>(args)...);
+        } catch (const std::future_error& e) {
+            SCP_DEBUG(()) << name()
+                          << " PassRPC::do_rpc_async_call() Connection with remote is closed: "
+                          << e.what();
+            stop_and_exit();
+        } catch (...) {
+            SCP_DEBUG(()) << name() << " PassRPC::do_rpc_async_call() Unknown error!";
+            stop_and_exit();
+        }
+        return ret;
+    }
+
+    template <typename T>
+    T do_rpc_async_get(std::future<RPCLIB_MSGPACK::object_handle> fut)
+    {
+        T ret;
+        try {
+            ret = do_rpc_as<T>(fut.get());
+        } catch (const std::future_error& e) {
+            SCP_DEBUG(()) << name()
+                          << " PassRPC::do_rpc_async_get() RPC future is corrupted: " << e.what();
+            stop_and_exit();
+        } catch (...) {
+            SCP_DEBUG(()) << name() << " PassRPC::do_rpc_async_get() Unknown error!";
+            stop_and_exit();
+        }
+        return ret;
+    }
+
+    template <typename T>
+    T do_rpc_as(RPCLIB_MSGPACK::object_handle handle)
+    {
+        T ret;
+        try {
+            ret = handle.template as<T>();
+        } catch (...) {
+            SCP_DEBUG(()) << name() << " PassRPC::do_rpc_as() RPC remote value is corrupted!";
+            stop_and_exit();
+        }
+        return ret;
+    }
+
+    template <typename... Args>
+    RPCLIB_MSGPACK::object_handle do_rpc_call(std::string const& func_name, Args... args)
+    {
+        if (!client) {
+            stop_and_exit();
+        }
+        RPCLIB_MSGPACK::object_handle ret;
+        while (!cancel_waiting) {
+            try {
+                if ((client->get_connection_state() == rpc::client::connection_state::initial) ||
+                    (client->get_connection_state() == rpc::client::connection_state::connected)) {
+                    client->set_timeout(RPC_TIMEOUT);
+                    ret = client->call(func_name, std::forward<Args>(args)...);
+                    break;
+                }
+            } catch (const rpc::timeout& t) {
+                try {
+                    client->clear_timeout();
+                    continue;
+                } catch (...) {
+                    SCP_DEBUG(())
+                        << name()
+                        << " PassRPC::do_rpc_call() Unknown error in rpc::client::clear_timeout()";
+                    stop_and_exit();
+                }
+            } catch (const std::future_error& e) {
+                SCP_DEBUG(()) << name()
+                              << " PassRPC::do_rpc_call() Connection with remote is closed: "
+                              << e.what();
+                stop_and_exit();
+            } catch (...) {
+                SCP_DEBUG(()) << name() << " PassRPC::do_rpc_call() Unknown error!";
+                stop_and_exit();
+            }
+        }
+        return ret;
+    }
 
     /* b_transport interface */
     void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
@@ -414,11 +578,46 @@ private:
         //        SCP_DEBUG(()) << name() << " b_transport socket ID " << id << " From_tlm " <<
         //        txn_str(trans); SCP_DEBUG(()) << getpid() <<" IS THE b_ RPC PID " <<
         //        std::this_thread::get_id() <<" is the thread ID";
-        tlm_generic_payload_rpc r = client->call("b_tspt", id, t)
-                                        .template as<tlm_generic_payload_rpc>();
+        /*tlm_generic_payload_rpc r = client->call("b_tspt", id, t)
+                                        .template as<tlm_generic_payload_rpc>();*/
+        /**
+         * FIXME: this is a temp solution for making the b_transport reentrant.
+         * remove the quantumkeeper and make b_tspt RPC async call, wait for the future
+         * from the async_call in a separate thread, then notify the waiting systemc thread.
+         * This solution should be revisted in future.
+         */
+        btspt_waiter.start();
+        auto rpc_future = do_rpc_async_call("b_tspt", id, t);
+
+        std::unique_lock<std::mutex> ul(btspt_waiter.rpc_execed_mut);
+        btspt_waiter.enqueue_notifier([&]() {
+            std::future_status status;
+            try {
+                do {
+                    status = rpc_future.wait_for(std::chrono::milliseconds(RPC_TIMEOUT));
+                } while ((status != std::future_status::ready) && !cancel_waiting);
+            } catch (const std::future_error& e) {
+                SCP_DEBUG(()) << name()
+                              << " PassRPC::b_transport() std::future::wait() Connection with "
+                                 "remote is closed: "
+                              << e.what();
+                stop_and_exit();
+            } catch (...) {
+                SCP_DEBUG(()) << name()
+                              << "PassRPC::b_transport() std::future::wait() Unknown error!";
+                stop_and_exit();
+            }
+            btspt_waiter.async_ev[id].async_notify();
+        });
+        btspt_waiter.is_rpc_execed.notify_one();
+        ul.unlock();
+        sc_core::wait(btspt_waiter.async_ev[id]); // systemc wait
+        tlm_generic_payload_rpc r = do_rpc_async_get<tlm_generic_payload_rpc>(
+            std::move(rpc_future));
+
         r.update_to_tlm(trans);
-        delay = sc_core::sc_time(t.m_quantum_time, sc_core::SC_SEC);
-        sc_core::sc_time other_time = sc_core::sc_time(t.m_sc_time, sc_core::SC_SEC);
+        delay = sc_core::sc_time(r.m_quantum_time, sc_core::SC_SEC);
+        sc_core::sc_time other_time = sc_core::sc_time(r.m_sc_time, sc_core::SC_SEC);
         //        m_qk->set(other_time+delay);
         //        m_qk->sync();
         //        SCP_DEBUG(()) << name() << " update_to_tlm " << txn_str(trans);
@@ -464,8 +663,35 @@ private:
         tlm_generic_payload_rpc t;
 
         t.from_tlm(trans);
-        tlm_generic_payload_rpc r = client->call("dbg_tspt", id, t)
-                                        .template as<tlm_generic_payload_rpc>();
+
+        dbg_waiter.start();
+        auto rpc_future = do_rpc_async_call("dbg_tspt", id, t);
+
+        std::unique_lock<std::mutex> ul(dbg_waiter.rpc_execed_mut);
+        dbg_waiter.enqueue_notifier([&]() {
+            std::future_status status;
+            try {
+                do {
+                    status = rpc_future.wait_for(std::chrono::milliseconds(RPC_TIMEOUT));
+                } while ((status != std::future_status::ready) && !cancel_waiting);
+            } catch (const std::future_error& e) {
+                SCP_DEBUG(()) << name()
+                              << " PassRPC::transport_dbg() std::future::wait() Connection with "
+                                 "remote is closed: "
+                              << e.what();
+                stop_and_exit();
+            } catch (...) {
+                SCP_DEBUG(()) << name()
+                              << " PassRPC::transport_dbg() std::future::wait() Unknown error!";
+                stop_and_exit();
+            }
+            dbg_waiter.async_ev[id].async_notify();
+        });
+        dbg_waiter.is_rpc_execed.notify_one();
+        ul.unlock();
+        sc_core::wait(dbg_waiter.async_ev[id]); // systemc wait
+        tlm_generic_payload_rpc r = do_rpc_async_get<tlm_generic_payload_rpc>(
+            std::move(rpc_future));
 
         r.update_to_tlm(trans);
         SCP_DEBUG(()) << name() << " <-remote debug tlm done " << txn_str(trans);
@@ -501,7 +727,8 @@ private:
 #ifdef DMICACHE
         c = in_cache(trans.get_address());
         if (c) {
-            //            SCP_DEBUG(()) << "In Cache " << std::hex << c->get_start_address() << "
+            //            SCP_DEBUG(()) << "In Cache " << std::hex << c->get_start_address() <<
+            //            "
             //            - " << std::hex << c->get_end_address() ;
             dmi_data = *c;
             return !(dmi_data.is_none_allowed());
@@ -512,7 +739,36 @@ private:
         //        SCP_DEBUG(()) << name() << " DMI socket ID " << id << " From_tlm " <<
         //        txn_str(trans)
         //        ;
-        tlm_dmi_rpc r = client->call("dmi_req", id, t).template as<tlm_dmi_rpc>();
+
+        dmi_waiter.start();
+        auto rpc_future = do_rpc_async_call("dmi_req", id, t);
+
+        std::unique_lock<std::mutex> ul(dmi_waiter.rpc_execed_mut);
+        dmi_waiter.enqueue_notifier([&]() {
+            std::future_status status;
+            try {
+                do {
+                    status = rpc_future.wait_for( std::chrono::milliseconds(RPC_TIMEOUT));
+                } while ((status != std::future_status::ready) && !cancel_waiting);
+            } catch (const std::future_error& e) {
+                SCP_DEBUG(()) << name()
+                              << " PassRPC::get_direct_mem_ptr() std::future::wait() Connection "
+                                 "with remote is closed: "
+                              << e.what();
+                stop_and_exit();
+            } catch (...) {
+                SCP_DEBUG(())
+                    << name()
+                    << " PassRPC::get_direct_mem_ptr() std::future::wait() Unknown error!";
+                stop_and_exit();
+            }
+            dmi_waiter.async_ev[id].async_notify();
+        });
+        dmi_waiter.is_rpc_execed.notify_one();
+        ul.unlock();
+        sc_core::wait(dmi_waiter.async_ev[id]); // systemc wait
+        tlm_dmi_rpc r = do_rpc_async_get<tlm_dmi_rpc>(std::move(rpc_future));
+
         if (r.m_shmem_size == 0) {
             SCP_DEBUG(()) << name() << "DMI OK, but no shared memory available?"
                           << trans.get_address();
@@ -532,7 +788,8 @@ private:
         //        }
         //        SCP_DEBUG(()) << name() << "DMI to " <<trans.get_address()<<" status "
         //        <<!(dmi_data.is_none_allowed()) <<" range " << std::hex <<
-        //        dmi_data.get_start_address() << " - " << std::hex << dmi_data.get_end_address() <<
+        //        dmi_data.get_start_address() << " - " << std::hex <<
+        //        dmi_data.get_end_address() <<
         //        "";
         return !(dmi_data.is_none_allowed());
     }
@@ -562,7 +819,7 @@ private:
         SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
                       << " start address 0x" << std::hex << start << " end address 0x" << std::hex
                       << end;
-        client->call("dmi_inv", start, end);
+        do_rpc_async_call("dmi_inv", start, end);
     }
     void invalidate_direct_mem_ptr_rpc(sc_dt::uint64 start, sc_dt::uint64 end)
     {
@@ -650,11 +907,10 @@ public:
         , cancel_waiting(false)
     {
         SigHandler::get().add_sig_handler(SIGINT, SigHandler::Handler_CB::PASS);
-        SigHandler::get().register_on_exit_cb([this](){stop();});
+        SigHandler::get().register_on_exit_cb([this]() { stop(); });
         SCP_DEBUG(()) << "PassRPC constructor";
         SCP_DEBUG(()) << getpid() << " IS THE RPC PID " << std::this_thread::get_id()
                       << " is the thread ID";
-
         // always serve on a new port.
         server = new rpc::server(p_sport);
         server->suppress_exceptions(true);
@@ -679,8 +935,8 @@ public:
             is_client_connected.notify_one();
             ul.unlock();
             // we are not interested in the return future from async_call
-            client->async_call("sock_pair", pahandler.get_sockpair_fd0(),
-                               pahandler.get_sockpair_fd1());
+            do_rpc_async_call("sock_pair", pahandler.get_sockpair_fd0(),
+                              pahandler.get_sockpair_fd1());
             return get_cci_db();
         });
 
@@ -736,7 +992,7 @@ public:
                 client = nullptr;
                 sc_core::sc_stop();
             });
-            m_qk->stop();
+            // m_qk->stop();
             return;
         });
 
@@ -765,18 +1021,18 @@ public:
 
         for (int i = 0; i < SIGNALS; i++) {
             target_signal_sockets[i].register_value_changed_cb(
-                [&, i](bool value) { client->send("signal", i, value); });
+                [&, i](bool value) { do_rpc_async_call("signal", i, value); });
         }
 
-        m_qk = tlm_quantumkeeper_factory(p_sync_policy);
-        m_qk->reset();
+        // m_qk = tlm_quantumkeeper_factory(p_sync_policy);
+        // m_qk->reset();
         server->async_run(1);
 
         if (p_cport) {
             SCP_INFO(()) << "Connecting client on port " << p_cport;
             if (!client)
                 client = new rpc::client("localhost", p_cport);
-            set_cci_db(client->call("reg", (int)p_sport).as<str_pairs>());
+            set_cci_db(do_rpc_as<str_pairs>(do_rpc_call("reg", (int)p_sport)));
         }
 
         if (!exec_path.empty()) {
@@ -819,7 +1075,7 @@ public:
         is_client_connected.wait(ul, [&]() { return (p_cport > 0 || cancel_waiting); });
         ul.unlock();
         send_status();
-    }
+    } // namespace gs
     PassRPC(const sc_core::sc_module_name& nm, int port)
         : PassRPC(nm, "", port){}; // convenience constructor
 
@@ -827,9 +1083,10 @@ public:
     {
         SCP_DEBUG(()) << "SIMULATION STATE send " << name() << " to status "
                       << sc_core::sc_get_status();
-        client->call("status", static_cast<int>(sc_core::sc_get_status()));
+        do_rpc_call("status", static_cast<int>(sc_core::sc_get_status()));
         std::unique_lock<std::mutex> ul(sc_status_mut);
-        is_sc_status_set.wait(ul, [&]() { return (m_remote_status >= sc_core::sc_get_status() || cancel_waiting); });
+        is_sc_status_set.wait(
+            ul, [&]() { return (m_remote_status >= sc_core::sc_get_status() || cancel_waiting); });
         ul.unlock();
         SCP_DEBUG(()) << "SIMULATION STATE synced " << name() << " to status "
                       << sc_core::sc_get_status();
@@ -837,6 +1094,8 @@ public:
 
     void stop()
     {
+        if (cancel_waiting)
+            return;
         cancel_waiting = true;
         {
             std::lock_guard<std::mutex> cc_lg(client_conncted_mut);
@@ -846,11 +1105,26 @@ public:
             std::lock_guard<std::mutex> scs_lg(sc_status_mut);
             is_sc_status_set.notify_one();
         }
+        btspt_waiter.stop();
+        dmi_waiter.stop();
+        dbg_waiter.stop();
+        if (server) {
+            server->close_sessions();
+            server->stop();
+            delete server;
+            server = nullptr;
+        }
         if (client) {
-            client->async_call("exit", 0);
+            do_rpc_async_call("exit", 0);
             delete client;
             client = nullptr;
         }
+    }
+
+    void stop_and_exit()
+    {
+        stop();
+        _Exit(EXIT_SUCCESS);
     }
 
     void before_end_of_elaboration() { send_status(); }
@@ -858,22 +1132,16 @@ public:
     void start_of_simulation()
     {
         send_status();
-        m_qk->start();
+        // m_qk->start();
     }
 
     PassRPC() = delete;
     PassRPC(const PassRPC&) = delete;
     ~PassRPC()
     {
-        m_qk->stop();
+        // m_qk->stop();
         SCP_DEBUG(()) << "EXIT " << name();
-        if (client) {
-            client->async_call("exit", 0);
-            delete client;
-            client = nullptr;
-        }
-        if (server)
-            delete server;
+        stop();
 #ifdef DMICACHE
         m_dmi_cache.clear();
 #endif
@@ -881,14 +1149,10 @@ public:
 
     void end_of_simulation()
     {
-        m_qk->stop();
-        if (client) {
-            client->async_call("exit", 0);
-            delete client;
-            client = nullptr;
-        }
+        // m_qk->stop();
+        stop();
     }
-};
+}; // namespace gs
 
 } // namespace gs
 #endif
