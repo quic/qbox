@@ -164,7 +164,19 @@ As a last resort, the following script will populate {\small{\lstinline!~/.git-c
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Build the platform}
 
-This operation will take 5 to 20 minutes, depending on your build system configuration.
+On MacOS, run the following command before building:
+
+\small
+\begin{lstlisting}[language=bash]
+    # export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+\end{lstlisting}
+\normalsize
+
+To facilitate future builds, you can put the line above in your
+{\small{\lstinline!~/.zprofile!}} (if you use zsh) or
+{\small{\lstinline!~/.profile!}} (if you use bash-like shells).
+
+The build operation will take 5 to 20 minutes, depending on your build system configuration.
 
 \small
 \begin{lstlisting}[language=bash]
@@ -827,6 +839,28 @@ The following error indicates that {\small{\lstinline!libelf-dev!}} is not insta
 \end{lstlisting}
 \normalsize
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Example of build failure while building QQVP: missing SDKROOT}
+
+The following error occurs on MacOS when {\small{\lstinline!SDKROOT!}} was not
+exported before the build command:
+
+\small
+\begin{lstlisting}[language=bash]
+    ...
+ERROR: "/Library/Developer/CommandLineTools/usr/bin/cc" cannot build an executable (is your linker broken?)
+...
+\end{lstlisting}
+\normalsize
+
+To fix that, export the variable and retry:
+
+\small
+\begin{lstlisting}[language=bash]
+    # export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+    # ...
+\end{lstlisting}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Example of a problem while running QQVP: block device}
