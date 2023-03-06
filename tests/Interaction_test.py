@@ -11,6 +11,7 @@ import getpass
 from truth.truth import AssertThat
 import subprocess
 from subprocess import Popen, PIPE
+import psutil
 
 
 def fastrpc_calc_test():
@@ -35,6 +36,12 @@ def fastrpc_calc_test():
     lua_path = Path(args.lua)
     img_path = Path(args.img)
 
+    load = psutil.cpu_percent(2)
+    timeout_scale = 1
+    if (load > 0.0):
+        timeout_scale = 1 + (load / 100)
+    print ("Timeout Scale: ", timeout_scale)
+
     env = {
         "QQVP_IMAGE_DIR": img_path.as_posix(),
         "PWD": os.environ['PWD']
@@ -50,7 +57,7 @@ def fastrpc_calc_test():
                 vp_path.as_posix(),
                 ["--gs_luafile", args.lua, "--param", "platform.with_gpu=false"],
                 env=env,
-                timeout=180
+                timeout=180*timeout_scale
             )
 
     child.logfile = stdout.buffer
@@ -63,7 +70,7 @@ def fastrpc_calc_test():
         child.send("\n")
         child.expect("#")
         child.sendline('fastrpc_calc_test 0 100 {}'.format(cdsp_index))
-        child.expect('- sum = 4950', timeout=300)
+        child.expect('- sum = 4950', timeout=300*timeout_scale)
         child.expect('- success')
 
     test = True
