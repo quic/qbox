@@ -168,8 +168,11 @@ T cci_get(std::string name) {
  * 2/ The ability to automatically load a configuration file
  * 3/ Explicitly set parameters (from the constructor) are 'hidden' from the parent broker
  */
-class ConfigurableBroker : public cci_utils::consuming_broker
+class ConfigurableBroker : public virtual cci_utils::consuming_broker
 {
+private:
+    std::set<std::string> m_unignored; // before conf_file
+
 public:
     // a set of perameters that should be exposed up the broker stack
     std::set<std::string> hide;
@@ -526,7 +529,7 @@ public:
         }
     }
 
-    cci_originator get_value_origin(const std::string& parname) const {
+    cci_originator get_value_origin(const std::string& parname) const override {
         if (sendToParent(parname)) {
             return m_parent.get_value_origin(parname);
         } else {
@@ -536,7 +539,7 @@ public:
 
     /* NB  missing from upstream CCI 'broker' see
      * https://github.com/OSCI-WG/cci/issues/258 */
-    bool has_preset_value(const std::string& parname) const {
+    bool has_preset_value(const std::string& parname) const override {
         if (sendToParent(parname)) {
             return m_parent.has_preset_value(parname);
         } else {
@@ -544,7 +547,7 @@ public:
         }
     }
 
-    cci_value get_preset_cci_value(const std::string& parname) const {
+    cci_value get_preset_cci_value(const std::string& parname) const override {
         if (sendToParent(parname)) {
             return m_parent.get_preset_cci_value(parname);
         } else {
@@ -552,7 +555,7 @@ public:
         }
     }
 
-    void lock_preset_value(const std::string& parname) {
+    void lock_preset_value(const std::string& parname) override {
         if (sendToParent(parname)) {
             return m_parent.lock_preset_value(parname);
         } else {
@@ -560,33 +563,43 @@ public:
         }
     }
 
-    cci_value get_cci_value(const std::string& parname) const {
+    cci_value get_cci_value(const std::string& parname, const cci::cci_originator& originator =
+                                                            cci::cci_originator()) const override {
         if (sendToParent(parname)) {
-            return m_parent.get_cci_value(parname);
+            return m_parent.get_cci_value(parname, originator);
         } else {
-            return consuming_broker::get_cci_value(parname);
+            return consuming_broker::get_cci_value(parname, originator);
         }
     }
 
-    void add_param(cci_param_if* par) {
+    void add_param(cci_param_if* par) override {
         if (sendToParent(par->name())) {
             return m_parent.add_param(par);
         } else {
+            auto iter = m_unignored.find(par->name());
+            if (iter != m_unignored.end()) {
+                m_unignored.erase(iter);
+            }
             return consuming_broker::add_param(par);
         }
     }
 
-    void remove_param(cci_param_if* par) {
+    void remove_param(cci_param_if* par) override {
         if (sendToParent(par->name())) {
             return m_parent.remove_param(par);
         } else {
+            m_unignored.insert(par->name());
             return consuming_broker::remove_param(par);
         }
     }
 
     // Upstream consuming broker fails to pass get_unconsumed_preset_value to parent
-    std::vector<cci_name_value_pair> get_unconsumed_preset_values() const {
-        std::vector<cci_name_value_pair> r = consuming_broker::get_unconsumed_preset_values();
+    std::vector<cci_name_value_pair> get_unconsumed_preset_values() const override {
+        std::vector<cci_name_value_pair> r;
+        for (auto u : m_unignored) {
+            auto p = get_preset_cci_value(u);
+            r.push_back(std::make_pair(u, p));
+        }
         if (has_parent) {
             std::vector<cci_name_value_pair> p = m_parent.get_unconsumed_preset_values();
             r.insert(r.end(), p.begin(), p.end());
@@ -595,15 +608,21 @@ public:
     }
 
     // Upstream consuming broker fails to pass ignore_unconsumed_preset_values
-    void ignore_unconsumed_preset_values(const cci_preset_value_predicate& pred) {
+    void ignore_unconsumed_preset_values(const cci_preset_value_predicate& pred) override {
         if (has_parent) {
             m_parent.ignore_unconsumed_preset_values(pred);
         }
-        consuming_broker::ignore_unconsumed_preset_values(pred);
+        for (auto u = m_unignored.begin(); u != m_unignored.end();) {
+            if (pred(make_pair(*u, cci_value(0)))) {
+                u = m_unignored.erase(u);
+            } else {
+                ++u;
+            }
+        }
     }
 
     cci_preset_value_range get_unconsumed_preset_values(
-        const cci_preset_value_predicate& pred) const {
+        const cci_preset_value_predicate& pred) const override {
         return cci_preset_value_range(pred, ConfigurableBroker::get_unconsumed_preset_values());
     }
 
@@ -611,15 +630,16 @@ public:
     // method variant.
 
     void set_preset_cci_value(const std::string& parname, const cci_value& cci_value,
-                              const cci_originator& originator) {
+                              const cci_originator& originator) override {
         if (sendToParent(parname)) {
             return m_parent.set_preset_cci_value(parname, cci_value, originator);
         } else {
+            m_unignored.insert(parname);
             return consuming_broker::set_preset_cci_value(parname, cci_value, originator);
         }
     }
     cci_param_untyped_handle get_param_handle(const std::string& parname,
-                                              const cci_originator& originator) const {
+                                              const cci_originator& originator) const override {
         if (sendToParent(parname)) {
             return m_parent.get_param_handle(parname, originator);
         }
@@ -634,7 +654,7 @@ public:
     }
 
     std::vector<cci_param_untyped_handle> get_param_handles(
-        const cci_originator& originator) const {
+        const cci_originator& originator) const override {
         if (has_parent) {
             std::vector<cci_param_untyped_handle> p_param_handles = m_parent.get_param_handles();
             std::vector<cci_param_untyped_handle>
@@ -650,7 +670,7 @@ public:
         }
     }
 
-    bool is_global_broker() const { return (!has_parent); }
+    bool is_global_broker() const override { return (!has_parent); }
 };
 } // namespace gs
 
