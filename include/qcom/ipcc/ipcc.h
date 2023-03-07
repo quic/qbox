@@ -7,6 +7,7 @@
 
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
 #include <systemc>
+#include <cci_configuration>
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
 
@@ -83,22 +84,24 @@ private:
         CLIENT_SIGNAL_STATUS_1_n = 0x700 / 4,
         CLIENT_ENABLE_STATUS_0_n = 0x800 / 4,
         CLIENT_ENABLE_STATUS_1_n = 0x900 / 4,
+        MAX_CLIENT_SIZE = 64
     };
     class IPC_client
     {
     public:
         uint32_t regs[0x1000 / 4];
+        cci::cci_param<uint32_t> p_client_size;
         bool status(int client, int signal) {
-            assert(client < 64);
-            assert(signal < 64);
+            assert(client < p_client_size);
+            assert(signal < p_client_size);
             if (signal < 32)
                 return (regs[CLIENT_SIGNAL_STATUS_0_n + client] & (1 << signal)) != 0;
             else
                 return (regs[CLIENT_SIGNAL_STATUS_1_n + client] & (1 << (signal - 32))) != 0;
         }
         bool enable(int client, int signal) {
-            assert(client < 64);
-            assert(signal < 64);
+            assert(client < p_client_size);
+            assert(signal < p_client_size);
             if (signal < 32)
                 return (regs[CLIENT_ENABLE_STATUS_0_n + client] & (1 << signal)) != 0;
             else
@@ -106,8 +109,8 @@ private:
         }
 
         void set_status(int client, int signal) {
-            assert(client < 64);
-            assert(signal < 64);
+            assert(client < p_client_size);
+            assert(signal < p_client_size);
             if (signal < 32)
                 regs[CLIENT_SIGNAL_STATUS_0_n + client] |= (1 << signal);
             else
@@ -115,8 +118,8 @@ private:
         }
 
         void clear_status(int client, int signal) {
-            assert(client < 64);
-            assert(signal < 64);
+            assert(client < p_client_size);
+            assert(signal < p_client_size);
             if (signal < 32)
                 regs[CLIENT_SIGNAL_STATUS_0_n + client] &= ~(1 << signal);
             else
@@ -124,8 +127,8 @@ private:
         }
 
         void set_enable(int client, int signal) {
-            assert(client < 64);
-            assert(signal < 64);
+            assert(client < p_client_size);
+            assert(signal < p_client_size);
             if (signal < 32)
                 regs[CLIENT_ENABLE_STATUS_0_n + client] |= (1 << signal);
             else
@@ -133,21 +136,22 @@ private:
         }
 
         void clear_enable(int client, int signal) {
-            assert(client < 64);
-            assert(signal < 64);
+            assert(client < p_client_size);
+            assert(signal < p_client_size);
             if (signal < 32)
                 regs[CLIENT_ENABLE_STATUS_0_n + client] &= ~(1 << signal);
             else
                 regs[CLIENT_ENABLE_STATUS_1_n + client] &= ~(1 << (signal - 32));
         }
 
-        IPC_client() {
+        IPC_client()
+          : p_client_size("client_size", MAX_CLIENT_SIZE, "") {
             memset(regs, 0, sizeof(regs));
             regs[VERSION] = 0x10200;
             regs[RECV_ID] = 0xFFFFFFFF;
         };
     };
-    IPC_client client[4][64];
+    IPC_client client[4][MAX_CLIENT_SIZE];
     sc_core::sc_event update_irq_ev;
 
 protected:
@@ -177,7 +181,7 @@ protected:
         case SEND: {
             int s = data & 0xffff;
             if (data & 0x80000000) {
-                for (int c = 0; c < 64; c++) {
+                for (int c = 0; c < src.p_client_size; c++) {
                     send(src, c, s);
                 }
             } else {
@@ -229,7 +233,8 @@ protected:
         dst.set_status(sc, s);
     }
     void update_irq() {
-        for (int c = 0; c < 64; c++) {
+        int client_size = client[0][0].p_client_size;
+        for (int c = 0; c < client_size; c++) {
             int allirqcount = 0;
             for (int p = 0; p < 3; p++) {
                 int irqcount = 0;
@@ -237,8 +242,8 @@ protected:
                 int sig = 0;
                 int cli = 0;
 
-                for (int sc = 0; sc < 64; sc++) {
-                    for (int s = 0; s < 64; s++) {
+                for (int sc = 0; sc < client_size; sc++) {
+                    for (int s = 0; s < client_size; s++) {
                         if (client[p][c].status(sc, s)) {
                             // there is an active signal s from p/sc to p/c
                             if ((client[p][c].regs[CONFIG] & 0x80000000) == 0) {
@@ -315,13 +320,14 @@ protected:
 
 public:
     tlm_utils::simple_target_socket<IPCC> socket;
-    InitiatorSignalSocket<bool> irq[64];
-    bool irq_status[64] = { false };
+    InitiatorSignalSocket<bool> irq[MAX_CLIENT_SIZE];
+    bool irq_status[MAX_CLIENT_SIZE] = { false };
 
     SC_HAS_PROCESS(IPCC);
     IPCC(sc_core::sc_module_name name): socket("socket") {
+        int client_size = client[0][0].p_client_size;
         for (int p = 0; p < 3; p++) {
-            for (int c = 0; c < 64; c++) {
+            for (int c = 0; c < client_size; c++) {
                 client[p][c].regs[ID] = (c << 16) + p;
             }
         }
