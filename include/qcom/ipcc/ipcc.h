@@ -91,6 +91,7 @@ private:
     public:
         uint32_t regs[0x1000 / 4];
         cci::cci_param<uint32_t> p_client_size;
+        cci::cci_param<uint32_t> p_version;
         bool status(int client, int signal) {
             assert(client < p_client_size);
             assert(signal < p_client_size);
@@ -145,9 +146,10 @@ private:
         }
 
         IPC_client()
-          : p_client_size("client_size", MAX_CLIENT_SIZE, "") {
+            : p_client_size("client_size", MAX_CLIENT_SIZE, "")
+            , p_version("version", 0x10200, "") {
             memset(regs, 0, sizeof(regs));
-            regs[VERSION] = 0x10200;
+            regs[VERSION] = p_version;
             regs[RECV_ID] = 0xFFFFFFFF;
         };
     };
