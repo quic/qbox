@@ -14,18 +14,6 @@ CPMDeclarePackage(libgsutils
   GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/libgsutils.git
   GIT_SHALLOW on
 )
-# lua
-CPMDeclarePackage(lua
-  GIT_TAG v5.4.2
-  GITHUB_REPOSITORY lua/lua
-  EXCLUDE_FROM_ALL YES
-)
-# googletest (unversioned)
-CPMDeclarePackage(googletest
- GIT_TAG main
- GITHUB_REPOSITORY google/googletest
- EXCLUDE_FROM_ALL YES
-)
 # libgssync
 CPMDeclarePackage(libgssync
   NAME libgssync
