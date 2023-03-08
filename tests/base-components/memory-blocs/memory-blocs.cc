@@ -14,7 +14,6 @@ class MemoryBlocs : public sc_core::sc_module
 {
 public:
     // static constexpr size_t MEMORY_SIZE = 0x1000;
-    static constexpr size_t MEMORY_SIZE = 0xD00000000;
 
     void test_write_one_bloc()
     {
@@ -211,6 +210,70 @@ public:
         }
     }
 
+    template <class T>
+    void test_rw()
+    {
+        T seed = 0x11;
+        for (int i = 0; i < sizeof(T); i++)
+            seed += seed << 8;
+        for (int i = 1; i < 30; i++) {
+            for (int a = 0; a < 16; a++) {
+                uint64_t addr = ((i * 0x1000) - (8 * sizeof(T))) + (a * sizeof(T));
+                assert(m_initiator.do_write(addr, seed * a, false) == tlm::TLM_OK_RESPONSE);
+            }
+        }
+        for (int i = 1; i < 3; i++) {
+            for (int a = 0; a < 16; a++) {
+                T d;
+                uint64_t addr = ((i * 0x1000) - (8 * sizeof(T))) + (a * sizeof(T));
+                assert(m_initiator.do_read(addr, d, false) == tlm::TLM_OK_RESPONSE);
+                assert(d == (seed * a));
+            }
+        }
+    }
+
+    template <class T>
+    void test_rdmiw()
+    {
+        T seed = 0x11;
+        uint8_t* old_ptr;
+        int boundry = 0;
+        for (int i = 0; i < sizeof(T); i++)
+            seed += seed << 8; // make a fairly random data thats different in each byte
+        for (int i = 1; i < 30; i++) {
+            old_ptr = 0;
+            for (int a = 0; a < 16; a++) {
+                uint64_t addr = ((i * 0x1000) - (8 * sizeof(T))) + (a * sizeof(T));
+
+                do_good_dmi_request_and_check(addr);
+                const tlm::tlm_dmi& dmi_data = m_initiator.get_last_dmi_data();
+                uint64_t start_addr = dmi_data.get_start_address();
+                uint64_t end_addr = dmi_data.get_end_address();
+                uint8_t* ptr = dmi_data.get_dmi_ptr();
+                if (old_ptr != ptr) {
+                    assert(a == 0 || a == 8);
+                    if (a == 8) {
+                        boundry++;
+                    }
+                }
+                old_ptr = ptr;
+                assert(start_addr <= addr);
+                assert(addr <= end_addr);
+                T data = seed * a;
+                memcpy(dmi_data.get_dmi_ptr() + (addr - start_addr), &data, sizeof(T));
+            }
+        }
+        for (int i = 1; i < 3; i++) {
+            for (int a = 0; a < 16; a++) {
+                T d;
+                uint64_t addr = ((i * 0x1000) - (8 * sizeof(T))) + (a * sizeof(T));
+                assert(m_initiator.do_read(addr, d, false) == tlm::TLM_OK_RESPONSE);
+                assert(d == (seed * a));
+            }
+        }
+        assert(boundry > 0);
+    }
+
 protected:
     gs::ConfigurableBroker m_broker;
     InitiatorTester m_initiator;
@@ -218,10 +281,7 @@ protected:
 
 public:
     MemoryBlocs(const sc_core::sc_module_name& n)
-        : sc_core::sc_module(n)
-        , m_broker()
-        , m_initiator("initiator")
-        , m_memory("memory", MEMORY_SIZE)
+        : sc_core::sc_module(n), m_broker(), m_initiator("initiator"), m_memory("memory")
     {
         m_initiator.socket.bind(m_memory.socket);
     }
@@ -231,12 +291,20 @@ public:
 
 int sc_main(int argc, char* argv[])
 {
+    static constexpr size_t MEMORY_SIZE = 0xD00000000;
+
     auto m_broker = new gs::ConfigurableBroker(
         argc, argv,
-        { { "test.memory.min_bloc_size", cci::cci_value(0x1000) },
-          { "test.memory.max_bloc_size", cci::cci_value(0x10000) } });
+        {
+            { "test.memory.min_block_size", cci::cci_value(0x1000) },
+            { "test.memory.max_block_size", cci::cci_value(0x10000) },
+            { "test.memory.target_socket.size", cci::cci_value(MEMORY_SIZE) },
+            { "test.memory.target_socket.address", cci::cci_value(0) },
+            { "test.memory.target_socket.relative_addresses", cci::cci_value(true) },
+        });
 
     scp::init_logging(scp::LogConfig()
+                          .fileInfoFrom(sc_core::SC_ERROR)
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(10));      // make the msg type column a bit tighter
 
@@ -250,5 +318,9 @@ int sc_main(int argc, char* argv[])
     test.test_write_debug_two_blocs();
     test.test_write_with_DMI();
 
+    test.test_rdmiw<uint8_t>();
+    test.test_rdmiw<uint64_t>();
+    test.test_rw<uint8_t>();
+    test.test_rw<uint64_t>();
     return 0;
 }
