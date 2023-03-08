@@ -96,7 +96,7 @@ public:
     {
         for (int i = 0; i < NB_MEMORY; i++) {
             char txt[20];
-            sprintf(txt, "Memory_%d", i);
+            snprintf(txt, 20, "Memory_%d", i);
             m_memory.push_back(new gs::Memory<>(txt, size[i]));
             memory_size.push_back(address[i] + size[i]);
         }

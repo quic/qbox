@@ -272,7 +272,7 @@ public:
 
         for (int i = 0; i < NB_TARGETS; i++) {
             char txt[20];
-            sprintf(txt, "Target_%d", i);
+            snprintf(txt, 20, "Target_%d", i);
             m_target.push_back(new TargetTester(txt, size[i]));
             target_size.push_back(address[i] + size[i]);
         }
