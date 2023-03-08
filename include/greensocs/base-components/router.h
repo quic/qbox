@@ -312,6 +312,7 @@ private:
 
     struct target_info* decode_address(sc_dt::uint64 addr)
     {
+        lazy_initialize();
         for (unsigned int i = 0; i < targets.size(); i++) {
             struct target_info& ti = targets.at(i);
             if (addr >= ti.address && (addr - ti.address) < ti.size) {
@@ -340,11 +341,18 @@ private:
 protected:
     virtual void before_end_of_elaboration()
     {
-        target_socket.register_b_transport(this, &Router::b_transport);
-        target_socket.register_transport_dbg(this, &Router::transport_dbg);
-        target_socket.register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr);
-        initiator_socket.register_invalidate_direct_mem_ptr(this,
-                                                            &Router::invalidate_direct_mem_ptr);
+        if (!lazy_init)
+            lazy_initialize();
+    }
+
+private:
+    bool initialized = false;
+    void lazy_initialize()
+    {
+        if (initialized)
+            return;
+        initialized = true;
+
         std::vector<target_info> final_list = {};
 
         for (auto& ti : targets) {
@@ -426,6 +434,7 @@ protected:
 public:
     cci::cci_broker_handle m_broker;
     cci::cci_param<bool> thread_safe;
+    cci::cci_param<bool> lazy_init;
 
     explicit Router(const sc_core::sc_module_name& nm)
         : sc_core::sc_module(nm)
@@ -433,8 +442,16 @@ public:
         , target_socket("target_socket")
         , m_broker(cci::cci_get_broker())
         , thread_safe("thread_safe", THREAD_SAFE, "Is this model thread safe")
+        , lazy_init("lazy_init", false,
+                    "Initialize the router lazily (eg. during simulation rather than BEOL)")
     {
         SCP_DEBUG(()) << "Router constructed";
+
+        target_socket.register_b_transport(this, &Router::b_transport);
+        target_socket.register_transport_dbg(this, &Router::transport_dbg);
+        target_socket.register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr);
+        initiator_socket.register_invalidate_direct_mem_ptr(this,
+                                                            &Router::invalidate_direct_mem_ptr);
     }
 
     Router() = delete;
