@@ -69,6 +69,10 @@ public:
     {
         uint64_t v1 = 0xdeadbeef, v2;
         assert(m_initiator->do_write(0x0, v1) == tlm::TLM_OK_RESPONSE);
+        for (int i = 0; i < 1000; i++) {
+            assert(m_initiator->do_read(0x22020, v2) == tlm::TLM_OK_RESPONSE);
+            sc_core::wait(1, sc_core::SC_MS);
+        }
     }
 };
 
