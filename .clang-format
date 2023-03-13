@@ -17,7 +17,7 @@ AlignConsecutiveMacros: true
 AlignConsecutiveAssignments: false
 
 AllowAllArgumentsOnNextLine: false
-AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 
@@ -27,6 +27,7 @@ BreakStringLiterals: true
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass: true
+  AfterFunction:   true
 
 SpaceBeforeCtorInitializerColon: false
 SpacesBeforeTrailingComments: 1
