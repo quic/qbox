@@ -1,0 +1,11 @@
+fw/fastrpc-images/images/system.squashfs filter=lfs diff=lfs merge=lfs -text
+fw/fastrpc-images/images/vendor.squashfs filter=lfs diff=lfs merge=lfs -text
+fw/fastrpc-images/images/Image filter=lfs diff=lfs merge=lfs -text
+fw/fastrpc-images/images/hypvm.elf filter=lfs diff=lfs merge=lfs -text
+fw/fastrpc-images/images/rumi.dtb filter=lfs diff=lfs merge=lfs -text
+fw/fastrpc-images/images/rumi.dts filter=lfs diff=lfs merge=lfs -text
+fw/hexagon-images/bootimage_kailua.cdsp.coreQ.pbn filter=lfs diff=lfs merge=lfs -text
+fw/makena/images/mifs_qdrive.img filter=lfs diff=lfs merge=lfs -text
+fw/fastrpc-images/images/rumi_virtio.dts filter=lfs diff=lfs merge=lfs -text
+fw/fastrpc-images/images/rumi_virtio.dtb filter=lfs diff=lfs merge=lfs -text
+fw/fastrpc-images/images/Image_virtio filter=lfs diff=lfs merge=lfs -text

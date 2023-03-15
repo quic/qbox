@@ -1,0 +1,36 @@
+[*======================= COPYRIGHT NOTICE ======================*]
+[* Copyright(c) 2022 Qualcomm Innovation Center, Inc.            *]
+[* All rights reserved.                                          *]
+[*                                                               *]
+[*===============================================================*]
+
+Qualcomm QEMU-Virtual Platform 0.4 - Release Notes
+
+----------------------------------------------------------------------
+
+QQVP is provided via git repositories hosted on CodeLinaro.
+
+https://git.codelinaro.org/clo/private/qqvp/ is a link to the QQVP project
+in CodeLinaro.
+
+The user guide for QQVP is published in CreatePoint: Qualcomm® Quick
+Emulator (QEMU) Virtual Platform User Guide (80-N2040-55).
+
+-----------------------------------------------------------------------
+New in this release:
+- Support for S8775P platform.
+
+-----------------------------------------------------------------------
+Known problems:
+
+Invoking multiple concurrent 'qnn-net-run' instances will fail.
+This issue is still under investigation.
+
+
+-----------------------------------------------------------------------
+Troubleshooting:
+
+    "Could not initialize SDL(x11 not available) - exiting"
+    - This error message indicates your configuration (`conf.lua`)
+    requires a host GPU but the X server was not available.  See
+    User Guide for details.
