@@ -5,12 +5,8 @@ add_test(
 )
 target_link_libraries(checker
    PRIVATE
-      SystemC::systemc
-      SystemC::cci
-      GreenSocs::libgsutils
-      scp::reporting
-      gssync
+      ${TARGET_LIBS}
 )
 target_include_directories(checker
-   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../include/greensocs/
+   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../../include/greensocs/
 )

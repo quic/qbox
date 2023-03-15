@@ -20,7 +20,7 @@
 #include <libqemu/libqemu.h>
 
 #include "libqemu-cxx/target/riscv.h"
-#include "internals.h"
+#include "../internals.h"
 
 namespace qemu {
 void CpuRiscv::set_mip_update_callback(MipUpdateCallbackFn cb) {
