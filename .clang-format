@@ -4,6 +4,7 @@ BasedOnStyle: Google
 
 ColumnLimit: 100
 UseTab: Never
+
 IndentWidth: 4
 IndentCaseLabels: false
 
@@ -22,6 +23,7 @@ AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 
 BreakConstructorInitializers: BeforeComma
+
 BreakBeforeBinaryOperators: None
 BreakStringLiterals: true
 BreakBeforeBraces: Custom
