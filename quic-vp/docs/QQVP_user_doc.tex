@@ -35,7 +35,7 @@ The following diagram shows an overview of the modeled system.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Host system requirements}
 
-QQVP is supported on Ubuntu Linux 18.04.
+QQVP is supported on Ubuntu Linux 20.04 and macOS Monterey.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -55,10 +55,7 @@ QQVP binaries require the following system libraries to be installed, and corres
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Build the release}
 
-You can build this release natively on Ubuntu 18.04, but it will require
-an alternate host toolchain.
-
-Install the build dependencies:
+Install the build dependencies.  For Ubuntu:
 
 \small
 \begin{lstlisting}[language=bash]
@@ -67,34 +64,33 @@ Install the build dependencies:
 \end{lstlisting}
 \normalsize
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{gcc version}
-
-gcc version 9.4.0 or newer is required.  You can download and build gcc
-as follows:
+For macOS, you can install the dependencies using Homebrew.  First, to
+install Homebrew and add it to your build user's environment:
 
 \small
 \begin{lstlisting}[language=bash]
-    # curl https://ftp.gnu.org/gnu/gcc/gcc-9.4.0/gcc-9.4.0.tar.xz | tar xJf -
-    # cd gcc-9.4.0
-    # sed -i -e 's/ftp:/http:/' ./contrib/download_prerequisites
-    # ./contrib/download_prerequisites
-    # mkdir ../gcc-build
-    # cd ../gcc-build
-    # ../gcc-9.4.0/configure \
-        --prefix=/some/install/path \
-        --enable-languages=c,c++
-    # make -j$(nproc)
-    # make install
+    # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+    # echo '# Set PATH, MANPATH, etc., for Homebrew.' >> ~/.profile
+    # echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.profile
+    # eval "$(/opt/homebrew/bin/brew shellenv)"
 \end{lstlisting}
 \normalsize
 
+And then, to install the build dependencies:
+
+\small
+\begin{lstlisting}[language=bash]
+    # brew install cmake libelf flex bison make pkg-config python ninja glib pixman sdl gtk+3
+\end{lstlisting}
+\normalsize
 
 \clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Cmake version}
 
-Cmake version 3.14 or newer is required. Download it as follows:
+Cmake version 3.14 or newer is required.  For macOS, it's installed via
+Homebrew.  For Ubuntu, download it as follows:
 
 \small
 \begin{lstlisting}[language=bash]
@@ -181,8 +177,7 @@ The build operation will take 5 to 20 minutes, depending on your build system co
 \small
 \begin{lstlisting}[language=bash]
     # cd $HOME/quic-vp
-    # cmake -DCMAKE_C_COMPILER=/some/install/path/bin/gcc \
-      -DCMAKE_CXX_COMPILER=/some/install/path/bin/g++ -B build
+    # cmake -B build
     # cd build
     # make -j
 \end{lstlisting}
