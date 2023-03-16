@@ -14,6 +14,8 @@ execute_process(COMMAND git config --get remote.origin.url
 string(REGEX REPLACE "(.*)/${PACKAGE_PATH}.git$" "\\1/" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
 string(REGEX REPLACE "(.*)/sandboxes/[^\/]*/(.*)" "\\1/" GREENSOCS_GIT_ORIGIN "${GREENSOCS_GIT_ORIGIN}")
 
+message(STATUS "GREENSOCS_GIT_ORIGIN = ${GREENSOCS_GIT_ORIGIN}")
+
 if ( "${GREENSOCS_GIT}" STREQUAL "")
     set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
 endif()
@@ -21,7 +23,7 @@ endif()
 if (NOT gs-cmake_SOURCE_DIR)
    include(FetchContent)
    FetchContent_Declare(gs-cmake
-        GIT_REPOSITORY ${GREENSOCS_GIT}greensocs/cmake-boilerplate.git
+        GIT_REPOSITORY ${GREENSOCS_GIT}cmake-boilerplate.git
         GIT_TAG master
    )
    FetchContent_MakeAvailable(gs-cmake)
@@ -45,5 +47,5 @@ target_link_libraries(${PROJECT_NAME} INTERFACE
     ${TARGET_LIBS}
 )
 
-# gs_export()
-# gs_enable_testing()
+gs_export()
+gs_enable_testing()
