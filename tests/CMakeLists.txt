@@ -1,0 +1,5 @@
+add_subdirectory(csr)
+add_subdirectory(ipcc)
+add_subdirectory(qtb)
+add_subdirectory(qup)
+add_subdirectory(smmu500)
