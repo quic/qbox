@@ -1,0 +1,3 @@
+include:
+  - project: 'qqvp-tmp/cmake-boilerplate'
+    file: 'gitlab-ci-template.yml'
