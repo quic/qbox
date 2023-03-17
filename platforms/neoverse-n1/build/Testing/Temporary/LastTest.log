@@ -1,0 +1,177 @@
+Start testing: Mar 16 16:58 CET
+----------------------------------------------------------
+1/1 Testing: Interaction_test
+1/1 Test: Interaction_test
+Command: "/home/thomas/Documents/Qualcomm/build-lib/Qbox/platforms/neoverse-n1/tests/Interaction_test.py" "-e" "/home/thomas/Documents/Qualcomm/build-lib/Qbox/platforms/neoverse-n1/build/vp" "-l" "/home/thomas/Documents/Qualcomm/build-lib/Qbox/platforms/neoverse-n1/conf.lua"
+Directory: /home/thomas/Documents/Qualcomm/build-lib/Qbox/platforms/neoverse-n1/build/tests
+"Interaction_test" start time: Mar 16 16:58 CET
+Output:
+----------------------------------------------------------
+
+        SystemC 2.3.4-Accellera --- Mar 16 2023 16:55:39
+        Copyright (c) 1996-2022 by all Contributors,
+        ALL RIGHTS RESERVED
+[32m[I] [                0 s ]lua                           : Parse command line for --gs_luafile option (3 arguments)[m
+[32m[I] [                0 s ]lua                           : Option --gs_luafile with value /home/thomas/Documents/Qualcomm/build-lib/Qbox/platforms/neoverse-n1/conf.lua[m
+[32m[I] [                0 s ]lua                           : Lua file command line parser: parse option --gs_luafile /home/thomas/Documents/Qualcomm/build-lib/Qbox/platforms/neoverse-n1/conf.lua
+[m
+[32m[I] [                0 s ]lua                           : Read lua file '/home/thomas/Documents/Qualcomm/build-lib/Qbox/platforms/neoverse-n1/conf.lua'[m
+Lua config running. . . 
+[36m[D] [                0 s ]DMI.Libqbox                   : DmiManager Constructor[m
+[36m[D] [                0 s ]MemoryServices                : MemoryServices constructor[m
+[36m[D] [                0 s ]MemoryServices                : Memory Services Initialization[m
+[36m[D] [                0 s ]MemoryServices                : Memory Services Initialization[m
+[36m[D] [                0 s ]MemoryServices                : Memory Services Initialization[m
+Loading libqemu-system-aarch64.so
+Booting Linux on physical CPU 0x0000000000 [0x414fd0c1]
+Linux version 5.4.58 (lukas@fornax) (gcc version 9.3.0 (Buildroot 2021.02.3)) #2 SMP Sun Aug 22 10:14:16 CEST 2021
+Machine model: linux,dummy-virt
+earlycon: pl11 at MMIO 0x00000000c0000000 (options '')
+printk: bootconsole [pl11] enabled
+efi: Getting EFI parameters from FDT:
+efi: UEFI not found.
+On node 0 totalpages: 65536
+  DMA32 zone: 1024 pages used for memmap
+  DMA32 zone: 0 pages reserved
+  DMA32 zone: 65536 pages, LIFO batch:15
+psci: probing for conduit method from DT.
+psci: PSCIv1.1 detected in firmware.
+psci: Using standard PSCI v0.2 function IDs
+psci: Trusted OS migration not required
+psci: SMC Calling Convention v1.0
+percpu: Embedded 21 pages/cpu s46936 r8192 d30888 u86016
+pcpu-alloc: s46936 r8192 d30888 u86016 alloc=21*4096
+pcpu-alloc: [0] 0 [0] 1 [0] 2 [0] 3 
+Detected PIPT I-cache on CPU0
+CPU features: detected: GIC system register CPU interface
+CPU features: detected: Virtualization Host Extensions
+CPU features: detected: Hardware dirty bit management
+alternatives: patching kernel code
+Built 1 zonelists, mobility grouping on.  Total pages: 64512
+Kernel command line: console=ttyAMA0 root=/dev/mtdblock0 loglevel=8 earlyprintk earlycon
+Dentry cache hash table entries: 32768 (order: 6, 262144 bytes, linear)
+Inode-cache hash table entries: 16384 (order: 5, 131072 bytes, linear)
+mem auto-init: stack:off, heap alloc:off, heap free:off
+Memory: 235548K/262144K available (6268K kernel code, 348K rwdata, 1468K rodata, 448K init, 330K bss, 26596K reserved, 0K cma-reserved)
+SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=4, Nodes=1
+rcu: Hierarchical RCU implementation.
+rcu: 	RCU event tracing is enabled.
+rcu: 	RCU restricting CPUs from NR_CPUS=256 to nr_cpu_ids=4.
+rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=4
+NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+GICv3: GIC: Using split EOI/Deactivate mode
+GICv3: 32 SPIs implemented
+GICv3: 0 Extended SPIs implemented
+GICv3: Distributor has no Range Selector support
+GICv3: 16 PPIs implemented
+GICv3: no VLPI support, no direct LPI support
+GICv3: CPU0: found redistributor 0 region 0:0x00000000c8010000
+random: get_random_bytes called from start_kernel+0x2a8/0x3c0 with crng_init=0
+arch_timer: cp15 timer(s) running at 62.50MHz (phys).
+clocksource: arch_sys_counter: mask: 0xffffffffffffff max_cycles: 0x1cd42e208c, max_idle_ns: 881590405314 ns
+sched_clock: 56 bits at 62MHz, resolution 16ns, wraps every 4398046511096ns
+Console: colour dummy device 80x25
+Calibrating delay loop (skipped), value calculated using timer frequency.. 125.00 BogoMIPS (lpj=250000)
+pid_max: default: 32768 minimum: 301
+Mount-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+Mountpoint-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+ASID allocator initialised with 32768 entries
+rcu: Hierarchical SRCU implementation.
+EFI services will not be available.
+smp: Bringing up secondary CPUs ...
+Detected PIPT I-cache on CPU1
+GICv3: CPU1: found redistributor 1 region 0:0x00000000c8030000
+CPU1: Booted secondary processor 0x0000000001 [0x414fd0c1]
+Detected PIPT I-cache on CPU2
+GICv3: CPU2: found redistributor 2 region 0:0x00000000c8050000
+CPU2: Booted secondary processor 0x0000000002 [0x414fd0c1]
+Detected PIPT I-cache on CPU3
+GICv3: CPU3: found redistributor 3 region 0:0x00000000c8070000
+CPU3: Booted secondary processor 0x0000000003 [0x414fd0c1]
+smp: Brought up 1 node, 4 CPUs
+SMP: Total of 4 processors activated.
+CPU features: detected: Privileged Access Never
+CPU features: detected: User Access Override
+CPU features: detected: 32-bit EL0 Support
+CPU features: detected: Common not Private translations
+CPU features: detected: RAS Extension Support
+CPU features: detected: Data cache clean to the PoU not required for I/D coherence
+CPU features: detected: CRC32 instructions
+CPU: All CPU(s) started at EL2
+devtmpfs: initialized
+clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+futex hash table entries: 1024 (order: 4, 65536 bytes, linear)
+DMI not present or invalid.
+NET: Registered protocol family 16
+DMA: preallocated 256 KiB pool for atomic allocations
+hw-breakpoint: found 6 breakpoint and 4 watchpoint registers.
+Serial: AMBA PL011 UART driver
+c0000000.pl011: ttyAMA0 at MMIO 0xc0000000 (irq = 7, base_baud = 0) is a PL011 rev1
+printk: console [ttyAMA0] enabled
+printk: console [ttyAMA0] enabled
+printk: bootconsole [pl11] disabled
+printk: bootconsole [pl11] disabled
+iommu: Default domain type: Translated 
+vgaarb: loaded
+SCSI subsystem initialized
+libata version 3.00 loaded.
+clocksource: Switched to clocksource arch_sys_counter
+NET: Registered protocol family 2
+tcp_listen_portaddr_hash hash table entries: 256 (order: 0, 4096 bytes, linear)
+TCP established hash table entries: 2048 (order: 2, 16384 bytes, linear)
+TCP bind hash table entries: 2048 (order: 3, 32768 bytes, linear)
+TCP: Hash tables configured (established 2048 bind 2048)
+UDP hash table entries: 256 (order: 1, 8192 bytes, linear)
+UDP-Lite hash table entries: 256 (order: 1, 8192 bytes, linear)
+NET: Registered protocol family 1
+PCI: CLS 0 bytes, default 64
+workingset: timestamp_bits=62 max_order=16 bucket_order=0
+squashfs: version 4.0 (2009/01/31) Phillip Lougher
+fuse: init (API version 7.31)
+Block layer SCSI generic (bsg) driver version 0.4 loaded (major 251)
+io scheduler mq-deadline registered
+io scheduler kyber registered
+cacheinfo: Unable to detect cache hierarchy for CPU 0
+physmap-flash 200000000.flash: physmap platform flash device: [mem 0x200000000-0x27fffffff]
+libphy: Fixed MDIO Bus: probed
+libphy: ethoc-mdio: probed
+NET: Registered protocol family 10
+Segment Routing with IPv6
+sit: IPv6, IPv4 and MPLS over IPv4 tunneling driver
+NET: Registered protocol family 17
+NET: Registered protocol family 15
+registered taskstats version 1
+hctosys: unable to open rtc device (rtc0)
+EXT4-fs (mtdblock0): mounted filesystem with ordered data mode. Opts: (null)
+VFS: Mounted root (ext4 filesystem) readonly on device 31:0.
+devtmpfs: mounted
+Freeing unused kernel memory: 448K
+Run /sbin/init as init process
+EXT4-fs (mtdblock0): re-mounted. Opts: (null)
+Starting syslogd: OK
+Starting klogd: OK
+Running sysctl: OK
+Saving random seed: random: dd: uninitialized urandom read (512 bytes read)
+OK
+Starting network: ethoc c7000000.ethernet eth0: Link is Down
+OK
+random: crng init done
+ssh-keygen: generating new host keys: RSA DSA ECDSA ED25519 
+Starting sshd: OK
+
+Welcome to Buildroot - Log in with username (root) and password (greensocs)
+buildroot login: root
+root
+Password: greensocs
+
+# 
+<end of output>
+Test time =   7.76 sec
+----------------------------------------------------------
+Test Passed.
+"Interaction_test" end time: Mar 16 16:59 CET
+"Interaction_test" time elapsed: 00:00:07
+----------------------------------------------------------
+
+End testing: Mar 16 16:59 CET
