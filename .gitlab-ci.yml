@@ -1,5 +1,13 @@
 include:
-  - project: 'qqvp/greensocs/cmake-boilerplate'
+  - project: 'qqvp/qbox'
+    file: 'platforms/cortex-a53/.gitlab-ci.yml'
+  - project: 'qqvp/qbox'
+    file: 'platforms/neoverse-n1/.gitlab-ci.yml'
+  - project: 'qqvp/qbox'
+    file: 'platforms/riscv64/.gitlab-ci.yml'
+  - project: 'qqvp/qbox'
+    file: 'platforms/cortex-m55-remote/.gitlab-ci.yml'
+  - project: 'qqvp/cmake-boilerplate'
     file: 'gitlab-ci-template.yml'
 
 .build_job_template:
