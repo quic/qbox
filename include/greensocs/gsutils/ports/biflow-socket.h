@@ -77,6 +77,7 @@ class biflow_socket : public sc_core::sc_module
             break;
         case ctrl::INFINITE:
             infinite = true;
+            break;
         default:
             SCP_FATAL(())("Unkown command");
         }
