@@ -24,4 +24,4 @@ install (TARGETS vp DESTINATION ${CMAKE_INSTALL_BINDIR})
 file(GLOB REF_USER_CONF_FILES "${CMAKE_SOURCE_DIR}/configs/*.lua")
 install(FILES ${REF_USER_CONF_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/examples)
 
-# gs_enable_testing()
+gs_enable_testing()

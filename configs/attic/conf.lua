@@ -50,15 +50,15 @@ function get_image(local_path, install_path, base_name)
     return target_image
 end
 
-filesystem_image = get_image("bsp/linux/extras/fs/filesystem.bin",
+filesystem_image = get_image("../bsp/linux/extras/fs/filesystem.bin",
     image_install_dir() .. "filesystem.bin",
     "filesystem.bin")
 
-linux_image = get_image("bsp/linux/out/android-mainline/dist/Image",
+linux_image = get_image("../bsp/linux/out/android-mainline/dist/Image",
     nil,
     "Image");
 
-device_tree = get_image("fw/fastrpc-images/images/rumi_opengl.dtb",
+device_tree = get_image("../fw/fastrpc-images/images/rumi_opengl.dtb",
     nil,
     "rumi_opengl.dtb");
 
@@ -73,7 +73,7 @@ end
 
 _KERNEL64_LOAD_ADDR = 0x41080000
 _DTB_LOAD_ADDR = 0x44200000
-dofile(top() .. "fw/arm64_bootloader.lua")
+dofile(top() .. "../fw/arm64_bootloader.lua")
 
 local NSP0_AHBS_BASE = 0x1B300000 -- TURING_SS_0TURING_QDSP6V68SS
 local NSP0_BASE      = 0x1A000000 -- TURING_SS_0TURING

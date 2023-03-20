@@ -10,7 +10,7 @@ function top()
     end
  end
 
-dofile(top().."/fw/utils.lua");
+dofile(top().."../fw/utils.lua");
 print ("Lua config running. . . ");
 
 -- these values are helpful for local configuration, so make them global
@@ -21,8 +21,8 @@ print ("Lua config running. . . ");
 
 
 
-local MAKENA_REGS_CSV = valid_file(top().."fw/makena/SA8540P_MakenaAU_v2_Registers.csv")
-local QDSP6_CFG   = valid_file(top().."fw/qdsp6.lua")
+local MAKENA_REGS_CSV = valid_file(top().."../fw/makena/SA8540P_MakenaAU_v2_Registers.csv")
+local QDSP6_CFG   = valid_file(top().."../fw/qdsp6.lua")
 
 local NSP0_BASE     = 0x24000000 -- TURING_SS_0TURING
 local NSP1_BASE     = 0x28000000 -- TURING_SS_1TURING
