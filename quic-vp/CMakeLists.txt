@@ -5,7 +5,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 set(LIBQEMU_TARGETS aarch64 hexagon)
 
-add_subdirectory(../ ${CMAKE_BINARY_DIR}/_deps/quic-build)
+add_subdirectory(../ ${CMAKE_BINARY_DIR}/_deps/qqvp-build)
 
 add_executable(vp
     src/main.cc

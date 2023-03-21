@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.14)
-project(quic VERSION 1.0)
+project(qqvp VERSION 1.0)
 
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
-set(PACKAGE_PATH "quic")
+set(PACKAGE_PATH "qqvp")
 set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositoies")
 
 execute_process(COMMAND git config --get remote.origin.url

@@ -1,5 +1,5 @@
 include:
-  - project: 'qqvp/quic'
+  - project: 'qqvp/qqvp'
     file: 'quic-vp/.gitlab-ci.yml'
   - project: 'qqvp/cmake-boilerplate'
     file: 'gitlab-ci-template.yml'
