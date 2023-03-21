@@ -34,8 +34,8 @@
 //
 //==============================================================================
 
-#include "qup/spi/mspi-qupv3.h"
-#include "qup/spi/sspi-qupv3.h"
+#include "quic/qup/spi/mspi-qupv3.h"
+#include "quic/qup/spi/sspi-qupv3.h"
 
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/target-tester.h>
