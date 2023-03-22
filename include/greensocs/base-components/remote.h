@@ -283,6 +283,8 @@ class PassRPC : public sc_core::sc_module
     };
 
     cci::cci_broker_handle m_broker;
+    str_pairs m_cci_db;
+    std::mutex m_cci_db_mut;
 
     class initiator_socket_spying
         : public tlm_utils::simple_initiator_socket_b<MOD, BUSWIDTH, tlm::tlm_base_protocol_types,
@@ -404,7 +406,7 @@ private:
             while (!is_stopped) {
                 std::unique_lock<std::mutex> ul(rpc_execed_mut);
                 is_rpc_execed.wait_for(ul, std::chrono::milliseconds(RPC_TIMEOUT),
-                                   [this]() { return (!notifiers.empty() || is_stopped); });
+                                       [this]() { return (!notifiers.empty() || is_stopped); });
                 while (!notifiers.empty()) {
                     notifiers.front()();
                     notifiers.pop();
@@ -748,7 +750,7 @@ private:
             std::future_status status;
             try {
                 do {
-                    status = rpc_future.wait_for( std::chrono::milliseconds(RPC_TIMEOUT));
+                    status = rpc_future.wait_for(std::chrono::milliseconds(RPC_TIMEOUT));
                 } while ((status != std::future_status::ready) && !cancel_waiting);
             } catch (const std::future_error& e) {
                 SCP_DEBUG(()) << name()
@@ -943,7 +945,14 @@ public:
         // would it be better to have a 'remote cci broker' that connected back,
 
         server->bind("cci_db", [&](str_pairs db) {
-            set_cci_db(db);
+            if (sc_core::sc_get_status() > sc_core::sc_status::SC_BEFORE_END_OF_ELABORATION) {
+                std::cerr << "Attempt to do cci_db() RPC after "
+                             "sc_core::sc_status::SC_BEFORE_END_OF_ELABORATION"
+                          << std::endl;
+                exit(1);
+            }
+            std::lock_guard<std::mutex> lg(m_cci_db_mut);
+            m_cci_db.insert(m_cci_db.end(), db.begin(), db.end());
             return;
         });
 
@@ -1127,7 +1136,12 @@ public:
         _Exit(EXIT_SUCCESS);
     }
 
-    void before_end_of_elaboration() { send_status(); }
+    void before_end_of_elaboration()
+    {
+        send_status();
+        std::lock_guard<std::mutex> lg(m_cci_db_mut);
+        set_cci_db(m_cci_db);
+    }
     void end_of_elaboration() { send_status(); }
     void start_of_simulation()
     {
