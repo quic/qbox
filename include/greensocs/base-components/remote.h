@@ -375,6 +375,7 @@ private:
     std::mutex client_conncted_mut;
     std::mutex sc_status_mut;
     std::atomic_bool cancel_waiting;
+    std::thread::id sc_tid;
 
     sc_core::sc_status m_remote_status = static_cast<sc_core::sc_status>(0);
 
@@ -546,6 +547,7 @@ private:
     void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
     {
         tlm_generic_payload_rpc t;
+        tlm_generic_payload_rpc r;
         double time = sc_core::sc_time_stamp().to_seconds();
 
         uint64_t addr = trans.get_address();
@@ -588,34 +590,50 @@ private:
          * from the async_call in a separate thread, then notify the waiting systemc thread.
          * This solution should be revisted in future.
          */
-        btspt_waiter.start();
-        auto rpc_future = do_rpc_async_call("b_tspt", id, t);
+        if (std::this_thread::get_id() == sc_tid &&
+            sc_core::sc_get_status() >= sc_core::sc_status::SC_RUNNING &&
+            sc_core::sc_get_curr_process_kind() != sc_core::sc_curr_proc_kind::SC_NO_PROC_) {
+            SCP_DEBUG(()) << name() << " B_TSPT handle reentrancy, sc_get_curr_simcontext " << sc_get_curr_simcontext()
+                          << " SC current process kind = "
+                          << sc_core::sc_get_curr_process_kind();
+            btspt_waiter.start();
+            auto rpc_future = do_rpc_async_call("b_tspt", id, t);
 
-        std::unique_lock<std::mutex> ul(btspt_waiter.rpc_execed_mut);
-        btspt_waiter.enqueue_notifier([&]() {
-            std::future_status status;
-            try {
-                do {
-                    status = rpc_future.wait_for(std::chrono::milliseconds(RPC_TIMEOUT));
-                } while ((status != std::future_status::ready) && !cancel_waiting);
-            } catch (const std::future_error& e) {
-                SCP_DEBUG(()) << name()
-                              << " PassRPC::b_transport() std::future::wait() Connection with "
-                                 "remote is closed: "
-                              << e.what();
-                stop_and_exit();
-            } catch (...) {
-                SCP_DEBUG(()) << name()
-                              << "PassRPC::b_transport() std::future::wait() Unknown error!";
-                stop_and_exit();
+            std::unique_lock<std::mutex> ul(btspt_waiter.rpc_execed_mut);
+            btspt_waiter.enqueue_notifier([&]() {
+                std::future_status status;
+                try {
+                    do {
+                        status = rpc_future.wait_for(std::chrono::milliseconds(RPC_TIMEOUT));
+                    } while ((status != std::future_status::ready) && !cancel_waiting);
+                } catch (const std::future_error& e) {
+                    SCP_DEBUG(()) << name()
+                                  << " PassRPC::b_transport() std::future::wait() Connection with "
+                                     "remote is closed: "
+                                  << e.what();
+                    stop_and_exit();
+                } catch (...) {
+                    SCP_DEBUG(()) << name()
+                                  << "PassRPC::b_transport() std::future::wait() Unknown error!";
+                    stop_and_exit();
+                }
+                btspt_waiter.async_ev[id].async_notify();
+            });
+            btspt_waiter.is_rpc_execed.notify_one();
+            ul.unlock();
+            SCP_DEBUG(()) << name() << " B_TSPT wait for event, sc_get_curr_simcontext " << sc_get_curr_simcontext()
+                          << " SC current process kind = "
+                          << sc_core::sc_get_curr_process_kind();
+            if (sc_core::sc_get_curr_process_kind() !=
+                sc_core::sc_curr_proc_kind::SC_METHOD_PROC_) {
+                sc_core::wait(btspt_waiter.async_ev[id]); // systemc wait
+            } else {
+                sc_core::next_trigger(btspt_waiter.async_ev[id]);
             }
-            btspt_waiter.async_ev[id].async_notify();
-        });
-        btspt_waiter.is_rpc_execed.notify_one();
-        ul.unlock();
-        sc_core::wait(btspt_waiter.async_ev[id]); // systemc wait
-        tlm_generic_payload_rpc r = do_rpc_async_get<tlm_generic_payload_rpc>(
-            std::move(rpc_future));
+            r = do_rpc_async_get<tlm_generic_payload_rpc>(std::move(rpc_future));
+        } else {
+            r = do_rpc_as<tlm_generic_payload_rpc>(do_rpc_call("b_tspt", id, t));
+        }
 
         r.update_to_tlm(trans);
         delay = sc_core::sc_time(r.m_quantum_time, sc_core::SC_SEC);
@@ -663,37 +681,57 @@ private:
     {
         SCP_DEBUG(()) << name() << " ->remote debug tlm " << txn_str(trans);
         tlm_generic_payload_rpc t;
+        tlm_generic_payload_rpc r;
 
         t.from_tlm(trans);
 
-        dbg_waiter.start();
-        auto rpc_future = do_rpc_async_call("dbg_tspt", id, t);
+        if (std::this_thread::get_id() == sc_tid &&
+            sc_core::sc_get_status() >= sc_core::sc_status::SC_RUNNING &&
+            sc_core::sc_get_curr_process_kind() != sc_core::sc_curr_proc_kind::SC_NO_PROC_) {
+            SCP_DEBUG(()) << name() << " TSBT Debug handle reentrancy, sc_get_curr_simcontext " << sc_get_curr_simcontext()
+                          << " enter SC current process kind = "
+                          << sc_core::sc_get_curr_process_kind();
+            dbg_waiter.start();
+            auto rpc_future = do_rpc_async_call("dbg_tspt", id, t);
 
-        std::unique_lock<std::mutex> ul(dbg_waiter.rpc_execed_mut);
-        dbg_waiter.enqueue_notifier([&]() {
-            std::future_status status;
-            try {
-                do {
-                    status = rpc_future.wait_for(std::chrono::milliseconds(RPC_TIMEOUT));
-                } while ((status != std::future_status::ready) && !cancel_waiting);
-            } catch (const std::future_error& e) {
-                SCP_DEBUG(()) << name()
-                              << " PassRPC::transport_dbg() std::future::wait() Connection with "
-                                 "remote is closed: "
-                              << e.what();
-                stop_and_exit();
-            } catch (...) {
-                SCP_DEBUG(()) << name()
-                              << " PassRPC::transport_dbg() std::future::wait() Unknown error!";
-                stop_and_exit();
+            std::unique_lock<std::mutex> ul(dbg_waiter.rpc_execed_mut);
+            dbg_waiter.enqueue_notifier(
+                [&]() {
+                    std::future_status status;
+                    try {
+                        do {
+                            status = rpc_future.wait_for(std::chrono::milliseconds(RPC_TIMEOUT));
+                        } while ((status != std::future_status::ready) && !cancel_waiting);
+                    } catch (const std::future_error& e) {
+                        SCP_DEBUG(())
+                            << name()
+                            << " PassRPC::transport_dbg() std::future::wait() Connection with "
+                               "remote is closed: "
+                            << e.what();
+                        stop_and_exit();
+                    } catch (...) {
+                        SCP_DEBUG(())
+                            << name()
+                            << " PassRPC::transport_dbg() std::future::wait() Unknown error!";
+                        stop_and_exit();
+                    }
+                    dbg_waiter.async_ev[id].async_notify();
+                });
+            dbg_waiter.is_rpc_execed.notify_one();
+            ul.unlock();
+            SCP_DEBUG(()) << name() << " TSBT Debug wait for event, sc_get_curr_simcontext " << sc_get_curr_simcontext()
+                          << " enter SC current process kind = "
+                          << sc_core::sc_get_curr_process_kind();
+            if (sc_core::sc_get_curr_process_kind() !=
+                sc_core::sc_curr_proc_kind::SC_METHOD_PROC_) {
+                sc_core::wait(dbg_waiter.async_ev[id]); // systemc wait
+            } else {
+                sc_core::next_trigger(dbg_waiter.async_ev[id]);
             }
-            dbg_waiter.async_ev[id].async_notify();
-        });
-        dbg_waiter.is_rpc_execed.notify_one();
-        ul.unlock();
-        sc_core::wait(dbg_waiter.async_ev[id]); // systemc wait
-        tlm_generic_payload_rpc r = do_rpc_async_get<tlm_generic_payload_rpc>(
-            std::move(rpc_future));
+            r = do_rpc_async_get<tlm_generic_payload_rpc>(std::move(rpc_future));
+        } else {
+            r = do_rpc_as<tlm_generic_payload_rpc>(do_rpc_call("dbg_tspt", id, t));
+        }
 
         r.update_to_tlm(trans);
         SCP_DEBUG(()) << name() << " <-remote debug tlm done " << txn_str(trans);
@@ -737,40 +775,60 @@ private:
         }
 #endif
         tlm_generic_payload_rpc t;
+        tlm_dmi_rpc r;
         t.from_tlm(trans);
         //        SCP_DEBUG(()) << name() << " DMI socket ID " << id << " From_tlm " <<
         //        txn_str(trans)
         //        ;
 
-        dmi_waiter.start();
-        auto rpc_future = do_rpc_async_call("dmi_req", id, t);
+        if (std::this_thread::get_id() == sc_tid &&
+            sc_core::sc_get_status() >= sc_core::sc_status::SC_RUNNING &&
+            sc_core::sc_get_curr_process_kind() != sc_core::sc_curr_proc_kind::SC_NO_PROC_) {
+            SCP_DEBUG(()) << name() << " Get DMI Ptr handle reentrancy, sc_get_curr_simcontext " << sc_get_curr_simcontext()
+                          << " enter SC current process kind = "
+                          << sc_core::sc_get_curr_process_kind();
 
-        std::unique_lock<std::mutex> ul(dmi_waiter.rpc_execed_mut);
-        dmi_waiter.enqueue_notifier([&]() {
-            std::future_status status;
-            try {
-                do {
-                    status = rpc_future.wait_for(std::chrono::milliseconds(RPC_TIMEOUT));
-                } while ((status != std::future_status::ready) && !cancel_waiting);
-            } catch (const std::future_error& e) {
-                SCP_DEBUG(()) << name()
-                              << " PassRPC::get_direct_mem_ptr() std::future::wait() Connection "
-                                 "with remote is closed: "
-                              << e.what();
-                stop_and_exit();
-            } catch (...) {
-                SCP_DEBUG(())
-                    << name()
-                    << " PassRPC::get_direct_mem_ptr() std::future::wait() Unknown error!";
-                stop_and_exit();
+            dmi_waiter.start();
+            auto rpc_future = do_rpc_async_call("dmi_req", id, t);
+
+            std::unique_lock<std::mutex> ul(dmi_waiter.rpc_execed_mut);
+            dmi_waiter.enqueue_notifier(
+                [&]() {
+                    std::future_status status;
+                    try {
+                        do {
+                            status = rpc_future.wait_for(std::chrono::milliseconds(RPC_TIMEOUT));
+                        } while ((status != std::future_status::ready) && !cancel_waiting);
+                    } catch (const std::future_error& e) {
+                        SCP_DEBUG(())
+                            << name()
+                            << " PassRPC::get_direct_mem_ptr() std::future::wait() Connection "
+                               "with remote is closed: "
+                            << e.what();
+                        stop_and_exit();
+                    } catch (...) {
+                        SCP_DEBUG(())
+                            << name()
+                            << " PassRPC::get_direct_mem_ptr() std::future::wait() Unknown error!";
+                        stop_and_exit();
+                    }
+                    dmi_waiter.async_ev[id].async_notify();
+                });
+            dmi_waiter.is_rpc_execed.notify_one();
+            ul.unlock();
+            SCP_DEBUG(()) << name() << " Get DMI Ptr wait for event, sc_get_curr_simcontext " << sc_get_curr_simcontext()
+                          << " execute SC current process kind = "
+                          << sc_core::sc_get_curr_process_kind();
+            if (sc_core::sc_get_curr_process_kind() !=
+                sc_core::sc_curr_proc_kind::SC_METHOD_PROC_) {
+                sc_core::wait(dmi_waiter.async_ev[id]); // systemc wait
+            } else {
+                sc_core::next_trigger(dmi_waiter.async_ev[id]);
             }
-            dmi_waiter.async_ev[id].async_notify();
-        });
-        dmi_waiter.is_rpc_execed.notify_one();
-        ul.unlock();
-        sc_core::wait(dmi_waiter.async_ev[id]); // systemc wait
-        tlm_dmi_rpc r = do_rpc_async_get<tlm_dmi_rpc>(std::move(rpc_future));
-
+            r = do_rpc_async_get<tlm_dmi_rpc>(std::move(rpc_future));
+        } else {
+            r = do_rpc_as<tlm_dmi_rpc>(do_rpc_call("dmi_req", id, t));
+        }
         if (r.m_shmem_size == 0) {
             SCP_DEBUG(()) << name() << "DMI OK, but no shared memory available?"
                           << trans.get_address();
@@ -910,6 +968,7 @@ public:
     {
         SigHandler::get().add_sig_handler(SIGINT, SigHandler::Handler_CB::PASS);
         SigHandler::get().register_on_exit_cb([this]() { stop(); });
+        sc_tid = std::this_thread::get_id();
         SCP_DEBUG(()) << "PassRPC constructor";
         SCP_DEBUG(()) << getpid() << " IS THE RPC PID " << std::this_thread::get_id()
                       << " is the thread ID";
