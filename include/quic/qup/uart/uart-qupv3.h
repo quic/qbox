@@ -87,6 +87,7 @@ public:
         { GENI_TX_FIFO_0, 0x0 },      { GENI_TX_FIFO_STATUS, 0x0 },  { UART_TX_TRANS_LEN, 0x0 },
         { GENI_RX_FIFO_0, 0x0 },      { GENI_S_IRQ_STATUS, 0x0 },    { GENI_FW_REVISION_RO, 0x2ff },
         { GENI_RX_FIFO_STATUS, 0x0 }, { SE_HW_PARAM_0, 0x20102864 }, { SE_HW_PARAM_1, 0x20204800 },
+        { UART_MANUAL_RFR, 0x0 },
     };
 
 #ifdef QUP_UART_TEST
@@ -137,9 +138,7 @@ public:
         }
     }
 
-    void qupv3_update() {
-        update_event.notify();
-    }
+    void qupv3_update() { update_event.notify(); }
 
     int irq_level() {
         return (qupv3_handle[GENI_M_IRQ_STATUS] & M_CMD_DONE) ||
@@ -208,6 +207,10 @@ public:
         case SE_HW_PARAM_1:
             r = qupv3_handle[SE_HW_PARAM_1];
             SCP_DEBUG(()) << hex << "Unhandled READ at offset :" << offset;
+            break;
+        case UART_MANUAL_RFR:
+            r = qupv3_handle[UART_MANUAL_RFR];
+            SCP_DEBUG(())("Manual RFR read");
             break;
         default:
             SCP_WARN(()) << "Error: qupv3_read() Unhandled read(" << hex << offset
@@ -281,6 +284,11 @@ public:
             else
                 SCP_ERR() << hex << "Error: Addr(UART_TX_TRANS_LEN):" << value;
             break;
+        case UART_MANUAL_RFR:
+            qupv3_handle[UART_MANUAL_RFR] = value;
+            SCP_DEBUG(())("Manual RFR write");
+            break;
+
         case SE_GSI_EVENT_EN:
         case GENI_S_IRQ_ENABLE:
         case SE_IRQ_EN:
@@ -301,7 +309,8 @@ public:
         }
     }
     int get_fifo_has_space() {
-        return ((qupv3_handle[GENI_RX_FIFO_STATUS] >> 28) < (GENI_RX_FIFO_MAX - 1));
+        return ((qupv3_handle[GENI_RX_FIFO_STATUS] >> 28) < (GENI_RX_FIFO_MAX - 1)) &&
+               (qupv3_handle[UART_MANUAL_RFR] != 0x80000002);
     }
     static int qupv3_can_receive(void* opaque) {
         QUPv3* uart = (QUPv3*)opaque;

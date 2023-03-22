@@ -77,6 +77,7 @@ typedef enum {
     UNKNOWN_TX_FIFO           = ((GENI4_DATA) + 0x144),
     GENI_RX_WATERMARK_REG     = ((GENI4_DATA) + 0x210),
     GENI_RX_RFR_WATERMARK_REG = ((GENI4_DATA) + 0x214),
+    UART_MANUAL_RFR           = ((GENI4_IMAGE_REGS) + 0x1AC),
 
 } qupv3_reg;
 
@@ -91,6 +92,6 @@ typedef enum {
 #define RX_LAST            (1 << 31)
 #define RX_LAST_BYTE_VALID (1 << 28)
 
-#define GENI_RX_FIFO_MAX 4    /* Must be power of 2 */
+#define GENI_RX_FIFO_MAX 4 /* Must be power of 2 */
 
 #endif
