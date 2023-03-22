@@ -58,10 +58,11 @@ public:
     }
 
     enum class Handler_CB {
-        EXIT, //  exit
-        PASS, // run signal_handler
-        IGN,  // ignore
-        DFL,  // default
+        EXIT,       //  run signal_handler then exit
+        PASS,       // run signal_handler
+        FORCE_EXIT, // just exit
+        IGN,        // ignore
+        DFL,        // default
     };
 
     static void pass_sig_handler(int sig) {
@@ -70,9 +71,12 @@ public:
         ssize_t ret = ::write(gs::SigHandler::get().get_write_sock_end(), &ch, 1);
     }
 
+    static void force_exit_sig_handler(int sig) {
+        _Exit(EXIT_SUCCESS); // FIXME: should the exit status be EXIT_FAILURE?
+    }
+
     inline void add_sig_handler(int signum, Handler_CB s_cb = Handler_CB::EXIT) {
-        auto it = m_signals.find(signum);
-        if (it != m_signals.end())
+        if (m_signals.find(signum) != m_signals.end())
             m_signals.at(signum) = s_cb;
         else {
             auto ret = m_signals.insert(std::make_pair(signum, s_cb));
@@ -116,11 +120,40 @@ public:
         _start_pass_signal_handler();
     }
 
-    inline int get_write_sock_end() const { return self_sockpair_fd[1]; }
+    inline int get_write_sock_end() {
+        int flags = fcntl(self_sockpair_fd[1],
+                          F_GETFL); // fcntl is async signal safe according to
+                                    // https://man7.org/linux/man-pages/man7/signal-safety.7.html
+        if (flags == -1) {
+            perror("fcntl F_GETFL");
+            _Exit(EXIT_FAILURE);
+        }
+        if (!(flags & O_NONBLOCK)) {
+            flags |= O_NONBLOCK;
+            if (fcntl(self_sockpair_fd[1], F_SETFL, flags) == -1) {
+                perror("fcntl F_SETFL");
+                _Exit(EXIT_FAILURE);
+            }
+        }
+        return self_sockpair_fd[1];
+    }
 
     inline void set_sig_num(int val) { sig_num = val; }
 
+    inline void mark_error_signal(int signum, std::string error_msg) {
+        if (error_signals.find(signum) != error_signals.end())
+            error_signals.at(signum) = error_msg;
+        else {
+            auto ret = error_signals.insert(std::make_pair(signum, error_msg));
+            if (!ret.second) {
+                std::cerr << "Failed to insert error signal: " << signum << std::endl;
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+
     ~SigHandler() {
+        _change_pass_sig_cbs_to_force_exit();
         close(self_sockpair_fd[0]); // this should terminate the pass_handler thread.
         close(self_sockpair_fd[1]);
         stop_running = true;
@@ -151,8 +184,12 @@ private:
                     if (m_signals[sig_num] == Handler_CB::EXIT) {
                         for (auto on_exit_cb : exit_handlers)
                             on_exit_cb();
-                        if (sc_core::sc_get_status() < sc_core::SC_START_OF_SIMULATION)
-                            _Exit(EXIT_SUCCESS);
+                        if (error_signals.find(sig_num) != error_signals.end()) {
+                            std::cerr << "Fatal error: " << error_signals[sig_num] << std::endl;
+                            _Exit(EXIT_FAILURE);
+                        }
+                        if (sc_core::sc_get_status() < sc_core::SC_RUNNING)
+                            _Exit(EXIT_SUCCESS); // FIXME: should the exit status be EXIT_FAILURE?
                         stop_running = true;
                         async_request_update();
                     } else {
@@ -163,6 +200,7 @@ private:
                     exit(EXIT_FAILURE);
                 }
             }
+            _change_pass_sig_cbs_to_force_exit();
         });
         is_pass_handler_requested = true;
     }
@@ -177,6 +215,9 @@ private:
         , m_signals{ { SIGINT, Handler_CB::EXIT },  { SIGTERM, Handler_CB::EXIT },
                      { SIGQUIT, Handler_CB::EXIT }, { SIGSEGV, Handler_CB::EXIT },
                      { SIGABRT, Handler_CB::EXIT }, { SIGBUS, Handler_CB::EXIT } }
+        , error_signals{ { SIGSEGV, "segmentation fault (SIGSEGV)!" },
+                         { SIGBUS, "bus error (SIGBUS)!" },
+                         { SIGABRT, "abnormal termination (SIGABRT)!" } }
         , is_pass_handler_requested{ false }
         , stop_running{ false }
         , exit_act{ 0 }
@@ -205,6 +246,10 @@ private:
             pass_act.sa_handler = SigHandler::pass_sig_handler;
             sigaction(signum, &pass_act, NULL);
             break;
+        case Handler_CB::FORCE_EXIT:
+            force_exit_act.sa_handler = SigHandler::force_exit_sig_handler;
+            sigaction(signum, &force_exit_act, NULL);
+            break;
         case Handler_CB::IGN:
             ign_act.sa_handler = SIG_IGN;
             sigaction(signum, &ign_act, NULL);
@@ -222,8 +267,16 @@ private:
         }
     }
 
+    inline void _change_pass_sig_cbs_to_force_exit() {
+        for (auto sig_cb_pair : m_signals) {
+            if (sig_cb_pair.second == Handler_CB::EXIT || sig_cb_pair.second == Handler_CB::PASS)
+                _update_sig_cb(sig_cb_pair.first, Handler_CB::FORCE_EXIT);
+        }
+    }
+
 private:
     std::map<int, Handler_CB> m_signals;
+    std::map<int, std::string> error_signals;
     sigset_t m_sigs_to_block;
     struct pollfd self_pipe_monitor;
     std::thread pass_handler;
@@ -235,6 +288,7 @@ private:
     int self_sockpair_fd[2];
     struct sigaction exit_act;
     struct sigaction pass_act;
+    struct sigaction force_exit_act;
     struct sigaction ign_act;
     struct sigaction dfl_act;
 };
