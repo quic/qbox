@@ -452,6 +452,7 @@ public:
         target_socket.register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr);
         initiator_socket.register_invalidate_direct_mem_ptr(this,
                                                             &Router::invalidate_direct_mem_ptr);
+        SCP_DEBUG((DMI)) << "Router Initializing DMI SCP reporting";
     }
 
     Router() = delete;
