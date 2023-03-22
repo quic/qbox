@@ -37,8 +37,8 @@
 #ifndef QUP_UART_TEST
 #define QUP_UART_TEST
 
-#include "qup/uart/uart-qupv3.h"
-#include "qup/uart/qupv3_regs.h"
+#include "quic/qup/uart/uart-qupv3.h"
+#include "quic/qup/uart/qupv3_regs.h"
 
 #include "greensocs/systemc-uarts/backends/char-backend.h"
 #include <greensocs/systemc-uarts/backends/char/stdio.h>

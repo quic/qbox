@@ -31,11 +31,18 @@ endif()
 include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
 ##############################################
 
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+set(LIBQEMU_TARGETS aarch64 hexagon)
+
 gs_systemc()
 
 gs_addpackage(qbox)
 
 add_library(${PROJECT_NAME} INTERFACE)
+add_executable(vp
+    src/main.cc
+)
 
 target_include_directories(
     ${PROJECT_NAME} INTERFACE
@@ -48,4 +55,19 @@ target_link_libraries(${PROJECT_NAME} INTERFACE
 )
 
 gs_export()
+
+if(APPLE)
+    target_link_options(vp PRIVATE "LINKER:-dead_strip_dylibs")
+else()
+    target_link_options(vp PRIVATE "LINKER:-as-needed")
+endif()
+
+target_link_libraries(vp
+    ${TARGET_LIBS}
+)
+
+install (TARGETS vp DESTINATION ${CMAKE_INSTALL_BINDIR})
+file(GLOB REF_USER_CONF_FILES "${CMAKE_SOURCE_DIR}/configs/*.lua")
+install(FILES ${REF_USER_CONF_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/examples)
+
 gs_enable_testing()
