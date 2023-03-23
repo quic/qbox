@@ -238,7 +238,7 @@ if (platform.arm_num_cpus > 0) then
         },
         -- QUPV3_1 / u_qupv3_wrapper_1 / qupv3_se_irq[*]:
         { addr = 0xa80000, primary_idx = 3,
-          qgic_spi_irqs = { 353, 354, 355, 356, 357, 358, 836, },
+          qgic_spi_irqs = { 353, 354, 355, 356, 357, 358, 835, },
         },
     };
 
