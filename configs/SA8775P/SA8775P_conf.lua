@@ -230,7 +230,7 @@ if (platform.arm_num_cpus > 0) then
     local QUP_BANKS = {
         -- QUPV3_2 / u_qupv3_wrapper_2 / qupv3_se_irq[*]:
         { addr = 0x880000, primary_idx = nil,
-          qgic_spi_irqs = { 373, 583, 584, 585, 586, 587, 834, },
+          qgic_spi_irqs = { 373, 583, 584, 585, 586, 587, 833, },
         },
         -- QUPV3_0 / u_qupv3_wrapper_0 / qupv3_se_irq[*]:
         { addr = 0x980000, primary_idx = nil,
