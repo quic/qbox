@@ -202,4 +202,6 @@ endif()
 gs_export()
 install(TARGETS rpc DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 
+add_subdirectory(platforms)
+
 gs_enable_testing()
