@@ -29,8 +29,10 @@ local NSP0_BASE     = 0x24000000 -- TURING_SS_0TURING
 local NSP1_BASE     = 0x28000000 -- TURING_SS_1TURING
    -- ^^ This val is also described as 'TCM_BASE_ADDRESS' in
    -- Sys arch spec "TCM region memory map"
+local LPASS_BASE    = 0x02c00000
 local TURING_SS_0TURING_QDSP6V68SS_CSR= 0x26380000
 local TURING_SS_1TURING_QDSP6V68SS_CSR= 0x2A380000
+local LPASS_QDSP6V68SS_CSR= 0x03080000
 -- The QDSP6v67SS private registers include CSR, L2VIC, QTMR registers.
 -- The address base is determined by parameter QDSP6SS_PRIV_BASEADDR
 
@@ -39,9 +41,11 @@ local TURING_SS_1TURING_QDSP6V68SS_CSR= 0x2A380000
 
 local NSP0_AHB_HIGH = 0x27000000
 local NSP1_AHB_HIGH = 0x2B000000
+local ADSP_AHB_HIGH = 0x03C80000
 
 local NSP0_AHB_SIZE = NSP0_AHB_HIGH - NSP0_BASE
 local NSP1_AHB_SIZE = NSP1_AHB_HIGH - NSP1_BASE
+local ADSP_AHB_SIZE = ADSP_AHB_HIGH - LPASS_BASE
 
 local IPC_ROUTER_TOP = 0x00400000
 
@@ -64,6 +68,9 @@ local TURING_SS_0TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x208A4008;
 local TURING_SS_1TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x263B0008;
 local TURING_SS_1TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x260A4008;
 local HWKM_MASTER_CFG_KW_RNG_EEx_base=0x010D0000;
+
+local LPASS_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x30B0008;
+local LPASS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x3480008;
 
 dofile(QDSP6_CFG);
 
@@ -100,6 +107,22 @@ assert((SA8775P_nsp1_config_table[3] << 16) == TURING_SS_1TURING_QDSP6V68SS_CSR)
 local NSP1_VTCM_BASE_ADDR = (SA8775P_nsp1_config_table[15] << 16)
 local NSP1_VTCM_SIZE_BYTES = (SA8775P_nsp1_config_table[16] * 1024)
 
+-- ADSP configuration
+local SA8775P_adsp_config_table= get_SA8775P_adsp_config_table();
+local adsp = get_adsp(
+        "v66",
+        LPASS_BASE,
+        0x03000000, -- LPASS_QDSP6V68SS_PUB
+        SA8775P_adsp_config_table,
+        0x95C00000, -- entry point address from bootimage_lemans.adsp.prodQ.pbn
+        ADSP_AHB_SIZE,
+        2 -- threads
+        );
+assert((SA8775P_adsp_config_table[3] << 16) == LPASS_QDSP6V68SS_CSR)
+
+-- TODO: remove this when we get the fw image working at qqvp
+adsp.hexagon_thread_0.start_powered_off=true
+
 local IS_SHARED_MEM = false
 if os.getenv("QQVP_PLUGIN_DIR") ~= nil then
     IS_SHARED_MEM = true
@@ -111,9 +134,10 @@ platform = {
     num_redists = 1;
     with_gpu = false;
 
-    hexagon_num_clusters = 2;
+    hexagon_num_clusters = 3;
     hexagon_cluster_0 = nsp0ss;
     hexagon_cluster_1 = nsp1ss;
+    hexagon_cluster_2 = adsp;
     quantum_ns = 10000000;
 
     ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
@@ -143,6 +167,7 @@ platform = {
                 {irq=8, dst = "platform.gic.spi_in_229"},
                 {irq=18, dst = "platform.hexagon_cluster_1.l2vic.irq_in_30"}, -- NB relies on 2 clusters
                 {irq=6,  dst = "platform.hexagon_cluster_0.l2vic.irq_in_30"},
+                {irq=32,  dst = "platform.hexagon_cluster_2.l2vic.irq_in_153"},
             }
         };
 
@@ -157,7 +182,7 @@ platform = {
     -- The QTB model is not active in the system, left here for debug purposes.
 
     smmu_0 = { socket = {address=0x15000000, size=0x100000};
-             num_tbu=2;  -- for now, this needs to match the expected number of TBU's
+             num_tbu=3;  -- for now, this needs to match the expected number of TBU's
              num_pages=128;
              num_cb=128;
              num_smr=224;
@@ -184,6 +209,13 @@ platform = {
     tbu_1 = { topology_id=0x29C0,
              upstream_socket = { address=NSP1_AHB_HIGH,
                                  size=0xF00000000-NSP1_AHB_HIGH,
+                                 relative_addresses=false
+             }
+            };
+
+    tbu_2 = { topology_id=0x3000,
+             upstream_socket = { address=ADSP_AHB_HIGH,
+                                 size=0xF00000000-ADSP_AHB_HIGH,
                                  relative_addresses=false
              }
             };
@@ -217,6 +249,10 @@ platform = {
          address=TURING_SS_1TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
         {data={0x01180214},
          address=TURING_SS_1TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
+        {data={0x01300214},
+         address=LPASS_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
+        {data={0x01180214},
+         address=LPASS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
 
 --      {data={0x00020400}, address=0x10E0000};
 --      {data={0x60000003}, address=0x10E000C};

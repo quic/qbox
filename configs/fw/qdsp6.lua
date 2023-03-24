@@ -243,11 +243,42 @@ function get_SA8775P_nsp1_config_table()
 };
 end
 
-function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
-        num_threads)
-    local cfgtable_base_addr = base + 0x180000; -- TODO: this offset (and
-                                                -- ones below) might need to be
-                                                -- adjusted for the ADSP
+-- From the DSP Silicon Validation team
+function get_SA8775P_adsp_config_table()
+ return {
+        0x000002C0, -- L2TCM
+        0x00000000, -- Reserved
+        0x00000308, -- Subsystem_base
+        0x000002F9, -- ETM_cfg_base
+        0x000002FA, -- L2_cfg_base
+        0x000002FB, -- Coproc_reserved
+        0x000002E0, -- Coproc_reserved
+        0x00000390, -- AXIM2_base
+        0x000002FC, -- Stream_cfg_base
+        0x000002FD, -- CLADE_cfg_base
+        0x000002FE, -- Fastl2vic_base
+        0x000000C0, -- JTLB_size
+        0x00000000, -- Coproc_type
+        0x00000000, -- Coproc_contexts
+        0x00000000, -- VTCM_base
+        0x00000000, -- VTCM_size
+        0x00000400, -- L2_tag_size
+        0x00000800, -- L2_array_size
+        0x0000000F, -- Thread_enable_mask
+        0x000002FF, -- ECC_cfg_base
+        0x00000040, -- L2_line_size
+        0x00000000, -- Audio_extension
+ };
+end
+
+function _get_dsp(dsp_type, arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
+                  num_threads)
+    local offset = 0
+    if dsp_type == "adsp" then
+        -- ADSP addresses are offset
+        offset = 0x200000
+    end
+    local cfgtable_base_addr = base + offset + 0x180000
     local sched_limit = true;
     assert(num_threads >= 1);
     local dsp = {
@@ -260,23 +291,23 @@ function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
         HexagonQemuInstance = { tcg_mode="SINGLE",
             sync_policy = "multithread-unconstrained"};
         hexagon_start_addr = start_addr;
-        l2vic={  mem           = {address=ahbs_base + 0x90000, size=0x1000};
-                 fastmem       = {address=base     + 0x1e0000, size=0x10000}};
-        qtimer={ mem           = {address=ahbs_base + 0xA0000, size=0x1000};
-                 mem_view      = {address=ahbs_base + 0xA1000, size=0x2000}};
-        pass = {target_socket  = {address=0x0 , size=base + ahb_size,
+        l2vic={  mem           = {address=ahbs_base + offset + 0x90000, size=0x1000};
+                 fastmem       = {address=base      + offset + 0x1e0000, size=0x10000}};
+        qtimer={ mem           = {address=ahbs_base + offset + 0xA0000, size=0x1000};
+                 mem_view      = {address=ahbs_base + offset + 0xA1000, size=0x2000}};
+        pass = {target_socket  = {address=0x0 , size=base + offset + ahb_size,
             relative_addresses=false}};
         cfgtable_base = cfgtable_base_addr;
 
-        wdog  = { socket        = {address=ahbs_base + 0x84000, size=0x1000}};
-        pll_0 = { socket        = {address=ahbs_base + 0x40000, size=0x10000}};
-        pll_1 = { socket        = {address=base + 0x01001000, size=0x10000}};
-        pll_2 = { socket        = {address=base + 0x01020000, size=0x10000}};
-        pll_3 = { socket        = {address=base + 0x01021000, size=0x10000}};
+        wdog  = { socket        = {address=ahbs_base + offset + 0x84000,    size=0x1000}};
+        pll_0 = { socket        = {address=ahbs_base + offset + 0x40000,    size=0x10000}};
+        pll_1 = { socket        = {address=base      + offset + 0x01001000, size=0x10000}};
+        pll_2 = { socket        = {address=base      + offset + 0x01020000, size=0x10000}};
+        pll_3 = { socket        = {address=base      + offset + 0x01021000, size=0x10000}};
         rom   = { target_socket = {address=cfgtable_base_addr, size=0x100 },
             read_only=true, load={data=cfgtable, offset=0}};
 
-        csr = { socket = {address=ahbs_base, size=0x1000}};
+        csr = { socket = {address=ahbs_base + offset, size=0x1000}};
     };
     for th=1,num_threads-1 do
       dsp["hexagon_thread_" .. th] = {
@@ -288,3 +319,14 @@ function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
     return dsp
 end
 
+function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
+                 num_threads)
+    return _get_dsp("cdsp", arch, base, ahbs_base, cfgtable, start_addr,
+                    ahb_size, num_threads)
+end
+
+function get_adsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
+                 num_threads)
+    return _get_dsp("adsp", arch, base, ahbs_base, cfgtable, start_addr,
+                    ahb_size, num_threads)
+end
