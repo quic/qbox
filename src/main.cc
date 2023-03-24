@@ -185,18 +185,30 @@ public:
         : sc_core::sc_module(p_name)
         , m_irqs_num(gs::sc_cci_list_items(name(), "irq").size())
         , m_smmu500_tbus_num(gs::sc_cci_list_items(name(), "smmu500_tbu").size())
+        , p_num_initiators("num_initiators", m_smmu500_tbus_num, "Number of initiator ports")
+        , p_num_targets("num_targets", 1, "Number of target ports")
         , argv(get_argv())
         , remote_exec_path("remote_exec_path", "", "Remote process executable path")
         , m_smmu500_tbus("smmu500_tbu", m_smmu500_tbus_num,
                          [&](const char* n, size_t i) { return new smmu500_tbu<>(n, p_smmu); })
-        , m_remote("local_pass", remote_exec_path.get_value(), argv) {}
+        , m_remote("local_pass", remote_exec_path.get_value(), argv) {
+        assert((p_num_initiators <= PASSRPC_TLM_PORTS_NUM) &&
+               (p_num_initiators >= m_smmu500_tbus_num) &&
+               (p_num_targets <= PASSRPC_TLM_PORTS_NUM) && (p_num_targets >= 0));
+    }
 
     void bind_tlm_ports(gs::Router<>& router) {
-        for (int i = 0; i < m_smmu500_tbus_num; i++) {
-            m_remote.initiator_sockets[i].bind(m_smmu500_tbus[i].upstream_socket);
-            m_smmu500_tbus[i].downstream_socket.bind(router.target_socket);
+        for (int i = 0; i < p_num_initiators.get_value(); i++) {
+            if (i < m_smmu500_tbus_num) {
+                m_remote.initiator_sockets[i].bind(m_smmu500_tbus[i].upstream_socket);
+                m_smmu500_tbus[i].downstream_socket.bind(router.target_socket);
+            } else {
+                m_remote.initiator_sockets[i].bind(router.target_socket);
+            }
         }
-        router.initiator_socket.bind(m_remote.target_sockets[0]);
+        for (int t = 0; t < p_num_targets.get_value(); t++) {
+            router.initiator_socket.bind(m_remote.target_sockets[t]);
+        }
     }
 
     void bind_irqs(QemuArmGicv3* gic) {
@@ -223,9 +235,13 @@ private:
 private:
     uint32_t m_irqs_num;
     uint32_t m_smmu500_tbus_num;
+    cci::cci_param<unsigned> p_num_initiators;
+    cci::cci_param<unsigned> p_num_targets;
     std::vector<std::string> argv;
     cci::cci_param<std::string> remote_exec_path;
     sc_core::sc_vector<smmu500_tbu<>> m_smmu500_tbus;
+
+public:
     gs::PassRPC<PASSRPC_TLM_PORTS_NUM, PASSRPC_SIGNALS_NUM> m_remote;
 };
 #endif
@@ -405,6 +421,16 @@ protected:
                 std::string dstname = gs::cci_get<std::string>(irqss + ".dst");
                 sc_core::sc_object* dst_obj = gs::find_sc_obj(nullptr, dstname);
                 auto dst = dynamic_cast<QemuTargetSignalSocket*>(dst_obj);
+                if (!dst) {
+                    auto dst_target_signal_socket = dynamic_cast<TargetSignalSocket<bool>*>(
+                        dst_obj);
+                    if (!dst_target_signal_socket) {
+                        SCP_FATAL(()) << "ipcc.irqs.dst object is not QemuTargetSignalSocket nor "
+                                         "TargetSignalSocket";
+                    }
+                    m_ipcc.irq[irq].bind((*dst_target_signal_socket));
+                    continue;
+                }
                 m_ipcc.irq[irq].bind((*dst));
                 //                std::cout << "BINDING IRQ : "<< dstname<<" to
                 //                ipcc["<<irq<<"]\n";
