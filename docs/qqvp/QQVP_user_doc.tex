@@ -704,6 +704,23 @@ The following lua code will load {\small{\lstinline!conf.yaml!}}:
 
 \clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Logging}
+
+To set the logging verbosity, there's a configurable parameter called
+{\small{\lstinline!platform.log_level!}}.  If you want to get more
+detailed output about platform activity and interactions, you can
+increase the log level.
+
+You can set the log level on the command-line:
+\small
+\begin{lstlisting}[language=bash]
+    --param 'platform.log_level=4'!
+\end{lstlisting}
+\normalsize
+
+\clearpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{QEMU arguments}
 
 QEMU arguments can be added to an entire instance using the configuration mechanism. The argument name must be in the form of {\small{\lstinline!"name.of.your.qemu.instance.args.-ARG" = "value"!}}.
@@ -712,7 +729,7 @@ For example, to enable the QEMU monitor interface (which allows control over QEM
 
 \small
 \begin{lstlisting}[language=bash]
-    --param platform.QemuInstance.args.-monitor = "tcp:127.0.0.1:55555,server,nowait"!
+    --param 'platform.ArmQemuInstance.args.-monitor="tcp:127.0.0.1:55555,server,nowait"'!
 \end{lstlisting}
 \normalsize
 
@@ -736,6 +753,22 @@ Use telnet to connect to the monitor:
     (qemu) quit
     quit
     Connection closed by foreign host.
+\end{lstlisting}
+\normalsize
+
+List the tracing options:
+
+\small
+\begin{lstlisting}[language=bash]
+    bin/vp --gs_luafile SA8775P_conf.lua --param 'platform.ArmQemuInstance.args.-d="help"'
+    bin/vp --gs_luafile SA8775P_conf.lua --param 'platform.hexagon_cluster_0.HexagonQemuInstance.args.-d="help"'
+\end{lstlisting}
+\normalsize
+
+\small
+\begin{lstlisting}[language=bash]
+    bin/vp --gs_luafile SA8775P_conf.lua --param 'platform.ArmQemuInstance.args.-d="trace:help"'
+    bin/vp --gs_luafile SA8775P_conf.lua --param 'platform.hexagon_cluster_0.HexagonQemuInstance.args.-d="trace:help"'
 \end{lstlisting}
 \normalsize
 
