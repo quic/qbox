@@ -34,6 +34,7 @@
 #include <signal.h>
 #include <termios.h>
 #endif
+#include <atomic>
 
 class CharBackendStdio : public CharBackend, public sc_core::sc_module
 {
@@ -41,7 +42,7 @@ private:
     gs::async_event m_event;
     std::queue<unsigned char> m_queue;
     std::mutex m_mutex;
-    bool m_running = true;
+    std::atomic_bool m_running;
     std::unique_ptr<std::thread> rcv_thread_id;
     pthread_t rcv_pthread_id = 0;
 
@@ -67,7 +68,7 @@ public:
 #endif
     }
 
-    CharBackendStdio(sc_core::sc_module_name name, bool read_write = true) {
+    CharBackendStdio(sc_core::sc_module_name name, bool read_write = true) : m_running(true) {
         SCP_DEBUG(SCMOD) << "CharBackendStdio constructor";
         SC_METHOD(rcv);
         sensitive << m_event;
@@ -161,7 +162,9 @@ public:
 
     ~CharBackendStdio() {
         m_running = false;
-        pthread_kill(rcv_pthread_id, SIGURG);
-        rcv_thread_id->join();
+        if(rcv_pthread_id)
+            pthread_kill(rcv_pthread_id, SIGURG);
+        if(rcv_thread_id->joinable())
+            rcv_thread_id->join();
     }
 };
