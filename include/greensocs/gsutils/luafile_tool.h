@@ -150,16 +150,16 @@ public:
         case 0:
             break;
         case LUA_ERRSYNTAX:
-            SCP_INFO("lua") << "Syntax error reading config file: " << config_file;
+            SCP_ERR("lua") << "Syntax error reading config file: " << config_file;
             return 1;
         case LUA_ERRMEM:
-            SCP_INFO("lua") << "Error allocating memory to read config file: " << config_file;
+            SCP_ERR("lua") << "Error allocating memory to read config file: " << config_file;
             return 1;
         case LUA_ERRFILE:
-            SCP_INFO("lua") << "Error opening/reading the config file: " << config_file;
+            SCP_ERR("lua") << "Error opening/reading the config file: " << config_file;
             return 1;
         default:
-            SCP_INFO("lua") << "Unknown error loading config file: " << config_file;
+            SCP_ERR("lua") << "Unknown error loading config file: " << config_file;
             return 1;
         }
         lua_setglobal(L, "config_chunk");
