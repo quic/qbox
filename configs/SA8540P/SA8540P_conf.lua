@@ -23,7 +23,7 @@ print ("Lua config running. . . ");
 
 
 
-local MAKENA_REGS_CSV = valid_file(top().."../fw/makena/SA8540P_MakenaAU_v2_Registers.csv")
+local MAKENA_REGS_CSV = valid_file(top().."../fw/8540/8540_Registers.csv")
 local QDSP6_CFG   = valid_file(top().."../fw/qdsp6.lua")
 
 local NSP0_BASE     = 0x1A000000 -- TURING_SS_0TURING
