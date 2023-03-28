@@ -1,1 +1,0 @@
-SA8775P_conf.lua
