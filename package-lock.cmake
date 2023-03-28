@@ -11,7 +11,7 @@ CPMDeclarePackage(qbox
 # libqemu
 CPMDeclarePackage(libqemu
   NAME libqemu
-  GIT_TAG libqemu-v7.2-v0.5.2
+  GIT_TAG libqemu-v7.2-v0.5.4
   GIT_REPOSITORY ${GREENSOCS_GIT}qemu/qemu.git
   GIT_SUBMODULES CMakeLists.txt
 )
