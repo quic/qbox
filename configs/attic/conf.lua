@@ -58,7 +58,7 @@ linux_image = get_image("../bsp/linux/out/android-mainline/dist/Image",
     nil,
     "Image");
 
-device_tree = get_image("../fw/fastrpc-images/images/rumi_opengl.dtb",
+device_tree = get_image("fastrpc-images/images/rumi_opengl.dtb",
     nil,
     "rumi_opengl.dtb");
 
