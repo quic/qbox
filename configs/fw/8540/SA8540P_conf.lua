@@ -188,6 +188,7 @@ platform = {
                       };
     load={
         {data={0x60140200}, address=TCSR_SOC_HW_VERSION_ADDR};
+        {data={0x04}, address=TCSR_SOC_EMULATION_TYPE_ADDR};
         {data={SMEM_TARG_INFO_ADDR}, address=SMEM_TCSR_TZ_WONCE_ADDR};
         {data={0x00005381},
          address=RPMH_PDC_COMPUTE_PDC_PARAM_RESOURCE_DRVd};
@@ -209,8 +210,6 @@ platform = {
 
 --      {data={0x00020400}, address=0x10E0000};
 --      {data={0x60000003}, address=0x10E000C};
---      {data={0x0}, address=TCSR_SOC_EMULATION_TYPE_ADDR}; -- 0=silicon
---      {data={0x1}, address=TCSR_SOC_EMULATION_TYPE_ADDR}; -- 1=RUMI
     };
 };
 
