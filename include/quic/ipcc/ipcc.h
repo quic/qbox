@@ -90,8 +90,10 @@ private:
     {
     public:
         uint32_t regs[0x1000 / 4];
-        cci::cci_param<uint32_t> p_client_size;
-        cci::cci_param<uint32_t> p_version;
+        // These could be parameters, but then each IPC_client needs a unique name and would need to
+        // be constructed during elaboration
+        uint32_t p_client_size;
+        uint32_t p_version;
         bool status(int client, int signal) {
             assert(client < p_client_size);
             assert(signal < p_client_size);
@@ -145,9 +147,7 @@ private:
                 regs[CLIENT_ENABLE_STATUS_1_n + client] &= ~(1 << (signal - 32));
         }
 
-        IPC_client()
-            : p_client_size("client_size", MAX_CLIENT_SIZE, "")
-            , p_version("version", 0x10200, "") {
+        IPC_client(): p_client_size(MAX_CLIENT_SIZE), p_version(0x10200) {
             memset(regs, 0, sizeof(regs));
             regs[VERSION] = p_version;
             regs[RECV_ID] = 0xFFFFFFFF;
