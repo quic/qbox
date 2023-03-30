@@ -115,7 +115,7 @@ public:
             break;
         }
         case tlm::TLM_WRITE_COMMAND:
-            if (read_only) {
+            if (!read_only) {
                 txn.set_response_status(tlm::TLM_OK_RESPONSE);
                 TYPE data;
                 memcpy(&data, ptr, len);
@@ -165,6 +165,30 @@ public:
                                        const cci::cci_originator& orig) {
         SCP_FATAL("Use param handle");
         return false;
+    }
+
+    typedef
+        typename cci::cci_param_pre_write_callback<TYPE>::type cci_param_pre_write_callback_typed;
+    cci::cci_callback_untyped_handle register_pre_write_callback(
+        const cci_param_pre_write_callback_typed& cb) {
+        return value.register_pre_write_callback(cb);
+    }
+    typedef
+        typename cci::cci_param_post_write_callback<TYPE>::type cci_param_post_write_callback_typed;
+    cci::cci_callback_untyped_handle register_post_write_callback(
+        const cci_param_post_write_callback_typed& cb) {
+        return value.register_post_write_callback(cb);
+    }
+    typedef typename cci::cci_param_pre_read_callback<TYPE>::type cci_param_pre_read_callback_typed;
+    cci::cci_callback_untyped_handle register_pre_read_callback(
+        const cci_param_pre_read_callback_typed& cb) {
+        return value.register_pre_read_callback(cb);
+    }
+    typedef
+        typename cci::cci_param_post_read_callback<TYPE>::type cci_param_post_read_callback_typed;
+    cci::cci_callback_untyped_handle register_post_read_callback(
+        const cci_param_post_read_callback_typed& cb) {
+        return value.register_post_read_callback(cb);
     }
 
     cci::cci_callback_untyped_handle register_pre_write_callback(
@@ -379,9 +403,10 @@ public:
         sc_dt::uint64 addr = txn.get_address();
 
         auto range = regs_map.equal_range(addr);
+
         auto f = regs_map.lower_bound(addr);
         auto l = regs_map.upper_bound(addr + len - 1);
-        if (f == regs_map.end() && l == regs_map.end()) {
+        if (f == regs_map.end() || (f == l)) {
             SCP_WARN(())("Attempt to access unknown register at offset 0x{:x}", addr);
             txn.set_response_status(tlm::TLM_COMMAND_ERROR_RESPONSE);
             return;

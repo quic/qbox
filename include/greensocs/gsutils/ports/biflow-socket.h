@@ -50,14 +50,15 @@ class biflow_socket : public sc_core::sc_module
         std::lock_guard<std::mutex> guard(m_mutex);
         tlm::tlm_generic_payload txn;
 
-        uint64_t sending = (m_can_send <= m_queue.size()) ? m_can_send : m_queue.size();
+        uint64_t sending = (infinite || (m_can_send > m_queue.size())) ? m_queue.size()
+                                                                       : m_can_send;
         if (sending > 0) {
             txn.set_data_length(sending);
             txn.set_data_ptr(&(m_queue[0]));
             txn.set_command(tlm::TLM_IGNORE_COMMAND);
             sc_core::sc_time delay;
             initiator_socket->b_transport(txn, delay);
-            m_queue.erase(m_queue.begin(), m_queue.begin() + sending - 1);
+            m_queue.erase(m_queue.begin(), m_queue.begin() + sending);
             m_can_send -= sending;
         }
     }
