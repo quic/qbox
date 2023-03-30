@@ -363,7 +363,7 @@ This option is useful to both find the names of configurable parameters and to c
 
 A configuration file defined for the SoC is provided in the quic-vp git
 repository: {\small{\lstinline!*conf.lua!}} and is installed into
-{\small{\lstinline!$CMAKE_INSTALL_PREFIX/etc/vp/*conf.lua!}}
+{\small{\lstinline!$CMAKE_INSTALL_PREFIX/etc/vp/*/<SoC>/bsp/<OS>/conf.lua!}}
 
 \caution Changes to this lua configuration file might make the virtual platform inoperable.
 
@@ -375,7 +375,7 @@ in the quic-vp repo under {\small{\lstinline!examples/conf.lua!}}.
 
 This can be run as follows:
 
-{\small{\lstinline!QQVP_IMAGE_DIR=/your/image/directory /path/to/vp_install/bin/vp --gs_luafile /path/to/vp_install/etc/vp/SA8540P_conf.lua!}}
+{\small{\lstinline!QQVP_IMAGE_DIR=/your/image/directory /path/to/vp_install/bin/vp --gs_luafile /path/to/vp_install/etc/vp/8540/SA8540P_conf.lua!}}
 
 The image directory must contain a conf.lua file. The example provided assumes
 the files are locally stored in the same directory. Note that
