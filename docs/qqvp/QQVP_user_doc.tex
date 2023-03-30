@@ -2,7 +2,7 @@
 % Copyright (c) 2022-2023 Qualcomm Technologies, Inc. All rights reserved.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% This custom LaTeX file includes the other chapters for the PDF. This file is called 
+% This custom LaTeX file includes the other chapters for the PDF. This file is called
 % by the primary LaTeX document build file, _build_pdf.tex.
 %
 % For questions or more information, send an email to livingdocs.support or go to the
@@ -55,14 +55,14 @@ QQVP binaries require the following system libraries to be installed, and corres
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Build the release}
 
-Install the build dependencies.  
+Install the build dependencies.
 
 \textbf{For Ubuntu:}
 
 \small
 \begin{lstlisting}[language=bash]
     # apt update && apt upgrade -y
-    # apt install -y make build-essential cmake g++ wget flex bison unzip \ 
+    # apt install -y make build-essential cmake g++ wget flex bison unzip \
                      python python3-pip iproute2 ninja-build pkg-config \
                      libpixman-1-dev libglib2.0-dev git wget curl \
                      libelf-dev libvirglrenderer-dev libepoxy-dev \
@@ -73,16 +73,16 @@ Install the build dependencies.
 \clearpage
 \textbf{For macOS:}
 
-You can install the dependencies using Homebrew.  
+You can install the dependencies using Homebrew.
 
-\begin{enumerate} 
+\begin{enumerate}
 
 \item Install Homebrew and add it to your build environment:
 	\small
 	\begin{lstlisting}[language=bash]
 	    # /bin/bash -c "$(curl -fsSL \
 	    https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-	
+
 	    # echo '# Set PATH, MANPATH, etc., for Homebrew.' >> ~/.profile
 	    # echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.profile
 	    # eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -103,7 +103,7 @@ You can install the dependencies using Homebrew.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Cmake version}
 
-Cmake version 3.14 or newer is required.  
+Cmake version 3.14 or newer is required.
 
 \begin{itemize}
 \item macOS -- cmake is installed via Homebrew.
@@ -111,7 +111,7 @@ Cmake version 3.14 or newer is required.
 
 \small
 \begin{lstlisting}[language=bash]
-    # curl -L \ 
+    # curl -L \
 https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/\
 cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
 \end{lstlisting}
@@ -179,8 +179,8 @@ As a last resort, the following script will populate {\small{\lstinline!~/.git-c
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Build the platform}
 
-\note On MacOS, run the following command before building. To facilitate 
-future builds, add the line to your bash profile, i.e., 
+\note On MacOS, run the following command before building. To facilitate
+future builds, add the line to your bash profile, i.e.,
 {\small{\lstinline!~/.zprofile!}} (if you use zsh) or
 {\small{\lstinline!~/.profile!}} (if you use bash-like shells).
 
