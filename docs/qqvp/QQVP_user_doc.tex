@@ -1,8 +1,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Copyright (c) 2022 Qualcomm Technologies, Inc. All rights reserved.
+% Copyright (c) 2022-2023 Qualcomm Technologies, Inc. All rights reserved.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% This custom LaTeX file includes the other chapters for the PDF. This file is called
+% This custom LaTeX file includes the other chapters for the PDF. This file is called 
 % by the primary LaTeX document build file, _build_pdf.tex.
 %
 % For questions or more information, send an email to livingdocs.support or go to the
@@ -55,50 +55,69 @@ QQVP binaries require the following system libraries to be installed, and corres
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Build the release}
 
-Install the build dependencies.  For Ubuntu:
+Install the build dependencies.  
+
+\textbf{For Ubuntu:}
 
 \small
 \begin{lstlisting}[language=bash]
     # apt update && apt upgrade -y
-    # apt install -y make build-essential cmake g++ wget flex bison unzip python python3-pip iproute2 ninja-build pkg-config libpixman-1-dev libglib2.0-dev git wget curl libelf-dev libvirglrenderer-dev libepoxy-dev libgtk-3-dev libsdl2-dev
-\end{lstlisting}
-\normalsize
-
-For macOS, you can install the dependencies using Homebrew.  First, to
-install Homebrew and add it to your build user's environment:
-
-\small
-\begin{lstlisting}[language=bash]
-    # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-    # echo '# Set PATH, MANPATH, etc., for Homebrew.' >> ~/.profile
-    # echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.profile
-    # eval "$(/opt/homebrew/bin/brew shellenv)"
-\end{lstlisting}
-\normalsize
-
-And then, to install the build dependencies:
-
-\small
-\begin{lstlisting}[language=bash]
-    # brew install cmake libelf flex bison make pkg-config python ninja glib pixman sdl2 gtk+3
+    # apt install -y make build-essential cmake g++ wget flex bison unzip \ 
+                     python python3-pip iproute2 ninja-build pkg-config \
+                     libpixman-1-dev libglib2.0-dev git wget curl \
+                     libelf-dev libvirglrenderer-dev libepoxy-dev \
+                     libgtk-3-dev libsdl2-dev
 \end{lstlisting}
 \normalsize
 
 \clearpage
+\textbf{For macOS:}
+
+You can install the dependencies using Homebrew.  
+
+\begin{enumerate} 
+
+\item Install Homebrew and add it to your build environment:
+	\small
+	\begin{lstlisting}[language=bash]
+	    # /bin/bash -c "$(curl -fsSL \
+	    https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+	
+	    # echo '# Set PATH, MANPATH, etc., for Homebrew.' >> ~/.profile
+	    # echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.profile
+	    # eval "$(/opt/homebrew/bin/brew shellenv)"
+	\end{lstlisting}
+	\normalsize
+
+\item Install the build dependencies:
+
+	\small
+	\begin{lstlisting}[language=bash]
+	    # brew install cmake libelf flex bison make pkg-config python \
+                           ninja glib pixman sdl2 gtk+3
+	\end{lstlisting}
+	\normalsize
+
+\end{enumerate}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Cmake version}
 
-Cmake version 3.14 or newer is required.  For macOS, it's installed via
-Homebrew.  For Ubuntu, download it as follows:
+Cmake version 3.14 or newer is required.  
+
+\begin{itemize}
+\item macOS -- cmake is installed via Homebrew.
+\item Ubuntu -- Download cmake using the follwoing command.
 
 \small
 \begin{lstlisting}[language=bash]
-    # curl -L https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
+    # curl -L \ 
+https://github.com/Kitware/CMake/releases/download/v3.20.0-rc4/\
+cmake-3.20.0-rc4-linux-x86_64.tar.gz | tar -zxf -
 \end{lstlisting}
 \normalsize
 
-Cmake is installed in the following directory. Either include this location in your path or run cmake from the directory:
+Cmake is installed in the following directory. Either include this location in your path or run cmake from the directory.
 
 \small
 \begin{lstlisting}[language=bash]
@@ -106,8 +125,8 @@ Cmake is installed in the following directory. Either include this location in y
 \end{lstlisting}
 \normalsize
 
+\end{itemize}
 
-\clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Fetch the sources}
 
@@ -160,7 +179,10 @@ As a last resort, the following script will populate {\small{\lstinline!~/.git-c
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Build the platform}
 
-On MacOS, run the following command before building:
+\note On MacOS, run the following command before building. To facilitate 
+future builds, add the line to your bash profile, i.e., 
+{\small{\lstinline!~/.zprofile!}} (if you use zsh) or
+{\small{\lstinline!~/.profile!}} (if you use bash-like shells).
 
 \small
 \begin{lstlisting}[language=bash]
@@ -168,9 +190,7 @@ On MacOS, run the following command before building:
 \end{lstlisting}
 \normalsize
 
-To facilitate future builds, you can put the line above in your
-{\small{\lstinline!~/.zprofile!}} (if you use zsh) or
-{\small{\lstinline!~/.profile!}} (if you use bash-like shells).
+
 
 The build operation will take 5 to 20 minutes, depending on your build system configuration.
 
@@ -347,8 +367,8 @@ repository: {\small{\lstinline!*conf.lua!}} and is installed into
 
 \caution Changes to this lua configuration file might make the virtual platform inoperable.
 
-This configuration file will set all the required parameters within the system,
-but expects to also find an additional configuration file to specify the
+This configuration sets the required system parameters,
+but also expects an additional configuration file to specify the
 various firmware and binary files required (using an environment variable
 {\small{\lstinline!QQVP_IMAGE_DIR!}}.  An example of such a file can be found
 in the quic-vp repo under {\small{\lstinline!examples/conf.lua!}}.
@@ -358,8 +378,10 @@ This can be run as follows:
 {\small{\lstinline!QQVP_IMAGE_DIR=/your/image/directory /path/to/vp_install/bin/vp --gs_luafile /path/to/vp_install/etc/vp/SA8540P_conf.lua!}}
 
 The image directory must contain a conf.lua file. The example provided assumes
-all of the files will be located locally, in the same directory. Also note that
+the files are locally stored in the same directory. Note that
 virtio block devices may be added, but must be enabled in the firmware.
+
+\clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{General configuration options}
 
@@ -391,10 +413,9 @@ In this mode, the simulation will not start until a connection is made to the TC
 \normalsize
 
 
-
-\clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Connect the debugger to the CPUs}
+\label{sec:connect-debugger-cpus}
 
 The platform can be configured to hold multiple ARM A53 CPUs, which are numbered {\small{\lstinline!cpu_0!}} through {\small{\lstinline!cpu_[n]!}}.
 
@@ -424,6 +445,7 @@ Simulation will not start until the debugger is connected to the TCP port.
 
 The ARM Gnu Toolchain provides a GDB release suitable for debugging with the emulated ARM CPUs: {\color{blue}{\url{https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads}}}. This debug mechanism is intended for debugging bootstrap operations, kernel operations, interrupt service routines, and so on. However, after the guest operating system comes up, you can use process-level debugging: connect with a debug agent running on the guest system.
 
+\clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{QQVP component library loader}
 
@@ -468,7 +490,6 @@ For the <soc-name> SoC, stage the binaries as indicated above and use the {\smal
 \end{lstlisting}
 \normalsize
 
-\newpage
 
 Following is an excerpt from the relevant {\small{\lstinline!load!}} section. For an unabridged example, see {\color{blue}{\url{https://git.codelinaro.org/clo/private/qqvp/quic-vp/-/blob/e2bbbcc66141d2b3f6ab6445fcbf04344d761ff5/<soc-name>_conf.lua}}}.
 
@@ -482,7 +503,7 @@ Following is an excerpt from the relevant {\small{\lstinline!load!}} section. Fo
 \end{lstlisting}
 \normalsize
 
-
+\clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Other loader configurations}
 
@@ -705,6 +726,7 @@ The following lua code will load {\small{\lstinline!conf.yaml!}}:
 \clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Logging}
+\label{sec:logging}
 
 To set the logging verbosity, there's a configurable parameter called
 {\small{\lstinline!platform.log_level!}}.  If you want to get more
@@ -718,7 +740,7 @@ You can set the log level on the command-line:
 \end{lstlisting}
 \normalsize
 
-\clearpage
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{QEMU arguments}
@@ -772,7 +794,7 @@ List the tracing options:
 \end{lstlisting}
 \normalsize
 
-
+\clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Model Features}
 
@@ -801,7 +823,6 @@ Configuration file examples:
 \end{lstlisting}
 \normalsize
 
-\clearpage
 
 If your VBSP supports SSH and you have this {\small{\lstinline!hostfwd!}} configuration, you can remotely log in to your virtual platform with the following:
 
@@ -831,10 +852,11 @@ Configuration file example:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{GPU device}
+\label{sec:gpuDevice}
 
 A {\small{\lstinline!virtio-gpu-gl-pci!}} device model is included as part
 of the system. A QEMU model of a {\small{\lstinline!virtio-mmio!}} GPU
-device appears at the specified memory address.  It can render to the host
+device appears at the specified memory address. It can render to the host
 X server indicated by the {\small{\lstinline!DISPLAY!}} environment variable.
 
 This model feature is enabled only if the Lua config
@@ -868,7 +890,8 @@ The following error indicates that {\small{\lstinline!libelf-dev!}} is not insta
 \normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Example of build failure while building QQVP: missing SDKROOT}
+\subsection{Example of build failure while building QQVP: missing SDKROOT}\
+\label{sec:missingSDKROOT}
 
 The following error occurs on MacOS when {\small{\lstinline!SDKROOT!}} was not
 exported before the build command:
@@ -890,6 +913,7 @@ To fix that, export the variable and retry:
 \end{lstlisting}
 \normalsize
 
+\clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Example of a problem while running QQVP: block device}
 
@@ -913,9 +937,10 @@ The following problem can occur if you do not have permission to open the block 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Example of a problem while running QQVP: X server}
+\label{sec:xServer}
 
 The following problem can occur if you do not have X running on the host
-system while the GPU device is enabled.  In this case, you should either
+system while the GPU device is enabled. In this case, you should either
 disable the GPU device by setting the {\small{\lstinline!platform["with_gpu"]!}}
 option to {\small{\lstinline!false!}} or start the X server and reference
 it via the {\small{\lstinline!DISPLAY!}} environtment variable before invoking
@@ -937,6 +962,7 @@ QQVP.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Example of a problem while running QQVP: virtio-gpu}
+\label{sec:virtioGPU}
 
 The following error indicates that an unspecified error ({\small{\lstinline!VIRTIO_GPU_RESP_ERR_UNSPEC=0x1200!}})
 was generated while processing a virtio-gpu command ({\mbox{{\small{\lstinline!VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING=0x106!}}}).
@@ -948,21 +974,22 @@ was generated while processing a virtio-gpu command ({\mbox{{\small{\lstinline!V
 \normalsize
 
 This could mean that the guest kernel requires a more recent version of QEMU or
-virglrenderer with support to such a command or some of its parameters.
+virglrenderer with support for such a command or some of its parameters.
 In this case, you could either:
 
 \begin{itemize}
-\item update the virglrenderer library installed in your system and recompile quic-vp
-\item downgrade the guest kernel to an older version
-\item disable the GPU device by setting the {\small{\lstinline!platform["with_gpu"]!}} option to {\small{\lstinline!false!}}
+\item Update the virglrenderer library installed in your system and recompile quic-vp
+\item Downgrade the guest kernel to an older version
+\item Disable the GPU device by setting the {\small{\lstinline!platform["with_gpu"]!}} option to {\small{\lstinline!false!}}
 \end{itemize}
 
 \clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Example of a problem while running QQVP: port forwards}
+\label{sec:portForwards}
 
 The following error indicates that QQVP could not setup a port forwarding
-rule.  This is generally due to a failed attempt to bind a given listening port
+rule. This is generally due to a failed attempt to bind a given listening port
 to {\small{\lstinline!INADDR_ANY!}} on the host.
 
 \small
@@ -971,12 +998,15 @@ to {\small{\lstinline!INADDR_ANY!}} on the host.
 \end{lstlisting}
 \normalsize
 
-Typical causes are: another instance of QQVP is already running and has
-claimed this port, a system service is using this ports.
+Typical causes are:
+\begin{itemize}
+\item Another instance of QQVP is already running and has claimed this port
+\item A system service is using this port
+\end{itemize}
 
 To avoid this issue, you should edit your
-{\small{\lstinline!$QQVP_IMAGE_DIR/conf.lua!}} to use different host ports
-instead -- for example, ``9998'' instead of ``9999''.
+{\small{\lstinline!$QQVP_IMAGE_DIR/conf.lua!}} to use different host ports,
+for example, ``9998'' instead of ``9999''.
 
 \small
 \begin{lstlisting}[language=bash]
@@ -989,7 +1019,7 @@ tableMerge(platform, {
 \normalsize
 
 The {\small{\lstinline!netstat!}} command on many hosts can show which
-ports are already in use.  Consult your host system's manuals for details
+ports are already in use. Consult your host system manuals for details
 on how to query for TCP ports.
 
 \clearpage
