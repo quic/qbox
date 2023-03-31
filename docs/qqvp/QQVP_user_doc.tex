@@ -491,7 +491,7 @@ For the <soc-name> SoC, stage the binaries as indicated above and use the {\smal
 \normalsize
 
 
-Following is an excerpt from the relevant {\small{\lstinline!load!}} section. For an unabridged example, see {\color{blue}{\url{https://git.codelinaro.org/clo/private/qqvp/quic-vp/-/blob/e2bbbcc66141d2b3f6ab6445fcbf04344d761ff5/<soc-name>_conf.lua}}}.
+The following is an excerpt from the relevant {\small{\lstinline!load!}} section. For an unabridged example, see {\color{blue}{\url{https://git.codelinaro.org/clo/private/qqvp/quic-vp/-/blob/e2bbbcc66141d2b3f6ab6445fcbf04344d761ff5/<soc-name>_conf.lua}}}.
 
 \small
 \begin{lstlisting}[language=bash]
@@ -744,6 +744,7 @@ You can set the log level on the command-line:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{QEMU arguments}
+\label{sec:qemuArguments}
 
 QEMU arguments can be added to an entire instance using the configuration mechanism. The argument name must be in the form of {\small{\lstinline!"name.of.your.qemu.instance.args.-ARG" = "value"!}}.
 
@@ -890,7 +891,7 @@ The following error indicates that {\small{\lstinline!libelf-dev!}} is not insta
 \normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Example of build failure while building QQVP: missing SDKROOT}\
+\subsection{Example of build failure while building QQVP: missing SDKROOT}
 \label{sec:missingSDKROOT}
 
 The following error occurs on MacOS when {\small{\lstinline!SDKROOT!}} was not
@@ -904,7 +905,7 @@ ERROR: "/Library/Developer/CommandLineTools/usr/bin/cc" cannot build an executab
 \end{lstlisting}
 \normalsize
 
-To fix that, export the variable and retry:
+To fix this, export the variable and retry:
 
 \small
 \begin{lstlisting}[language=bash]
