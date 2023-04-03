@@ -65,16 +65,13 @@ private:
     class multi_passthrough_initiator_socket_spying
         : public tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>
     {
-        using typename tlm_utils::multi_passthrough_initiator_socket<
-            MOD, BUSWIDTH>::base_target_socket_type;
+        using typename tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>::base_target_socket_type;
 
         const std::function<void(std::string)> register_cb;
 
     public:
-        multi_passthrough_initiator_socket_spying(const char* name,
-                                                  const std::function<void(std::string)>& f)
-            : tlm_utils::multi_passthrough_initiator_socket<
-                  MOD, BUSWIDTH>::multi_passthrough_initiator_socket(name)
+        multi_passthrough_initiator_socket_spying(const char* name, const std::function<void(std::string)>& f)
+            : tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>::multi_passthrough_initiator_socket(name)
             , register_cb(f)
         {
         }
@@ -91,7 +88,8 @@ private:
         std::string name;
         sc_dt::uint64 address;
         sc_dt::uint64 size;
-        bool mask_addr;
+        bool use_offset;
+        bool is_callback;
     };
     std::string parent(std::string name) { return name.substr(0, name.find_last_of(".")); }
 
@@ -136,10 +134,10 @@ private:
         s = nameFromSocket(s);
         struct target_info ti = { 0 };
         ti.name = s;
-        ti.index = targets.size();
+        ti.index = bound_targets.size();
         SCP_LOGGER_VECTOR_PUSH_BACK(D, ti.name);
         SCP_DEBUG((D[ti.index])) << "Connecting : " << ti.name;
-        targets.push_back(ti);
+        bound_targets.push_back(ti);
     }
 
 public:
@@ -149,7 +147,11 @@ public:
     tlm_utils::multi_passthrough_target_socket<Router<BUSWIDTH>> target_socket;
 
 private:
-    std::vector<target_info> targets;
+    std::vector<target_info> bound_targets;
+    std::map<uint64_t, target_info*> map_targets;
+    std::map<uint64_t, target_info*> map_cb_targets;
+    std::vector<target_info*> id_targets;
+
     std::vector<PathIDExtension*> m_pathIDPool; // at most one per thread!
 #if THREAD_SAFE == true
     std::mutex m_pool_mutex;
@@ -190,69 +192,67 @@ private:
 
     void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
     {
+        bool found = false;
         sc_dt::uint64 addr = trans.get_address();
-        auto ti = decode_address(addr);
+        auto ti = decode_address(trans);
         if (!ti) {
-            SCP_WARN(()) << "Access to unmapped address " << scp::scp_txn_tostring(trans);
-
-            trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
+            SCP_WARN(())("Attempt to access unknown register at offset 0x{:x}", addr);
+            trans.set_response_status(tlm::TLM_COMMAND_ERROR_RESPONSE);
             return;
         }
 
         stamp_txn(id, trans);
-
-        if (ti->mask_addr)
-            trans.set_address(addr - ti->address);
-        SCP_DEBUG((D[ti->index]), ti->name)
-            << "calling b_transport : " << scp::scp_txn_tostring(trans);
+        if (ti->use_offset) trans.set_address(addr - ti->address);
+        SCP_DEBUG((D[ti->index]), ti->name) << "calling b_transport : " << scp::scp_txn_tostring(trans);
+        do_callbacks(trans, delay);
+        if (trans.get_response_status() <= tlm::TLM_GENERIC_ERROR_RESPONSE) return;
         initiator_socket[ti->index]->b_transport(trans, delay);
-        SCP_DEBUG((D[ti->index]), ti->name)
-            << "b_transport returned : " << scp::scp_txn_tostring(trans);
-        if (ti->mask_addr)
-            trans.set_address(addr);
-
+        if (trans.get_response_status() <= tlm::TLM_GENERIC_ERROR_RESPONSE) return;
+        do_callbacks(trans, delay);
+        if (trans.get_response_status() <= tlm::TLM_GENERIC_ERROR_RESPONSE) return;
+        SCP_DEBUG((D[ti->index]), ti->name) << "b_transport returned : " << scp::scp_txn_tostring(trans);
+        if (ti->use_offset) trans.set_address(addr);
         unstamp_txn(id, trans);
+
+        if (map_cb_targets.size() != 0) { /* If ANY callbacks are registered we deny ALL DMI access ! */
+            trans.set_dmi_allowed(false);
+        }
     }
 
     unsigned int transport_dbg(int id, tlm::tlm_generic_payload& trans)
     {
         sc_dt::uint64 addr = trans.get_address();
-        auto ti = decode_address(addr);
+        auto ti = decode_address(trans);
         if (!ti) {
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return 0;
         }
 
-        if (ti->mask_addr)
-            trans.set_address(addr - ti->address);
-        SCP_DEBUG((D[ti->index]), ti->name)
-            << "calling dbg_transport : " << scp::scp_txn_tostring(trans);
+        if (ti->use_offset) trans.set_address(addr - ti->address);
+        SCP_DEBUG((D[ti->index]), ti->name) << "calling dbg_transport : " << scp::scp_txn_tostring(trans);
         unsigned int ret = initiator_socket[ti->index]->transport_dbg(trans);
-        if (ti->mask_addr)
-            trans.set_address(addr);
+        if (ti->use_offset) trans.set_address(addr);
         return ret;
     }
 
     bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
         sc_dt::uint64 addr = trans.get_address();
-        auto ti = decode_address(addr);
+        auto ti = decode_address(trans);
         if (!ti) {
             return false;
         }
 
-        if (ti->mask_addr)
-            trans.set_address(addr - ti->address);
+        if (ti->use_offset) trans.set_address(addr - ti->address);
 
         if (!m_dmi_mutex.try_lock()) { // if we're busy invalidating, dont grant DMI's
             return false;
         }
 
-        SCP_DEBUG((D[ti->index]), ti->name)
-            << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
+        SCP_DEBUG((D[ti->index]), ti->name) << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
         bool status = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
         if (status) {
-            if (ti->mask_addr) {
+            if (ti->use_offset) {
                 assert(dmi_data.get_start_address() < ti->size);
                 dmi_data.set_start_address(ti->address + dmi_data.get_start_address());
                 dmi_data.set_end_address(ti->address + dmi_data.get_end_address());
@@ -266,9 +266,9 @@ private:
 
     void invalidate_direct_mem_ptr(int id, sc_dt::uint64 start, sc_dt::uint64 end)
     {
-        if (targets[id].mask_addr) {
-            start = compose_address(id, start);
-            end = compose_address(id, end);
+        if (id_targets[id]->use_offset) {
+            start = id_targets[id]->address + start;
+            end = id_targets[id]->address + end;
         }
         std::lock_guard<std::mutex> lock(m_dmi_mutex);
         invalidate_direct_mem_ptr_ts(id, start, end);
@@ -301,8 +301,8 @@ private:
             }
             for (auto t : it->second.initiators) {
                 SCP_INFO((DMI)) << "Invalidating initiator " << t << " [0x" << std::hex
-                                << it->second.dmi.get_start_address() << " - 0x"
-                                << it->second.dmi.get_end_address() << "]";
+                                << it->second.dmi.get_start_address() << " - 0x" << it->second.dmi.get_end_address()
+                                << "]";
                 target_socket[t]->invalidate_direct_mem_ptr(it->second.dmi.get_start_address(),
                                                             it->second.dmi.get_end_address());
             }
@@ -310,125 +310,118 @@ private:
         }
     }
 
-    struct target_info* decode_address(sc_dt::uint64 addr)
+    void do_callbacks(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
     {
-        lazy_initialize();
-        for (unsigned int i = 0; i < targets.size(); i++) {
-            struct target_info& ti = targets.at(i);
-            if (addr >= ti.address && (addr - ti.address) < ti.size) {
-                return &ti;
+        sc_dt::uint64 addr = trans.get_address();
+        sc_dt::uint64 len = trans.get_data_length();
+        auto f = map_cb_targets.lower_bound(addr);
+        auto l = map_cb_targets.upper_bound(addr + len);
+        std::vector<target_info*> found;
+        for (auto tim = f; tim != map_targets.end() && tim != l; tim++) {
+            auto ti = tim->second;
+            if ((addr >= ti->address) && (addr + len < ti->address + ti->size)) {
+                found.push_back(ti);
             }
         }
-        return nullptr;
+        std::sort(found.begin(), found.end(), [](target_info* a, target_info* b) { return a->index < b->index; });
+
+        for (auto ti : found) {
+            initiator_socket[ti->index]->b_transport(trans, delay);
+            if (trans.get_response_status() <= tlm::TLM_GENERIC_ERROR_RESPONSE) break;
+        }
     }
 
-    inline sc_dt::uint64 compose_address(unsigned int index, sc_dt::uint64 address)
+    target_info* decode_address(tlm::tlm_generic_payload& trans)
     {
-        assert(address < targets[index].size);
-        return targets[index].address + address;
-    }
+        lazy_initialize();
 
-    inline uint64_t get_uint64(std::string s)
-    {
-        auto v = m_broker.get_preset_cci_value(s);
-        if (v.is_uint64()) {
-            return v.get_uint64();
+        sc_dt::uint64 addr = trans.get_address();
+        sc_dt::uint64 len = trans.get_data_length();
+        auto f = map_targets.lower_bound(addr);
+        auto l = map_targets.upper_bound(addr + len);
+        std::vector<target_info*> found;
+        for (auto tim = f; tim != map_targets.end() && tim != l; tim++) {
+            auto ti = tim->second;
+            if ((addr >= ti->address) && (addr + len < ti->address + ti->size)) {
+                found.push_back(ti);
+            }
+        }
+        std::sort(found.begin(), found.end(), [](target_info* a, target_info* b) { return a->index < b->index; });
+        if (found.size() > 0) {
+            return found[0];
         } else {
-            return v.get_int64();
+            return nullptr;
         }
     }
 
 protected:
     virtual void before_end_of_elaboration()
     {
-        if (!lazy_init)
-            lazy_initialize();
+        if (!lazy_init) lazy_initialize();
     }
 
 private:
+    template <class TYPE>
+    inline TYPE get_val(std::string s, bool use_default = false, TYPE default_val = 0)
+    {
+        TYPE ret;
+
+        auto h = m_broker.get_param_handle(s);
+        cci::cci_value v;
+        if (h.is_valid()) {
+            v = h.get_cci_value();
+        } else {
+            if (!m_broker.has_preset_value(s)) {
+                SCP_FATAL(()) << "Can't find " << s;
+            }
+            v = m_broker.get_preset_cci_value(s);
+        }
+        if (v.is_uint64())
+            ret = v.get_uint64();
+        else if (v.is_int64())
+            ret = v.get_int64();
+        else if (v.is_bool())
+            ret = v.get_bool();
+        else if (use_default)
+            ret = default_val;
+        else {
+            SCP_FATAL(())("Unknown type for %s : %s", s, v.to_json());
+        }
+        m_broker.lock_preset_value(s);
+        m_broker.ignore_unconsumed_preset_values(
+            [&s](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == (s); });
+        return ret;
+    }
+    template <class TYPE>
+    inline TYPE get_val(std::string s, TYPE default_val)
+    {
+        return get_val<TYPE>(s, true, default_val);
+    }
     bool initialized = false;
     void lazy_initialize()
     {
-        if (initialized)
-            return;
+        if (initialized) return;
         initialized = true;
 
-        std::vector<target_info> final_list = {};
+        for (auto& ti : bound_targets) {
+            ti.address = get_val<uint64_t>(ti.name + ".address");
+            ti.size = get_val<uint64_t>(ti.name + ".size");
+            ti.use_offset = get_val<bool>(ti.name + ".relative_addresses", true);
+            ti.is_callback = get_val<bool>(ti.name + ".is_callback", false);
 
-        for (auto& ti : targets) {
-            if (!m_broker.has_preset_value(ti.name + ".address")) {
-                SCP_FATAL((D[ti.index])) << "Can't find " << ti.name << ".address";
+            SCP_INFO((D[ti.index])) << "Address map " << ti.name + " at"
+                                    << " address "
+                                    << "0x" << std::hex << ti.address << " size "
+                                    << "0x" << std::hex << ti.size
+                                    << (ti.use_offset ? " (with relative address) " : "");
+
+            if (ti.is_callback) {
+                map_cb_targets.insert({ ti.address, &ti });
+            } else {
+                map_targets.insert({ ti.address, &ti });
             }
-            uint64_t address = get_uint64(ti.name + ".address");
-            m_broker.lock_preset_value(ti.name + ".address");
-            m_broker.ignore_unconsumed_preset_values(
-                [ti](const std::pair<std::string, cci::cci_value>& iv) -> bool {
-                    return iv.first == (ti.name + ".address");
-                });
-            if (!m_broker.has_preset_value(ti.name + ".size")) {
-                SCP_FATAL((D[ti.index])) << "Can't find " << ti.name << ".size";
-            }
-            uint64_t size = get_uint64(ti.name + ".size");
-            m_broker.lock_preset_value(ti.name + ".size");
-            m_broker.ignore_unconsumed_preset_values(
-                [ti](const std::pair<std::string, cci::cci_value>& iv) -> bool {
-                    return iv.first == (ti.name + ".size");
-                });
-
-            bool mask = true;
-            if (m_broker.has_preset_value(ti.name + ".relative_addresses")) {
-                mask = m_broker.get_preset_cci_value(ti.name + ".relative_addresses").get_bool();
-                m_broker.lock_preset_value(ti.name + ".relative_addresses");
-                m_broker.ignore_unconsumed_preset_values(
-                    [ti](const std::pair<std::string, cci::cci_value>& iv) -> bool {
-                        return iv.first == (ti.name + ".relative_addresses");
-                    });
-            }
-
-            SCP_INFO((D[ti.index]))
-                << "Address map " << ti.name + " at"
-                << " address "
-                << "0x" << std::hex << address << " size "
-                << "0x" << std::hex << size << (mask ? " (with relative address) " : "");
-
-            ti.address = address;
-            ti.size = size;
-            ti.mask_addr = mask;
-            final_list.push_back(ti);
-            if (m_broker.has_preset_value(ti.name + ".aliases.0.address")) {
-                int l = ti.name.length() + 8 + 1;
-                /*-----------------------------------------------------*/
-                std::list<std::string> children;
-                auto uncon = m_broker.get_unconsumed_preset_values(
-                    [&ti](const std::pair<std::string, cci::cci_value>& iv) {
-                        return iv.first.find(std::string(ti.name) + ".aliases.") == 0;
-                    });
-                for (auto p : uncon) {
-                    children.push_back(p.first.substr(l, p.first.find(".", l) - l));
-                }
-                children.sort();
-                children.unique();
-                /*-----------------------------------------------------*/
-                for (int t = 0; t < children.size(); t++) {
-                    std::string name = (ti.name + ".aliases." + std::to_string(t));
-                    uint64_t address = get_uint64(name + ".address");
-                    uint64_t size = get_uint64(name + ".size");
-                    m_broker.lock_preset_value(name);
-                    m_broker.ignore_unconsumed_preset_values(
-                        [name](const std::pair<std::string, cci::cci_value>& iv) -> bool {
-                            return iv.first == (name);
-                        });
-
-                    struct target_info ati = ti;
-                    ati.address = address;
-                    ati.size = size;
-                    ati.name = name;
-
-                    final_list.push_back(ati);
-                }
-            }
+            id_targets.push_back(&ti);
         }
-        targets = final_list;
     }
 
 public:
@@ -442,16 +435,14 @@ public:
         , target_socket("target_socket")
         , m_broker(cci::cci_get_broker())
         , thread_safe("thread_safe", THREAD_SAFE, "Is this model thread safe")
-        , lazy_init("lazy_init", false,
-                    "Initialize the router lazily (eg. during simulation rather than BEOL)")
+        , lazy_init("lazy_init", false, "Initialize the router lazily (eg. during simulation rather than BEOL)")
     {
         SCP_DEBUG(()) << "Router constructed";
 
         target_socket.register_b_transport(this, &Router::b_transport);
         target_socket.register_transport_dbg(this, &Router::transport_dbg);
         target_socket.register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr);
-        initiator_socket.register_invalidate_direct_mem_ptr(this,
-                                                            &Router::invalidate_direct_mem_ptr);
+        initiator_socket.register_invalidate_direct_mem_ptr(this, &Router::invalidate_direct_mem_ptr);
         SCP_DEBUG((DMI)) << "Router Initializing DMI SCP reporting";
     }
 

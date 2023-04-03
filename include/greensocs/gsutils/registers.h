@@ -83,7 +83,8 @@ public:
         , value(GS_REGS_TOP + std::string(_name), _default_val)
         , offset(_offset)
         , read_only(_read_only)
-        , size(sizeof(TYPE)) {
+        , size(sizeof(TYPE))
+    {
         SCP_TRACE(())("Register construction {}");
     }
     /**
@@ -101,7 +102,8 @@ public:
      * @param txn
      * @param delay
      */
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
         if (len != size) {
@@ -147,92 +149,96 @@ public:
        desired functionality
     */
 public:
-    cci::cci_param_untyped_handle create_param_handle(const cci::cci_originator& originator) const {
+    cci::cci_param_untyped_handle create_param_handle(const cci::cci_originator& originator) const
+    {
         return value.create_param_handle();
     }
-    bool unregister_pre_write_callback(const cci::cci_callback_untyped_handle& cb,
-                                       const cci::cci_originator& orig) {
+    bool unregister_pre_write_callback(const cci::cci_callback_untyped_handle& cb, const cci::cci_originator& orig)
+    {
         SCP_FATAL("Use param handle");
         return false;
     }
-    bool unregister_post_write_callback(const cci::cci_callback_untyped_handle& cb,
-                                        const cci::cci_originator& orig) {
+    bool unregister_post_write_callback(const cci::cci_callback_untyped_handle& cb, const cci::cci_originator& orig)
+    {
         SCP_FATAL("Use param handle");
         return false;
     }
-    bool unregister_pre_read_callback(const cci::cci_callback_untyped_handle& cb,
-                                      const cci::cci_originator& orig) {
+    bool unregister_pre_read_callback(const cci::cci_callback_untyped_handle& cb, const cci::cci_originator& orig)
+    {
         SCP_FATAL("Use param handle");
         return false;
     }
-    bool unregister_post_read_callback(const cci::cci_callback_untyped_handle& cb,
-                                       const cci::cci_originator& orig) {
+    bool unregister_post_read_callback(const cci::cci_callback_untyped_handle& cb, const cci::cci_originator& orig)
+    {
         SCP_FATAL("Use param handle");
         return false;
     }
 
-    typedef
-        typename cci::cci_param_pre_write_callback<TYPE>::type cci_param_pre_write_callback_typed;
-    cci::cci_callback_untyped_handle register_pre_write_callback(
-        const cci_param_pre_write_callback_typed& cb) {
+    typedef typename cci::cci_param_pre_write_callback<TYPE>::type cci_param_pre_write_callback_typed;
+    cci::cci_callback_untyped_handle register_pre_write_callback(const cci_param_pre_write_callback_typed& cb)
+    {
         return value.register_pre_write_callback(cb);
     }
-    typedef
-        typename cci::cci_param_post_write_callback<TYPE>::type cci_param_post_write_callback_typed;
-    cci::cci_callback_untyped_handle register_post_write_callback(
-        const cci_param_post_write_callback_typed& cb) {
+    typedef typename cci::cci_param_post_write_callback<TYPE>::type cci_param_post_write_callback_typed;
+    cci::cci_callback_untyped_handle register_post_write_callback(const cci_param_post_write_callback_typed& cb)
+    {
         return value.register_post_write_callback(cb);
     }
     typedef typename cci::cci_param_pre_read_callback<TYPE>::type cci_param_pre_read_callback_typed;
-    cci::cci_callback_untyped_handle register_pre_read_callback(
-        const cci_param_pre_read_callback_typed& cb) {
+    cci::cci_callback_untyped_handle register_pre_read_callback(const cci_param_pre_read_callback_typed& cb)
+    {
         return value.register_pre_read_callback(cb);
     }
-    typedef
-        typename cci::cci_param_post_read_callback<TYPE>::type cci_param_post_read_callback_typed;
-    cci::cci_callback_untyped_handle register_post_read_callback(
-        const cci_param_post_read_callback_typed& cb) {
+    typedef typename cci::cci_param_post_read_callback<TYPE>::type cci_param_post_read_callback_typed;
+    cci::cci_callback_untyped_handle register_post_read_callback(const cci_param_post_read_callback_typed& cb)
+    {
         return value.register_post_read_callback(cb);
     }
 
-    cci::cci_callback_untyped_handle register_pre_write_callback(
-        const cci::cci_callback_untyped_handle& cb, const cci::cci_originator& orig) {
+    cci::cci_callback_untyped_handle register_pre_write_callback(const cci::cci_callback_untyped_handle& cb,
+                                                                 const cci::cci_originator& orig)
+    {
         SCP_FATAL("Use param handle");
         return cci::cci_callback_untyped_handle();
     }
-    cci::cci_callback_untyped_handle register_post_write_callback(
-        const cci::cci_callback_untyped_handle& cb, const cci::cci_originator& orig) {
+    cci::cci_callback_untyped_handle register_post_write_callback(const cci::cci_callback_untyped_handle& cb,
+                                                                  const cci::cci_originator& orig)
+    {
         SCP_FATAL("Use param handle");
         return cci::cci_callback_untyped_handle();
     }
-    cci::cci_callback_untyped_handle register_pre_read_callback(
-        const cci::cci_callback_untyped_handle& cb, const cci::cci_originator& orig) {
+    cci::cci_callback_untyped_handle register_pre_read_callback(const cci::cci_callback_untyped_handle& cb,
+                                                                const cci::cci_originator& orig)
+    {
         SCP_FATAL("Use param handle");
         return cci::cci_callback_untyped_handle();
     }
-    cci::cci_callback_untyped_handle register_post_read_callback(
-        const cci::cci_callback_untyped_handle& cb, const cci::cci_originator& orig) {
+    cci::cci_callback_untyped_handle register_post_read_callback(const cci::cci_callback_untyped_handle& cb,
+                                                                 const cci::cci_originator& orig)
+    {
         SCP_FATAL("Use param handle");
         return cci::cci_callback_untyped_handle();
     }
-    bool unregister_all_callbacks(const cci::cci_originator& orig) {
+    bool unregister_all_callbacks(const cci::cci_originator& orig)
+    {
         SCP_FATAL("Use param handle");
         return false;
     }
     bool has_callbacks() const { return value.has_callbacks(); }
 
-    void set_cci_value(const cci::cci_value& val, const void* pwd,
-                       const cci::cci_originator& originator) {
+    void set_cci_value(const cci::cci_value& val, const void* pwd, const cci::cci_originator& originator)
+    {
         value.set_cci_value(val, pwd, originator);
     }
-    cci::cci_value get_cci_value(const cci::cci_originator& originator) const {
+    cci::cci_value get_cci_value(const cci::cci_originator& originator) const
+    {
         return value.get_cci_value(originator);
     }
     cci::cci_value get_default_cci_value() const { return value.get_default_cci_value(); }
     std::string get_description() const { return value.get_description(); }
     void set_description(const std::string& desc) { value.set_description(desc); }
-    void add_metadata(const std::string& name, const cci::cci_value& val,
-                      const std::string& desc = "") {
+    void add_metadata(const std::string& name, const cci::cci_value& val, const std::string& desc = "")
+    {
         value.add_metadata(name, val, desc);
     }
     cci::cci_value_map get_metadata() const { return value.get_metadata(); }
@@ -253,42 +259,42 @@ public:
     void destroy(cci::cci_broker_handle broker) { value.destroy(broker); }
     void init(cci::cci_broker_handle broker_handle) { value.init(broker_handle); }
     template <typename T>
-    const T& get_typed_value(const cci::cci_param_if& rhs) const {
+    const T& get_typed_value(const cci::cci_param_if& rhs) const
+    {
         return value.get_typed_value(rhs);
     }
 
     // private:
     //  these functions should never be called, the implementation chosen for the functions that
     //  cause these to be called would be chosen down one path of the diamond inheritance
-    void preset_cci_value(const cci::cci_value& preset, const cci::cci_originator& originator) {
+    void preset_cci_value(const cci::cci_value& preset, const cci::cci_originator& originator)
+    {
         SCP_FATAL("Call to super class implementation of preset_cci_value");
     }
-    void invalidate_all_param_handles() {
+    void invalidate_all_param_handles()
+    {
         SCP_FATAL("Call to super class implementation of invalidate_all_param_handles");
     }
-    void set_raw_value(const void* vp, const void* pwd, const cci::cci_originator& originator) {
+    void set_raw_value(const void* vp, const void* pwd, const cci::cci_originator& originator)
+    {
         SCP_FATAL("Call to super class implementation of set_raw_value");
     }
-    const void* get_raw_value(const cci::cci_originator& originator) const {
+    const void* get_raw_value(const cci::cci_originator& originator) const
+    {
         SCP_FATAL("Call to super class implementation of get_raw_value");
         return nullptr;
     }
-    const void* get_raw_default_value() const {
+    const void* get_raw_default_value() const
+    {
         SCP_FATAL("Call to super class implementation of get_raw_default_value");
         return nullptr;
     }
 
-    void add_param_handle(cci::cci_param_untyped_handle* param_handle) {
-        value.add_param_handle(param_handle);
-    }
-    void remove_param_handle(cci::cci_param_untyped_handle* param_handle) {
-        value.remove_param_handle(param_handle);
-    }
+    void add_param_handle(cci::cci_param_untyped_handle* param_handle) { value.add_param_handle(param_handle); }
+    void remove_param_handle(cci::cci_param_untyped_handle* param_handle) { value.remove_param_handle(param_handle); }
 
     const TYPE& get_value() const { return get_value(get_originator()); }
-    const TYPE& get_value(const cci::cci_originator& originator) const {
-        return value.get_value(get_originator());
-    };
+    const TYPE& get_value(const cci::cci_originator& originator) const { return value.get_value(get_originator()); };
     void set_value(const TYPE& val) { set_value(val, NULL); }
     void set_value(const TYPE& val, const void* pwd) { value.set_value(val, pwd); }
 };
@@ -299,7 +305,8 @@ public:
  * @param name  name being searched for
  * @return sc_core::sc_object* return object if found
  */
-static struct gs::gs_register_if* find_register(std::string name, sc_core::sc_object* m = nullptr) {
+static struct gs::gs_register_if* find_register(std::string name, sc_core::sc_object* m = nullptr)
+{
     auto reg = dynamic_cast<gs::gs_register_if*>(m);
     if (reg && (name == m->name() || name == std::string(reg->get_cci_name()))) {
         return dynamic_cast<gs::gs_register_if*>(m);
@@ -320,8 +327,7 @@ static struct gs::gs_register_if* find_register(std::string name, sc_core::sc_ob
     } else {
         for (auto c : children) {
             auto ret = find_register(name, c);
-            if (ret)
-                return ret;
+            if (ret) return ret;
         }
     }
     return nullptr;
@@ -367,41 +373,38 @@ public:
         int bitwidth;
     };
     reg_bank(sc_core::sc_module_name _name, std::vector<reg_bank_info_s> _reg_info)
-        : sc_core::sc_module(_name), target_socket("target_socket") {
+        : sc_core::sc_module(_name), target_socket("target_socket")
+    {
         SCP_DEBUG(())("Reg bank Constructor");
         target_socket.register_b_transport(this, &reg_bank::b_transport);
 
-        reg_info.init(
-            _reg_info.size(), [this, _reg_info](const char* name, size_t n) -> gs::gs_register_if* {
-                switch (_reg_info[n].bitwidth) {
-                case 64:
-                    return new gs_register<uint64_t>(_reg_info[n].name.c_str(), _reg_info[n].offset,
-                                                     _reg_info[n].read_only,
-                                                     _reg_info[n].default_val);
-                case 32:
-                    return new gs_register<uint32_t>(_reg_info[n].name.c_str(), _reg_info[n].offset,
-                                                     _reg_info[n].read_only,
-                                                     _reg_info[n].default_val);
-                case 16:
-                    return new gs_register<uint16_t>(_reg_info[n].name.c_str(), _reg_info[n].offset,
-                                                     _reg_info[n].read_only,
-                                                     _reg_info[n].default_val);
-                case 8:
-                    return new gs_register<uint8_t>(_reg_info[n].name.c_str(), _reg_info[n].offset,
-                                                    _reg_info[n].read_only,
-                                                    _reg_info[n].default_val);
-                default:
-                    SCP_FATAL(())("Can only handle 64,32,16,8 bitwidths");
-                    return nullptr;
-                }
-            });
+        reg_info.init(_reg_info.size(), [this, _reg_info](const char* name, size_t n) -> gs::gs_register_if* {
+            switch (_reg_info[n].bitwidth) {
+            case 64:
+                return new gs_register<uint64_t>(_reg_info[n].name.c_str(), _reg_info[n].offset, _reg_info[n].read_only,
+                                                 _reg_info[n].default_val);
+            case 32:
+                return new gs_register<uint32_t>(_reg_info[n].name.c_str(), _reg_info[n].offset, _reg_info[n].read_only,
+                                                 _reg_info[n].default_val);
+            case 16:
+                return new gs_register<uint16_t>(_reg_info[n].name.c_str(), _reg_info[n].offset, _reg_info[n].read_only,
+                                                 _reg_info[n].default_val);
+            case 8:
+                return new gs_register<uint8_t>(_reg_info[n].name.c_str(), _reg_info[n].offset, _reg_info[n].read_only,
+                                                _reg_info[n].default_val);
+            default:
+                SCP_FATAL(())("Can only handle 64,32,16,8 bitwidths");
+                return nullptr;
+            }
+        });
         for (auto r = reg_info.begin(); r != reg_info.end(); r++) {
             regs_map.emplace(std::make_pair((*r).get_offset(), &(*r)));
         }
         reset();
     }
 
-    void b_transport(int id, tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void b_transport(int id, tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
@@ -426,14 +429,18 @@ public:
         txn.set_data_ptr(ptr);
     }
 
-    void reset() {
+    void reset()
+    {
         for (auto r = reg_info.begin(); r != reg_info.end(); r++) {
             (*r).reset();
         }
     }
 };
 
-/* Provide a class to provide b_transport callback */
+/**
+ * @brief  Provide a class to provide b_transport callback
+ *
+ */
 class tlm_cb
 {
     std::function<void(tlm::tlm_generic_payload&, sc_core::sc_time&)> m_cb;
@@ -442,29 +449,26 @@ public:
     tlm_cb(std::function<void(tlm::tlm_generic_payload&, sc_core::sc_time&)> cb): m_cb(cb) {}
     void operator()(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) { m_cb(txn, delay); }
 };
-class pre_read_cb : public tlm_cb
-{
-    using tlm_cb::tlm_cb;
-};
-class pre_write_cb : public tlm_cb
-{
-    using tlm_cb::tlm_cb;
-};
-class post_read_cb : public tlm_cb
-{
-    using tlm_cb::tlm_cb;
-};
-class post_write_cb : public tlm_cb
-{
-    using tlm_cb::tlm_cb;
-};
+/* clang-format off */
+/* helper classes to allow identification of different cb types */
+class pre_read_cb : public tlm_cb  { using tlm_cb::tlm_cb; };
+class pre_write_cb : public tlm_cb { using tlm_cb::tlm_cb; };
+class post_read_cb : public tlm_cb { using tlm_cb::tlm_cb; };
+class post_write_cb : public tlm_cb{ using tlm_cb::tlm_cb; };
+/* clang-format on */
 
+/**
+ * @brief A class that encapsulates a simple target port and a set of b_transport lambda functions for pre/post
+ * read/write. when b_transport is called port, the correct lambda's will be invoked
+ *
+ */
 class port_lambda : public virtual tlm_utils::simple_target_socket<port_lambda>
 {
     std::vector<tlm_cb> m_pre_read_cbs;
     std::vector<tlm_cb> m_pre_write_cbs;
     std::vector<tlm_cb> m_post_read_cbs;
     std::vector<tlm_cb> m_post_write_cbs;
+    cci::cci_param<bool> p_is_callback;
     bool m_in_callback = false;
     void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
@@ -475,14 +479,10 @@ class port_lambda : public virtual tlm_utils::simple_target_socket<port_lambda>
                 case tlm::TLM_INCOMPLETE_RESPONSE:
                     switch (txn.get_command()) {
                     case tlm::TLM_READ_COMMAND:
-                        for (auto cb : m_pre_read_cbs) {
-                            cb(txn, delay);
-                        }
+                        for (auto cb : m_pre_read_cbs) cb(txn, delay);
                         break;
                     case tlm::TLM_WRITE_COMMAND:
-                        for (auto cb : m_pre_write_cbs) {
-                            cb(txn, delay);
-                        }
+                        for (auto cb : m_pre_write_cbs) cb(txn, delay);
                         break;
                     default:
                         break;
@@ -491,14 +491,10 @@ class port_lambda : public virtual tlm_utils::simple_target_socket<port_lambda>
                 case tlm::TLM_OK_RESPONSE:
                     switch (txn.get_command()) {
                     case tlm::TLM_READ_COMMAND:
-                        for (auto cb : m_post_read_cbs) {
-                            cb(txn, delay);
-                        }
+                        for (auto cb : m_post_read_cbs) cb(txn, delay);
                         break;
                     case tlm::TLM_WRITE_COMMAND:
-                        for (auto cb : m_post_write_cbs) {
-                            cb(txn, delay);
-                        }
+                        for (auto cb : m_post_write_cbs) cb(txn, delay);
                         break;
                     default:
                         break;
@@ -514,52 +510,23 @@ class port_lambda : public virtual tlm_utils::simple_target_socket<port_lambda>
     }
 
 public:
-    cci::cci_param<uint64_t> p_offset;
-    cci::cci_param<uint64_t> p_size;
-
-    cci::cci_param<bool> p_has_pre_cb;
-    cci::cci_param<bool> p_has_post_cb;
-
     void add_cbs(std::vector<tlm_cb> cbs)
     {
+        /* clang-format off */
         for (auto cb : cbs) {
-            {
-                auto t = static_cast<pre_read_cb*>(&cb);
-                if (t) {
-                    m_pre_read_cbs.push_back(cb);
-                    p_has_pre_cb = true;
-                }
-            }
-            {
-                auto t = static_cast<pre_write_cb*>(&cb);
-                if (t) {
-                    m_pre_write_cbs.push_back(cb);
-                    p_has_pre_cb = true;
-                }
-            }
-            {
-                auto t = static_cast<post_read_cb*>(&cb);
-                if (t) {
-                    m_post_read_cbs.push_back(cb);
-                    p_has_post_cb = true;
-                }
-            }
-            {
-                auto t = static_cast<post_write_cb*>(&cb);
-                if (t) {
-                    m_post_write_cbs.push_back(cb);
-                    p_has_post_cb = true;
-                }
-            }
+            { auto t = static_cast<pre_read_cb*>(&cb);   if (t) { m_pre_read_cbs.push_back(cb);   } }
+            { auto t = static_cast<pre_write_cb*>(&cb);  if (t) { m_pre_write_cbs.push_back(cb);  } }
+            { auto t = static_cast<post_read_cb*>(&cb);  if (t) { m_post_read_cbs.push_back(cb);  } }
+            { auto t = static_cast<post_write_cb*>(&cb); if (t) { m_post_write_cbs.push_back(cb); } }
         }
+        /* clang-format on */
     }
     port_lambda(const char* name, std::vector<tlm_cb> cbs)
         : tlm_utils::simple_target_socket<port_lambda>(name) // do these names need current sc_module name ++?
-        , p_offset("offset", 0, "Offset of this register")
-        , p_size("size", 0, "Size of this register")
-        , p_has_pre_cb("has_pre_cb", false, "Has pre read/write callbacks")
-        , p_has_post_cb("has_post_cb", false, "Has post read/write callbacks")
+        , p_is_callback("is_callback", true, "Is a callback (true)")
     {
+        p_is_callback = true;
+        p_is_callback.lock();
         add_cbs(cbs);
         tlm_utils::simple_target_socket<port_lambda>::register_b_transport(this, &port_lambda::b_transport);
     }
@@ -644,7 +611,7 @@ public:
 
     void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) { m_dmi = nullptr; }
 
-    gs_proxy_data<TYPE>(uint64_t offset, uint64_t start = 0, uint64_t length = sizeof(TYPE))
+    gs_proxy_data<TYPE>(uint64_t offset = 0, uint64_t start = 0, uint64_t length = sizeof(TYPE))
         : initiator_socket("initiator_socket")
         , p_offset("offset", offset, "Offset of this register")
         , p_start("start", start, "Start bit of field")
@@ -668,7 +635,10 @@ template <class TYPE = uint32_t>
 class gs_register_pl : public virtual port_lambda, public virtual gs_proxy_data<TYPE>
 {
 public:
-    gs_register_pl<TYPE>(const char* name): port_lambda(name, {}), gs_proxy_data<TYPE>(p_offset) {}
+    gs_register_pl<TYPE>(const char* name)
+        : port_lambda((std::string(name) + ".target_socket").c_str(), {}), gs_proxy_data<TYPE>()
+    {
+    }
     void operator=(TYPE value) { gs_proxy_data<TYPE>::set(value); }
     /* . . . . . . */
 };

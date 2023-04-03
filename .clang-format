@@ -2,7 +2,7 @@
 Language: Cpp
 BasedOnStyle: Google
 
-ColumnLimit: 100
+ColumnLimit: 120
 UseTab: Never
 IndentWidth: 4
 IndentCaseLabels: false
@@ -17,9 +17,10 @@ AlignConsecutiveMacros: true
 AlignConsecutiveAssignments: false
 
 AllowAllArgumentsOnNextLine: false
-AllowShortFunctionsOnASingleLine: InlineOnly
-AllowShortIfStatementsOnASingleLine: Never
-AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+AllowShortLambdasOnASingleLine: true
 
 BreakConstructorInitializers: BeforeComma
 BreakBeforeBinaryOperators: None
@@ -27,6 +28,7 @@ BreakStringLiterals: true
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass: true
+  AfterFunction: true
 
 SpaceBeforeCtorInitializerColon: false
 SpacesBeforeTrailingComments: 1
