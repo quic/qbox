@@ -124,12 +124,13 @@ protected:
         m_r->m_root.del_subregion(alias->get_alias_mr());
     }
 
-    /*
-     * Check for the presence of the DMI hint in the transaction. If found,
-     * request a DMI region, ask the QEMU instance DMI manager for a DMI region
-     * alias for it and map it on the CPU address space.
+    /**
+     * @brief Request a DMI region, ask the QEMU instance DMI manager for a DMI
+     * region alias for it and map it on the CPU address space.
      *
-     * Ideal, the whole operation could be done on the SystemC thread for
+     * @param trans DMI allowed transation
+     *
+     * @details Ideal, the whole operation could be done on the SystemC thread for
      * simplicity. Unfortunately, QEMU misbehaves if the memory region alias
      * subregion is mapped on the root MR by another thread than the CPU
      * thread. This is related to some internal QEMU code taking different
@@ -140,10 +141,7 @@ protected:
      *
      * On the other hand we SHOULD do a bunch on the SystemC thread to ensure
      * validity of the DMI region and thus the alias until the point where we
-     // N.B.
-     // we choose to protect all such areas with a mutex,
-     // allowing us to process everything on the QEMU thread.
-     * DEPRECATED ... effectively map the alias onto the root MR. This is why we first create
+     *  effectively map the alias onto the root MR. This is why we first create
      * the alias on the SystemC thread and return it to the CPU thread. Once
      * we're back to the CPU thread, we lock the DMI manager again and check
      * for the alias validity flag. If an invalidation happened in between,
@@ -152,35 +150,31 @@ protected:
      * If the alias is valid after we took the lock, we can map it. If an
      * invalidation must occur, it will be done after we release the lock.
      *
-     * @see QemuInstanceDmiManager for more information on why we need a global
-     * MR per DMI region.
-     */
-
-    /*   **************
-     * NB all DMI activity MUST happen from the CPU thread (from an MMIO read/write or 'safe work')
+     * @note We choose to protect all such areas with a mutex, allowing us to
+     * process everything on the QEMU thread.
      *
-     * For 7.2 this may need to be safe aync work ????????
-     *   ************** */
-
-    void check_dmi_hint(TlmPayload& trans) {
-        if (!trans.is_dmi_allowed()) {
-            return;
-        }
+     * @see QemuInstanceDmiManager for more information on why we need a global
+     *      MR per DMI region.
+     *
+     * @note All DMI activity MUST happen from the CPU thread (from an MMIO read/write or 'safe
+     * work') For 7.2 this may need to be safe aync work ????????
+     *
+     * @note Needs to be called with iothread locked as it will be doing several
+     * updates and we dont want multiple DMI's
+     *
+     * @returns The DMI descriptor for the corresponding DMI region
+     */
+    tlm::tlm_dmi check_dmi_hint_locked(TlmPayload& trans) {
+        assert(trans.is_dmi_allowed());
+        tlm::tlm_dmi dmi_data;
 
         SCP_INFO(SCMOD) << "DMI request for address 0x" << std::hex << trans.get_address();
 
         // It is 'safer' from the SystemC perspective to  m_on_sysc.run_on_sysc([this,
         // &trans]{...}).
 
-        tlm::tlm_dmi m_dmi_data;
-
-        // hold the lock through, as we will be doing several updates and we dont want multiple
-        // DMI's
-        m_inst.get().lock_iothread();
-
-        if (!(*this)->get_direct_mem_ptr(trans, m_dmi_data)) {
-            m_inst.get().unlock_iothread();
-            return;
+        if (!(*this)->get_direct_mem_ptr(trans, dmi_data)) {
+            return dmi_data;
         }
 
         SCP_INFO(SCMOD) << "DMI Adding for address 0x" << std::hex << trans.get_address();
@@ -202,8 +196,8 @@ protected:
             d = remove_alias(d);
         }
 
-        uint64_t start = m_dmi_data.get_start_address();
-        uint64_t end = m_dmi_data.get_end_address();
+        uint64_t start = dmi_data.get_start_address();
+        uint64_t end = dmi_data.get_end_address();
 
         if (m_dmi_aliases.size() > 0) {
             auto next = m_dmi_aliases.upper_bound(start);
@@ -213,19 +207,17 @@ protected:
                 if (prev->first == start) {
                     // already have the DMI
                     assert(end <= dmi->get_end());
-                    assert(m_dmi_data.get_dmi_ptr() == dmi->get_dmi_ptr());
-                    m_inst.get().unlock_iothread();
+                    assert(dmi_data.get_dmi_ptr() == dmi->get_dmi_ptr());
                     SCP_INFO(SCMOD) << "Already have region";
-                    return;
+                    return dmi_data;
                 }
                 uint64_t sz = dmi->get_size();
                 if (dmi->get_end() + 1 == start &&
-                    dmi->get_dmi_ptr() + sz == m_dmi_data.get_dmi_ptr()) {
+                    dmi->get_dmi_ptr() + sz == dmi_data.get_dmi_ptr()) {
                     SCP_INFO(SCMOD) << "Merge with previous";
                     start = dmi->get_start();
-                    m_dmi_data.set_start_address(start);
-                    m_dmi_data.set_dmi_ptr(dmi->get_dmi_ptr());
-
+                    dmi_data.set_start_address(start);
+                    dmi_data.set_dmi_ptr(dmi->get_dmi_ptr());
                     remove_alias(prev);
                 }
             }
@@ -235,31 +227,48 @@ protected:
                 if (next->first == start) {
                     // already have the DMI
                     assert(end <= dmi->get_end());
-                    assert(m_dmi_data.get_dmi_ptr() == dmi->get_dmi_ptr());
-                    m_inst.get().unlock_iothread();
+                    assert(dmi_data.get_dmi_ptr() == dmi->get_dmi_ptr());
                     SCP_INFO(SCMOD) << "Already have region(2)";
-                    return;
+                    return dmi_data;
                 }
                 if (dmi->get_start() == end + 1 &&
-                    m_dmi_data.get_dmi_ptr() + sz == dmi->get_dmi_ptr()) {
+                    dmi_data.get_dmi_ptr() + sz == dmi->get_dmi_ptr()) {
                     SCP_INFO(SCMOD) << "Merge with next";
                     end = dmi->get_end();
-                    m_dmi_data.set_end_address(end);
+                    dmi_data.set_end_address(end);
 
                     remove_alias(next);
                 }
             }
         }
 
-        SCP_INFO(SCMOD) << "Adding DMI for range [0x" << std::hex << m_dmi_data.get_start_address()
-                        << "-0x" << std::hex << m_dmi_data.get_end_address() << "]";
+        SCP_INFO(SCMOD) << "Adding DMI for range [0x" << std::hex << dmi_data.get_start_address()
+                        << "-0x" << std::hex << dmi_data.get_end_address() << "]";
 
-        DmiRegionAlias::Ptr alias = m_inst.get_dmi_manager().get_new_region_alias(m_dmi_data);
+        DmiRegionAlias::Ptr alias = m_inst.get_dmi_manager().get_new_region_alias(dmi_data);
 
         m_dmi_aliases[start] = alias;
         add_dmi_mr_alias(m_dmi_aliases[start]);
 
+        return dmi_data;
+    }
+
+    /**
+     * @brief Check for the presence of the DMI hint in the transaction. If found,
+     * request a DMI region, ask the QEMU instance DMI manager for a DMI region
+     * alias for it and map it on the CPU address space.
+     *
+     * @returns The DMI descriptor for the corresponding DMI region
+     */
+    tlm::tlm_dmi check_dmi_hint(TlmPayload& trans) {
+        tlm::tlm_dmi ret;
+        if (!trans.is_dmi_allowed()) {
+            return ret;
+        }
+        m_inst.get().lock_iothread();
+        ret = check_dmi_hint_locked(trans);
         m_inst.get().unlock_iothread();
+        return ret;
     }
 
     void check_qemu_mr_hint(TlmPayload& trans) {
