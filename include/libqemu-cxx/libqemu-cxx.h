@@ -46,6 +46,7 @@ struct DisplayChangeListener;
 struct MemTxAttrs;
 struct QemuMemoryRegionOps;
 struct QemuAddressSpace;
+struct QemuMemoryListener;
 struct QemuTimer;
 typedef void* QEMUGLContext;
 struct QEMUGLParams;
@@ -67,6 +68,7 @@ class LibQemuInternals;
 class Object;
 class MemoryRegionOps;
 class AddressSpace;
+class MemoryListener;
 class Gpio;
 class Timer;
 class Bus;
@@ -144,6 +146,7 @@ public:
     std::shared_ptr<MemoryRegionOps> memory_region_ops_new();
     std::shared_ptr<AddressSpace> address_space_new();
     std::shared_ptr<AddressSpace> address_space_get_system_memory();
+    std::shared_ptr<MemoryListener> memory_listener_new();
     Gpio gpio_new();
 
     std::shared_ptr<Timer> timer_new();
@@ -367,10 +370,37 @@ public:
 
     ~AddressSpace();
 
+    QemuAddressSpace* get_ptr() { return m_as; }
+
     void init(MemoryRegion mr, const char* name, bool global = false);
 
     MemTxResult read(uint64_t addr, void* data, size_t size, MemTxAttrs attrs);
     MemTxResult write(uint64_t addr, const void* data, size_t size, MemTxAttrs attrs);
+};
+
+class MemoryListener
+{
+public:
+    typedef std::function<void(MemoryListener&, uint64_t addr, uint64_t len)> MapCallback;
+
+private:
+    QemuMemoryListener* m_ml;
+    std::shared_ptr<LibQemuInternals> m_int;
+    std::shared_ptr<AddressSpace> m_as;
+
+    MapCallback m_map_cb;
+
+public:
+    MemoryListener(std::shared_ptr<LibQemuInternals> internals);
+    MemoryListener(const MemoryListener&) = delete;
+    ~MemoryListener();
+
+    void set_ml(QemuMemoryListener* ml);
+
+    void set_map_callback(MapCallback cb);
+    MapCallback& get_map_callback() { return m_map_cb; }
+
+    void register_as(std::shared_ptr<AddressSpace> as);
 };
 
 class DisplayOptions
