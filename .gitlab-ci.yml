@@ -5,3 +5,17 @@ include:
 .build_job_template:
     variables:
       REPO_CMAKE_ARGS: -DLIBQEMU_TARGETS=aarch64
+
+qqvp-trigger:
+  trigger:
+    project: qqvp/qqvp
+    strategy: depend
+  allow_failure: true
+  inherit:
+    variables: false
+  variables:
+    OVERRIDE_PKG: qbox
+    OVERRIDE_REF: $CI_COMMIT_REF_NAME
+    # Workaround for CI_REPOSITORY_URL not being exported:
+    # https://gitlab.com/gitlab-org/gitlab/-/issues/231663
+    OVERRIDE_URL: "${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
