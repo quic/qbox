@@ -263,4 +263,35 @@ AddressSpace::MemTxResult AddressSpace::write(uint64_t addr, const void* data, s
     return QEMU_TO_LIB_MEMTXRESULT_MAPPING(qemu_res);
 }
 
+MemoryListener::MemoryListener(std::shared_ptr<LibQemuInternals> internals)
+    : m_ml{ nullptr }, m_int(internals) {
+}
+
+MemoryListener::~MemoryListener() {
+    if (m_ml) {
+        m_int->exports().memory_listener_free(m_ml);
+    }
+}
+
+void MemoryListener::set_ml(QemuMemoryListener* ml) {
+    assert(!m_ml && "Qemu memory listener already set");
+    m_ml = ml;
+}
+
+static void generic_map_cb(void* opaque, hwaddr addr, hwaddr len) {
+    auto* ml = reinterpret_cast<MemoryListener*>(opaque);
+    ml->get_map_callback()(*ml, addr, len);
+}
+
+void MemoryListener::set_map_callback(MapCallback cb) {
+    m_map_cb = cb;
+    m_int->exports().memory_listener_set_map_cb(m_ml, generic_map_cb);
+}
+
+void MemoryListener::register_as(std::shared_ptr<AddressSpace> as) {
+    assert(m_ml && as->get_ptr());
+    m_as = as;
+    m_int->exports().memory_listener_register(m_ml, as->get_ptr());
+}
+
 }; // namespace qemu

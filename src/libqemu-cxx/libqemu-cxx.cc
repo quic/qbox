@@ -152,6 +152,13 @@ std::shared_ptr<AddressSpace> LibQemu::address_space_get_system_memory() {
     return std::make_shared<AddressSpace>(as, m_int);
 }
 
+std::shared_ptr<MemoryListener> LibQemu::memory_listener_new() {
+    auto ret = std::make_shared<MemoryListener>(m_int);
+    QemuMemoryListener* ml = m_int->exports().memory_listener_new(ret.get(), "QboxMemoryListener");
+    ret->set_ml(ml);
+    return ret;
+}
+
 static void qemu_gpio_generic_handler(void* opaque, int n, int level) {
     Gpio::GpioProxy* proxy = reinterpret_cast<Gpio::GpioProxy*>(opaque);
 
