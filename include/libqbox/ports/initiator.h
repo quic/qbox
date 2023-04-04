@@ -83,6 +83,9 @@ protected:
 
     bool m_finished = false;
 
+    std::shared_ptr<qemu::AddressSpace> m_as;
+    std::shared_ptr<qemu::MemoryListener> m_listener;
+
     class m_mem_obj
     {
     public:
@@ -404,6 +407,38 @@ public:
         m_r = nullptr;
         //        dmimgr_unlock();
     }
+
+    void qemu_map(qemu::MemoryListener& listener, uint64_t addr, uint64_t len) {
+        if (m_finished)
+            return;
+
+        SCP_INFO(SCMOD) << "Mapping request for address [0x" << std::hex << addr << "-0x"
+                        << addr + len - 1 << "]";
+
+        TlmPayload trans;
+        uint64_t current_addr = addr;
+        uint64_t temp;
+        init_payload(trans, tlm::TLM_IGNORE_COMMAND, current_addr, &temp, 0);
+        trans.set_dmi_allowed(true);
+
+        while (current_addr < addr + len) {
+            tlm::tlm_dmi dmi_data = check_dmi_hint_locked(trans);
+
+            // Current addr is an absolute address while the dmi range might be relative
+            // hence not necesseraly current_addr falls withing dmi_range address boundaries
+            // TODO: is there a way to retrieve the dmi range block offset?
+            SCP_INFO(SCMOD) << "0x" << std::hex << current_addr << " mapped [0x"
+                            << dmi_data.get_start_address() << "-0x" << dmi_data.get_end_address()
+                            << "]";
+
+            // The allocated range may not span the whole length required for mapping
+            current_addr += dmi_data.get_end_address() - dmi_data.get_start_address() + 1;
+            trans.set_address(current_addr);
+        }
+
+        m_initiator.initiator_tidy_tlm_payload(trans);
+    }
+
     void init_global(qemu::Device& dev) {
         using namespace std::placeholders;
 
@@ -420,8 +455,13 @@ public:
         m_r->m_root.init_io(dev, TlmInitiatorSocket::name(), std::numeric_limits<uint64_t>::max(),
                             ops);
 
-        auto as = inst.address_space_get_system_memory();
-        as->init(m_r->m_root, "global-peripheral-initiator", true);
+        m_as = inst.address_space_get_system_memory();
+        m_as->init(m_r->m_root, "global-peripheral-initiator", true);
+
+        m_listener = inst.memory_listener_new();
+        m_listener->set_map_callback(std::bind(&QemuInitiatorSocket::qemu_map, this, _1, _2, _3));
+        m_listener->register_as(m_as);
+
         m_dev = dev;
     }
 
