@@ -28,8 +28,7 @@ include:
     - .general_build_job_template
 
 lua-check:
+  extends: .mr-job
   stage: test
-  script: ./scripts/luacheckpatch.sh $CI_MERGE_REQUEST_DIFF_BASE_SHA HEAD
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script: ./scripts/luacheckpatch.sh $SOURCE_REF $TARGET_REF
   allow_failure: true
