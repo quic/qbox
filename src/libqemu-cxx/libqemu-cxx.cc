@@ -120,7 +120,7 @@ QemuObject* LibQemu::object_new_internal(const char* type_name) {
     QemuObject* root = m_int->exports().object_get_root();
     QemuError* err = nullptr;
     char name[20]; // helpful for debugging.
-    sprintf(name, "qbox-%.10s[*]", type_name);
+    snprintf(name, sizeof(name), "qbox-%.10s[*]", type_name);
     m_int->exports().object_property_add_child(root, name, o);
 
     if (err != nullptr) {
