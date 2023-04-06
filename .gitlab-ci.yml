@@ -7,19 +7,8 @@ include:
       REPO_CMAKE_ARGS: -DLIBQEMU_TARGETS=aarch64
 
 qqvp-trigger:
+  extends: .base-trigger
   trigger:
     project: qqvp/qqvp
-    strategy: depend
-  allow_failure: true
-  inherit:
-    variables: false
   variables:
     OVERRIDE_PKG: qbox
-    OVERRIDE_REF: $CI_COMMIT_REF_NAME
-    # Workaround for CI_REPOSITORY_URL not being exported:
-    # https://gitlab.com/gitlab-org/gitlab/-/issues/231663
-    OVERRIDE_URL: "${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
-  # Avoid nested pipeline triggering (e.g. libqemu -> qbox -> qqvp)
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "pipeline"
-      when: never
