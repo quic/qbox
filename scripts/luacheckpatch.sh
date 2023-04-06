@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # A lua linter for PRs powered by luacheck
 #
@@ -74,6 +74,6 @@ do
             error=1
         fi
     fi
-done < <(luacheck --no-color --formatter=plain --allow-defined-top --no-max-line-length $(find -name '*.lua'))
+done < <(luacheck --no-color --formatter=plain --allow-defined-top --no-max-line-length $(find . -name '*.lua'))
 
 exit $error
