@@ -30,5 +30,5 @@ include:
 lua-check:
   extends: .mr-job
   stage: test
-  script: ./scripts/luacheckpatch.sh $SOURCE_REF $TARGET_REF
+  script: ./scripts/luacheckpatch.sh $TARGET_REF $SOURCE_REF
   allow_failure: true
