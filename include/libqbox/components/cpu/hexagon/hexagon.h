@@ -24,6 +24,7 @@
 
 #include <string>
 #include <functional>
+#include <optional>
 
 #include <libqemu-cxx/target/hexagon.h>
 
@@ -31,9 +32,14 @@
 
 #include "libqbox/components/cpu/cpu.h"
 
+#define DSP_REV(arch) \
+    { #arch, arch##_rev }
+
 class QemuCpuHexagon : public QemuCpu
 {
 public:
+    static constexpr qemu::Target ARCH = qemu::Target::HEXAGON;
+
     typedef enum {
         v66_rev = 0xa666,
         v68_rev = 0x8d68,
@@ -41,6 +47,12 @@ public:
         v73_rev = 0x8c73,
     } Rev_t;
 
+    const std::map<std::string, Rev_t> DSP_REVS = {
+        DSP_REV(v66),
+        DSP_REV(v68),
+        DSP_REV(v69),
+        DSP_REV(v73),
+    };
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
 
     QemuCpuHexagon(const sc_core::sc_module_name& name, QemuInstance& inst, uint32_t cfgbase,
@@ -49,10 +61,10 @@ public:
         : QemuCpu(name, inst, "v67-hexagon")
         , irq_in("irq_in", 8, [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
         , m_cfgbase(cfgbase)
-        , m_rev(rev)
         , m_l2vic_base_addr(l2vic_base_addr)
         , m_qtimer_base_addr(qtimer_base_addr)
         , m_exec_start_addr(exec_start_addr)
+        , p_dsp_arch("dsp-arch", "v68", "DSP arch")
         , p_start_powered_off("start_powered_off", false,
                               "Start and reset the CPU "
                               "in powered-off state")
@@ -73,8 +85,13 @@ public:
         QemuCpu::before_end_of_elaboration();
         qemu::CpuHexagon cpu(get_qemu_dev());
 
+        Rev_t dsp_rev = v68_rev;
+        const std::string dsp_arch = p_dsp_arch.get_value();
+        if (auto rev = DSP_REVS.find(dsp_arch); rev != DSP_REVS.end()) {
+            dsp_rev = rev->second;
+        }
         cpu.set_prop_int("config-table-addr", m_cfgbase);
-        cpu.set_prop_int("dsp-rev", m_rev);
+        cpu.set_prop_int("dsp-rev", dsp_rev);
         cpu.set_prop_int("l2vic-base-addr", m_l2vic_base_addr);
         cpu.set_prop_int("qtimer-base-addr", m_qtimer_base_addr);
         cpu.set_prop_int("exec-start-addr", m_exec_start_addr);
@@ -95,7 +112,6 @@ public:
 
 protected:
     uint32_t m_cfgbase;
-    Rev_t m_rev;
     uint32_t m_l2vic_base_addr;
     uint32_t m_qtimer_base_addr;
     uint32_t m_exec_start_addr;
@@ -103,4 +119,5 @@ protected:
 public:
     cci::cci_param<bool> p_start_powered_off;
     cci::cci_param<bool> p_sched_limit;
+    cci::cci_param<std::string> p_dsp_arch;
 };
