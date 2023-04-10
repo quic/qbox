@@ -29,8 +29,8 @@ local NSP0_BASE     = 0x1A000000 -- TURING_SS_0TURING
 local NSP1_BASE     = 0x20000000 -- TURING_SS_1TURING
    -- ^^ This val is also described as 'TCM_BASE_ADDRESS' in
    -- Sys arch spec "TCM region memory map"
-local NSP0_AHBS_BASE= 0x1B300000 -- TURING_SS_0TURING_QDSP6V68SS
-local NSP1_AHBS_BASE= 0x21300000 -- TURING_SS_0TURING_QDSP6V68SS
+-- local NSP0_AHBS_BASE= 0x1B300000 -- TURING_SS_0TURING_QDSP6V68SS
+-- local NSP1_AHBS_BASE= 0x21300000 -- TURING_SS_0TURING_QDSP6V68SS
 local TURING_SS_0TURING_QDSP6V68SS_CSR= 0x1B380000
 local TURING_SS_1TURING_QDSP6V68SS_CSR= 0x21380000
 -- The QDSP6v67SS private registers include CSR, L2VIC, QTMR registers.
@@ -80,7 +80,7 @@ local nsp0ss = get_nspss(
         0x1B300000, -- TURING_SS_0TURING_QDSP6V68SS
         SA8540P_nsp0_config_table,
         0x89F00000, -- entry point address from bootimage_makena.cdsp0.prodQ.pbn
-        0x05000000 -- AHB_SIZE
+        NSP0_AHB_SIZE
         );
 
 assert((SA8540P_nsp0_config_table[11] << 16) == nsp0ss.l2vic.fastmem.address)
@@ -96,7 +96,7 @@ local nsp1ss = get_nspss(
         0x21300000, -- TURING_SS_1TURING_QDSP6V68SS
         SA8540P_nsp1_config_table,
         0x8C600000, -- entry point address from bootimage_makena.cdsp1.prodQ.pbn
-        0x05000000 -- AHB_SIZE
+        NSP1_AHB_SIZE
         );
 assert((SA8540P_nsp1_config_table[11] << 16) == nsp1ss.l2vic.fastmem.address)
 assert((SA8540P_nsp1_config_table[3] << 16) == TURING_SS_1TURING_QDSP6V68SS_CSR)
@@ -233,7 +233,7 @@ if (platform.arm_num_cpus > 0) then
     };
 
     local qup_index = 0;
-    for bank_index, bank in next, QUP_BANKS do
+    for _, bank in next, QUP_BANKS do
         -- assert(bank.count == #bank.qgic_spi_irqs)
         for i, spi_irq in next, bank.qgic_spi_irqs do
             local i_0 = i - 1;

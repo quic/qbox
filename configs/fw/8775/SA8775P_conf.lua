@@ -242,7 +242,7 @@ if (platform.arm_num_cpus > 0) then
     };
 
     local qup_index = 0;
-    for bank_index, bank in next, QUP_BANKS do
+    for _, bank in next, QUP_BANKS do
         -- assert(bank.count == #bank.qgic_spi_irqs)
         for i, spi_irq in next, bank.qgic_spi_irqs do
             local i_0 = i - 1;

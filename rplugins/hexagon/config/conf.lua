@@ -78,10 +78,10 @@ function get_remote_nspss(base, ahbs_base, cfgtable, start_addr, ahb_size, tbu)
                     target_socket_1 = {address=ahbs_base , size= 0xA1000 + 0x2000, relative_addresses=false};
         };
         remote_exec_path="./vp-hex-remote";
-        remote = {  
+        remote = {
                     target_socket_0 = {address=tbu.upstream_socket.address, size= tbu.upstream_socket.size, relative_addresses=false};
                     target_socket_1 = {address=0x0, size=base, relative_addresses=false};
-                    target_socket_2 = {address=ahbs_base + ahb_size, size=0xF00000000 - (ahbs_base + ahb_size) , relative_addresses=false};         
+                    target_socket_2 = {address=ahbs_base + ahb_size, size=0xF00000000 - (ahbs_base + ahb_size) , relative_addresses=false};
                  };
         fallback_memory = { target_socket={address=base, size=(ahbs_base + ahb_size) - base},
                  dmi_allow=false, verbose=true};
