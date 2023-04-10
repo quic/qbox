@@ -5,3 +5,4 @@ TAGS
 *~
 *.sw?
 .vscode
+.DS_Store
