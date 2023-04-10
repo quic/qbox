@@ -16,7 +16,7 @@ import subprocess
 import re
 
 ADDED_FILE_PREFIX="+++ b/"
-LUACHECK_CMD="luacheck --no-color --formatter=plain --allow-defined-top --no-max-line-length $(find . -name '*.lua')"
+LUACHECK_CMD="luacheck --no-color --formatter=plain --allow-defined-top --no-max-line-length $(find . -name '*.lua' -not -path './build/*')"
 
 def run(cmd, can_fail=True):
     proc = subprocess.run(cmd, shell=True,
