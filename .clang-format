@@ -29,6 +29,7 @@ BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass: true
   AfterFunction: true
+PackConstructorInitializers: Never
 
 SpaceBeforeCtorInitializerColon: false
 SpacesBeforeTrailingComments: 1

@@ -33,11 +33,13 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/multi_passthrough_target_socket.h>
 #include <scp/report.h>
-#include "cciutils.h"
+#include <greensocs/gsutils/cciutils.h>
 #include "rapidjson/document.h"
 #include <greensocs/base-components/memory.h>
 
 namespace gs {
+
+#if 0
 
 #define GS_REGS_TOP "gs_regs."
 class cci_tlm_object_if : public virtual cci::cci_param_if,
@@ -436,25 +438,65 @@ public:
         }
     }
 };
-
+#endif
 /**
  * @brief  Provide a class to provide b_transport callback
  *
  */
 class tlm_cb
 {
-    std::function<void(tlm::tlm_generic_payload&, sc_core::sc_time&)> m_cb;
+public:
+    typedef std::function<void(tlm::tlm_generic_payload&, sc_core::sc_time&)> TLMFUNC;
+
+private:
+    TLMFUNC m_cb;
 
 public:
-    tlm_cb(std::function<void(tlm::tlm_generic_payload&, sc_core::sc_time&)> cb): m_cb(cb) {}
+    tlm_cb(tlm_cb&) = delete;
+    tlm_cb(TLMFUNC cb)
+        : m_cb(cb)
+    {
+    }
     void operator()(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) { m_cb(txn, delay); }
+    virtual void dummy() {} // force polymorphism
 };
-/* clang-format off */
+
+template <typename Tag>
+class tlm_cb_tagged : public tlm_cb
+{
+public:
+    tlm_cb_tagged(tlm_cb_tagged&) = delete;
+    tlm_cb_tagged(tlm_cb::TLMFUNC cb)
+        : tlm_cb(cb)
+    {
+    }
+    // using tlm_cb::tlm_cb;
+};
 /* helper classes to allow identification of different cb types */
+struct _pre_read_cb {
+};
+struct _pre_write_cb {
+};
+struct _post_read_cb {
+};
+struct _post_write_cb {
+};
+using pre_read_cb = tlm_cb_tagged<_pre_read_cb>;
+using pre_write_cb = tlm_cb_tagged<_pre_write_cb>;
+using post_read_cb = tlm_cb_tagged<_post_read_cb>;
+using post_write_cb = tlm_cb_tagged<_post_write_cb>;
+
+/* clang-format off */
+
+
+/*using pre_write_cb = tlm_cb;
+using post_read_cb = tlm_cb;
+using post_write_cb = tlm_cb;
 class pre_read_cb : public tlm_cb  { using tlm_cb::tlm_cb; };
 class pre_write_cb : public tlm_cb { using tlm_cb::tlm_cb; };
 class post_read_cb : public tlm_cb { using tlm_cb::tlm_cb; };
 class post_write_cb : public tlm_cb{ using tlm_cb::tlm_cb; };
+*/
 /* clang-format on */
 
 /**
@@ -462,14 +504,23 @@ class post_write_cb : public tlm_cb{ using tlm_cb::tlm_cb; };
  * read/write. when b_transport is called port, the correct lambda's will be invoked
  *
  */
-class port_lambda : public virtual tlm_utils::simple_target_socket<port_lambda>
+class port_lambda : public tlm_utils::simple_target_socket<port_lambda>
 {
-    std::vector<tlm_cb> m_pre_read_cbs;
-    std::vector<tlm_cb> m_pre_write_cbs;
-    std::vector<tlm_cb> m_post_read_cbs;
-    std::vector<tlm_cb> m_post_write_cbs;
+    SCP_LOGGER();
+    std::vector<std::shared_ptr<tlm_cb>> m_pre_read_cbs;
+    std::vector<std::shared_ptr<tlm_cb>> m_pre_write_cbs;
+    std::vector<std::shared_ptr<tlm_cb>> m_post_read_cbs;
+    std::vector<std::shared_ptr<tlm_cb>> m_post_write_cbs;
     cci::cci_param<bool> p_is_callback;
     bool m_in_callback = false;
+
+    std::string my_name()
+    {
+        std::string n(name());
+        n = n.substr(0, n.length() - strlen("_target_socket")); // get rid of last part of string
+        n = n.substr(n.find_last_of(".") + 1);                  // take the last part.
+        return n;
+    }
     void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
         if (m_pre_read_cbs.size() || m_pre_write_cbs.size() || m_post_read_cbs.size() || m_post_write_cbs.size()) {
@@ -479,10 +530,16 @@ class port_lambda : public virtual tlm_utils::simple_target_socket<port_lambda>
                 case tlm::TLM_INCOMPLETE_RESPONSE:
                     switch (txn.get_command()) {
                     case tlm::TLM_READ_COMMAND:
-                        for (auto cb : m_pre_read_cbs) cb(txn, delay);
+                        if (m_pre_read_cbs.size()) {
+                            SCP_TRACE(())("Pre-Read callbacks: {}", my_name());
+                            for (auto& cb : m_pre_read_cbs) (*cb)(txn, delay);
+                        }
                         break;
                     case tlm::TLM_WRITE_COMMAND:
-                        for (auto cb : m_pre_write_cbs) cb(txn, delay);
+                        if (m_pre_write_cbs.size()) {
+                            SCP_TRACE(())("Pre-Write callbacks: {}", my_name());
+                            for (auto& cb : m_pre_write_cbs) (*cb)(txn, delay);
+                        }
                         break;
                     default:
                         break;
@@ -491,10 +548,16 @@ class port_lambda : public virtual tlm_utils::simple_target_socket<port_lambda>
                 case tlm::TLM_OK_RESPONSE:
                     switch (txn.get_command()) {
                     case tlm::TLM_READ_COMMAND:
-                        for (auto cb : m_post_read_cbs) cb(txn, delay);
+                        if (m_post_read_cbs.size()) {
+                            SCP_TRACE(())("Post-Read callbacks: {}", my_name());
+                            for (auto& cb : m_post_read_cbs) (*cb)(txn, delay);
+                        }
                         break;
                     case tlm::TLM_WRITE_COMMAND:
-                        for (auto cb : m_post_write_cbs) cb(txn, delay);
+                        if (m_post_write_cbs.size()) {
+                            SCP_TRACE(())("Post-Write callbacks: {}", my_name());
+                            for (auto& cb : m_post_write_cbs) (*cb)(txn, delay);
+                        }
                         break;
                     default:
                         break;
@@ -509,22 +572,29 @@ class port_lambda : public virtual tlm_utils::simple_target_socket<port_lambda>
         txn.set_dmi_allowed(false);
     }
 
-public:
-    void add_cbs(std::vector<tlm_cb> cbs)
+    template <typename T>
+    void is_a_do(std::shared_ptr<tlm_cb> cb, std::function<void()> fn)
     {
-        /* clang-format off */
-        for (auto cb : cbs) {
-            { auto t = static_cast<pre_read_cb*>(&cb);   if (t) { m_pre_read_cbs.push_back(cb);   } }
-            { auto t = static_cast<pre_write_cb*>(&cb);  if (t) { m_pre_write_cbs.push_back(cb);  } }
-            { auto t = static_cast<post_read_cb*>(&cb);  if (t) { m_post_read_cbs.push_back(cb);  } }
-            { auto t = static_cast<post_write_cb*>(&cb); if (t) { m_post_write_cbs.push_back(cb); } }
-        }
-        /* clang-format on */
+        auto cbt = dynamic_cast<T*>(cb.get());
+        if (cbt) fn();
     }
-    port_lambda(const char* name, std::vector<tlm_cb> cbs)
-        : tlm_utils::simple_target_socket<port_lambda>(name) // do these names need current sc_module name ++?
-        , p_is_callback("is_callback", true, "Is a callback (true)")
+
+public:
+    void add_cbs(const std::vector<std::shared_ptr<tlm_cb>>& cbs)
     {
+        for (auto cb : cbs) {
+            is_a_do<pre_read_cb>(cb, [&]() { m_pre_read_cbs.push_back(cb); });
+            is_a_do<post_read_cb>(cb, [&]() { m_post_read_cbs.push_back(cb); });
+            is_a_do<pre_write_cb>(cb, [&]() { m_pre_write_cbs.push_back(cb); });
+            is_a_do<post_write_cb>(cb, [&]() { m_post_write_cbs.push_back(cb); });
+        }
+    }
+    port_lambda() = delete;
+    port_lambda(std::string name, const std::vector<std::shared_ptr<tlm_cb>>& cbs)
+        : simple_target_socket<port_lambda>((name + "_target_socket").c_str())
+        , p_is_callback(name + ".target_socket.is_callback", true, "Is a callback (true)")
+    {
+        //        SCP_TRACE(())("port_lamda constructor : {}", name);
         p_is_callback = true;
         p_is_callback.lock();
         add_cbs(cbs);
@@ -536,12 +606,16 @@ public:
 template <class TYPE = uint32_t>
 class gs_proxy_data
 {
+    scp::scp_logger_cache& SCP_LOGGER_NAME();
+
     tlm::tlm_generic_payload m_txn;
     TYPE* m_dmi = nullptr;
     TYPE m_tmp_data;
     cci::cci_param<uint64_t> p_offset;
-    cci::cci_param<uint32_t> p_start;
-    cci::cci_param<uint32_t> p_length;
+    cci::cci_param<uint64_t> p_size;
+    cci::cci_param<uint32_t> p_bit_start;
+    cci::cci_param<uint32_t> p_bit_length;
+    cci::cci_param<bool> p_is_callback;
 
     void check_dmi()
     {
@@ -555,21 +629,23 @@ class gs_proxy_data
             }
         }
     }
-    friend class cci::cci_value_converter<gs::gs_proxy_data<TYPE> >;
+    friend class cci::cci_value_converter<gs::gs_proxy_data<TYPE>>;
 
 public:
     tlm_utils::simple_initiator_socket<gs_proxy_data> initiator_socket;
 
-    TYPE mask(TYPE v) { return (v >> p_start) & ((1ull << p_length) - 1); }
+    TYPE mask(TYPE v) { return (v >> p_bit_start) & ((1ull << p_bit_length) - 1); }
     TYPE get()
     {
         if (m_dmi) {
+            SCP_TRACE(())("Got value (DMI) : 0x{:x}", mask(*m_dmi));
             return mask(*m_dmi);
         }
         sc_core::sc_time dummy;
         m_txn.set_command(tlm::TLM_READ_COMMAND);
         initiator_socket->b_transport(m_txn, dummy);
         sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
+        SCP_TRACE(())("Got value (transport): 0x{:x}", mask(m_tmp_data));
         check_dmi();
         return mask(m_tmp_data);
     }
@@ -577,51 +653,62 @@ public:
 
     void set(TYPE value)
     {
-        sc_assert(value < (1ull << p_length));
-        if (p_start == 0 && p_length == sizeof(TYPE)) {
+        sc_assert(value < (1ull << p_bit_length));
+        if (p_bit_start == 0 && p_bit_length == sizeof(TYPE) * 8) {
             if (m_dmi) {
+                SCP_TRACE(())("Set value (DMI) : 0x{:x}", value);
                 *m_dmi = value;
-                return;
+            } else {
+                sc_core::sc_time dummy;
+                m_txn.set_command(tlm::TLM_WRITE_COMMAND);
+                memcpy(&m_tmp_data, &value, sizeof(TYPE));
+                initiator_socket->b_transport(m_txn, dummy);
+                sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
+                SCP_TRACE(())("Set value (transport) : 0x{:x}", (TYPE)m_tmp_data);
+                check_dmi();
             }
-            sc_core::sc_time dummy;
-            m_txn.set_command(tlm::TLM_WRITE_COMMAND);
-            memcpy(&m_tmp_data, &value, sizeof(TYPE));
-            initiator_socket->b_transport(m_txn, dummy);
-            sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
-            check_dmi();
         } else {
             if (m_dmi) {
-                TYPE tmp = *m_dmi & ~((1ull << p_length) - 1);
-                tmp |= value << p_start;
+                TYPE tmp = *m_dmi & ~((1ull << p_bit_length) - 1);
+                tmp |= value << p_bit_start;
+                SCP_TRACE(())("Set value (DMI field {}:{}) : 0x{:x}", p_bit_start, p_bit_start + p_bit_length, tmp);
                 *m_dmi = tmp;
+            } else {
+                sc_core::sc_time dummy;
+                m_txn.set_command(tlm::TLM_READ_COMMAND);
+                initiator_socket->b_transport(m_txn, dummy);
+                sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
+                m_tmp_data &= ~((1ull << p_bit_length) - 1);
+                m_tmp_data |= value << p_bit_start;
+                m_txn.set_command(tlm::TLM_WRITE_COMMAND);
+                initiator_socket->b_transport(m_txn, dummy);
+                sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
+                SCP_TRACE(())
+                ("Set value (transport field {}:{}) : 0x{:x}", p_bit_start, p_bit_start + p_bit_length,
+                 (TYPE)m_tmp_data);
+                check_dmi();
             }
-            sc_core::sc_time dummy;
-            m_txn.set_command(tlm::TLM_READ_COMMAND);
-            initiator_socket->b_transport(m_txn, dummy);
-            sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
-            m_tmp_data &= ~((1ull << p_length) - 1);
-            m_tmp_data |= value << p_start;
-            m_txn.set_command(tlm::TLM_WRITE_COMMAND);
-            initiator_socket->b_transport(m_txn, dummy);
-            sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
-            check_dmi();
         }
     }
     void operator=(TYPE value) { set(value); }
 
     void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) { m_dmi = nullptr; }
 
-    gs_proxy_data<TYPE>(uint64_t offset = 0, uint64_t start = 0, uint64_t length = sizeof(TYPE))
-        : initiator_socket("initiator_socket")
-        , p_offset("offset", offset, "Offset of this register")
-        , p_start("start", start, "Start bit of field")
-        , p_length("length", length, "length of field")
+    gs_proxy_data(scp::scp_logger_cache& logger, std::string name, std::string path_name, std::string field_name,
+                  uint64_t offset = 0, uint64_t start = 0, uint64_t length = sizeof(TYPE) * 8)
+        : SCP_LOGGER_NAME()(logger)
+        , initiator_socket((name + "_initiator_socket").c_str())
+        , p_offset(path_name + ".target_socket.address", offset, "Offset of this register")
+        , p_size(path_name + ".target_socket.size", sizeof(TYPE), "size of this register")
+        , p_is_callback(path_name + ".target_socket.is_callback", true, "Is a callback (true)")
+        , p_bit_start(path_name + "." + field_name + ".bit_start", start, "Start bit of field")
+        , p_bit_length(path_name + "._" + field_name + ".." + name + ".bit_length", length, "length of field")
     // attributes?
     {
         static_assert(std::is_unsigned<TYPE>::value, "Register types must be unsigned");
-        sc_assert(p_start + p_length <= sizeof(TYPE));
+        sc_assert(p_bit_start + p_bit_length <= sizeof(TYPE) * 8);
         m_txn.set_address(p_offset);
-        m_txn.set_data_ptr(reinterpret_cast<unsigned char*>(m_tmp_data));
+        m_txn.set_data_ptr(reinterpret_cast<unsigned char*>(&m_tmp_data));
         m_txn.set_data_length(sizeof(TYPE));
         m_txn.set_streaming_width(sizeof(TYPE));
         m_txn.set_byte_enable_length(0);
@@ -632,15 +719,39 @@ public:
 };
 
 template <class TYPE = uint32_t>
-class gs_register_pl : public virtual port_lambda, public virtual gs_proxy_data<TYPE>
+class gs_register_pl : public port_lambda, public gs_proxy_data<TYPE>
 {
+    SCP_LOGGER();
+
 public:
-    gs_register_pl<TYPE>(const char* name)
-        : port_lambda((std::string(name) + ".target_socket").c_str(), {}), gs_proxy_data<TYPE>()
+    gs_register_pl() = delete;
+    gs_register_pl(std::string name, std::string path = "", std::string field_name = "")
+        : port_lambda(name, {})
+        , gs_proxy_data<TYPE>(SCP_LOGGER_NAME(), name, (path.size() ? path + "." : "") + name,
+                              field_name.empty() ? "" : field_name)
     {
+        std::string n(sc_core::sc_module::name());
+        n = n.substr(0, n.length() - strlen("_target_socket")); // get rid of last part of string
+        SCP_TRACE((), n)("constructor : {} attching in {}", name, path);
     }
     void operator=(TYPE value) { gs_proxy_data<TYPE>::set(value); }
-    /* . . . . . . */
+    operator TYPE() { return gs_proxy_data<TYPE>::get(); }
+
+    void operator=(gs_register_pl<TYPE>& other) { gs_proxy_data<TYPE>::set(gs_proxy_data<TYPE>::get()); }
+    void operator+=(TYPE other) { gs_proxy_data<TYPE>::set(gs_proxy_data<TYPE>::get() + other); }
+    void operator-=(TYPE other) { gs_proxy_data<TYPE>::set(gs_proxy_data<TYPE>::get() - other); }
+    void operator&=(TYPE other) { gs_proxy_data<TYPE>::set(gs_proxy_data<TYPE>::get() & other); }
+    void operator|=(TYPE other) { gs_proxy_data<TYPE>::set(gs_proxy_data<TYPE>::get() | other); }
+    void operator<<=(TYPE other) { gs_proxy_data<TYPE>::set(gs_proxy_data<TYPE>::get() << other); }
+    void operator>>=(TYPE other) { gs_proxy_data<TYPE>::set(gs_proxy_data<TYPE>::get() >> other); }
+
+    void end_of_elaboration()
+    {
+        //        if (!cci::cci_get_broker().has_preset_value(std::string(name()) + ".address")) {
+        //            SCP_FATAL(())("Parameters for {} not set", name());
+        //        }
+        //        assert(false);
+    }
 };
 
 /*make the normal router
@@ -1006,7 +1117,7 @@ public:
 //} // namespace gs
 #define CCI_CONVERTER(TYPE)                                                                               \
     template <>                                                                                           \
-    struct cci::cci_value_converter<gs::gs_proxy_data<TYPE> > {                                           \
+    struct cci::cci_value_converter<gs::gs_proxy_data<TYPE>> {                                            \
         static bool pack(cci_value::reference dst, gs::gs_proxy_data<TYPE> const& src) { return true; }   \
         static bool unpack(gs::gs_proxy_data<TYPE>& dst, cci_value::const_reference src) { return true; } \
     }

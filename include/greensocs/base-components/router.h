@@ -139,8 +139,102 @@ private:
         SCP_DEBUG((D[ti.index])) << "Connecting : " << ti.name;
         bound_targets.push_back(ti);
     }
+    static std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
+    {
+        cci_broker_handle m_broker = (sc_core::sc_get_current_object())
+                                         ? cci_get_broker()
+                                         : cci_get_global_broker(cci_originator("gs__sc_cci_children"));
+        std::list<std::string> children;
+        int l = strlen(name) + 1;
+        auto uncon = m_broker.get_unconsumed_preset_values([&name](const std::pair<std::string, cci_value>& iv) {
+            return iv.first.find(std::string(name) + ".") == 0;
+        });
+        for (auto p : uncon) {
+            children.push_back(p.first.substr(l, p.first.find(".", l) - l));
+        }
+        children.sort();
+        children.unique();
+        return children;
+    }
+    std::string txn_tostring(struct target_info* ti, tlm::tlm_generic_payload& trans)
+    {
+        std::stringstream info;
+        const char* cmd = "UNKOWN";
+        switch (trans.get_command()) {
+        case tlm::TLM_IGNORE_COMMAND:
+            info << "IGNORE to ";
+            break;
+        case tlm::TLM_WRITE_COMMAND:
+            info << "WRITE to ";
+            break;
+        case tlm::TLM_READ_COMMAND:
+            info << "READ to ";
+            break;
+        }
+
+        if (ti->size > trans.get_data_length()) {
+            sc_dt::uint64 addr = trans.get_address();
+            sc_dt::uint64 len = trans.get_data_length();
+
+            uint64_t best = ti->size;
+            std::string best_s = ti->name;
+
+            for (auto cbti : cb_targets) {
+                if ((addr >= cbti->address && (addr - cbti->address) < cbti->size) && (cbti->size < best)) {
+                    best_s = parent(cbti->name.substr(parent(name()).length() + 1));
+                    best = cbti->size;
+                }
+            }
+            if (best == ti->size) {
+                //            SCP_TRACE((D[ti->index]))("Looking in {} ({} > {} @ 0x{:x})",parent(name()), ti->size,
+                //            trans.get_data_length(), trans.get_address());
+                for (auto nn : gs::sc_cci_children(parent(name()).c_str())) {
+                    std::string fn = parent(name()) + "." + nn;
+                    uint64_t n_addr = get_val<uint64_t>(fn + ".target_socket.address", 0);
+                    uint64_t n_size = get_val<uint64_t>(fn + ".target_socket.size", 0);
+                    uint64_t n_num = get_val<uint64_t>(fn + ".number", 0);
+                    if (n_num) n_size++;
+                    //                SCP_TRACE((D[ti->index]))("Could be {} {} 0x{:x} {}", fn,  nn,  n_addr, n_size) ;
+                    if (n_size && (n_size < best) && (n_addr <= addr) && (n_addr + n_size >= addr + len)) {
+                        best_s = nn;
+                        best = n_size;
+                    }
+                }
+            }
+            if (best < ti->size) {
+                //            SCP_TRACE((D[ti->index]))(" --- FOUND  {}",best_s);
+                info << best_s << " in ";
+            }
+        }
+        // cache this in the ti structure !!!!!
+        info << parent(ti->name.substr(parent(name()).length() + 1)) << " address: "
+             << " "
+             << "0x" << std::hex << trans.get_address();
+        info << " len: " << trans.get_data_length();
+        unsigned char* ptr = trans.get_data_ptr();
+        if ((trans.get_command() == tlm::TLM_READ_COMMAND && trans.get_response_status() == tlm::TLM_OK_RESPONSE) ||
+            (trans.get_command() == tlm::TLM_WRITE_COMMAND &&
+             trans.get_response_status() == tlm::TLM_INCOMPLETE_RESPONSE)) {
+            info << " data: 0x";
+            for (int i = trans.get_data_length(); i; i--) {
+                info << std::setw(2) << std::setfill('0') << std::hex << (unsigned int)(ptr[i - 1]);
+            }
+        }
+        info << " status: " << trans.get_response_string() << " ";
+        for (int i = 0; i < tlm::max_num_extensions(); i++) {
+            if (trans.get_extension(i)) {
+                info << " extn:" << i;
+            }
+        }
+        return info.str();
+    }
 
 public:
+    void rename_last(std::string s)
+    {
+        target_info& ti = bound_targets.back();
+        ti.name = s;
+    }
     // make the sockets public for binding
     typedef multi_passthrough_initiator_socket_spying<Router<BUSWIDTH>> initiator_socket_type;
     initiator_socket_type initiator_socket;
@@ -148,8 +242,8 @@ public:
 
 private:
     std::vector<target_info> bound_targets;
-    std::map<uint64_t, target_info*> map_targets;
-    std::map<uint64_t, target_info*> map_cb_targets;
+    std::vector<target_info*> targets;
+    std::vector<target_info*> cb_targets;
     std::vector<target_info*> id_targets;
 
     std::vector<PathIDExtension*> m_pathIDPool; // at most one per thread!
@@ -202,19 +296,19 @@ private:
         }
 
         stamp_txn(id, trans);
-        if (ti->use_offset) trans.set_address(addr - ti->address);
-        SCP_DEBUG((D[ti->index]), ti->name) << "calling b_transport : " << scp::scp_txn_tostring(trans);
+        SCP_TRACE((D[ti->index]), ti->name) << "calling b_transport : " << txn_tostring(ti, trans);
         do_callbacks(trans, delay);
-        if (trans.get_response_status() <= tlm::TLM_GENERIC_ERROR_RESPONSE) return;
-        initiator_socket[ti->index]->b_transport(trans, delay);
-        if (trans.get_response_status() <= tlm::TLM_GENERIC_ERROR_RESPONSE) return;
-        do_callbacks(trans, delay);
-        if (trans.get_response_status() <= tlm::TLM_GENERIC_ERROR_RESPONSE) return;
-        SCP_DEBUG((D[ti->index]), ti->name) << "b_transport returned : " << scp::scp_txn_tostring(trans);
-        if (ti->use_offset) trans.set_address(addr);
+        if (trans.get_response_status() >= tlm::TLM_INCOMPLETE_RESPONSE) {
+            if (ti->use_offset) trans.set_address(addr - ti->address);
+            initiator_socket[ti->index]->b_transport(trans, delay);
+            if (ti->use_offset) trans.set_address(addr);
+        }
+        if (trans.get_response_status() >= tlm::TLM_OK_RESPONSE) {
+            do_callbacks(trans, delay);
+        }
+        SCP_TRACE((D[ti->index]), ti->name) << "b_transport returned : " << txn_tostring(ti, trans);
         unstamp_txn(id, trans);
-
-        if (map_cb_targets.size() != 0) { /* If ANY callbacks are registered we deny ALL DMI access ! */
+        if (cb_targets.size() != 0) { /* If ANY callbacks are registered we deny ALL DMI access ! */
             trans.set_dmi_allowed(false);
         }
     }
@@ -229,7 +323,7 @@ private:
         }
 
         if (ti->use_offset) trans.set_address(addr - ti->address);
-        SCP_DEBUG((D[ti->index]), ti->name) << "calling dbg_transport : " << scp::scp_txn_tostring(trans);
+        SCP_TRACE((D[ti->index]), ti->name) << "calling dbg_transport : " << scp::scp_txn_tostring(trans);
         unsigned int ret = initiator_socket[ti->index]->transport_dbg(trans);
         if (ti->use_offset) trans.set_address(addr);
         return ret;
@@ -249,7 +343,7 @@ private:
             return false;
         }
 
-        SCP_DEBUG((D[ti->index]), ti->name) << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
+        SCP_TRACE((D[ti->index]), ti->name) << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
         bool status = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
         if (status) {
             if (ti->use_offset) {
@@ -314,20 +408,14 @@ private:
     {
         sc_dt::uint64 addr = trans.get_address();
         sc_dt::uint64 len = trans.get_data_length();
-        auto f = map_cb_targets.lower_bound(addr);
-        auto l = map_cb_targets.upper_bound(addr + len);
-        std::vector<target_info*> found;
-        for (auto tim = f; tim != map_targets.end() && tim != l; tim++) {
-            auto ti = tim->second;
-            if ((addr >= ti->address) && (addr + len < ti->address + ti->size)) {
-                found.push_back(ti);
-            }
-        }
-        std::sort(found.begin(), found.end(), [](target_info* a, target_info* b) { return a->index < b->index; });
 
-        for (auto ti : found) {
-            initiator_socket[ti->index]->b_transport(trans, delay);
-            if (trans.get_response_status() <= tlm::TLM_GENERIC_ERROR_RESPONSE) break;
+        for (auto ti : cb_targets) {
+            if (addr >= ti->address && (addr - ti->address) < ti->size) {
+                if (ti->use_offset) trans.set_address(addr - ti->address);
+                initiator_socket[ti->index]->b_transport(trans, delay);
+                if (ti->use_offset) trans.set_address(addr);
+                if (trans.get_response_status() <= tlm::TLM_GENERIC_ERROR_RESPONSE) break;
+            }
         }
     }
 
@@ -337,21 +425,13 @@ private:
 
         sc_dt::uint64 addr = trans.get_address();
         sc_dt::uint64 len = trans.get_data_length();
-        auto f = map_targets.lower_bound(addr);
-        auto l = map_targets.upper_bound(addr + len);
-        std::vector<target_info*> found;
-        for (auto tim = f; tim != map_targets.end() && tim != l; tim++) {
-            auto ti = tim->second;
-            if ((addr >= ti->address) && (addr + len < ti->address + ti->size)) {
-                found.push_back(ti);
+
+        for (auto ti : targets) {
+            if (addr >= ti->address && (addr - ti->address) < ti->size) {
+                return ti;
             }
         }
-        std::sort(found.begin(), found.end(), [](target_info* a, target_info* b) { return a->index < b->index; });
-        if (found.size() > 0) {
-            return found[0];
-        } else {
-            return nullptr;
-        }
+        return nullptr;
     }
 
 protected:
@@ -362,7 +442,7 @@ protected:
 
 private:
     template <class TYPE>
-    inline TYPE get_val(std::string s, bool use_default = false, TYPE default_val = 0)
+    inline TYPE get_val(std::string s, bool use_default, TYPE default_val)
     {
         TYPE ret;
 
@@ -372,8 +452,14 @@ private:
             v = h.get_cci_value();
         } else {
             if (!m_broker.has_preset_value(s)) {
-                SCP_FATAL(()) << "Can't find " << s;
+                if (use_default) {
+                    m_broker.lock_preset_value(s);
+                    return default_val;
+                } else {
+                    SCP_FATAL(()) << "Can't find " << s;
+                }
             }
+
             v = m_broker.get_preset_cci_value(s);
         }
         if (v.is_uint64())
@@ -385,8 +471,9 @@ private:
         else if (use_default)
             ret = default_val;
         else {
-            SCP_FATAL(())("Unknown type for %s : %s", s, v.to_json());
+            SCP_FATAL(())("Unknown type for {} : {}", s, v.to_json());
         }
+
         m_broker.lock_preset_value(s);
         m_broker.ignore_unconsumed_preset_values(
             [&s](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == (s); });
@@ -396,6 +483,11 @@ private:
     inline TYPE get_val(std::string s, TYPE default_val)
     {
         return get_val<TYPE>(s, true, default_val);
+    }
+    template <class TYPE>
+    inline TYPE get_val(std::string s)
+    {
+        return get_val<TYPE>(s, false, 0);
     }
     bool initialized = false;
     void lazy_initialize()
@@ -409,16 +501,17 @@ private:
             ti.use_offset = get_val<bool>(ti.name + ".relative_addresses", true);
             ti.is_callback = get_val<bool>(ti.name + ".is_callback", false);
 
-            SCP_INFO((D[ti.index])) << "Address map " << ti.name + " at"
-                                    << " address "
-                                    << "0x" << std::hex << ti.address << " size "
-                                    << "0x" << std::hex << ti.size
-                                    << (ti.use_offset ? " (with relative address) " : "");
+            SCP_INFO((D[ti.index]), ti.name)
+                << "Address map " << ti.name + " at"
+                << " address "
+                << "0x" << std::hex << ti.address << " size "
+                << "0x" << std::hex << ti.size << (ti.use_offset ? " (with relative address) " : "")
+                << (ti.is_callback ? " (callback) " : "");
 
             if (ti.is_callback) {
-                map_cb_targets.insert({ ti.address, &ti });
+                cb_targets.push_back(&ti);
             } else {
-                map_targets.insert({ ti.address, &ti });
+                targets.push_back(&ti);
             }
             id_targets.push_back(&ti);
         }

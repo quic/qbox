@@ -90,7 +90,9 @@ class Memory : public sc_core::sc_module
 
     public:
         SubBlock(uint64_t address, uint64_t len, Memory& mem)
-            : m_address(address), m_len(len), m_mem(mem)
+            : m_address(address)
+            , m_len(len)
+            , m_mem(mem)
         {
         }
 
@@ -109,20 +111,17 @@ class Memory : public sc_core::sc_module
 
             if (!m_use_sub_blocks) {
                 if (!((std::string)m_mem.p_mapfile).empty()) {
-                    if ((m_ptr = MemoryServices::get().map_file(
-                             ((std::string)(m_mem.p_mapfile)).c_str(), m_len, m_address)) !=
-                        nullptr) {
+                    if ((m_ptr = MemoryServices::get().map_file(((std::string)(m_mem.p_mapfile)).c_str(), m_len,
+                                                                m_address)) != nullptr) {
                         m_mapped = true;
                         return *this;
                     }
                 }
                 if (m_mem.p_shmem) {
                     std::stringstream shmname_stream;
-                    shmname_stream << "/" << getpid() << "-" << std::string(m_mem.name())
-                                   << std::to_string(m_address);
+                    shmname_stream << "/" << getpid() << "-" << std::string(m_mem.name()) << std::to_string(m_address);
                     std::string shmname = shmname_stream.str();
-                    if ((m_ptr = MemoryServices::get().map_mem_create(shmname.c_str(), m_len)) !=
-                        nullptr) {
+                    if ((m_ptr = MemoryServices::get().map_mem_create(shmname.c_str(), m_len)) != nullptr) {
                         m_mapped = true;
                         m_shmemID = ShmemIDExtension(shmname, (uint64_t)m_ptr, m_len);
                         return *this;
@@ -146,8 +145,7 @@ class Memory : public sc_core::sc_module
             int i = (address - m_address) / (m_sub_size);
 
             if (!m_sub_blocks[i]) {
-                m_sub_blocks[i] = std::make_unique<SubBlock<N>>((i * m_sub_size) + m_address,
-                                                                m_sub_size, m_mem);
+                m_sub_blocks[i] = std::make_unique<SubBlock<N>>((i * m_sub_size) + m_address, m_sub_size, m_mem);
             }
             return m_sub_blocks[i]->access(address);
         }
@@ -182,8 +180,7 @@ class Memory : public sc_core::sc_module
 
         ShmemIDExtension* get_extension()
         {
-            if (m_shmemID.empty())
-                return nullptr;
+            if (m_shmemID.empty()) return nullptr;
             return &m_shmemID;
         }
 
@@ -192,8 +189,7 @@ class Memory : public sc_core::sc_module
             if (m_mapped) {
                 munmap(m_ptr, m_len);
             } else {
-                if (m_ptr)
-                    free(m_ptr);
+                if (m_ptr) free(m_ptr);
             }
         }
     };
@@ -202,10 +198,9 @@ private:
     std::unique_ptr<Memory<BUSWIDTH>::SubBlock<>> m_sub_block;
 
 protected:
-    virtual bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
+    virtual bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
     {
-        if (!p_dmi)
-            return false;
+        if (!p_dmi) return false;
         sc_dt::uint64 addr = txn.get_address();
 
         if (!m_relative_addresses) {
@@ -220,7 +215,7 @@ protected:
             return false;
         }
 
-        SCP_DEBUG(SCMOD) << " : DMI access to address "
+        SCP_TRACE(SCMOD) << " : DMI access to address "
                          << "0x" << std::hex << addr;
 
         if (p_rom)
@@ -253,7 +248,7 @@ protected:
         return true;
     }
 
-    virtual void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    virtual void b_transport(int id, tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
@@ -264,8 +259,7 @@ protected:
         if (txn.get_streaming_width() < len) {
             SCP_FATAL(SCMOD) << "not supported.";
         }
-        if (p_verbose)
-            SCP_WARN(SCMOD) << "b_transport :" << scp::scp_txn_tostring(txn);
+        if (p_verbose) SCP_WARN(SCMOD) << "b_transport :" << scp::scp_txn_tostring(txn);
 
         if (!m_relative_addresses) {
             if (addr < m_address) {
@@ -285,8 +279,7 @@ protected:
                 for (unsigned int i = 0; i < len; i++)
                     if (byt[i % bel] == TLM_BYTE_ENABLED) {
                         if (!read(&(ptr[i]), (addr + i), 1)) {
-                            SCP_FATAL(SCMOD)
-                                << "Address + length is out of range of the memory size";
+                            SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
                         }
                     }
             } else {
@@ -304,8 +297,7 @@ protected:
                 for (unsigned int i = 0; i < len; i++)
                     if (byt[i % bel] == TLM_BYTE_ENABLED) {
                         if (!write(&(ptr[i]), (addr + i), 1)) {
-                            SCP_FATAL(SCMOD)
-                                << "Address + length is out of range of the memory size";
+                            SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
                         }
                     }
             } else {
@@ -321,15 +313,14 @@ protected:
 
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
 
-        if (p_dmi)
-            txn.set_dmi_allowed(true);
+        if (p_dmi) txn.set_dmi_allowed(true);
     }
 
-    virtual unsigned int transport_dbg(tlm::tlm_generic_payload& txn)
+    virtual unsigned int transport_dbg(int id, tlm::tlm_generic_payload& txn)
     {
         unsigned int len = txn.get_data_length();
         sc_core::sc_time delay = sc_core::SC_ZERO_TIME;
-        b_transport(txn, delay);
+        b_transport(id, txn, delay);
         if (txn.get_response_status() == tlm::TLM_OK_RESPONSE)
             return len;
         else
@@ -341,9 +332,7 @@ protected:
         auto m_broker = cci::cci_get_broker();
         std::string fullname = std::string(sc_module::name()) + "." + name;
         m_broker.ignore_unconsumed_preset_values(
-            [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool {
-                return iv.first == fullname;
-            });
+            [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == fullname; });
     }
 
     bool read(uint8_t* data, uint64_t offset, uint64_t len)
@@ -352,8 +341,7 @@ protected:
         // this may happen if another model descides to load data into memory as
         // part of it's initialization during before_end_of_elaboration.
 
-        if (!m_sub_block)
-            before_end_of_elaboration();
+        if (!m_sub_block) before_end_of_elaboration();
 
         uint64_t remain_len = 0;
         uint64_t data_ptr_offset = 0;
@@ -375,8 +363,7 @@ protected:
     }
     bool write(const uint8_t* data, uint64_t offset, uint64_t len)
     {
-        if (!m_sub_block)
-            before_end_of_elaboration();
+        if (!m_sub_block) before_end_of_elaboration();
 
         uint64_t remain_len = 0;
         uint64_t data_ptr_offset = 0;
@@ -388,8 +375,7 @@ protected:
         while (len > 0) {
             SubBlock<>& blk = m_sub_block->access(offset + data_ptr_offset);
 
-            remain_len = blk.write_sub_blocks(&data[data_ptr_offset], offset + data_ptr_offset,
-                                              len);
+            remain_len = blk.write_sub_blocks(&data[data_ptr_offset], offset + data_ptr_offset, len);
 
             data_ptr_offset += remain_len;
             len -= remain_len;
@@ -401,7 +387,7 @@ protected:
 public:
     gs::Loader<> load;
 
-    tlm_utils::simple_target_socket<Memory, BUSWIDTH> socket;
+    tlm_utils::multi_passthrough_target_socket<Memory<BUSWIDTH>> socket;
     cci::cci_param<bool> p_rom;
     cci::cci_param<bool> p_dmi;
     cci::cci_param<bool> p_verbose;
@@ -421,8 +407,7 @@ public:
         , p_rom("read_only", false, "Read Only Memory (default false)")
         , p_dmi("dmi_allow", true, "DMI allowed (default true)")
         , p_verbose("verbose", false, "Switch on verbose logging")
-        , p_latency("latency", sc_core::sc_time(10, sc_core::SC_NS),
-                    "Latency reported for DMI access")
+        , p_latency("latency", sc_core::sc_time(10, sc_core::SC_NS), "Latency reported for DMI access")
         , p_mapfile("map_file", "", "(optional) file to map this memory")
         , p_max_block_size("max_block_size", 0x100000000, "Maximum size of the sub bloc")
         , p_min_block_size("min_block_size", sysconf(_SC_PAGE_SIZE), "Minimum size of the sub bloc")
@@ -430,8 +415,7 @@ public:
         , load("load",
                [&](const uint8_t* data, uint64_t offset, uint64_t len) -> void {
                    if (!write(data, offset, len)) {
-                       SCP_WARN(SCMOD)
-                           << " Offset : 0x" << std::hex << offset << " of the out of range";
+                       SCP_WARN(SCMOD) << " Offset : 0x" << std::hex << offset << " of the out of range";
                    }
                })
         , m_sub_block(nullptr)
@@ -451,9 +435,8 @@ public:
             if (!m_broker.get_preset_cci_value(std::string(name) + "." + SCP_LOG_LEVEL_PARAM_NAME)
                      .template try_get<int>(level) ||
                 level < (int)(scp::log::WARNING)) {
-                m_broker.set_preset_cci_value(
-                    (std::string(name) + "." + SCP_LOG_LEVEL_PARAM_NAME).c_str(),
-                    cci::cci_value(static_cast<int>(scp::log::WARNING)));
+                m_broker.set_preset_cci_value((std::string(name) + "." + SCP_LOG_LEVEL_PARAM_NAME).c_str(),
+                                              cci::cci_value(static_cast<int>(scp::log::WARNING)));
             }
         }
 
@@ -485,8 +468,7 @@ public:
 
         m_relative_addresses = true;
         if (m_broker.has_preset_value(ts_name + ".relative_addresses")) {
-            m_relative_addresses = m_broker.get_preset_cci_value(ts_name + ".relative_addresses")
-                                       .get_bool();
+            m_relative_addresses = m_broker.get_preset_cci_value(ts_name + ".relative_addresses").get_bool();
             m_broker.lock_preset_value(ts_name + ".relative_addresses");
         }
     }
