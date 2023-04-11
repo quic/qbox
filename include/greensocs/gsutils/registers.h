@@ -472,31 +472,16 @@ public:
     }
     // using tlm_cb::tlm_cb;
 };
+/* clang-format off */
 /* helper classes to allow identification of different cb types */
-struct _pre_read_cb {
-};
-struct _pre_write_cb {
-};
-struct _post_read_cb {
-};
-struct _post_write_cb {
-};
+struct _pre_read_cb {};
+struct _pre_write_cb {};
+struct _post_read_cb {};
+struct _post_write_cb {};
 using pre_read_cb = tlm_cb_tagged<_pre_read_cb>;
 using pre_write_cb = tlm_cb_tagged<_pre_write_cb>;
 using post_read_cb = tlm_cb_tagged<_post_read_cb>;
 using post_write_cb = tlm_cb_tagged<_post_write_cb>;
-
-/* clang-format off */
-
-
-/*using pre_write_cb = tlm_cb;
-using post_read_cb = tlm_cb;
-using post_write_cb = tlm_cb;
-class pre_read_cb : public tlm_cb  { using tlm_cb::tlm_cb; };
-class pre_write_cb : public tlm_cb { using tlm_cb::tlm_cb; };
-class post_read_cb : public tlm_cb { using tlm_cb::tlm_cb; };
-class post_write_cb : public tlm_cb{ using tlm_cb::tlm_cb; };
-*/
 /* clang-format on */
 
 /**
@@ -590,11 +575,10 @@ public:
         }
     }
     port_lambda() = delete;
-    port_lambda(std::string name, const std::vector<std::shared_ptr<tlm_cb>>& cbs)
+    port_lambda(std::string name, std::string path_name, const std::vector<std::shared_ptr<tlm_cb>>& cbs)
         : simple_target_socket<port_lambda>((name + "_target_socket").c_str())
-        , p_is_callback(name + ".target_socket.is_callback", true, "Is a callback (true)")
+        , p_is_callback(path_name + ".target_socket.is_callback", true, "Is a callback (true)")
     {
-        //        SCP_TRACE(())("port_lamda constructor : {}", name);
         p_is_callback = true;
         p_is_callback.lock();
         add_cbs(cbs);
@@ -602,6 +586,89 @@ public:
     }
 };
 
+class gs_proxy_data_untyped
+{
+    scp::scp_logger_cache& SCP_LOGGER_NAME();
+
+    tlm::tlm_generic_payload m_txn;
+    unsigned char* m_dmi = nullptr;
+    unsigned char* m_tmp_data;
+    cci::cci_param<uint64_t> p_offset;
+    cci::cci_param<uint64_t> p_size;
+
+    void check_dmi()
+    {
+        if (m_txn.is_dmi_allowed()) {
+            tlm::tlm_dmi m_dmi_data;
+            if (initiator_socket->get_direct_mem_ptr(m_txn, m_dmi_data)) {
+                uint64_t start = m_dmi_data.get_start_address();
+                unsigned char* ptr = m_dmi_data.get_dmi_ptr();
+                ptr += (p_offset - start);
+                m_dmi = ptr;
+            }
+        }
+    }
+
+public:
+    tlm_utils::simple_initiator_socket<gs_proxy_data_untyped> initiator_socket;
+
+    unsigned char* get()
+    {
+        if (m_dmi) {
+            SCP_TRACE(())("Got value (DMI) : 0x{:x}", *m_dmi);
+            return m_dmi;
+        }
+        sc_core::sc_time dummy;
+        m_txn.set_command(tlm::TLM_READ_COMMAND);
+        m_txn.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+        initiator_socket->b_transport(m_txn, dummy);
+        sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
+        SCP_TRACE(())("Got value (transport): 0x{:x}", *m_tmp_data);
+        check_dmi();
+        return m_tmp_data;
+    }
+
+    void set(unsigned char* value)
+    {
+        if (m_dmi) {
+            SCP_TRACE(())("Set value (DMI) : 0x{:x}", *value);
+            memcpy(m_dmi, value, p_size);
+        } else {
+            sc_core::sc_time dummy;
+            m_txn.set_command(tlm::TLM_WRITE_COMMAND);
+            m_txn.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+            memcpy(&m_tmp_data, &value, p_size);
+            initiator_socket->b_transport(m_txn, dummy);
+            sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
+            SCP_TRACE(())("Set value (transport) : 0x{:x}", *m_tmp_data);
+            check_dmi();
+        }
+    }
+
+    void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) { m_dmi = nullptr; }
+
+    gs_proxy_data_untyped(scp::scp_logger_cache& logger, std::string name, std::string path_name, uint64_t _offset = 0,
+                          uint64_t _size = 4)
+        : SCP_LOGGER_NAME()(logger)
+        , initiator_socket((name + "_initiator_socket").c_str())
+        , p_offset(path_name + ".target_socket.address", _offset, "Offset of this register")
+        , p_size(path_name + ".target_socket.size", _size, "size of this register")
+    {
+        m_txn.set_address(p_offset);
+        m_tmp_data = new unsigned char[p_size];
+        m_txn.set_data_ptr(reinterpret_cast<unsigned char*>(&m_tmp_data));
+        m_txn.set_data_length(p_size);
+        m_txn.set_streaming_width(p_size);
+        m_txn.set_byte_enable_length(0);
+        m_txn.set_dmi_allowed(false);
+        m_txn.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+        initiator_socket.register_invalidate_direct_mem_ptr(this,
+                                                            &gs::gs_proxy_data_untyped::invalidate_direct_mem_ptr);
+    }
+    ~gs_proxy_data_untyped() { delete m_tmp_data; }
+};
+
+// Should be based on previous ....
 /* an object that has a fixed address and is proxied by data accessed via TLM*/
 template <class TYPE = uint32_t>
 class gs_proxy_data
@@ -615,7 +682,6 @@ class gs_proxy_data
     cci::cci_param<uint64_t> p_size;
     cci::cci_param<uint32_t> p_bit_start;
     cci::cci_param<uint32_t> p_bit_length;
-    cci::cci_param<bool> p_is_callback;
 
     void check_dmi()
     {
@@ -629,7 +695,6 @@ class gs_proxy_data
             }
         }
     }
-    friend class cci::cci_value_converter<gs::gs_proxy_data<TYPE>>;
 
 public:
     tlm_utils::simple_initiator_socket<gs_proxy_data> initiator_socket;
@@ -700,10 +765,8 @@ public:
         , initiator_socket((name + "_initiator_socket").c_str())
         , p_offset(path_name + ".target_socket.address", offset, "Offset of this register")
         , p_size(path_name + ".target_socket.size", sizeof(TYPE), "size of this register")
-        , p_is_callback(path_name + ".target_socket.is_callback", true, "Is a callback (true)")
         , p_bit_start(path_name + "." + field_name + ".bit_start", start, "Start bit of field")
-        , p_bit_length(path_name + "._" + field_name + ".." + name + ".bit_length", length, "length of field")
-    // attributes?
+        , p_bit_length(path_name + "." + field_name + ".bit_length", length, "length of field")
     {
         static_assert(std::is_unsigned<TYPE>::value, "Register types must be unsigned");
         sc_assert(p_bit_start + p_bit_length <= sizeof(TYPE) * 8);
@@ -718,6 +781,20 @@ public:
     }
 };
 
+class gs_register_pl_size : public port_lambda, public gs_proxy_data_untyped
+{
+    SCP_LOGGER();
+
+public:
+    gs_register_pl_size() = delete;
+    gs_register_pl_size(std::string name, std::string path = "", std::string field_name = "")
+        : port_lambda(name, (path.size() ? path + "." : "") + name, {})
+        , gs_proxy_data_untyped(SCP_LOGGER_NAME(), name, (path.size() ? path + "." : "") + name)
+    {
+        SCP_TRACE(())("constructor : {} attching in {}", name, path);
+    }
+};
+// should be based on previous...
 template <class TYPE = uint32_t>
 class gs_register_pl : public port_lambda, public gs_proxy_data<TYPE>
 {
@@ -726,7 +803,7 @@ class gs_register_pl : public port_lambda, public gs_proxy_data<TYPE>
 public:
     gs_register_pl() = delete;
     gs_register_pl(std::string name, std::string path = "", std::string field_name = "")
-        : port_lambda(name, {})
+        : port_lambda(name, (path.size() ? path + "." : "") + name, {})
         , gs_proxy_data<TYPE>(SCP_LOGGER_NAME(), name, (path.size() ? path + "." : "") + name,
                               field_name.empty() ? "" : field_name)
     {
@@ -744,24 +821,8 @@ public:
     void operator|=(TYPE other) { gs_proxy_data<TYPE>::set(gs_proxy_data<TYPE>::get() | other); }
     void operator<<=(TYPE other) { gs_proxy_data<TYPE>::set(gs_proxy_data<TYPE>::get() << other); }
     void operator>>=(TYPE other) { gs_proxy_data<TYPE>::set(gs_proxy_data<TYPE>::get() >> other); }
-
-    void end_of_elaboration()
-    {
-        //        if (!cci::cci_get_broker().has_preset_value(std::string(name()) + ".address")) {
-        //            SCP_FATAL(())("Parameters for {} not set", name());
-        //        }
-        //        assert(false);
-    }
 };
 
-/*make the normal router
-  pre-post callbacks
-    call ALL 'things in scope' not just the first one
-    handle DMI directly - e.g. if you have no pre-post callbacks, pass the DMI, but if you have them you need to stop
-  the DMI here to ensure the callbacks are accessed
-
-    if you have no callbacks you can allow DMI otherwise refuse?
-*/
 #if 0
 
 
