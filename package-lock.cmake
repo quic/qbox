@@ -35,12 +35,3 @@ CPMDeclarePackage(qbox
   GIT_REPOSITORY ${GREENSOCS_GIT}qbox.git
   GIT_SHALLOW on
 )
-
-# libqemu
-CPMDeclarePackage(libqemu
-  NAME libqemu
-  GIT_TAG libqemu-v7.2-v0.5.4
-  GIT_REPOSITORY ${GREENSOCS_GIT}qemu/qemu.git
-  GIT_SUBMODULES CMakeLists.txt
-  GIT_SHALLOW on
-)
