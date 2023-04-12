@@ -87,7 +87,8 @@ public:
 
         Rev_t dsp_rev = v68_rev;
         const std::string dsp_arch = p_dsp_arch.get_value();
-        if (auto rev = DSP_REVS.find(dsp_arch); rev != DSP_REVS.end()) {
+        auto rev = DSP_REVS.find(dsp_arch);
+        if (rev != DSP_REVS.end()) {
             dsp_rev = rev->second;
         }
         cpu.set_prop_int("config-table-addr", m_cfgbase);
