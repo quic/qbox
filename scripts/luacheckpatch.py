@@ -15,6 +15,7 @@ import sys
 import subprocess
 import re
 
+NEW_DIFF_PREFIX="diff --git"
 ADDED_FILE_PREFIX="+++ b/"
 LUACHECK_CMD="luacheck --no-color --formatter=plain --allow-defined-top --no-max-line-length $(find . -name '*.lua' -not -path './build/*')"
 
@@ -47,12 +48,20 @@ def main():
 
     check_requirements()
 
+    head = run("git rev-parse HEAD", can_fail=False)[0]
+    to_rev_full = run(f"git rev-parse '{to_rev}'", can_fail=False)[0]
+    if head != to_rev_full:
+        sys.exit(f"error: repo is not checked out at '{to_rev}'")
+
     changes = {}
 
+    file = None
     for line in run(f"git diff -U0 '{from_rev}' '{to_rev}' -- '*.lua'", can_fail=False):
-        if line.startswith(ADDED_FILE_PREFIX):
+        if line.startswith(NEW_DIFF_PREFIX):
+            file = None
+        elif line.startswith(ADDED_FILE_PREFIX):
             file = line.lstrip(ADDED_FILE_PREFIX)
-        elif line.startswith("@@ "):
+        elif line.startswith("@@ ") and file is not None:
             match = re.search(r'^@@ \-[0-9]*[,]*[0-9]* \+([0-9]*)[,]*([0-9]*) .*', line)
             if match is None or len(match.groups()) != 2:
                 sys.exit("unexpected regex matching error")
