@@ -185,8 +185,8 @@ public:
             return error;
         }
         lua_close(L);
-        return 0;
 #endif
+        return 0;
     }
 
     /// Parses the command line and extracts the luafile option.
