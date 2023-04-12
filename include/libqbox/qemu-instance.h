@@ -120,6 +120,8 @@ protected:
     cci::cci_param<std::string> p_args;
     bool p_display_argument_set;
 
+    cci::cci_param<std::string> p_accel;
+
     void push_default_args() {
         auto m_conf_broker = cci::cci_get_broker();
         const size_t l = strlen(name()) + 1;
@@ -174,8 +176,6 @@ protected:
     }
 
     void push_tcg_mode_args() {
-        m_inst.push_qemu_arg("-accel");
-
         switch (m_tcg_mode) {
         case TCG_SINGLE:
             m_inst.push_qemu_arg("tcg,thread=single");
@@ -198,6 +198,16 @@ protected:
         }
     }
 
+    void push_accelerator_args() {
+        m_inst.push_qemu_arg("-accel");
+
+        if (p_accel.get_value() == "tcg") {
+            push_tcg_mode_args();
+        } else {
+            m_inst.push_qemu_arg(p_accel.get_value().c_str());
+        }
+    }
+
 public:
     QemuInstance(const sc_core::sc_module_name& n, LibLoader& loader, Target t)
         : sc_core::sc_module(n)
@@ -210,7 +220,8 @@ public:
         , p_icount("icount", false, "Enable virtual instruction counter")
         , p_icount_mips("icount_mips_shift", 0,
                         "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
-        , p_display_argument_set(false) {
+        , p_display_argument_set(false)
+        , p_accel("accel", "tcg", "Virtualization accelerator") {
         SCP_DEBUG(SCMOD) << "Libqbox QemuInstance constructor";
         m_running = true;
         p_tcg_mode.lock();
@@ -305,7 +316,7 @@ public:
             }
         }
 
-        push_tcg_mode_args();
+        push_accelerator_args();
         push_icount_mode_args();
 
         if (!p_display_argument_set) {
