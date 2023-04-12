@@ -42,21 +42,21 @@ def check_requirements():
 
 def main():
     if len(sys.argv) != 3:
-        sys.exit(f"usage: {sys.argv[0]} <from-sha1> <to-sha1>")
-    from_rev = sys.argv[1]
-    to_rev = sys.argv[2]
+        sys.exit(f"usage: {sys.argv[0]} <target-sha1> <source-sha1>")
+    target_rev = sys.argv[1]
+    source_rev = sys.argv[2]
 
     check_requirements()
 
     head = run("git rev-parse HEAD", can_fail=False)[0]
-    to_rev_full = run(f"git rev-parse '{to_rev}'", can_fail=False)[0]
-    if head != to_rev_full:
-        sys.exit(f"error: repo is not checked out at '{to_rev}'")
+    source_rev_full = run(f"git rev-parse '{source_rev}'", can_fail=False)[0]
+    if head != source_rev_full:
+        sys.exit(f"error: repo is not checked out at '{source_rev}'")
 
     changes = {}
 
     file = None
-    for line in run(f"git diff -U0 '{from_rev}' '{to_rev}' -- '*.lua'", can_fail=False):
+    for line in run(f"git diff -U0 '{target_rev}' '{source_rev}' -- '*.lua'", can_fail=False):
         if line.startswith(NEW_DIFF_PREFIX):
             file = None
         elif line.startswith(ADDED_FILE_PREFIX):
