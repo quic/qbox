@@ -378,7 +378,7 @@ public:
         return consumed_preset_cci_values;
     }
 
-    void print_help(bool top = true) {
+    void print_debug(bool top = true) {
         /* NB there is a race condition between this and the QEMU uart which
          * has a tendency to wipe the buffer. We will use cerr here */
 
@@ -405,7 +405,7 @@ public:
                 cci_param_typed_handle<ConfigurableBroker*> c(p);
                 ConfigurableBroker* cc = c.get_value();
                 if (cc != this) {
-                    cc->print_help(false);
+                    cc->print_debug(false);
                 }
             }
         }
@@ -488,26 +488,27 @@ public:
      */
     ConfigurableBroker(const int argc, char* const argv[],
                        std::initializer_list<cci_name_value_pair> list = {},
-                       bool load_conf_file = true)
+                       bool load_conf_file = true, bool enforce_config_file = false)
         : ConfigurableBroker(false) {
         for (auto& p : list) {
             set_preset_cci_value(relname(p.first), p.second, m_originator);
         }
 
-        LuaFile_Tool lua("lua", argc, argv);
+        LuaFile_Tool lua("lua", argc, argv, "", enforce_config_file);
 
-        static const char* optstring = "h";
-        static struct option long_options[] = { { "help", 0, 0, 'h' }, // '--help' = '-h'
+        static const char* optstring = "d";
+        static struct option long_options[] = { { "debug", 0, 0, 'd' }, // '--debug' = '-d'
                                                 { 0, 0, 0, 0 } };
+
         optind = 1;
         while (1) {
             int c = getopt_long(argc, argv, optstring, long_options, 0);
             if (c == EOF)
                 break;
             switch (c) {
-            case 'h': // -h and --help
+            case 'd': // -d and --debug
                 sc_core::sc_spawn_options opts;
-                m_help_helper.register_cb([&]() -> void { print_help(); });
+                m_help_helper.register_cb([&]() -> void { print_debug(); });
                 break;
             }
         }
@@ -518,6 +519,9 @@ public:
             LuaFile_Tool lua("lua", std::string(conf_file).c_str(), m_orig_name);
         }
     }
+
+    ConfigurableBroker(const int argc, char* const argv[], bool enforce_config_file)
+        : ConfigurableBroker(argc, argv, {}, true, enforce_config_file) {}
 
     std::string relname(const std::string& n) const {
         return (m_orig_name.empty()) ? n : m_orig_name + std::string(".") + n;

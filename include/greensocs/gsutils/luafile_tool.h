@@ -105,9 +105,9 @@ public:
         config(config_file);
     }
     LuaFile_Tool(sc_core::sc_module_name name, const int argc, char* const argv[],
-                 std::string _orig_name = "")
+                 std::string _orig_name = "", bool enforce_config_file = false)
         : LuaFile_Tool(name, _orig_name) {
-        parseCommandLine(argc, argv);
+        parseCommandLine(argc, argv, enforce_config_file);
     }
     LuaFile_Tool(sc_core::sc_module_name name, std::string _orig_name = "")
         : sc_core::sc_module(name)
@@ -196,10 +196,10 @@ public:
      * @param argc The argc of main(...).
      * @param argv The argv of main(...).
      */
-    void parseCommandLine(const int argc,
-                          const char* const* argv) /* throw(CommandLineException) */ {
+    void parseCommandLine(const int argc, const char* const* argv,
+                          bool enforce_config_file = false) /* throw(CommandLineException) */ {
 #ifdef USE_GETOPT
-        parseCommandLineWithGetOpt(argc, argv);
+        parseCommandLineWithGetOpt(argc, argv, enforce_config_file);
 #else
         parseCommandLineWithBoost(argc, argv);
 #endif
@@ -269,10 +269,11 @@ protected:
      * @param argc The argc of main(...).
      * @param argv The argv of main(...).
      */
-    void parseCommandLineWithGetOpt(const int argc,
-                                    const char* const* argv) /* throw(CommandLineException) */ {
+    void parseCommandLineWithGetOpt(const int argc, const char* const* argv,
+                                    bool enforce_config_file) /* throw(CommandLineException) */ {
         SCP_INFO("lua") << "Parse command line for --gs_luafile option (" << argc << " arguments)";
 
+        bool luafile_found = false;
         // getopt permutes argv array, so copy it to argv_cp
         const int BUFFER_SIZE = 8192;
         char argv_buffer[BUFFER_SIZE];
@@ -294,17 +295,48 @@ protected:
         optind = 0; // reset of getopt
         opterr = 0; // avoid error message for not recognized option
 #ifdef ENABLE_SHORT_COMMAND_LINE_OPTIONS
-        static const char* optstring = "l:p:h";
+        static const char* optstring = "l:p:dh";
 #else
         static const char* optstring = "";
 #endif
         static struct option long_options[] = {
             { "gs_luafile", required_argument, 0, 'l' }, // '--luafile filename'
             { "param", required_argument, 0, 'p' },      // --param foo.baa=10
+            { "debug", no_argument, 0, 'd' },             // '--debug' = '-d'
             { "help", no_argument, 0, 'h' },             // '--help' = '-h'
             { 0, 0, 0, 0 }
         };
 
+        while (1) {
+            int c = getopt_long(argc, argv_cp, optstring, long_options, 0);
+            if (c == EOF)
+                break;
+            if (c == 'h') {
+                std::cout << "Lua file command line parser: parse option --help\n"
+                             "  Command line usage for lua file command line parser:\n"
+                             "\n"
+                             "     Possible Options/Arguments:\n"
+                             "\n"
+                             "      --gs_luafile <filename>\n"
+                             "        execute a Lua script and loads all the globals as\n"
+                             "        parameters [required]\n"
+                             "\n"
+                             "      --param <param_name=value>\n"
+                             "        set param name (foo.baa) to value\n"
+                             "\n"
+                             "      --debug\n"
+                             "        shows the state of the configurable parameters at\n"
+                             "        the beginning of the simulation and halts.\n"
+                             "\n"
+                             "      --help\n"
+                             "        this help\n"
+                             "\n"
+                          << std::flush;
+                exit(0);
+            }
+        }
+
+        optind = 0; // reset of getopt
         while (1) {
             int c = getopt_long(argc, argv_cp, optstring, long_options, 0);
             if (c == EOF)
@@ -316,6 +348,7 @@ protected:
                 SCP_INFO("lua") << "Lua file command line parser: parse option --gs_luafile "
                                 << optarg << std::endl;
                 config(optarg);
+                luafile_found = true;
                 break;
 
             case 'p': // -p and --param
@@ -333,25 +366,6 @@ protected:
                                               cci::cci_value(cci::cci_value::from_json(value)));
                 break;
             }
-            case 'h': // -h and --help
-                std::cout << "Lua file command line parser: parse option --help " << std::endl;
-                std::cout << "  Command line usage for lua file command line parser:" << std::endl;
-                std::cout << std::endl;
-                std::cout << "     Possible Options/Arguments:" << std::endl;
-                std::cout << std::endl;
-                std::cout << "      --gs_luafile <filename>" << std::endl;
-                std::cout << "        execute a Lua script and loads all the globals "
-                             "as parameters"
-                          << std::endl;
-                std::cout << std::endl;
-                std::cout << "      --param <param_name=value>" << std::endl;
-                std::cout << "        set param name (foo.baa) to value" << std::endl;
-                std::cout << std::endl;
-                std::cout << "      --help" << std::endl;
-                std::cout << "        this help" << std::endl;
-                std::cout << std::endl;
-                std::cout << std::endl;
-                break;
 
             case '?':
             case ':':
@@ -361,6 +375,11 @@ protected:
             }
         }
         delete[] argv_cp;
+
+        if (enforce_config_file && !luafile_found) {
+            std::cerr << "fatal: missing required --gs_luafile argument" << std::endl;
+            exit(1);
+        }
     }
 #endif
 
