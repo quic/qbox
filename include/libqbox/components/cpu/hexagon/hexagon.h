@@ -64,7 +64,7 @@ public:
         , m_l2vic_base_addr(l2vic_base_addr)
         , m_qtimer_base_addr(qtimer_base_addr)
         , m_exec_start_addr(exec_start_addr)
-        , p_dsp_arch("dsp-arch", "v68", "DSP arch")
+        , p_dsp_arch("dsp_arch", "v68", "DSP arch")
         , p_start_powered_off("start_powered_off", false,
                               "Start and reset the CPU "
                               "in powered-off state")
