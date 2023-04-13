@@ -339,7 +339,7 @@ The order of options is important because the last option on the command line to
 {\textbf {\footnotesize{\lstinline!--gs_luafile <FILE.lua>!}}}
 \vspace{-2pt}
 \begin{quote}
-Reads the lua file to set the parameters.
+Reads the lua file to set the parameters [required].
 \end{quote}
 
 {\textbf {\footnotesize{\lstinline!--param path.to.param=<value>!}}}
@@ -348,8 +348,7 @@ Reads the lua file to set the parameters.
 Allows you to set individual parameters.
 \end{quote}
 
-{\textbf {\footnotesize{\lstinline!--help!}}} \newline
-{\textbf {\footnotesize{\lstinline!-h!}}}
+{\textbf {\footnotesize{\lstinline!--debug!}}}
 \vspace{-2pt}
 \begin{quote}
 Reports on the state of all configurable parameters known to the system up to the beginning of the simulation. The option will cause the simulation to halt at this point.
@@ -357,6 +356,16 @@ Reports on the state of all configurable parameters known to the system up to th
 This option is useful to both find the names of configurable parameters and to check their state.
 \end{quote}
 
+{\textbf {\footnotesize{\lstinline!--help!}}} \newline
+{\textbf {\footnotesize{\lstinline!-h!}}}
+\vspace{-2pt}
+\begin{quote}
+Displays all the available command line options, as described here.
+\end{quote}
+
+Any extra non-option arguments (i.e. arguments not prefixed with `-' or `-{}-')
+are treated as lua configuration files. That is, a `file.lua' argument is handled
+exactly the same as {\footnotesize{\lstinline!--gs_luafile file.lua!}}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \vspace{9pt}{\large \textbf {\textsf{Configuration file}}}
