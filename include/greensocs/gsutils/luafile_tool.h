@@ -298,10 +298,12 @@ protected:
 #else
         static const char* optstring = "";
 #endif
-        static struct option long_options[] = { { "gs_luafile", 1, 0, 'l' }, // '--luafile filename'
-                                                { "param", 1, 0, 'p' },      // --param foo.baa=10
-                                                { "help", 0, 0, 'h' },       // '--help' = '-h'
-                                                { 0, 0, 0, 0 } };
+        static struct option long_options[] = {
+            { "gs_luafile", required_argument, 0, 'l' }, // '--luafile filename'
+            { "param", required_argument, 0, 'p' },      // --param foo.baa=10
+            { "help", no_argument, 0, 'h' },             // '--help' = '-h'
+            { 0, 0, 0, 0 }
+        };
 
         while (1) {
             int c = getopt_long(argc, argv_cp, optstring, long_options, 0);
