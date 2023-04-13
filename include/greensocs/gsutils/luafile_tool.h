@@ -336,6 +336,7 @@ protected:
             }
         }
 
+        opterr = 1; // restore error message for not recognized option
         optind = 0; // reset of getopt
         while (1) {
             int c = getopt_long(argc, argv_cp, optstring, long_options, 0);
@@ -367,11 +368,14 @@ protected:
                 break;
             }
 
-            case '?':
-            case ':':
-                SCP_INFO("lua") << "Option " << c
-                                << " not processed in lua file command line parser: " << optopt;
+            case 'd':
+            case 'h':
+                /* ignore for now */
                 break;
+
+            default:
+                /* unrecognized option */
+                exit(1);
             }
         }
         delete[] argv_cp;
