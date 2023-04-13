@@ -33,10 +33,12 @@ find_path(LIBELF_INCLUDE_DIR NAMES "libelf.h" "libelf/libelf.h"
           REQUIRED)
 
 find_library(LIBELF_LIBRARIES NAMES elf "libelf.a"
-          HINTS $ENV{LIBELF_HOME}/lib /usr/lib /lib /usr/local/lib)
+          HINTS $ENV{LIBELF_HOME}/lib /usr/lib /lib /usr/local/lib
+          REQUIRED)
 
 find_library(LIBZ_LIBRARIES NAMES z "libz.a"
-          HINTS $ENV{LIBZ_HOME}/lib /usr/lib /lib)
+          HINTS $ENV{LIBZ_HOME}/lib /usr/lib /lib
+          REQUIRED)
 
 list(APPEND LIBELF_LIBRARIES ${LIBZ_LIBRARIES})
 list(APPEND LIBELF_INCLUDE_DIR ${LIBELF_INCLUDE_DIR}/libelf)
@@ -153,7 +155,7 @@ target_include_directories(
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC 
+target_link_libraries(${PROJECT_NAME} PUBLIC
      ${TARGET_LIBS}
      ${LIBELF_LIBRARIES}
      Threads::Threads
