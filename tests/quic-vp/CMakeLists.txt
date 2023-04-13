@@ -17,12 +17,21 @@ endmacro()
 gs_add_test(Makena_fastrpc_calc_test 8540/SA8540P_conf.lua "makena/default")
 gs_add_test(LeMans_fastrpc_calc_test 8775/SA8775P_conf.lua "lemans")
 
-if(EXISTS ${QQVP_FIRMWARE_REPO_DIR}/opengl_linux)
-    add_test(
-        NAME Linux_boot_test
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/Linux_test.py -e ${CMAKE_BINARY_DIR}/vp -l "${QQVP_FIRMWARE_REPO_DIR}/opengl_linux/conf.lua" -i "${QQVP_FIRMWARE_REPO_DIR}/opengl_linux/"
-        WORKING_DIRECTORY "${QQVP_FIRMWARE_REPO_DIR}/opengl_linux/"
-    )
-else()
-    message(WARNING "Skipping Linux_boot_test, could not find '${QQVP_FIRMWARE_REPO_DIR}/opengl_linux'. To enable tests, set QQVP_FIRMWARE_REPO_DIR in environment.")
-endif()
+foreach(flavor IN ITEMS opengl red_hat)
+    if(EXISTS ${QQVP_FIRMWARE_REPO_DIR}/${flavor}_linux)
+        if("${flavor}" STREQUAL "red_hat")
+            if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+                # NEEDSWORK: the red-hat boot test currently times out in Debug builds.
+                continue()
+            endif()
+            set(LUA_CONF -l "${CMAKE_SOURCE_DIR}/configs/fw/8775/SA8775P_conf.lua")
+        endif()
+        add_test(
+            NAME Linux_${flavor}_boot_test
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/Linux_test.py -e ${CMAKE_BINARY_DIR}/vp ${LUA_CONF} -i "${QQVP_FIRMWARE_REPO_DIR}/${flavor}_linux/"
+            WORKING_DIRECTORY "${QQVP_FIRMWARE_REPO_DIR}/${flavor}_linux/"
+        )
+    else()
+        message(WARNING "Skipping Linux_${flavor}_boot_test, could not find '${QQVP_FIRMWARE_REPO_DIR}/${flavor}_linux'. To enable tests, set QQVP_FIRMWARE_REPO_DIR in environment.")
+    endif()
+endforeach()

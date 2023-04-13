@@ -13,18 +13,17 @@ def linux_boot():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--exe", metavar="", help="Path to vp executable")
-    parser.add_argument("-l", "--lua", metavar="", help="Path to luafile")
+    parser.add_argument("-l", "--lua", metavar="", help="Path to luafile (defaults to conf.lua in images dir)")
     parser.add_argument("-i", "--img", metavar="", help="Path to binary images")
     args = parser.parse_args()
     if not args.exe:
         print("vp executable file not found")
         return test
-    if not args.lua:
-        print("luafile is required")
-        return test
     if not args.img:
         print("img argument is required")
         return test
+    if not args.lua:
+        args.lua = os.path.join(args.img, "conf.lua")
 
     vp_path = Path(args.exe)
     lua_path = Path(args.lua)
