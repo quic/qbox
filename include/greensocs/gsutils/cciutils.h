@@ -278,8 +278,9 @@ public:
     // a set of perameters that should be exposed up the broker stack
     std::set<std::string> hide;
     cci_param<std::string> conf_file;
+    friend class PrivateConfigurableBroker;
 
-private:
+protected:
     bool has_parent;
     cci_broker_if& m_parent;
     std::string m_orig_name;
@@ -320,7 +321,7 @@ private:
      * @brief private function to determine if we send to the parent broker or not
      *
      */
-    bool sendToParent(const std::string& parname) const
+    virtual bool sendToParent(const std::string& parname) const
     {
         return ((hide.find(parname) == hide.end()) && (!is_global_broker()));
     }
@@ -438,6 +439,7 @@ private:
 
         void start_of_simulation()
         {
+            if (!help_cb) return;
             auto m_broker = cci::cci_get_broker();
             // remove lua builtins
             m_broker.ignore_unconsumed_preset_values([](const std::pair<std::string, cci::cci_value>& iv) -> bool {
@@ -772,6 +774,52 @@ public:
     }
 
     bool is_global_broker() const { return (!has_parent); }
+};
+
+class PrivateConfigurableBroker : public gs::ConfigurableBroker
+{
+    std::string m_name;
+    unsigned m_name_length;
+    std::set<std::string> parent;
+    bool sendToParent(const std::string& parname) const override
+    {
+        if (parent.count(parname) > 0) {
+            return true;
+        }
+        if (parname.substr(0, m_name_length) == m_name) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+public:
+    PrivateConfigurableBroker(const std::string& name)
+        : gs::ConfigurableBroker(name, false)
+    {
+        m_name = hierarchical_name();
+        m_name_length = m_name.length();
+
+        auto uncon = m_parent.get_unconsumed_preset_values(
+            [&](const std::pair<std::string, cci_value>& iv) { return iv.first.find(m_name + ".") == 0; });
+        for (auto p : uncon) {
+            parent.insert(p.first);
+        }
+    }
+
+    virtual std::vector<cci_name_value_pair> get_unconsumed_preset_values() const override
+    {
+        std::vector<cci_name_value_pair> r;
+        for (auto u : m_unignored) {
+            auto p = get_preset_cci_value(u);
+            r.push_back(std::make_pair(u, p));
+        }
+        return r;
+    }
+    cci_preset_value_range get_unconsumed_preset_values(const cci_preset_value_predicate& pred) const override
+    {
+        return cci_preset_value_range(pred, PrivateConfigurableBroker::get_unconsumed_preset_values());
+    }
 };
 } // namespace gs
 

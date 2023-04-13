@@ -637,7 +637,7 @@ public:
             sc_core::sc_time dummy;
             m_txn.set_command(tlm::TLM_WRITE_COMMAND);
             m_txn.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
-            memcpy(&m_tmp_data, &value, p_size);
+            memcpy(m_tmp_data, &value, p_size);
             initiator_socket->b_transport(m_txn, dummy);
             sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
             SCP_TRACE(())("Set value (transport) : 0x{:x}", *m_tmp_data);
