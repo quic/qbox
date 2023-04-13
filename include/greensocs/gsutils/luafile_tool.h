@@ -331,6 +331,9 @@ protected:
                              "      --help\n"
                              "        this help\n"
                              "\n"
+                             "      Any extra arguments will be treated as lua config\n"
+                             "      files. That is, as --gs_luafile arguments.\n"
+                             "\n"
                           << std::flush;
                 exit(0);
             }
@@ -378,6 +381,14 @@ protected:
                 exit(1);
             }
         }
+
+        for (int i = optind; i < argc; i++) {
+            SCP_INFO("lua") << "Positional config file found '"
+                            << argv_cp[i] << "'" << std::endl;
+            config(argv_cp[i]);
+            luafile_found = true;
+        }
+
         delete[] argv_cp;
 
         if (enforce_config_file && !luafile_found) {
