@@ -579,6 +579,7 @@ public:
         : simple_target_socket<port_lambda>((name + "_target_socket").c_str())
         , p_is_callback(path_name + ".target_socket.is_callback", true, "Is a callback (true)")
     {
+        SCP_TRACE(())("Constructor");
         p_is_callback = true;
         p_is_callback.lock();
         add_cbs(cbs);
@@ -586,86 +587,106 @@ public:
     }
 };
 
-class gs_proxy_data_untyped
+template <class TYPE>
+class gs_proxy_data_array
 {
     scp::scp_logger_cache& SCP_LOGGER_NAME();
 
     tlm::tlm_generic_payload m_txn;
-    unsigned char* m_dmi = nullptr;
-    unsigned char* m_tmp_data;
+    TYPE* m_dmi = nullptr;
     cci::cci_param<uint64_t> p_offset;
-    cci::cci_param<uint64_t> p_size;
+    cci::cci_param<uint64_t> p_number;
 
     void check_dmi()
     {
-        if (m_txn.is_dmi_allowed()) {
-            tlm::tlm_dmi m_dmi_data;
-            if (initiator_socket->get_direct_mem_ptr(m_txn, m_dmi_data)) {
-                uint64_t start = m_dmi_data.get_start_address();
-                unsigned char* ptr = m_dmi_data.get_dmi_ptr();
-                ptr += (p_offset - start);
-                m_dmi = ptr;
-            }
+        tlm::tlm_dmi m_dmi_data;
+        m_txn.set_command(tlm::TLM_IGNORE_COMMAND);
+        m_txn.set_data_ptr(nullptr);
+        m_txn.set_address(p_offset);
+        m_txn.set_data_length(sizeof(TYPE) * p_number);
+        m_txn.set_streaming_width(sizeof(TYPE) * p_number);
+        m_txn.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+        if (initiator_socket->get_direct_mem_ptr(m_txn, m_dmi_data)) {
+            uint64_t start = m_dmi_data.get_start_address();
+            unsigned char* ptr = m_dmi_data.get_dmi_ptr();
+            ptr += (p_offset - start);
+            sc_assert(m_dmi_data.get_end_address() >= start + p_offset + (p_number * sizeof(TYPE)));
+            m_dmi = reinterpret_cast<TYPE*>(ptr);
         }
     }
 
 public:
-    tlm_utils::simple_initiator_socket<gs_proxy_data_untyped> initiator_socket;
+    tlm_utils::simple_initiator_socket<gs_proxy_data_array> initiator_socket;
 
-    unsigned char* get()
+    void get(TYPE* dst, uint64_t idx = 0, uint64_t length = 1)
     {
+        sc_assert(idx + length < p_number);
         if (m_dmi) {
-            SCP_TRACE(())("Got value (DMI) : 0x{:x}", *m_dmi);
-            return m_dmi;
+            memcpy(dst, &m_dmi[idx], sizeof(TYPE) * length);
+            SCP_TRACE(())("Got value (DMI) : {::#x}", std::vector<TYPE>(dst[0], dst[length]));
         }
         sc_core::sc_time dummy;
         m_txn.set_command(tlm::TLM_READ_COMMAND);
+        m_txn.set_data_ptr(dst);
+        m_txn.set_address(p_offset + (sizeof(TYPE) * idx));
+        m_txn.set_data_length(sizeof(TYPE) * length);
+        m_txn.set_streaming_width(sizeof(TYPE) * length);
         m_txn.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
         initiator_socket->b_transport(m_txn, dummy);
         sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
-        SCP_TRACE(())("Got value (transport): 0x{:x}", *m_tmp_data);
-        check_dmi();
-        return m_tmp_data;
-    }
-
-    void set(unsigned char* value)
-    {
-        if (m_dmi) {
-            SCP_TRACE(())("Set value (DMI) : 0x{:x}", *value);
-            memcpy(m_dmi, value, p_size);
-        } else {
-            sc_core::sc_time dummy;
-            m_txn.set_command(tlm::TLM_WRITE_COMMAND);
-            m_txn.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
-            memcpy(m_tmp_data, &value, p_size);
-            initiator_socket->b_transport(m_txn, dummy);
-            sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
-            SCP_TRACE(())("Set value (transport) : 0x{:x}", *m_tmp_data);
+        SCP_TRACE(())("Got value (transport) : {::#x}", std::vector<TYPE>(dst[0], dst[length]));
+        if (m_txn.is_dmi_allowed()) {
             check_dmi();
         }
     }
 
+    void set(TYPE* src, uint64_t idx = 0, uint64_t length = 1)
+    {
+        if (m_dmi) {
+            SCP_TRACE(())("Set value (DMI) : {::#x}", std::vector<TYPE>(src[0], src[length]));
+            memcpy(&m_dmi[idx], src, sizeof(TYPE) * length);
+        } else {
+            sc_core::sc_time dummy;
+            m_txn.set_command(tlm::TLM_WRITE_COMMAND);
+            m_txn.set_data_ptr(src);
+            m_txn.set_address(p_offset + (sizeof(TYPE) * idx));
+            m_txn.set_data_length(sizeof(TYPE) * length);
+            m_txn.set_streaming_width(sizeof(TYPE) * length);
+            m_txn.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+            SCP_TRACE(())("Set value (DMI) : {::#x}", std::vector<TYPE>(src[0], src[length]));
+            initiator_socket->b_transport(m_txn, dummy);
+            sc_assert(m_txn.get_response_status() == tlm::TLM_OK_RESPONSE);
+            if (m_txn.is_dmi_allowed()) {
+                check_dmi();
+            }
+        }
+    }
+
+    TYPE& operator[](int idx)
+    {
+        if (!m_dmi) {
+            check_dmi();
+            if (!m_dmi) {
+                SCP_FATAL(())("Operator[] can only be used for DMI'able registers");
+            }
+        }
+        return m_dmi[sizeof(TYPE) * idx];
+    }
     void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) { m_dmi = nullptr; }
 
-    gs_proxy_data_untyped(scp::scp_logger_cache& logger, std::string name, std::string path_name, uint64_t _offset = 0,
-                          uint64_t _size = 4)
+    gs_proxy_data_array(scp::scp_logger_cache& logger, std::string name, std::string path_name, uint64_t _offset = 0,
+                        uint64_t number = 1)
         : SCP_LOGGER_NAME()(logger)
         , initiator_socket((name + "_initiator_socket").c_str())
         , p_offset(path_name + ".target_socket.address", _offset, "Offset of this register")
-        , p_size(path_name + ".target_socket.size", _size, "size of this register")
+        , p_number(path_name + ".number", number, "number of elements in this register")
     {
-        m_txn.set_address(p_offset);
-        m_tmp_data = new unsigned char[p_size];
-        m_txn.set_data_ptr(reinterpret_cast<unsigned char*>(&m_tmp_data));
-        m_txn.set_data_length(p_size);
-        m_txn.set_streaming_width(p_size);
         m_txn.set_byte_enable_length(0);
         m_txn.set_dmi_allowed(false);
         m_txn.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
         initiator_socket.register_invalidate_direct_mem_ptr(this,
-                                                            &gs::gs_proxy_data_untyped::invalidate_direct_mem_ptr);
+                                                            &gs::gs_proxy_data_array<TYPE>::invalidate_direct_mem_ptr);
     }
-    ~gs_proxy_data_untyped() { delete m_tmp_data; }
 };
 
 // Should be based on previous ....
@@ -781,20 +802,23 @@ public:
     }
 };
 
-class gs_register_pl_size : public port_lambda, public gs_proxy_data_untyped
+template <class TYPE = uint32_t>
+class gs_register_pl_array : public port_lambda, public gs_proxy_data_array<TYPE>
 {
     SCP_LOGGER();
 
 public:
-    gs_register_pl_size() = delete;
-    gs_register_pl_size(std::string name, std::string path = "", std::string field_name = "")
+    gs_register_pl_array() = delete;
+    gs_register_pl_array(std::string name, std::string path = "", std::string field_name = "")
         : port_lambda(name, (path.size() ? path + "." : "") + name, {})
-        , gs_proxy_data_untyped(SCP_LOGGER_NAME(), name, (path.size() ? path + "." : "") + name)
+        , gs_proxy_data_array<TYPE>(SCP_LOGGER_NAME(), name, (path.size() ? path + "." : "") + name)
     {
         SCP_TRACE(())("constructor : {} attching in {}", name, path);
     }
+
+    TYPE& operator[](int idx) { return gs_proxy_data_array<TYPE>::operator[](idx); }
 };
-// should be based on previous...
+
 template <class TYPE = uint32_t>
 class gs_register_pl : public port_lambda, public gs_proxy_data<TYPE>
 {
