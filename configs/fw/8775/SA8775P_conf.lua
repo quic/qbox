@@ -20,6 +20,7 @@ print ("Lua config running. . . ");
  DDR_SPACE_SIZE = 16*1024*1024*1024
 
 
+local HEX_DIGITS='0123456789ABCDEF'
 
 local MAKENA_REGS_CSV = valid_file(top().."8540_Registers.csv")
 local QDSP6_CFG   = valid_file(top().."../qdsp6.lua")
@@ -60,8 +61,7 @@ local TURING_SS_0TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x20CB0008;
 local TURING_SS_0TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x208A4008;
 local TURING_SS_1TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x263B0008;
 local TURING_SS_1TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x260A4008;
-local HWKM_MASTER_CFG_KM_RNG_EE10_PRNG_DATA_OUT	= 0x10da000;
-local HWKM_MASTER_CFG_KM_RNG_EE10_PRNG_STATUS= 0x10da004;
+local HWKM_MASTER_CFG_KW_RNG_EEx_base=0x010D0000;
 
 dofile(QDSP6_CFG);
 
@@ -211,17 +211,23 @@ platform = {
          address=TURING_SS_1TURING_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
         {data={0x01180214},
          address=TURING_SS_1TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
-        {data={0x4},
-         address=HWKM_MASTER_CFG_KM_RNG_EE10_PRNG_DATA_OUT};
-        {data={0x01},
-         address=HWKM_MASTER_CFG_KM_RNG_EE10_PRNG_STATUS};
-
 
 --      {data={0x00020400}, address=0x10E0000};
 --      {data={0x60000003}, address=0x10E000C};
     };
 };
 
+
+-- PRNG values for HWKM_MASTER_CFG_KM_RNG_EE{2 to 15}
+local PRNG_table = {}
+for id = 3, #HEX_DIGITS do
+  local data_addr = HWKM_MASTER_CFG_KW_RNG_EEx_base +
+                    tonumber("0x" .. HEX_DIGITS:sub(id,id) .. "000")
+  local status_addr = data_addr + 0x4
+  table.insert(PRNG_table, {data={0x4}, address=data_addr})
+  table.insert(PRNG_table, {data={0x01}, address=status_addr})
+end
+tableJoin(platform["load"], PRNG_table)
 
 if (platform.arm_num_cpus > 0) then
     local QUP_PITCH = 0x4000;
