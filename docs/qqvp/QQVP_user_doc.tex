@@ -885,14 +885,9 @@ The following error indicates that {\small{\lstinline!libelf-dev!}} is not insta
 \small
 \begin{lstlisting}[language=bash]
     ...
-    -- Configuring done
-    CMake Error in build/_deps/base-components-src/CMakeLists.txt:
-      Target "base-components" INTERFACE_INCLUDE_DIRECTORIES property contains
-      path:
-
-        "/local/mnt/workspace/quic-vp/build/_deps/base-components-src/LIBELF_INCLUDE_DIRS-NOTFOUND"
-
-      which is prefixed in the build directory.
+    CMake Error at /Users/mathbern/qqvp/qbox/CMakeLists.txt:31 (find_path):
+      Could not find LIBELF_INCLUDE_DIR using the following files: libelf.h,
+      libelf/libelf.h
     ...
 \end{lstlisting}
 \normalsize
