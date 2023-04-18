@@ -30,6 +30,7 @@
 #include "libqbox/components/cpu/cpu.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
+#include "libqbox/sc-qemu-instance.h"
 
 class QemuCpuArmCortexA76 : public QemuCpu
 {
@@ -89,8 +90,11 @@ public:
     QemuInitiatorSignalSocket irq_timer_sec_out;
     QemuInitiatorSignalSocket irq_maintenance_out;
     QemuInitiatorSignalSocket irq_pmu_out;
-
-    QemuCpuArmCortexA76(sc_core::sc_module_name name, QemuInstance& inst)
+    QemuCpuArmCortexA76(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : QemuCpuArmCortexA76(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst())
+        {
+        }
+    QemuCpuArmCortexA76(const sc_core::sc_module_name& name, QemuInstance& inst)
         : QemuCpu(name, inst, "cortex-a76-arm")
         , p_mp_affinity("mp_affinity", 0, "Multi-processor affinity value")
         , p_has_el2("has_el2", true, "ARM virtualization extensions")

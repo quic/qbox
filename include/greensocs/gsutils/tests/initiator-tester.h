@@ -113,7 +113,10 @@ protected:
 public:
     tlm_utils::simple_initiator_socket<InitiatorTester> socket;
 
-    InitiatorTester(const sc_core::sc_module_name& n): sc_core::sc_module(n) {
+    InitiatorTester(const sc_core::sc_module_name& n)
+        : sc_core::sc_module(n)
+        , socket("initiator_socket") 
+    {
         socket.register_invalidate_direct_mem_ptr(this,
                                                   &InitiatorTester::invalidate_direct_mem_ptr);
     }

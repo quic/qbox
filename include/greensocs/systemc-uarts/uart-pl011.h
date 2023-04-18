@@ -107,6 +107,11 @@ public:
     sc_core::sc_event update_event;
 
     SC_HAS_PROCESS(Pl011);
+    Pl011(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : Pl011(name)
+        {
+            set_backend(dynamic_cast<CharBackend*>(o));
+        }
     Pl011(sc_core::sc_module_name name): irq("irq"), s(nullptr) {
         SCP_DEBUG(SCMOD) << "Pl011 constructor";
         chr = NULL;

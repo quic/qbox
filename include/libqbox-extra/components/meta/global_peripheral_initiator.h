@@ -22,6 +22,7 @@
 
 #include "libqbox/ports/initiator.h"
 #include "libqbox/components/device.h"
+#include "libqbox/sc-qemu-instance.h"
 
 class GlobalPeripheralInitiator : public QemuInitiatorIface, public sc_core::sc_module
 {
@@ -36,7 +37,10 @@ public:
     virtual void initiator_set_local_time(const sc_core::sc_time&) override {}
 
     QemuInitiatorSocket<> m_initiator;
-
+    GlobalPeripheralInitiator(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
+        : GlobalPeripheralInitiator(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst(), *(dynamic_cast<QemuDevice*>(t)))
+        {
+        }
     GlobalPeripheralInitiator(const sc_core::sc_module_name& nm, QemuInstance& inst,
                               QemuDevice& owner)
         : m_initiator("global_initiator", *this, inst), m_owner(owner) {}

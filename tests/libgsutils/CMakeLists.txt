@@ -53,3 +53,5 @@ if (GS_ENABLE_SANITIZERS)
         ENVIRONMENT ASAN_OPTIONS="detect_leaks=1":$ENV{ASAN_OPTIONS}
         ENVIRONMENT LSAN_OPTIONS="suppressions=${CMAKE_CURRENT_SOURCE_DIR}/ignore_leaks.txt":$ENV{LSAN_OPTIONS})
 endif()
+
+add_subdirectory(factory)

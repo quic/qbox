@@ -27,6 +27,7 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/components/virtio/virtio-mmio.h"
+#include "libqbox/sc-qemu-instance.h"
 
 class QemuVirtioMMIOBlk : public QemuVirtioMMIO
 {
@@ -35,6 +36,10 @@ private:
     cci::cci_param<std::string> blkdev_str;
 
 public:
+    QemuVirtioMMIOBlk(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : QemuVirtioMMIOBlk(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst())
+        {
+        }
     QemuVirtioMMIOBlk(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuVirtioMMIO(nm, inst, "virtio-blk-device")
         , blkdev_id(std::string(name()) + "-id")

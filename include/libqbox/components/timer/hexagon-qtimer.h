@@ -28,6 +28,7 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/target-signal-socket.h"
 #include "libqbox/ports/initiator-signal-socket.h"
+#include "libqbox/sc-qemu-instance.h"
 
 class QemuHexagonQtimer : public QemuDevice
 {
@@ -51,6 +52,10 @@ public:
     sc_core::sc_vector<QemuInitiatorSignalSocket> irq;
 
 public:
+    QemuHexagonQtimer(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : QemuHexagonQtimer(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst())
+        {
+        }
     QemuHexagonQtimer(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuDevice(nm, inst, "qct-qtimer")
         , p_nr_frames("nr_frames", 2, "Number of frames")

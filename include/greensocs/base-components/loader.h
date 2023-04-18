@@ -290,14 +290,16 @@ protected:
     }
     void end_of_elaboration()
     {
+        int i = 0;
         for (std::string s : sc_cci_children(name())) {
             if (std::count_if(s.begin(), s.end(),
                               [](unsigned char c) { return std::isdigit(c); })) {
                 load(std::string(name()) + "." + s);
-            } else {
-                load(name());
-                break;
+                i++;
             }
+        }
+        if (i == 0){
+            SCP_WARN(SCMOD) << "No load clause found";
         }
     }
 

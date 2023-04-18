@@ -29,6 +29,7 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
+#include "libqbox/sc-qemu-instance.h"
 
 class QemuArmGicv3 : public QemuDevice
 {
@@ -60,14 +61,19 @@ public:
     sc_core::sc_vector<QemuInitiatorSignalSocket> fiq_out;
     sc_core::sc_vector<QemuInitiatorSignalSocket> virq_out;
     sc_core::sc_vector<QemuInitiatorSignalSocket> vfiq_out;
-
+    QemuArmGicv3(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : QemuArmGicv3(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst())
+        {
+        }
     QemuArmGicv3(const sc_core::sc_module_name& name, QemuInstance& inst, unsigned num_cpus = 0)
         : QemuDevice(name, inst, "arm-gicv3")
-        , p_num_cpu("num_cpu", num_cpus, "Number of CPU interfaces")
+        , p_num_cpu("num_cpus", num_cpus, "Number of CPU interfaces")
         , p_num_spi("num_spi", 0, "Number of shared peripheral interrupts")
         , p_revision("revision", 3, "Revision of the GIC (3 -> v3, the only supported revision)")
-        , p_redist_region("redist_region", std::vector<unsigned int>({}),
-                          "Redistributor regions configuration")
+        // , p_redist_region("redist_region", std::vector<unsigned int>({}),
+        //                   "Redistributor regions configuration")
+        , p_redist_region("redist_region", std::vector<unsigned int>(gs::cci_get_vector<unsigned int>(std::string(sc_module::name())+".redist_region")),
+                                                            "Redistributor regions configuration")
         , p_has_security_extensions("has_security_extensions", false, "Enable security extensions")
         , dist_iface("dist_iface", inst)
         , redist_iface("redist_iface", p_redist_region.get_value().size(),

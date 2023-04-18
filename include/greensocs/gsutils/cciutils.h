@@ -29,8 +29,6 @@
 #include <regex>
 
 #include "luafile_tool.h"
-#include "registers.h"
-
 #include <cci_configuration>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include <systemc>
@@ -42,6 +40,90 @@
 
 namespace gs {
 using namespace cci;
+
+/**
+ * @brief Basic function container for CCI
+ * Packing and unpacking are not supported
+ *
+ * @tparam templated over any function T(U...)
+ */
+template <typename, typename... U>
+class cci_function; // undefined
+template <typename T, typename... U>
+class cci_function<T(U...)> : public std::function<T(U...)> {
+    using std::function<T(U...)>::function;
+
+public:
+    // add operater== as required by CCI
+    bool operator==(const cci_function& rhs) const { assert(false); return false; }
+};
+
+/**
+ * @brief sc_module constructor container for CCI
+ * This uses the CCI Function container, and the FactoryMaker in order to parameterise the constructor and maintain type safety
+ * The actual parameters will be extracted (in a type safe manor) from a CCI list
+ */
+class cci_constructor_vl : public std::function<sc_core::sc_module*(
+                               sc_core::sc_module_name, cci::cci_value_list)> {
+    using std::function<sc_core::sc_module*(sc_core::sc_module_name,
+        cci::cci_value_list)>::function;
+
+public:
+    /**
+    * @brief The FactoryMaker carries the type infomation into the constructor functor.
+    * 
+    * @tparam Templated over T(U..)
+    */
+    template <typename T, typename... U>
+    class FactoryMaker {
+    public:
+        const char* type;
+        FactoryMaker<T, U...>(const char* _t)
+            : type(_t)
+        {
+        }
+    };
+
+    const char* type; // maintain a string representation of the type.
+
+    /**
+     * @brief Construct a new cci constructor vl object
+     * The FactoryMaker carries the type info into this constructor
+     * If the cci params can not be converted to the correct types (or the
+     * number of params is incorrect), the constructor generates errors.
+     * @tparam templated over T(U..)
+     */
+    template <typename _T, typename... U>
+    cci_constructor_vl(FactoryMaker<_T, U...> fm)
+        : std::function<sc_core::sc_module*(sc_core::sc_module_name name,
+            cci::cci_value_list v)>(
+            [&](sc_core::sc_module_name name,
+                cci::cci_value_list v) -> sc_core::sc_module* {
+                if (sizeof...(U) != v.size()) {
+                    SC_REPORT_ERROR("GS CCI UTILS",
+                        ("Wrong number of CCI arguments for module " + std::string(name))
+                            .c_str());
+                }
+                int n = 0;
+                try {
+                    return new _T(name, v[n++].get<U>()...);
+                } catch (...) {
+                    SC_REPORT_ERROR("GS CCI UTILS",
+                        ("CCI argument types dont match for module " + std::string(name))
+                            .c_str());
+                }
+                return nullptr;
+            })
+    {
+        type = fm.type;
+    }
+
+    // add operater== as required by CCI
+    bool operator==(const cci_constructor_vl& rhs) const {
+        SCP_FATAL("cciutils.operator") << "Operator required by CCI";
+        return false;
+    }
+};
 
 /**
  * @brief Helper function to find a sc_object by fully qualified name
@@ -130,7 +212,7 @@ static std::list<std::string> sc_cci_list_items(sc_core::sc_module_name module_n
                                      ? cci_get_broker()
                                      : cci_get_global_broker(cci_originator("gs__sc_cci_children"));
     std::string name = std::string(module_name) + "." + list_name;
-    std::regex search(name + "_[0-9]+(\\.|$)");
+    std::regex search(name + "_[0-9]+\\.");
     std::list<std::string> children;
     int l = strlen(module_name) + 1;
     auto uncon = m_broker.get_unconsumed_preset_values(
@@ -178,17 +260,26 @@ static std::string get_parent_name(sc_core::sc_module_name n) {
     return "";
 }
 
+template <typename T>
+std::vector<T> cci_get_vector(const std::string base)
+{
+    std::vector<T> ret;
+    for (std::string s : sc_cci_children(base.c_str())) {
+        if (std::count_if(s.begin(), s.end(), [](unsigned char c) { return std::isdigit(c); })) {
+            ret.push_back(cci_get<T>(base + "." + s));
+        }
+    }
+    return ret;
+}
+
 /**
  * @brief Configurable Broker class, inherits from the 'standard' cci_utils broker, but adds
  * 1/ The ability to be instanced in the constructor
  * 2/ The ability to automatically load a configuration file
  * 3/ Explicitly set parameters (from the constructor) are 'hidden' from the parent broker
  */
-class ConfigurableBroker : public virtual cci_utils::consuming_broker
+class ConfigurableBroker : public cci_utils::consuming_broker
 {
-private:
-    std::set<std::string> m_unignored; // before conf_file
-
 public:
     // a set of perameters that should be exposed up the broker stack
     std::set<std::string> hide;
@@ -411,9 +502,6 @@ public:
 
         std::string ending = "childbroker";
         for (auto p : get_param_handles(get_cci_originator("Command line help"))) {
-            if (find_register(p.name()))
-                continue;
-
             if (!std::equal(ending.rbegin(), ending.rend(), std::string(p.name()).rbegin())) {
                 std::cerr << p.name() << " : " << p.get_description() << " (configured value "
                           << p.get_cci_value() << ") " << std::endl;
@@ -426,11 +514,6 @@ public:
             }
         }
         if (top) {
-            std::cerr << std::endl << "Logging parameters :" << std::endl;
-            for (auto p : scp::get_logging_parameters()) {
-                std::cerr << p << std::endl;
-            }
-
             std::cerr << "---" << std::endl;
         }
     }
@@ -550,7 +633,7 @@ public:
         }
     }
 
-    cci_originator get_value_origin(const std::string& parname) const override {
+    cci_originator get_value_origin(const std::string& parname) const {
         if (sendToParent(parname)) {
             return m_parent.get_value_origin(parname);
         } else {
@@ -560,7 +643,7 @@ public:
 
     /* NB  missing from upstream CCI 'broker' see
      * https://github.com/OSCI-WG/cci/issues/258 */
-    bool has_preset_value(const std::string& parname) const override {
+    bool has_preset_value(const std::string& parname) const {
         if (sendToParent(parname)) {
             return m_parent.has_preset_value(parname);
         } else {
@@ -568,7 +651,7 @@ public:
         }
     }
 
-    cci_value get_preset_cci_value(const std::string& parname) const override {
+    cci_value get_preset_cci_value(const std::string& parname) const {
         if (sendToParent(parname)) {
             return m_parent.get_preset_cci_value(parname);
         } else {
@@ -576,7 +659,7 @@ public:
         }
     }
 
-    void lock_preset_value(const std::string& parname) override {
+    void lock_preset_value(const std::string& parname) {
         if (sendToParent(parname)) {
             return m_parent.lock_preset_value(parname);
         } else {
@@ -584,43 +667,33 @@ public:
         }
     }
 
-    cci_value get_cci_value(const std::string& parname, const cci::cci_originator& originator =
-                                                            cci::cci_originator()) const override {
+    cci_value get_cci_value(const std::string& parname) const {
         if (sendToParent(parname)) {
-            return m_parent.get_cci_value(parname, originator);
+            return m_parent.get_cci_value(parname);
         } else {
-            return consuming_broker::get_cci_value(parname, originator);
+            return consuming_broker::get_cci_value(parname);
         }
     }
 
-    void add_param(cci_param_if* par) override {
+    void add_param(cci_param_if* par) {
         if (sendToParent(par->name())) {
             return m_parent.add_param(par);
         } else {
-            auto iter = m_unignored.find(par->name());
-            if (iter != m_unignored.end()) {
-                m_unignored.erase(iter);
-            }
             return consuming_broker::add_param(par);
         }
     }
 
-    void remove_param(cci_param_if* par) override {
+    void remove_param(cci_param_if* par) {
         if (sendToParent(par->name())) {
             return m_parent.remove_param(par);
         } else {
-            m_unignored.insert(par->name());
             return consuming_broker::remove_param(par);
         }
     }
 
     // Upstream consuming broker fails to pass get_unconsumed_preset_value to parent
-    std::vector<cci_name_value_pair> get_unconsumed_preset_values() const override {
-        std::vector<cci_name_value_pair> r;
-        for (auto u : m_unignored) {
-            auto p = get_preset_cci_value(u);
-            r.push_back(std::make_pair(u, p));
-        }
+    std::vector<cci_name_value_pair> get_unconsumed_preset_values() const {
+        std::vector<cci_name_value_pair> r = consuming_broker::get_unconsumed_preset_values();
         if (has_parent) {
             std::vector<cci_name_value_pair> p = m_parent.get_unconsumed_preset_values();
             r.insert(r.end(), p.begin(), p.end());
@@ -629,21 +702,15 @@ public:
     }
 
     // Upstream consuming broker fails to pass ignore_unconsumed_preset_values
-    void ignore_unconsumed_preset_values(const cci_preset_value_predicate& pred) override {
+    void ignore_unconsumed_preset_values(const cci_preset_value_predicate& pred) {
         if (has_parent) {
             m_parent.ignore_unconsumed_preset_values(pred);
         }
-        for (auto u = m_unignored.begin(); u != m_unignored.end();) {
-            if (pred(make_pair(*u, cci_value(0)))) {
-                u = m_unignored.erase(u);
-            } else {
-                ++u;
-            }
-        }
+        consuming_broker::ignore_unconsumed_preset_values(pred);
     }
 
     cci_preset_value_range get_unconsumed_preset_values(
-        const cci_preset_value_predicate& pred) const override {
+        const cci_preset_value_predicate& pred) const {
         return cci_preset_value_range(pred, ConfigurableBroker::get_unconsumed_preset_values());
     }
 
@@ -651,16 +718,15 @@ public:
     // method variant.
 
     void set_preset_cci_value(const std::string& parname, const cci_value& cci_value,
-                              const cci_originator& originator) override {
+                              const cci_originator& originator) {
         if (sendToParent(parname)) {
             return m_parent.set_preset_cci_value(parname, cci_value, originator);
         } else {
-            m_unignored.insert(parname);
             return consuming_broker::set_preset_cci_value(parname, cci_value, originator);
         }
     }
     cci_param_untyped_handle get_param_handle(const std::string& parname,
-                                              const cci_originator& originator) const override {
+                                              const cci_originator& originator) const {
         if (sendToParent(parname)) {
             return m_parent.get_param_handle(parname, originator);
         }
@@ -675,7 +741,7 @@ public:
     }
 
     std::vector<cci_param_untyped_handle> get_param_handles(
-        const cci_originator& originator) const override {
+        const cci_originator& originator) const {
         if (has_parent) {
             std::vector<cci_param_untyped_handle> p_param_handles = m_parent.get_param_handles();
             std::vector<cci_param_untyped_handle>
@@ -691,9 +757,105 @@ public:
         }
     }
 
-    bool is_global_broker() const override { return (!has_parent); }
+    bool is_global_broker() const { return (!has_parent); }
 };
 } // namespace gs
+
+#define CCI_GS_MF_NAME "__GS.ModuleFactory."
+/**
+ * @brief Helper macro to register an sc_module constructor, complete with its (typed) arguments
+ *
+ */
+
+#define GSC_MODULE_REGISTER(__NAME__, ...)                                              \
+    cci::cci_param<gs::cci_constructor_vl>                                              \
+        GS_MODULEFACTORY_moduleReg_##__NAME__(                                          \
+            CCI_GS_MF_NAME #__NAME__,                                                   \
+            gs::cci_constructor_vl::FactoryMaker<__NAME__, ##__VA_ARGS__>(#__NAME__),   \
+            "default constructor", cci::CCI_ABSOLUTE_NAME,                              \
+            cci::cci_originator("GreenSocs Module Factory"))
+
+/**
+ * @brief CCI value converted
+ * notice that NO conversion is provided.
+ *
+ */
+template <>
+struct cci::cci_value_converter<gs::cci_constructor_vl> {
+    typedef gs::cci_constructor_vl type;
+    static bool pack(cci::cci_value::reference dst, type const& src)
+    {
+        dst.set_string(src.type);
+        return true;
+    }
+    static bool unpack(type& dst, cci::cci_value::const_reference src)
+    {
+        if (!src.is_string()) {
+            return false;
+        }
+        std::string moduletype;
+        if (!src.try_get(moduletype)) {
+            return false;
+        }
+        cci::cci_param_typed_handle<gs::cci_constructor_vl> m_fac(
+            cci::cci_get_broker().get_param_handle(CCI_GS_MF_NAME + moduletype));
+        if (!m_fac.is_valid()) {
+            SC_REPORT_ERROR("ModuleFactory",
+                ("Can't find module type: " + moduletype).c_str());
+            return false;
+        }
+        dst = *m_fac;
+
+        return true;
+    }
+};
+
+/**
+ * @brief Provide support for sc_core::sc_object as a CCI param, based on their fully qualified name
+ * 
+ */
+template <>
+struct cci::cci_value_converter<sc_core::sc_object*> {
+    typedef sc_core::sc_object* type;
+    static bool pack(cci::cci_value::reference dst, type const& src)
+    {
+        dst.set_string(src->name());
+        return true;
+    }
+    static bool unpack(type& dst, cci::cci_value::const_reference src)
+    {
+        if (!src.is_string()) {
+            return false;
+        }
+        std::string name;
+        if (!src.try_get(name)) {
+            return false;
+        }
+        sc_assert(name[0] == '&');
+        dst = gs::find_sc_obj(nullptr, name.substr(1));
+        return true;
+    }
+};
+
+/**
+ * @brief CCI value converted
+ * notice that NO conversion is provided.
+ * 
+ */
+template <typename T, typename... U>
+struct cci::cci_value_converter<gs::cci_function<T(U...)>> {
+    typedef gs::cci_function<T(U...)> type;
+    static bool pack(cci::cci_value::reference dst, type const& src)
+    {
+        // unimplemented
+        return false;
+    }
+    static bool unpack(type& dst, cci::cci_value::const_reference src)
+    {
+        // unimplemented
+        return false;
+    }
+};
 
 template <>
 struct cci::cci_value_converter<gs::ConfigurableBroker*> {

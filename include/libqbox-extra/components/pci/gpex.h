@@ -30,6 +30,7 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator.h"
 #include "libqbox/ports/initiator-signal-socket.h"
+#include "libqbox/sc-qemu-instance.h"
 
 #include <cinttypes>
 
@@ -91,10 +92,10 @@ protected:
      * those aliases we give to the two sockets, so that the relative addresses
      * are correct in the end.
      */
-    uint64_t m_mmio_addr;
-    uint64_t m_mmio_size;
-    uint64_t m_mmio_high_addr;
-    uint64_t m_mmio_high_size;
+    cci::cci_param <uint64_t> p_mmio_addr;
+    cci::cci_param <uint64_t> p_mmio_size;
+    cci::cci_param <uint64_t> p_mmio_high_addr;
+    cci::cci_param <uint64_t> p_mmio_high_size;
 
     qemu::MemoryRegion m_mmio_alias;
     qemu::MemoryRegion m_mmio_high_alias;
@@ -102,8 +103,12 @@ protected:
     std::vector<Device*> devices;
 
 public:
-    QemuGPEX(const sc_core::sc_module_name& name, QemuInstance& inst, uint64_t mmio_addr,
-             uint64_t mmio_size, uint64_t mmio_high_addr, uint64_t mmio_high_size)
+    QemuGPEX(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : QemuGPEX(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst())
+        {
+        }
+    QemuGPEX(const sc_core::sc_module_name& name, QemuInstance& inst, uint64_t mmio_addr=0x00,
+             uint64_t mmio_size=0x00, uint64_t mmio_high_addr=0x00, uint64_t mmio_high_size=0x00)
         : QemuDevice(name, inst, "gpex-pcihost")
         , bus_master("bus_master", *this, inst)
         , ecam_iface("ecam_iface", inst)
@@ -112,11 +117,13 @@ public:
         , pio_iface("pio_iface", inst)
         , irq_out("irq_out", 4)
         , irq_num{ -1, -1, -1, -1 }
-        , m_mmio_addr(mmio_addr)
-        , m_mmio_size(mmio_size)
-        , m_mmio_high_addr(mmio_high_addr)
-        , m_mmio_high_size(mmio_high_size)
-        , devices() {}
+        , p_mmio_addr("mmio_iface.address", mmio_addr, "Interface MMIO address")
+        , p_mmio_size("mmio_iface.size", mmio_size, "Interface MMIO size")
+        , p_mmio_high_addr("mmio_iface_high.address", mmio_high_addr, "High Interface MMIO address")
+        , p_mmio_high_size("mmio_iface_high.size", mmio_high_size, "High Interface MMIO size")
+        , devices() {
+            sc_assert(p_mmio_addr != 0);
+        }
 
     void add_device(Device& dev) {
         if (m_inst != dev.get_qemu_inst()) {
@@ -141,10 +148,10 @@ public:
         m_mmio_alias = m_inst.get().object_new<qemu::MemoryRegion>();
         m_mmio_high_alias = m_inst.get().object_new<qemu::MemoryRegion>();
 
-        m_mmio_alias.init_alias(m_dev, "mmio-alias", mmio_mr, m_mmio_addr, m_mmio_size);
+        m_mmio_alias.init_alias(m_dev, "mmio-alias", mmio_mr, p_mmio_addr, p_mmio_size);
 
-        m_mmio_high_alias.init_alias(m_dev, "mmio-high-alias", mmio_mr, m_mmio_high_addr,
-                                     m_mmio_high_size);
+        m_mmio_high_alias.init_alias(m_dev, "mmio-high-alias", mmio_mr, p_mmio_high_addr,
+                                     p_mmio_high_size);
 
         ecam_iface.init(gpex, 0);
         mmio_iface.init_with_mr(m_mmio_alias);

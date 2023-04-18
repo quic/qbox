@@ -44,9 +44,9 @@ public:
      */
     QemuVirtioMMIO(sc_core::sc_module_name nm, QemuInstance& inst, const char* device_type)
         : QemuDevice(nm, inst, device_type)
-        , virtio_mmio_device("virtio-mmio", inst, "virtio-mmio")
+        , virtio_mmio_device("virtio_mmio", inst, "virtio-mmio")
         , socket("mem", inst)
-        , irq_out("irq-out") {}
+        , irq_out("irq_out") {}
 
     void before_end_of_elaboration() override {
         virtio_mmio_device.instantiate();
