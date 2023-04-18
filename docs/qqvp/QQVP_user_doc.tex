@@ -130,15 +130,15 @@ Cmake is installed in the following directory. Either include this location in y
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Fetch the sources}
 
-Extract the platform in {\small{\lstinline!$HOME/quic-vp!}}.
+Extract the platform in {\small{\lstinline!$HOME/qqvp!}}.
 
 If you have an SSH key, enter the following commands:
 
 \small
 \begin{lstlisting}[language=bash]
     # cd $HOME
-    # git clone git@git.codelinaro.org:clo/private/qqvp/quic-vp.git
-    # cd quic-vp
+    # git clone git@git.codelinaro.org:clo/private/qqvp/qqvp.git
+    # cd qqvp
 \end{lstlisting}
 \normalsize
 
@@ -147,8 +147,8 @@ Otherwise, enter these commands:
 \small
 \begin{lstlisting}[language=bash]
     # cd $HOME
-    # git clone https://git.codelinaro.org/clo/private/qqvp/quic-vp.git
-    # cd quic-vp
+    # git clone https://git.codelinaro.org/clo/private/qqvp/qqvp.git
+    # cd qqvp
 \end{lstlisting}
 \normalsize
 
@@ -196,7 +196,7 @@ The build operation will take 5 to 20 minutes, depending on your build system co
 
 \small
 \begin{lstlisting}[language=bash]
-    # cd $HOME/quic-vp
+    # cd $HOME/qqvp
     # cmake -B build
     # cd build
     # make -j
@@ -368,21 +368,21 @@ exactly the same as {\footnotesize{\lstinline!--gs_luafile file.lua!}}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \vspace{9pt}{\large \textbf {\textsf{Configuration file}}}
 
-A configuration file defined for the SoC is provided in the quic-vp git
+A configuration file defined for the SoC is provided in the qqvp git
 repository: {\small{\lstinline!*conf.lua!}} and is installed into
-{\small{\lstinline!$CMAKE_INSTALL_PREFIX/etc/vp/*/<SoC>/bsp/<OS>/conf.lua!}}
+{\small{\lstinline!$CMAKE_INSTALL_PREFIX/etc/vp/fw/<SoC>/bsp/<OS>/conf.lua!}}
 
 \caution Changes to this lua configuration file might make the virtual platform inoperable.
 
 This configuration sets the required system parameters,
 but also expects an additional configuration file to specify the
 various firmware and binary files required (using an environment variable
-{\small{\lstinline!QQVP_IMAGE_DIR!}}.  An example of such a file can be found
-in the quic-vp repo under {\small{\lstinline!examples/conf.lua!}}.
+{\small{\lstinline!QQVP_IMAGE_DIR!}}.  Examples of such a file can be found
+in the qqvp repo under {\small{\lstinline!configs/conf_*.lua!}}.
 
 This can be run as follows:
 
-{\small{\lstinline!QQVP_IMAGE_DIR=/your/image/directory /path/to/vp_install/bin/vp --gs_luafile /path/to/vp_install/etc/vp/8540/SA8540P_conf.lua!}}
+{\small{\lstinline!QQVP_IMAGE_DIR=/your/image/directory /path/to/vp_install/bin/vp --gs_luafile /path/to/vp_install/etc/vp/fw/8540/SA8540P_conf.lua!}}
 
 The image directory must contain a conf.lua file. The example provided assumes
 the files are locally stored in the same directory. Note that
@@ -489,16 +489,16 @@ From a QNX VBSP build, load the following files into memory in the {\small{\lsti
 \end{lstlisting}
 \normalsize
 
-For the <soc-name> SoC, stage the binaries as indicated above and use the {\small{\lstinline!<soc-name>_conf.lua!}} file provided in the quic-vp git repository:
+For the <soc-name> SoC, stage the binaries as indicated above and use the {\small{\lstinline!<soc-name>_conf.lua!}} file provided in the qqvp git repository:
 
 \small
 \begin{lstlisting}[language=bash]
-    # ./vp --gs_luafile <soc-name>_conf.lua
+    # ./vp --gs_luafile configs/fw/<soc-num>/<soc-name>_conf.lua
 \end{lstlisting}
 \normalsize
 
 
-The following is an excerpt from the relevant {\small{\lstinline!load!}} section. For an unabridged example, see {\color{blue}{\url{https://git.codelinaro.org/clo/private/qqvp/quic-vp/-/blob/e2bbbcc66141d2b3f6ab6445fcbf04344d761ff5/<soc-name>_conf.lua}}}.
+The following is an excerpt from the relevant {\small{\lstinline!load!}} section. For an unabridged example, see {\color{blue}{\url{https://git.codelinaro.org/clo/private/qqvp/qqvp/-/blob/875f7dce96930fda907ff4293c8b05771e828cdf/configs/fw/8775/SA8775P_conf.lua}}}.
 
 \small
 \begin{lstlisting}[language=bash]
@@ -790,15 +790,15 @@ List the tracing options:
 
 \small
 \begin{lstlisting}[language=bash]
-    bin/vp --gs_luafile SA8775P_conf.lua --param 'platform.ArmQemuInstance.args.-d="help"'
-    bin/vp --gs_luafile SA8775P_conf.lua --param 'platform.hexagon_cluster_0.HexagonQemuInstance.args.-d="help"'
+    bin/vp --gs_luafile etc/vp/fw/8775/SA8775P_conf.lua --param 'platform.ArmQemuInstance.args.-d="help"'
+    bin/vp --gs_luafile etc/vp/fw/8775/SA8775P_conf.lua --param 'platform.hexagon_cluster_0.HexagonQemuInstance.args.-d="help"'
 \end{lstlisting}
 \normalsize
 
 \small
 \begin{lstlisting}[language=bash]
-    bin/vp --gs_luafile SA8775P_conf.lua --param 'platform.ArmQemuInstance.args.-d="trace:help"'
-    bin/vp --gs_luafile SA8775P_conf.lua --param 'platform.hexagon_cluster_0.HexagonQemuInstance.args.-d="trace:help"'
+    bin/vp --gs_luafile etc/vp/fw/8775/SA8775P_conf.lua --param 'platform.ArmQemuInstance.args.-d="trace:help"'
+    bin/vp --gs_luafile etc/vp/fw/8775/SA8775P_conf.lua --param 'platform.hexagon_cluster_0.HexagonQemuInstance.args.-d="trace:help"'
 \end{lstlisting}
 \normalsize
 
@@ -986,7 +986,7 @@ virglrenderer with support for such a command or some of its parameters.
 In this case, you could either:
 
 \begin{itemize}
-\item Update the virglrenderer library installed in your system and recompile quic-vp
+\item Update the virglrenderer library installed in your system and recompile qqvp
 \item Downgrade the guest kernel to an older version
 \item Disable the GPU device by setting the {\small{\lstinline!platform["with_gpu"]!}} option to {\small{\lstinline!false!}}
 \end{itemize}
