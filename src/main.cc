@@ -289,7 +289,7 @@ protected:
 
     QemuGPEX* m_gpex;
     QemuVirtioGpuGlPci* m_gpu;
-    QemuDisplay* m_display;
+    QemuDisplay* m_display = nullptr;
     sc_core::sc_vector<QemuHexagonQtimer> m_qtimers;
 
     gs::Memory<> m_fallback_mem;
@@ -528,7 +528,10 @@ public:
         if (p_with_gpu.get_value()) {
             m_gpu = new QemuVirtioGpuGlPci("gpu", m_qemu_inst);
             m_gpex->add_device(*m_gpu);
+#ifdef __APPLE__
+            // Our custom QemuDisplay is only required on MacOS
             m_display = new QemuDisplay("display", *m_gpu);
+#endif
         }
         if (m_rams.size() <= 0) {
             SCP_ERR(SCMOD) << "Please specify at least one memory (ram_0)";
@@ -678,7 +681,9 @@ public:
         }
 #endif
         if (p_with_gpu.get_value()) {
-            delete m_display;
+            if (m_display) {
+                delete m_display;
+            }
             delete m_gpu;
         }
         delete m_gpex;
