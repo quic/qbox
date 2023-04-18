@@ -165,6 +165,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
      ${CMAKE_DL_LIBS}
 )
 
+set(LIBQEMU_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqemu)
 set_property(TARGET ${PROJECT_NAME}
     PROPERTY INSTALL_RPATH ${LIBQEMU_LIB_DIR})
 
