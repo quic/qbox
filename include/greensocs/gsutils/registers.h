@@ -398,10 +398,11 @@ public:
         , m_bitfield(reg, p_bit_start, p_bit_length)
     {
         SCP_TRACE(())("constructor");
-        sc_assert(p_bit_length > 0);
+        if (p_bit_length == 0) SCP_FATAL(())("Can't find bit length for {}", name);
     }
 
     void operator=(TYPE value) { m_bitfield = value; }
+    void operator=(gs_field<TYPE>& value) { m_bitfield = (TYPE)value; }
 
     operator TYPE() { return m_bitfield; }
 
