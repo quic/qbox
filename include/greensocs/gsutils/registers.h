@@ -171,8 +171,6 @@ class proxy_data_array
 
     tlm::tlm_generic_payload m_txn;
     TYPE* m_dmi = nullptr;
-    cci::cci_param<uint64_t> p_offset;
-    cci::cci_param<uint64_t> p_number;
 
     void check_dmi()
     {
@@ -193,6 +191,10 @@ class proxy_data_array
     }
 
 public:
+    cci::cci_param<uint64_t> p_offset;
+    cci::cci_param<uint64_t> p_number;
+    cci::cci_param<std::string> p_path_name;
+
     tlm_utils::simple_initiator_socket<proxy_data_array> initiator_socket;
 
     void get(TYPE* dst, uint64_t idx = 0, uint64_t length = 1)
@@ -256,6 +258,7 @@ public:
     proxy_data_array(scp::scp_logger_cache& logger, std::string name, std::string path_name, uint64_t _offset = 0,
                      uint64_t number = 1)
         : SCP_LOGGER_NAME()(logger)
+        , p_path_name(name + ".path_name", path_name, "path name for this register")
         , initiator_socket((name + "_initiator_socket").c_str())
         , p_offset(path_name + ".target_socket.address", _offset, "Offset of this register")
         , p_number(path_name + ".number", number, "number of elements in this register")
@@ -270,59 +273,39 @@ public:
 
 /**
  * @brief  A proxy data class that stores it's value using a b_transport interface
- *  Data is passed by value. Bit manipulation (fields) is supported.
+ *  Data is passed by value.
  */
 template <class TYPE = uint32_t>
 class proxy_data : public proxy_data_array<TYPE>
 {
     scp::scp_logger_cache& SCP_LOGGER_NAME();
 
-    cci::cci_param<uint32_t> p_bit_start;
-    cci::cci_param<uint32_t> p_bit_length;
-
 public:
-    TYPE mask(TYPE v) { return (v >> p_bit_start) & ((1ull << p_bit_length) - 1); }
     TYPE get()
     {
         TYPE tmp;
         proxy_data_array<TYPE>::get(&tmp);
-        if (p_bit_start == 0 && p_bit_length == sizeof(TYPE) * 8) {
-            return tmp;
-        } else {
-            SCP_TRACE(())("Get value: 0x{:x}", mask(tmp));
-            return mask(tmp);
-        }
+        return tmp;
     }
     operator TYPE() { return get(); }
 
-    void set(TYPE value)
-    {
-        sc_assert(value < (1ull << p_bit_length));
-        if (p_bit_start == 0 && p_bit_length == sizeof(TYPE) * 8) {
-            proxy_data_array<TYPE>::set(&value);
-        } else {
-            SCP_TRACE(())("Set value: 0x{:x}", value);
-            TYPE tmp;
-            proxy_data_array<TYPE>::get(&tmp);
-            tmp &= ~(((1ull << p_bit_length) - 1) << p_bit_start);
-            tmp |= value << p_bit_start;
-            proxy_data_array<TYPE>::set(&tmp);
-        }
-    }
+    void set(TYPE value) { proxy_data_array<TYPE>::set(&value); }
     void operator=(TYPE value) { set(value); }
 
-    proxy_data(scp::scp_logger_cache& logger, std::string name, std::string path_name, std::string field_name,
-               uint64_t offset = 0, uint64_t start = 0, uint64_t length = sizeof(TYPE) * 8)
+    proxy_data(scp::scp_logger_cache& logger, std::string name, std::string path_name, uint64_t offset = 0,
+               uint64_t start = 0, uint64_t length = sizeof(TYPE) * 8)
         : proxy_data_array<TYPE>(logger, name, path_name, offset, 1)
         , SCP_LOGGER_NAME()(logger)
-        , p_bit_start(path_name + "." + field_name + ".bit_start", start, "Start bit of field")
-        , p_bit_length(path_name + "." + field_name + ".bit_length", length, "length of field")
     {
         static_assert(std::is_unsigned<TYPE>::value, "Register types must be unsigned");
-        sc_assert(p_bit_start + p_bit_length <= sizeof(TYPE) * 8);
     }
 };
 
+/* forward declaration */
+template <class TYPE = uint32_t>
+class gs_bitfield;
+template <class TYPE = uint32_t>
+class gs_field;
 /**
  * @brief Class that encapsulates a 'register' that proxies it's data via a tlm interface,
  * and uses callbacks (on a tlm interface)
@@ -335,10 +318,9 @@ class gs_register : public port_fnct, public proxy_data<TYPE>
 
 public:
     gs_register() = delete;
-    gs_register(std::string name, std::string path = "", std::string field_name = "")
-        : port_fnct(name, (path.size() ? path + "." : "") + name)
-        , proxy_data<TYPE>(SCP_LOGGER_NAME(), name, (path.size() ? path + "." : "") + name,
-                           field_name.empty() ? "" : field_name)
+    gs_register(std::string name, std::string path = "")
+        : port_fnct(name, path)
+        , proxy_data<TYPE>(SCP_LOGGER_NAME(), name, path)
     {
         std::string n(sc_core::sc_module::name());
         n = n.substr(0, n.length() - strlen("_target_socket")); // get rid of last part of string
@@ -356,7 +338,76 @@ public:
     void operator>>=(TYPE other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get() >> other); }
 
     TYPE& operator[](int idx) { return proxy_data_array<TYPE>::operator[](idx); }
+
+    gs_bitfield<TYPE> operator[](gs_field<TYPE>& f) { return gs_bitfield<TYPE>(*this, f); }
 };
+
+/**
+ * @brief Proxy for bitfield access to a register.
+ *
+ */
+template <class TYPE>
+class gs_bitfield
+{
+    uint32_t start, length;
+    gs_register<TYPE>& m_reg;
+
+public:
+    gs_bitfield(gs_register<TYPE>& r, uint32_t s, uint32_t l)
+        : m_reg(r)
+        , start(s)
+        , length(l)
+    {
+    }
+
+    gs_bitfield(gs_register<TYPE>& r, gs_bitfield& f)
+        : m_reg(r)
+        , start(f.start)
+        , length(f.length)
+    {
+    }
+
+    void operator=(TYPE value)
+    {
+        sc_assert(value < (1ull << length));
+        m_reg &= ~(((1ull << length) - 1) << start);
+        m_reg |= value << start;
+    }
+    operator TYPE() { return (m_reg >> start) & ((1ull << length) - 1); }
+};
+
+/**
+ * @brief fields within registered encapsulated using a bitfield proxy.
+ * This field is constructed from a specific bit field in a specific register. The bitfield itself may be re-used to use
+ * the same field in another register.
+ */
+template <class TYPE>
+class gs_field
+{
+    SCP_LOGGER();
+    gs_register<TYPE>& m_reg;
+    cci::cci_param<uint32_t> p_bit_start;
+    cci::cci_param<uint32_t> p_bit_length;
+    gs_bitfield<TYPE> m_bitfield;
+
+public:
+    gs_field(gs_register<TYPE>& reg, std::string name)
+        : m_reg(reg)
+        , p_bit_start(reg.p_path_name.get_value() + "." + name + ".bit_start", 0, "Start bit of field")
+        , p_bit_length(reg.p_path_name.get_value() + "." + name + ".bit_length", 0, "length of field")
+        , m_bitfield(reg, p_bit_start, p_bit_length)
+    {
+        SCP_TRACE(())("constructor");
+        sc_assert(p_bit_length > 0);
+    }
+
+    void operator=(TYPE value) { m_bitfield = value; }
+
+    operator TYPE() { return m_bitfield; }
+
+    operator gs::gs_bitfield<TYPE>&() { return m_bitfield; }
+};
+
 } // namespace gs
 
 #endif // GS_REGISTERS_H
