@@ -500,6 +500,7 @@ public:
         static struct option long_options[] = { { "debug", 0, 0, 'd' }, // '--debug' = '-d'
                                                 { 0, 0, 0, 0 } };
 
+        opterr = 0;
         optind = 1;
         while (1) {
             int c = getopt_long(argc, argv, optstring, long_options, 0);
