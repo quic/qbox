@@ -46,6 +46,7 @@
 #include <tlm_utils/multi_passthrough_target_socket.h>
 
 #include <greensocs/base-components/pathid_extension.h>
+#include <greensocs/gsutils/cciutils.h>
 
 namespace gs {
 
@@ -148,20 +149,6 @@ private:
 
         bound_targets.push_back(ti);
     }
-    std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
-    {
-        std::list<std::string> children;
-        int l = strlen(name) + 1;
-        auto uncon = m_broker.get_unconsumed_preset_values([&name](const std::pair<std::string, cci_value>& iv) {
-            return iv.first.find(std::string(name) + ".") == 0;
-        });
-        for (auto p : uncon) {
-            children.push_back(p.first.substr(l, p.first.find(".", l) - l));
-        }
-        children.sort();
-        children.unique();
-        return children;
-    }
     std::map<uint64_t, std::string> name_map;
     std::string txn_tostring(struct target_info* ti, tlm::tlm_generic_payload& trans)
     {
@@ -192,7 +179,7 @@ private:
             }
             if (!found) {
                 if (name_map.empty()) {
-                    for (auto nn : sc_cci_children(parent(name()).c_str())) {
+                    for (auto nn : gs::sc_cci_children(parent(name()).c_str())) {
                         std::string fn = parent(name()) + "." + nn;
                         uint64_t n_addr = get_val<uint64_t>(fn + ".target_socket.address", 0);
                         uint64_t n_size = get_val<uint64_t>(fn + ".target_socket.size", 0);
@@ -241,6 +228,7 @@ public:
 
 private:
     std::vector<target_info> bound_targets;
+    std::vector<target_info> alias_targets;
     std::vector<target_info*> targets;
     std::vector<target_info*> cb_targets;
     std::vector<target_info*> id_targets;
@@ -290,7 +278,7 @@ private:
         auto ti = decode_address(trans);
         if (!ti) {
             SCP_WARN(())("Attempt to access unknown register at offset 0x{:x}", addr);
-            trans.set_response_status(tlm::TLM_COMMAND_ERROR_RESPONSE);
+            trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return;
         }
 
@@ -513,8 +501,23 @@ private:
                 cb_targets.push_back(&ti);
             } else {
                 targets.push_back(&ti);
+
+                for (std::string n : gs::sc_cci_children((ti.name + ".aliases").c_str())) {
+                    std::string name = ti.name + ".aliases." + n;
+                    uint64_t address = get_val<uint64_t>(name + ".address");
+                    uint64_t size = get_val<uint64_t>(name + ".size");
+                    SCP_INFO((D[ti.index]), ti.name)("Adding alias {} {:#x} (size: {})", name, address, size);
+                    struct target_info ati = ti;
+                    ati.address = address;
+                    ati.size = size;
+                    ati.name = name;
+                    alias_targets.push_back(ati);
+                }
+                id_targets.push_back(&ti);
             }
-            id_targets.push_back(&ti);
+        }
+        for (auto& ati : alias_targets) {
+            targets.push_back(&ati);
         }
     }
 

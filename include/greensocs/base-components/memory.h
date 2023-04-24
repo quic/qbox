@@ -30,7 +30,7 @@
 #include <cci_configuration>
 #include <systemc>
 #include <tlm>
-#include <tlm_utils/simple_target_socket.h>
+#include <tlm_utils/multi_passthrough_target_socket.h>
 #include <scp/report.h>
 #include <scp/helpers.h>
 
