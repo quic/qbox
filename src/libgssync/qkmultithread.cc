@@ -160,10 +160,9 @@ void tlm_quantumkeeper_multithread::sync() {
         m_tick.notify();
         sc_core::wait(t);
     } else {
+        std::unique_lock<std::mutex> lock(mutex);
         /* Wake up the SystemC thread if it's waiting for us to keep up */
         m_tick.notify();
-
-        std::unique_lock<std::mutex> lock(mutex);
         /* Wait for some run budget */
         cond.wait(lock,
                   [this] { return status == STOPPED || time_to_sync() != sc_core::SC_ZERO_TIME; });
