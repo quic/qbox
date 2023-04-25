@@ -2,11 +2,13 @@
 # This file should be committed to version control
 
 # cci
-CPMDeclarePackage(cci
-  NAME cci
+CPMDeclarePackage(SystemCCCI
+  NAME SystemCCCI
   GIT_TAG v1.0.0.1
   GIT_REPOSITORY ${ACCELLERA_GIT}accellera/cci.git
   GIT_SHALLOW on
+  OPTIONS
+      "SYSTEMCCCI_BUILD_TESTS OFF"
 )
 
 # SystemC
