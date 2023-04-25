@@ -329,6 +329,7 @@ After the kernel boots up, you can interact with it directly by entering the fol
 \clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Command line options}
+\label{sec:cliOptions}
 
 The QQVP is configured and controlled using a CCI-compatible configuration broker.
 
@@ -358,11 +359,11 @@ This option is useful to both find the names of configurable parameters and to c
 {\textbf {\footnotesize{\lstinline!-h!}}}
 \vspace{-2pt}
 \begin{quote}
-Displays all the available command line options, as described here.
+Displays available command line options, as described here.
 \end{quote}
 
-Any extra non-option arguments (i.e. arguments not prefixed with `-' or `-{}-')
-are treated as lua configuration files. That is, a `file.lua' argument is handled
+Any extra non-option arguments, that is, arguments not prefixed with '-' or '-{}-'
+are treated as lua configuration files. For example, a `file.lua' argument is handled
 exactly the same as {\footnotesize{\lstinline!--gs_luafile file.lua!}}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -879,6 +880,7 @@ This model feature is enabled only if the Lua config
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Example of build failure while building QQVP}
+\label{sec:missingLibElfDev}
 
 The following error indicates that {\small{\lstinline!libelf-dev!}} is not installed.
 
