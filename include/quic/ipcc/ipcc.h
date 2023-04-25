@@ -10,6 +10,7 @@
 #include <cci_configuration>
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 
 #include <scp/report.h>
 
@@ -157,6 +158,8 @@ private:
     sc_core::sc_event update_irq_ev;
 
 protected:
+    cci::cci_param<unsigned int> p_num_irq;
+
     uint32_t read(IPC_client& src, uint64_t addr) {
         uint32_t ret = src.regs[addr / 4];
         // Side effects
@@ -322,11 +325,17 @@ protected:
 
 public:
     tlm_utils::simple_target_socket<IPCC> socket;
-    InitiatorSignalSocket<bool> irq[MAX_CLIENT_SIZE];
+    // InitiatorSignalSocket<bool> irq[MAX_CLIENT_SIZE];
+    sc_core::sc_vector<InitiatorSignalSocket<bool>> irq;
     bool irq_status[MAX_CLIENT_SIZE] = { false };
 
     SC_HAS_PROCESS(IPCC);
-    IPCC(sc_core::sc_module_name name): socket("socket") {
+
+    IPCC(sc_core::sc_module_name name)
+    : p_num_irq ("num_irq", MAX_CLIENT_SIZE, "Number of irq")
+    , socket("target_socket")
+    , irq ("irq", p_num_irq)
+    {
         int client_size = client[0][0].p_client_size;
         for (int p = 0; p < 3; p++) {
             for (int c = 0; c < client_size; c++) {
@@ -344,3 +353,5 @@ public:
 
     ~IPCC() {}
 };
+
+GSC_MODULE_REGISTER(IPCC);

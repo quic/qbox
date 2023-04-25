@@ -116,91 +116,239 @@ if ACCEL == nil then
     ACCEL = "tcg"
 end
 print("Virtual acceleration: " .. ACCEL)
+local ARCH_TIMER_VIRT_IRQ = 16 + 11
+local ARCH_TIMER_S_EL1_IRQ = 16 + 13
+local ARCH_TIMER_NS_EL1_IRQ = 16 + 14
+local ARCH_TIMER_NS_EL2_IRQ = 16 + 10
+
+local ARM_NUM_CPUS = 8;
+local NUM_REDISTS = 1;
+local HEXAGON_NUM_CLUSTERS = 2;
 
 platform = {
-    arm_num_cpus = 8;
-    num_redists = 1;
     with_gpu = false;
 
     hexagon_num_clusters = 2;
-    hexagon_cluster_0 = nsp0ss;
-    hexagon_cluster_1 = nsp1ss;
     quantum_ns = 10000000;
 
-    ArmQemuInstance = { accel=ACCEL, tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
+    moduletype="Container";
 
-    ram_0=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=14*GiB}};
-    ram_1=  {  target_socket = {address=0x800000000, size=32*GiB}};
-    hexagon_ram_0={target_socket={address=NSP0_VTCM_BASE_ADDR, size=NSP0_VTCM_SIZE_BYTES}};
-    hexagon_ram_1={target_socket={address=NSP1_VTCM_BASE_ADDR, size=NSP1_VTCM_SIZE_BYTES}};
-    gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
-             redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0x1C0000}};
-    virtionet0= { mem    =   {address=0x1c120000, size=0x10000}, irq=18, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21"};
-    rtl8139 = { netdev_str = "type=user"}; -- MAC address can be overriden using mac="<mac address>", a Qemu generated MAC address is used by default.
---    virtioblk_0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..SYSTEM_QDRIVE..",format=raw,if=none"};
 
-    qtimer_0=   { mem     =   {address=0x17c20000, size=0x1000};
-                  mem_view=   {address=0x17c21000, size=0x1000*2*7}; -- 0x1000*nr_frames*nr_views
-                  irq0=40;irq1=41;irq2=42;irq3=43;irq4=44;irq5=45;irq6=46;
-                  nr_frames=7;nr_views=2;cnttid=0x1111515};
-    uart = { simple_target_socket_0 = {address= UART0, size=0x1000},
-        irq=379,
-        stdio=true,
-        input=false,
-        port=nil,
+    hexagon_cluster_0 = nsp0ss;
+    hexagon_cluster_1 = nsp1ss;
+
+    router = {
+        moduletype="Router";
+        log_level=0;
+        -- target_socket = {bind = "&tbu_2.downstream_socket"};
+    },
+
+    ram_0 = {
+        moduletype="Memory";
+        target_socket= {size = DDR_SPACE_SIZE/2,
+                        address=INITIAL_DDR_SPACE_14GB;
+                        bind = "&router.initiator_socket";}
+    },
+    ram_1 = {
+        moduletype="Memory";
+        target_socket= {size = DDR_SPACE_SIZE/2,
+                        address=INITIAL_DDR_SPACE_14GB+(DDR_SPACE_SIZE/2);
+                        bind = "&router.initiator_socket";}
+    },
+    hexagon_ram_0 = {
+        moduletype="Memory";
+        target_socket= {size = NSP0_VTCM_SIZE_BYTES,
+                        address=NSP0_VTCM_BASE_ADDR;
+                        bind = "&router.initiator_socket";}
+    },
+    hexagon_ram_1 = {
+        moduletype="Memory";
+        target_socket= {size = NSP1_VTCM_SIZE_BYTES,
+                        address=NSP1_VTCM_BASE_ADDR;
+                        bind = "&router.initiator_socket";}
+    },
+
+    qemu_inst_mgr = {
+        moduletype = "SC_QemuInstanceManager";
+    },
+
+    qemu_inst_mgr_h = {
+        moduletype = "SC_QemuInstanceManager";
+    },
+
+    qemu_inst= {
+        moduletype="SC_QemuInstance";
+        args = {"&platform.qemu_inst_mgr", "AARCH64"};
+        QemuInstance = {tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
+    },
+
+
+    gic_0=  {
+                moduletype = "QemuArmGicv3",
+                args = {"&platform.qemu_inst"},
+                dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR, bind = "&router.initiator_socket"};
+                redist_iface_0= {address=APSS_GIC600_GICD_APSS+OFFSET_APSS_ALIAS0_GICR_CTLR, size=0x1C0000, bind = "&router.initiator_socket"};
+                num_cpus = ARM_NUM_CPUS,
+                -- 64 seems reasonable, but can be up to
+                -- 960 or 987 depending on how the gic
+                -- is used MUST be a multiple of 32
+                redist_region = {ARM_NUM_CPUS / NUM_REDISTS};
+                num_spi=960};
+    virtionet0_0= { 
+                    moduletype = "QemuVirtioMMIONet",
+                    args = {"&platform.qemu_inst"};
+                    mem    =   {address=0x1c120000, size=0x10000, bind = "&router.initiator_socket"},
+                    irq_out = {bind = "&gic_0.spi_in_18"},
+
+                    netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21",
+    };
+--    virtioblk_0= { mem    =   {address=0x1c0d0000, size=0x2000}, 
+--                     irqs = {
+--                         {irq=9, dst = "platform.gic.spi_in_9"},
+--                     };
+--                     blkdev_str="file="..SYSTEM_QDRIVE..",format=raw,if=none",
+--     };
+
+    qtimer_0=   { 
+        moduletype = "QemuHexagonQtimer",
+        args = {"&platform.qemu_inst"};
+        mem  =   {address=0x17c20000, size=0x1000, bind = "&router.initiator_socket"};
+        mem_view=   {address=0x17c21000, size=0x1000*2*7, bind = "&router.initiator_socket"};
+        irq_0 = {bind = "&gic_0.spi_in_40"},
+        irq_1 = {bind = "&gic_0.spi_in_41"},
+        irq_2 = {bind = "&gic_0.spi_in_42"},
+        irq_3 = {bind = "&gic_0.spi_in_43"},
+        irq_4 = {bind = "&gic_0.spi_in_44"},
+        irq_5 = {bind = "&gic_0.spi_in_45"},
+        irq_6 = {bind = "&gic_0.spi_in_46"},
+        nr_frames=7;nr_views=2;cnttid=0x1111515};
+
+    charbackend_stdio_0 = {
+        moduletype = "CharBackendStdio";
+        args = {false};
     };
 
-    ipcc= {  socket        = {address=IPC_ROUTER_TOP, size=0xfc000},
-             irqs = {
-                {irq=8, dst = "platform.gic.spi_in_229"},
-                {irq=18, dst = "platform.hexagon_cluster_1.l2vic.irq_in_30"}, -- NB relies on 2 clusters
-                {irq=6,  dst = "platform.hexagon_cluster_0.l2vic.irq_in_30"},
-            }
+    pl011 = {
+        moduletype = "Pl011",
+        args = {"&platform.charbackend_stdio_0"};
+        simple_target_socket_0 = {address= UART0,
+                                  size=0x1000, 
+                                  bind = "&router.initiator_socket"},
+        irq = {bind = "&gic_0.spi_in_379"},
+    };
+
+    ipcc_0= {
+            moduletype = "IPCC",
+            target_socket = {address=IPC_ROUTER_TOP, size=0xfc000, bind = "&router.initiator_socket"},
+            irq_8 = {bind = "&gic_0.spi_in_229"},
+            irq_18 = {bind = "&hexagon_cluster_1.l2vic.irq_in_30"},
+            irq_6 = {bind = "&hexagon_cluster_0.l2vic.irq_in_30"},
         };
     mpm = { socket = {address=0x0C210000, size=0x1000}};
 
-    gpex = { pio_iface = { address = 0x003eff0000, size = 0x0000010000 };
-        mmio_iface = { address = 0x0060000000, size = 0x002B500000 };
-        ecam_iface = { address = 0x4010000000, size = 0x0010000000 };
-        mmio_iface_high = { address = 0x8000000000, size = 0x8000000000 },
-        irq_0 = 0, irq_1 = 0, irq_2 = 0, irq_3 = 0
+    gpex_0 = {
+        moduletype = "QemuGPEX";
+        args = {"&platform.qemu_inst"};
+        bus_master = {"&router.target_socket"};
+        pio_iface = { address = 0x003eff0000, size = 0x0000010000, bind= "&router.initiator_socket"};
+        mmio_iface = { address = 0x0060000000, size = 0x002B500000, bind= "&router.initiator_socket"};
+        ecam_iface = { address = 0x4010000000, size = 0x0010000000, bind= "&router.initiator_socket"};
+        mmio_iface_high = { address = 0x8000000000, size = 0x8000000000, bind= "&router.initiator_socket"};
+        irq_out_0 = {bind = "&gic_0.spi_in_0"};
+        irq_out_1 = {bind = "&gic_0.spi_in_0"};
+        irq_out_2 = {bind = "&gic_0.spi_in_0"};
+        irq_out_3 = {bind = "&gic_0.spi_in_0"};
+        irq_num_0 = 0;
+        irq_num_1 = 0;
+        irq_num_2 = 0;
+        irq_num_3 = 0;
     };
 
     -- qtb = { control_socket = {address=0x15180000, size=0x80000}};
     -- The QTB model is not active in the system, left here for debug purposes.
 
-    smmu_0 = { socket = {address=0x15000000, size=0x100000};
-             num_tbu=2;  -- for now, this needs to match the expected number of TBU's
-             num_pages=128;
-             num_cb=128;
-             num_smr=224;
-             irq_context = 103;
-             irq_global = 65;
-           };
-
-    tbu_0 = { topology_id=0x31A0,
+    tbu_0 = {
+              moduletype = "smmu500_tbu",
+              args = {"&platform.smmu_0"},
+              topology_id=0x31A0,
               upstream_socket = { address=NSP0_AHB_HIGH,
                                   size=0xF00000000-NSP0_AHB_HIGH,
-                                  relative_addresses=false
-             }
+                                  relative_addresses=false,
+                                  bind = "&hexagon_cluster_0.router.initiator_socket"
+             },
+             downstream_socket = {bind = "&router.target_socket"};
             };
-    tbu_1 = { topology_id=0x39A0,
+    tbu_1 = {
+             moduletype = "smmu500_tbu",
+             args = {"&platform.smmu_0"},
+             topology_id=0x39A0,
              upstream_socket = { address=NSP1_AHB_HIGH,
                                  size=0xF00000000-NSP1_AHB_HIGH,
-                                 relative_addresses=false
-             }
+                                 relative_addresses=false,
+                                 bind = "&hexagon_cluster_1.router.initiator_socket"
+             },
+             downstream_socket = {bind = "&router.target_socket"};
             };
 
-    memorydumper = { target_socket={address=0x1B300040, size=0x10}},
+    -- tbu_2 = {
+    --     moduletype = "smmu500_tbu",
+    --     args = {"&platform.smmu_0"},
+    --     topology_id=0x39A0,
+    --     upstream_socket = { address=NSP1_AHB_HIGH,
+    --                         size=0xF00000000-NSP1_AHB_HIGH,
+    --                         relative_addresses=false,
+    --                         bind = "&remote_0.initiator_socket_0"
+    --     -- downtream_socket = {bind = "router.target_socket"};
+    --     }
+    --    };
 
-    fallback_memory = { target_socket={address=0x0, size=0x40000000},
+    -- remote_0 = {
+    --     moduletype = "PassRPC";
+    --     args = {"./vp-hex-remote"};
+    --     target_socket_0 = {address= 0xAC00000,
+    --                         size= 0x200000,
+    --                         relative_addresses=false;
+    --                         bind = "&router.initiator_socket"};
+    --     irq_0 = 465,
+    --     irq_1 = 469,
+    -- };
+
+    memorydumper_0 = { 
+                moduletype = "MemoryDumper",
+                initiator_socket = {bind = "&router.target_socket"};
+                target_socket={address=0x1B300040, 
+                                size=0x10, 
+                                bind = "&router.initiator_socket"}
+                    },
+
+    fallback_memory_0 = { 
+                        target_socket={address=0x0, size=0x40000000},
                         dmi_allow=false, verbose=true,
-                        log_level=3,
-                        load={csv_file=MAKENA_REGS_CSV,
-                        offset=0, addr_str="Address",
-                        value_str="Reset Value", byte_swap=true}
+                        log_level=0,
+                        -- load={csv_file=MAKENA_REGS_CSV,
+                        -- offset=0, addr_str="Address",
+                        -- value_str="Reset Value", byte_swap=true}
                       };
+    -- fallback_memory_0 = {
+    --     -- moduletype="Memory";
+    --     -- dont_construct = false;
+    --     target_socket={address=0x0, size=0x40000000, bind = "&router.initiator_socket"},
+    --                     dmi_allow=false, verbose=true,
+    --                     log_level=3,
+    --                     load={csv_file=MAKENA_REGS_CSV,
+    --                     offset=0, addr_str="Address",
+    --                     value_str="Reset Value", byte_swap=true}
+    -- },
+
+    global_peripheral_initiator_arm_0 = {
+                   moduletype = "GlobalPeripheralInitiator",
+                   args = {"&platform.qemu_inst", "&platform.cpu_0"},
+                   global_initiator = {bind = "&router.target_socket"},
+    };
+
     load={
+        moduletype = "Loader",
+        initiator_socket = {bind = "&router.target_socket"};
         {data={0x60140200}, address=TCSR_SOC_HW_VERSION_ADDR};
         {data={0x04}, address=TCSR_SOC_EMULATION_TYPE_ADDR};
         {data={SMEM_TARG_INFO_ADDR}, address=SMEM_TCSR_TZ_WONCE_ADDR};
@@ -235,8 +383,28 @@ platform = {
     };
 };
 
+local irq_context = 103
+local irq_global = 65
+local num_cb = 128
 
-if (platform.arm_num_cpus > 0) then
+local smmu_index = 0;
+
+for i = 0, num_cb - 1 do
+    local smmu = {
+        moduletype = "smmu500",
+        dma = {bind = "&router.target_socket"},
+        socket = {address=0x15000000, size=0x100000, bind= "&router.initiator_socket"},
+        num_tbu = 2,
+        num_pages = 128,
+        num_cb = 128;
+        num_smr = 224,
+        irq_global = {bind = "&gic_0.spi_in_"..irq_global},
+    }
+    smmu["irq_context_" .. i] = {bind = "&gic_0.spi_in_" .. irq_context + i}
+    platform["smmu_"..tostring(smmu_index)] = smmu;
+end
+
+if (ARM_NUM_CPUS > 0) then
     local QUP_PITCH = 0x4000;
     local QUP_SIZE = 0x2000;
     local QUP_BANKS = {
@@ -259,24 +427,40 @@ if (platform.arm_num_cpus > 0) then
         -- assert(bank.count == #bank.qgic_spi_irqs)
         for i, spi_irq in next, bank.qgic_spi_irqs do
             local i_0 = i - 1;
+            local backend = {
+                moduletype = "CharBackendStdio";
+                args = {(i_0 == bank.primary_idx)};
+            };
+            platform["backend_"..tostring(qup_index)] = backend;
             local qup = {
+                moduletype = "QUPv3",
+                args = {"&platform.backend_"..tostring(qup_index)};
                 simple_target_socket_0 = {address=bank.addr + (i_0*QUP_PITCH),
-                    size=QUP_SIZE},
-                irq=spi_irq,
-                stdio=true,
-                input=(i_0 == bank.primary_idx),
-                port=nil,
+                    size=QUP_SIZE, bind="&router.initiator_socket"},
+                irq = {bind = "&gic_0.spi_in_"..spi_irq},
             };
             platform["uart_qup_"..tostring(qup_index)] = qup;
             qup_index = qup_index + 1;
         end
     end
 
+    -- for i=0,(HEXAGON_NUM_CLUSTERS-1) do
+    --     platform.router["target_socket"] = {bind = "&tbu_"..i.."_downstream_socket"};
+    -- end
 
-    for i=0,(platform.arm_num_cpus-1) do
+    for i=0,(ARM_NUM_CPUS-1) do
         local cpu = {
+            moduletype = "QemuCpuArmCortexA76";
+            args = {"&platform.qemu_inst"};
+            mem = {bind = "&router.target_socket"};
             has_el3 = (ACCEL ~= "hvf");
             has_el2 = false;
+            irq_timer_phys_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_NS_EL1_IRQ},
+            irq_timer_virt_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_VIRT_IRQ},
+            irq_timer_hyp_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_NS_EL2_IRQ},
+            irq_timer_sec_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_S_EL1_IRQ},
+            gicv3_maintenance_interrupt = {bind = "&gic_0.ppi_in_cpu_"..i.."_25"},
+            pmu_interrupt = {bind = "&gic_0.ppi_in_cpu_"..i.."_23"},
             psci_conduit = "smc";
             mp_affinity = (math.floor(i / 8) << 8) | (i % 8);
             start_powered_off = true;
@@ -286,6 +470,11 @@ if (platform.arm_num_cpus > 0) then
             cpu["start_powered_off"] = false;
         end
         platform["cpu_"..tostring(i)]=cpu;
+
+        platform["gic_0"]["irq_out_" .. i] = {bind="&cpu_"..i..".irq_in"}
+        platform["gic_0"]["fiq_out_" .. i] = {bind="&cpu_"..i..".fiq_in"}
+        platform["gic_0"]["virq_out_" .. i] = {bind="&cpu_"..i..".virq_in"}
+        platform["gic_0"]["vfiq_out_" .. i] = {bind="&cpu_"..i..".vfiq_in"}
     end
 end
 

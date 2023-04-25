@@ -48,6 +48,7 @@
 
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
 #include <greensocs/gsutils/ports/target-signal-socket.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 
 #include "qupv3_regs.h"
 #include <unordered_map>
@@ -89,14 +90,17 @@ public:
         { GENI_RX_FIFO_STATUS, 0x0 }, { SE_HW_PARAM_0, 0x20102864 }, { SE_HW_PARAM_1, 0x20204800 },
         { UART_MANUAL_RFR, 0x0 },
     };
-
-#ifdef QUP_UART_TEST
     SC_HAS_PROCESS(QUPv3);
+    QUPv3(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : QUPv3(name)
+        {
+            set_backend(dynamic_cast<CharBackend*>(o));
+        }
+#ifdef QUP_UART_TEST
     QUPv3(sc_core::sc_module_name name)
         : irq("irq")
         , dummy_target("dummy_target")
 #else
-    SC_HAS_PROCESS(QUPv3);
     QUPv3(sc_core::sc_module_name name)
         : irq("irq")
 #endif
@@ -332,4 +336,5 @@ public:
         uart->qupv3_put_fifo(*buf);
     }
 };
+GSC_MODULE_REGISTER(QUPv3, sc_core::sc_object*);
 #endif

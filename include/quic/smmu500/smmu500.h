@@ -46,6 +46,7 @@
 #include <sys/types.h>
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 
 #ifndef XILINX_SMMU500_ERR_DEBUG
 #define XILINX_SMMU500_ERR_DEBUG 0
@@ -55,6 +56,8 @@
 #define TYPE_XILINX_SMMU500_IOMMU_MEMORY_REGION "arm.mmu-500-iommu-memory-region"
 
 #define XILINX_SMMU500(obj) OBJECT_CHECK(SMMU, (obj), TYPE_XILINX_SMMU500)
+
+namespace gs {
 
 template <unsigned int BUSWIDTH = 32>
 class smmu500_tbu;
@@ -3039,6 +3042,10 @@ public:
     tlm_utils::simple_target_socket<smmu500_tbu, BUSWIDTH> upstream_socket;
     tlm_utils::simple_initiator_socket<smmu500_tbu, BUSWIDTH> downstream_socket;
 
+    smmu500_tbu(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+    : smmu500_tbu(name, (dynamic_cast<smmu500<BUSWIDTH>*>(o)))
+    {
+    }
     smmu500_tbu(sc_core::sc_module_name name, smmu500<BUSWIDTH>* _smmu)
         : p_topology_id("topology_id", 0x0, "Topology ID for this TBU")
         , upstream_socket("upstream_socket")
@@ -3060,3 +3067,10 @@ public:
         dmi_range_valid[CB] = false;
     }
 };
+}
+
+typedef gs::smmu500<> smmu500;
+GSC_MODULE_REGISTER(smmu500);
+
+typedef gs::smmu500_tbu<> smmu500_tbu;
+GSC_MODULE_REGISTER(smmu500_tbu, sc_core::sc_object*);

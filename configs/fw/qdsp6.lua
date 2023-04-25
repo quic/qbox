@@ -288,6 +288,8 @@ function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
     local sched_limit = true;
     assert(num_threads >= 1);
     local dsp = {
+        moduletype = "hexagon_cluster";
+        args = {"&platform.qemu_inst_mgr_h", "&platform.router"};
         hexagon_num_threads = num_threads;
         isdben_secure  = true;
         isdben_trusted = true;
