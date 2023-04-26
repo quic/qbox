@@ -15,20 +15,20 @@ platform["uart_qup_17"].input = false
 
 
 tableMerge(platform, {
-    virtioblk_0 = { mem = { address = 0x1c0d0000, size = 0x2000 }, irq = 0x2e, blkdev_str = "file=" .. valid_file(top() .. "rootfs.ext4") .. ",format=raw,if=none,readonly=off" };
+    virtioblk_0 = { mem = { address = 0x160d0000, size = 0x2000 }, irq = 0x2e, blkdev_str = "file=" .. valid_file(top() .. "rootfs.ext4") .. ",format=raw,if=none,readonly=off" };
 --    ram_2 = { target_socket = { address = 0xd00000000, size = 0x252c00000 } };
 --    ram_3 = { target_socket = { address = 0x940000000, size = 0x292d00000 } };
 --    ram_4 = { target_socket = { address = 0x900000000, size = 0x35200000 } };
 
 -- Overwrite uart irq to match dtb & newly added parameters to get input for id/password
 	uart = { simple_target_socket_0 = {address= UART0, size=0x1000},
-        irq=1,
+        irq=0x17B,
         stdio=true,
         input=true,
         port=nil,
     };
 -- Overwrite virtionet irq
-    virtionet0= { mem    =   {address=0x1c120000, size=0x10000}, irq=0x2d, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21,hostfwd=tcp::56283-:56283,hostfwd=tcp::55534-:65534,hostfwd=tcp::55535-:65535"};
+    virtionet0= { mem    =   {address=0x16120000, size=0x10000}, irq=0x2d, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21,hostfwd=tcp::56283-:56283,hostfwd=tcp::55534-:65534,hostfwd=tcp::55535-:65535"};
 });
 
 tableJoin(platform["load"], {
