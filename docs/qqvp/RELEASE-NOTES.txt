@@ -54,6 +54,8 @@ Others:
 - User Guide improvements, such as corrected sdl reference version,
   adjusted example paths to new repository structure, included new
   CLI options and exiting keys, etc.
+- configs/fw/8775/bsp/lnx/lrh/conf.lua has been updated to match the new
+  changes from LRH's device tree.
 
 -----------------------------------------------------------------------
 Known problems:
