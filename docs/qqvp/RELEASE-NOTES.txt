@@ -1,0 +1,62 @@
+[*======================= COPYRIGHT NOTICE ======================*]
+[* Copyright(c) 2023 Qualcomm Innovation Center, Inc.            *]
+[* All rights reserved.                                          *]
+[*                                                               *]
+[*===============================================================*]
+
+Qualcomm QEMU-Virtual Platform 0.8 - Release Notes (DRAFT)
+
+----------------------------------------------------------------------
+
+QQVP is provided via git repositories hosted on CodeLinaro.
+
+https://git.codelinaro.org/clo/private/qqvp/ is a link to the QQVP project
+in CodeLinaro.
+
+The user guide for QQVP is published in CreatePoint: Qualcomm® Quick
+Emulator (QEMU) Virtual Platform User Guide (80-N2040-55).
+
+-----------------------------------------------------------------------
+New in this release:
+
+Bugfixes:
+- Fixed issue with sdl2 on MacOS: added a SystemC display module and used
+  that instead of QEMU's version on MacOS, enforcing that window
+  management is performed only by the main thread.
+- Fixed "libqbox: virtio: bogus descriptor or out of resources" issue
+  in Red Hat Linux.
+- Fixed issue that prevented OpenGL launch.
+- Added workaround for issue regarding multiple qnn-net-run instances.
+
+UX and structure changes:
+- Updated repository structure:
+  * libqbox, libqemu-cxx, extra-components, platforms/*, greensocs/*, have
+    all been merged into the new "qbox" repository.
+  * quic-vp and quic/* repositories have been merged into the new "qqvp"
+    repository.
+- Added --debug option and new way to specify luafiles.
+- Improved qbox error messages.
+
+Compilation:
+- Made libelf and libz libraries required.
+- Fixed qbox compilation warnings.
+
+Others:
+- Implemented HWKM_MASTER_CFG_KM_RNG and TCSR_SOC_EMULATION_TYPE hexagon
+  register banks.
+- User Guide improvements, such as corrected sdl reference version,
+  adjusted example paths to new repository structure, included new
+  CLI options and exiting keys, etc.
+
+-----------------------------------------------------------------------
+Known problems:
+
+--
+
+-----------------------------------------------------------------------
+Troubleshooting:
+
+    "Could not initialize SDL(x11 not available) - exiting"
+    - This error message indicates your configuration (`conf.lua`)
+    requires a host GPU but the X server was not available.  See
+    User Guide for details.
