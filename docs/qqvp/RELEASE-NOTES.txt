@@ -58,7 +58,8 @@ Others:
 -----------------------------------------------------------------------
 Known problems:
 
---
+- We've experienced occasional failures at the fastrpc_calc and QNN tests
+  with LeMans. These issues are under investigation.
 
 -----------------------------------------------------------------------
 Troubleshooting:
