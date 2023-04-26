@@ -284,7 +284,8 @@ protected:
      * we use this hook to synchronize with the kernel.
      */
     void end_of_loop_cb() {
-        if (m_finished) return;
+        if (m_finished)
+            return;
         if (m_coroutines) {
             m_inst.get().coroutine_yield();
         } else {
@@ -423,6 +424,11 @@ public:
 
     void halt_cb(const bool& val) {
         if (!m_finished) {
+            if (val) {
+                m_qk->stop();
+            } else {
+                m_qk->start();
+            }
             m_inst.get().lock_iothread();
             m_cpu.halt(val);
             m_inst.get().unlock_iothread();
@@ -463,7 +469,9 @@ public:
             rearm_deadline_timer();
             m_cpu.kick();
         }
-        m_qk->start();
+        if (m_inst.can_run() && !p_start_halted) {
+            m_qk->start();
+        }
     }
 
     /* QemuInitiatorIface  */
