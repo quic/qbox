@@ -67,12 +67,14 @@ dofile(QDSP6_CFG);
 
 -- LeMans: NSP0 configuration --
 local SA8775P_nsp0_config_table= get_SA8775P_nsp0_config_table();
-local nsp0ss = get_nspss(
+local nsp0ss = get_dsp(
+        "v73",
         0x24000000, -- TURING_SS_0TURING
         0x26300000, -- TURING_SS_0TURING_QDSP6V68SS
         SA8775P_nsp0_config_table,
         0x9B800000, -- entry point address from bootimage_lemans.cdsp0.prodQ.pbn
-        0x05000000 -- AHB_SIZE
+        0x05000000,-- AHB_SIZE
+        6 -- threads
         );
 assert((SA8775P_nsp0_config_table[3] << 16) == TURING_SS_0TURING_QDSP6V68SS_CSR)
 assert((SA8775P_nsp0_config_table[3] << 16) == TURING_SS_0TURING_QDSP6V68SS_CSR)
@@ -82,12 +84,14 @@ local NSP0_VTCM_SIZE_BYTES = (SA8775P_nsp0_config_table[16] * 1024)
 
 -- NSP1 configuration TODO : need ramdump of config_table for NSP1. --
 local SA8775P_nsp1_config_table= get_SA8775P_nsp1_config_table();
-local nsp1ss = get_nspss(
+local nsp1ss = get_dsp(
+        "v73",
         0x28000000, -- TURING_SS_1TURING
         0x2A300000, -- TURING_SS_1TURING_QDSP6V68SS
         SA8775P_nsp1_config_table,
         0x9D700000, -- entry point address from bootimage_lemans.cdsp1.prodQ.pbn
-        0x05000000 -- AHB_SIZE
+        0x05000000,-- AHB_SIZE
+        6 -- threads
         );
 assert((SA8775P_nsp1_config_table[11] << 16) == nsp1ss.l2vic.fastmem.address)
 assert((SA8775P_nsp1_config_table[3] << 16) == TURING_SS_1TURING_QDSP6V68SS_CSR)

@@ -243,17 +243,20 @@ function get_SA8775P_nsp1_config_table()
 };
 end
 
-function get_nspss(base, ahbs_base, cfgtable, start_addr, ahb_size)
-    local cfgtable_base_addr = base + 0x180000;
+function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
+        num_threads)
+    local cfgtable_base_addr = base + 0x180000; -- TODO: this offset (and
+                                                -- ones below) might need to be
+                                                -- adjusted for the ADSP
     local sched_limit = true;
-    return {
-        hexagon_num_threads = 6;
-        hexagon_thread_0={start_powered_off = false, start_halted=true, sched_limit=sched_limit};
-        hexagon_thread_1={start_powered_off = true, sched_limit=sched_limit};
-        hexagon_thread_2={start_powered_off = true, sched_limit=sched_limit};
-        hexagon_thread_3={start_powered_off = true, sched_limit=sched_limit};
-        hexagon_thread_4={start_powered_off = true, sched_limit=sched_limit};
-        hexagon_thread_5={start_powered_off = true, sched_limit=sched_limit};
+    assert(num_threads >= 1);
+    local dsp = {
+        hexagon_num_threads = num_threads;
+        hexagon_thread_0={ start_powered_off = false,
+            start_halted=true,
+            sched_limit=sched_limit,
+            dsp_arch=arch,
+        };
         HexagonQemuInstance = { tcg_mode="SINGLE",
             sync_policy = "multithread-unconstrained"};
         hexagon_start_addr = start_addr;
@@ -275,5 +278,13 @@ function get_nspss(base, ahbs_base, cfgtable, start_addr, ahb_size)
 
         csr = { socket = {address=ahbs_base, size=0x1000}};
     };
+    for th=1,num_threads-1 do
+      dsp["hexagon_thread_" .. th] = {
+          start_powered_off = true,
+          sched_limit=sched_limit,
+          dsp_arch=arch,
+      };
+    end
+    return dsp
 end
 
