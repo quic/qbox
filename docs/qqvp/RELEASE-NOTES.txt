@@ -6,6 +6,13 @@
 
 Qualcomm QEMU-Virtual Platform 0.8 - Release Notes (DRAFT)
 
+*** ATTENTION: the main QQVP git repository has been moved from
+    https://git.codelinaro.org/clo/private/qqvp/quic-vp.git to
+    https://git.codelinaro.org/clo/private/qqvp/qqvp.git. Other
+    structural changes have also been made in this release,
+    including the agglutination of different repositories into
+    qqvp and qbox. Check the notes below for more info.
+
 ----------------------------------------------------------------------
 
 QQVP is provided via git repositories hosted on CodeLinaro.
