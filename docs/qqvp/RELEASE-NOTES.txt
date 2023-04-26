@@ -4,7 +4,7 @@
 [*                                                               *]
 [*===============================================================*]
 
-Qualcomm QEMU-Virtual Platform 0.8 - Release Notes (DRAFT)
+Qualcomm QEMU-Virtual Platform 0.8 - Release Notes
 
 *** ATTENTION: the main QQVP git repository has been moved from
     https://git.codelinaro.org/clo/private/qqvp/quic-vp.git to
