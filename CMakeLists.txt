@@ -69,9 +69,6 @@ set(LIBQEMU_CXX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqemu-cxx)
 # Other Dependencies
 gs_addexpackage("gh:rpclib/rpclib#v2.3.0")
 
-set(LIBQBOX_EXTRA_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqbox-extra)
-set(LIBQBOX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqbox)
-
 set(srcs
     src/libqemu-cxx/callbacks.cc
     src/libqemu-cxx/console.cc
@@ -164,11 +161,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
      rpc
      ${CMAKE_DL_LIBS}
 )
-
-set(LIBQEMU_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqemu)
-set_property(TARGET ${PROJECT_NAME}
-    PROPERTY INSTALL_RPATH ${LIBQEMU_LIB_DIR})
-
 
 install(DIRECTORY ${LIBQEMU_CXX_SRC_INCLUDE_DIR}
     DESTINATION ${LIBQEMU_CXX_INCLUDE_DIR})
