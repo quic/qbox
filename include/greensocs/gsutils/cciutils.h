@@ -140,7 +140,7 @@ static std::list<std::string> sc_cci_list_items(sc_core::sc_module_name module_n
     for (auto p : uncon) {
         std::smatch match;
         std::regex_search(p.first, match, search);
-        children.push_back(p.first.substr(l, (match.length() - l) - 1));
+        children.push_back(p.first.substr(l, (match.length() - l) - (match.str().back() == '.' ? 1 : 0)));
     }
     children.sort();
     children.unique();
