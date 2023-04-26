@@ -376,6 +376,8 @@ private:
     std::mutex sc_status_mut;
     std::atomic_bool cancel_waiting;
     std::thread::id sc_tid;
+    std::queue<std::pair<int,bool>> sig_queue;
+    std::mutex sig_queue_mut;
 
     sc_core::sc_status m_remote_status = static_cast<sc_core::sc_status>(0);
 
@@ -1065,7 +1067,14 @@ public:
         });
 
         server->bind("signal", [&](int i, bool v) {
-            m_sc.run_on_sysc([&] { initiator_signal_sockets[i]->write(v); });
+            if (sc_core::sc_get_status() < sc_core::sc_status::SC_START_OF_SIMULATION) {
+                std::lock_guard<std::mutex> lg(sig_queue_mut);
+                sig_queue.push(std::make_pair(i, v));
+                return;
+            }
+            m_sc.run_on_sysc(
+                [&] { initiator_signal_sockets[i]->write(v); },
+                (sc_core::sc_get_status() < sc_core::sc_status::SC_RUNNING ? false : true));
             return;
         });
 
@@ -1160,6 +1169,15 @@ public:
                       << sc_core::sc_get_status();
     }
 
+    void handle_before_sim_start_signals(){
+        std::lock_guard<std::mutex> lg(sig_queue_mut);
+        while(!sig_queue.empty()){
+            std::pair<int,bool> sig = sig_queue.front();
+            sig_queue.pop();
+            m_sc.run_on_sysc([&] { initiator_signal_sockets[sig.first]->write(sig.second); }, false);
+        }
+    }
+
     void stop()
     {
         if (cancel_waiting)
@@ -1205,6 +1223,7 @@ public:
     void start_of_simulation()
     {
         send_status();
+        handle_before_sim_start_signals();
         // m_qk->start();
     }
 
