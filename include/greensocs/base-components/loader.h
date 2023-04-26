@@ -238,12 +238,12 @@ protected:
                 if (m_broker.has_preset_value(name + ".offset"))
                     addr = cci_get<uint64_t>(name + ".offset");
                 else
-                    SCP_FATAL(SCMOD) << "No offset found";
+                    SCP_FATAL(SCMOD) << "No offset found for '" << name << "'";
             } else {
                 if (m_broker.has_preset_value(name + ".address"))
                     addr = cci_get<uint64_t>(name + ".address");
                 else
-                    SCP_FATAL(SCMOD) << "No address found";
+                    SCP_FATAL(SCMOD) << "No address found for '" << name << "'";
             }
             if (m_broker.has_preset_value(name + ".bin_file")) {
                 std::string file = cci_get<std::string>(name + ".bin_file");
@@ -267,7 +267,8 @@ protected:
                 std::string param = cci_get<std::string>(name + ".param");
                 cci::cci_param_typed_handle<std::string> data(m_broker.get_param_handle(param));
                 if (!data.is_valid()) {
-                    SCP_FATAL(SCMOD) << "Unable to find valid source param " << param;
+                    SCP_FATAL(SCMOD) << "Unable to find valid source param '" << param << "' for '"
+                                     << name << "'";
                 }
                 SCP_INFO(SCMOD) << "Loading string parameter " << param;
                 str_load(data.get_value(), addr);
@@ -284,7 +285,7 @@ protected:
             }
         }
         if (!read) {
-            SCP_FATAL(SCMOD) << "Unknown loader type";
+            SCP_FATAL(SCMOD) << "Unknown loader type: '" << name << "'";
         }
     }
     void end_of_elaboration()
