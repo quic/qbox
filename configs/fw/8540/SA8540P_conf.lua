@@ -75,12 +75,14 @@ dofile(QDSP6_CFG);
 
 -- NSP0 configuration --
 local SA8540P_nsp0_config_table= get_SA8540P_nsp0_config_table();
-local nsp0ss = get_nspss(
+local nsp0ss = get_dsp(
+        "v68",
         0x1A000000, -- TURING_SS_0TURING
         0x1B300000, -- TURING_SS_0TURING_QDSP6V68SS
         SA8540P_nsp0_config_table,
         0x89F00000, -- entry point address from bootimage_makena.cdsp0.prodQ.pbn
-        NSP0_AHB_SIZE
+        NSP0_AHB_SIZE,
+        6 -- threads
         );
 
 assert((SA8540P_nsp0_config_table[11] << 16) == nsp0ss.l2vic.fastmem.address)
@@ -91,12 +93,14 @@ local NSP0_VTCM_SIZE_BYTES = (SA8540P_nsp0_config_table[16] * 1024)
 
 -- NSP1 configuration --
 local SA8540P_nsp1_config_table= get_SA8540P_nsp1_config_table();
-local nsp1ss = get_nspss(
+local nsp1ss = get_dsp(
+        "v68",
         0x20000000, -- TURING_SS_1TURING
         0x21300000, -- TURING_SS_1TURING_QDSP6V68SS
         SA8540P_nsp1_config_table,
         0x8C600000, -- entry point address from bootimage_makena.cdsp1.prodQ.pbn
-        NSP1_AHB_SIZE
+        NSP1_AHB_SIZE,
+        6 -- threads
         );
 assert((SA8540P_nsp1_config_table[11] << 16) == nsp1ss.l2vic.fastmem.address)
 assert((SA8540P_nsp1_config_table[3] << 16) == TURING_SS_1TURING_QDSP6V68SS_CSR)

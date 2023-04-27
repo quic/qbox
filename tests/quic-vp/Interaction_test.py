@@ -21,6 +21,8 @@ def fastrpc_calc_test():
     parser.add_argument("-e", "--exe", metavar="", help="Path to vp executable")
     parser.add_argument("-l", "--lua", metavar="", help="Path to luafile")
     parser.add_argument("-i", "--img", metavar="", help="Path to binary images")
+    parser.add_argument('extra_args', nargs='*',
+        help="Forward additional arguments to vp")
     args = parser.parse_args()
     if not args.exe:
         print("vp executable file not found")
@@ -37,6 +39,7 @@ def fastrpc_calc_test():
     img_path = Path(args.img)
 
     load = psutil.cpu_percent(2)
+    timeout_sec = 60 * 3.
     timeout_scale = 1
     if (load > 0.0):
         timeout_scale = 1 + (load / 100)
@@ -53,11 +56,15 @@ def fastrpc_calc_test():
         env["LD_LIBRARY_PATH"] = os.environ["LD_LIBRARY_PATH"]
 
     print("Starting platform with ENV", env)
+    vp_args = ["--gs_luafile", args.lua, "--param", "platform.with_gpu=false", ]
+    if args.extra_args:
+        vp_args += args.extra_args
+
     child = pexpect.spawn(
                 vp_path.as_posix(),
-                ["--gs_luafile", args.lua, "--param", "platform.with_gpu=false"],
+                vp_args,
                 env=env,
-                timeout=180*timeout_scale
+                timeout=timeout_sec*timeout_scale
             )
 
     child.logfile = stdout.buffer
