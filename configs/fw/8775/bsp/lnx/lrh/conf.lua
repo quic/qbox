@@ -28,6 +28,7 @@ platform["uart_qup_17"].input = false
 
 tableMerge(platform, {
     virtioblk_0 = { mem = { address = 0x160d0000, size = 0x2000 }, irq = 0x2e, blkdev_str = "file=" .. valid_file(LRH_IMAGES_DIR .. "rootfs.ext4") .. ",format=raw,if=none,readonly=off" };
+    -- TODO: check for overlaps with ram_0 and ram_1
     ram_2 = { target_socket = { address = 0xd00000000, size = 0x280000000 } };
     ram_3 = { target_socket = { address = 0xA80000000, size = 0x180000000 } };
     ram_4 = { target_socket = { address = 0x940000000, size = 0x140000000 } };
