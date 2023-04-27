@@ -15,6 +15,8 @@ def linux_boot():
     parser.add_argument("-e", "--exe", metavar="", help="Path to vp executable")
     parser.add_argument("-l", "--lua", metavar="", help="Path to luafile (defaults to conf.lua in images dir)")
     parser.add_argument("-i", "--img", metavar="", help="Path to binary images")
+    parser.add_argument("-v", "--env", metavar="", nargs="+",
+                        help="Additional env vars in the format 'var1=val1 var2=val2 ...'")
     args = parser.parse_args()
     if not args.exe:
         print("vp executable file not found")
@@ -38,6 +40,13 @@ def linux_boot():
     # for building vp
     if os.environ.get("LD_LIBRARY_PATH") is not None:
         env["LD_LIBRARY_PATH"] = os.environ["LD_LIBRARY_PATH"]
+
+    for opt in args.env:
+        opt_arr = opt.split('=')
+        if len(opt_arr) != 2:
+            print(f"Invalid val for -v: {opt}")
+            return test
+        env[opt_arr[0]] = opt_arr[1]
 
     print("Starting platform with ENV", env)
     with pexpect.spawn(vp_path.as_posix(),
