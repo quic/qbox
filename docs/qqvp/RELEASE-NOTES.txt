@@ -34,6 +34,8 @@ Bugfixes:
   in Red Hat Linux.
 - Fixed issue that prevented OpenGL launch.
 - Added workaround for issue regarding multiple qnn-net-run instances.
+- Fixed "Synchronizing issue between QEMU and SystemC", a race condition
+  in the quantum keeper.
 
 UX and structure changes:
 - Updated repository structure:
@@ -56,6 +58,8 @@ Others:
   CLI options and exiting keys, etc.
 - configs/fw/8775/bsp/lnx/lrh/conf.lua has been updated to match the new
   changes from LRH's device tree.
+- QQVP now provides accurate values for the REV hexagon register as read
+  from within hexagon instances.
 
 -----------------------------------------------------------------------
 Known problems:
