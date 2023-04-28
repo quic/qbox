@@ -1,0 +1,5 @@
+add_subdirectory(base-components)
+add_subdirectory(libgssync)
+add_subdirectory(libgsutils)
+add_subdirectory(libqbox)
+add_subdirectory(systemc-uarts)

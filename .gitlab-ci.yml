@@ -1,0 +1,14 @@
+include:
+  - project: 'qqvp/cmake-boilerplate'
+    file: 'gitlab-ci-template.yml'
+
+.build_job_template:
+    variables:
+      REPO_CMAKE_ARGS: -DLIBQEMU_TARGETS=aarch64
+
+qqvp-trigger:
+  extends: .base-trigger
+  trigger:
+    project: qqvp/qqvp
+  variables:
+    OVERRIDE_PKG: qbox

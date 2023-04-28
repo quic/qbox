@@ -1,0 +1,3 @@
+# ignore leak issues
+# this detect leak can be remove if this JIRA ticket is close https://jira-dc.qualcomm.com/jira/browse/QTOOL-89141
+leak:cci::cci_impl

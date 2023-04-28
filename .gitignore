@@ -1,0 +1,8 @@
+/build*/
+/debug*/
+tags
+TAGS
+*~
+*.sw?
+.vscode
+.DS_Store
