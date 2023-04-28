@@ -41,12 +41,13 @@ def linux_boot():
     if os.environ.get("LD_LIBRARY_PATH") is not None:
         env["LD_LIBRARY_PATH"] = os.environ["LD_LIBRARY_PATH"]
 
-    for opt in args.env:
-        opt_arr = opt.split('=')
-        if len(opt_arr) != 2:
-            print(f"Invalid val for -v: {opt}")
-            return test
-        env[opt_arr[0]] = opt_arr[1]
+    if args.env is not None:
+        for opt in args.env:
+            opt_arr = opt.split('=')
+            if len(opt_arr) != 2:
+                print(f"Invalid val for -v: {opt}")
+                return test
+            env[opt_arr[0]] = opt_arr[1]
 
     print("Starting platform with ENV", env)
     with pexpect.spawn(vp_path.as_posix(),
