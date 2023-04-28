@@ -25,7 +25,7 @@ CPMDeclarePackage(SystemCLanguage
 # SCP
 CPMDeclarePackage(SCP
   NAME SCP
-  GIT_TAG v0.1.0
+  GIT_TAG v0.2.0
   GIT_REPOSITORY ${ACCELLERA_GIT}accellera/systemc-common-practices.git
   GIT_SHALLOW on
 )
