@@ -36,10 +36,12 @@ local TURING_SS_1TURING_QDSP6V68SS_CSR= 0x2A380000
 
 -- Not used : local NSP0_AHB_LOW  = NSP0_BASE
 -- Not used : local NSP0_TCM_BASE = NSP0_BASE
-local NSP0_AHB_SIZE = 0x05000000
-local NSP1_AHB_SIZE = 0x05000000
-local NSP0_AHB_HIGH = NSP0_BASE + NSP0_AHB_SIZE -- = 0x1f000000
-local NSP1_AHB_HIGH = NSP1_BASE + NSP1_AHB_SIZE -- = 0x25000000
+
+local NSP0_AHB_HIGH = 0x27000000
+local NSP1_AHB_HIGH = 0x2B000000
+
+local NSP0_AHB_SIZE = NSP0_AHB_HIGH - NSP0_BASE
+local NSP1_AHB_SIZE = NSP1_AHB_HIGH - NSP1_BASE
 
 local IPC_ROUTER_TOP = 0x00400000
 
@@ -73,7 +75,7 @@ local nsp0ss = get_dsp(
         0x26300000, -- TURING_SS_0TURING_QDSP6V68SS
         SA8775P_nsp0_config_table,
         0x9B800000, -- entry point address from bootimage_lemans.cdsp0.prodQ.pbn
-        0x05000000,-- AHB_SIZE
+        NSP0_AHB_SIZE,
         6 -- threads
         );
 assert((SA8775P_nsp0_config_table[3] << 16) == TURING_SS_0TURING_QDSP6V68SS_CSR)
@@ -90,7 +92,7 @@ local nsp1ss = get_dsp(
         0x2A300000, -- TURING_SS_1TURING_QDSP6V68SS
         SA8775P_nsp1_config_table,
         0x9D700000, -- entry point address from bootimage_lemans.cdsp1.prodQ.pbn
-        0x05000000,-- AHB_SIZE
+        NSP1_AHB_SIZE,
         6 -- threads
         );
 assert((SA8775P_nsp1_config_table[11] << 16) == nsp1ss.l2vic.fastmem.address)
