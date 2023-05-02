@@ -52,6 +52,30 @@ TEST_BENCH(DMIConverterTestBench, NoDMIAllowed)
     print_dashes();
 }
 
+TEST_BENCH(DMIConverterTestBench, UseByteEbale)
+{
+    SCP_INFO(()) << "Use Byte Enable." << std::endl;
+    uint8_t byt[8] = {0x00, 0xff, 0xff, 0x00, 0xff, 0x00, 0x00, 0xff};
+    tlm::tlm_generic_payload trans;
+
+    do_write_read_check_be(trans, 0, (uint8_t*)&data, 8, (uint8_t*)&byt, 8);
+    print_dashes();
+    do_write_read_check_be(trans, 0, (uint8_t*)&data, 8, (uint8_t*)&byt, 4);
+    print_dashes();
+    do_write_read_check_be(trans, (MEM_SIZE / 2) - 8, (uint8_t*)&data, 8, (uint8_t*)&byt, 8);
+    print_dashes();
+    do_write_read_check_be(trans, (MEM_SIZE / 2) - 4, (uint8_t*)&data, 8, (uint8_t*)&byt, 3);
+    print_dashes();
+    do_write_read_check_be(trans, (MEM_SIZE / 2) - 4, (uint8_t*)&data, 8, (uint8_t*)&byt, 5);
+    print_dashes();
+    do_write_read_check_be(trans, 3 * (MEM_SIZE / 4) - 8, (uint8_t*)&data, 8, (uint8_t*)&byt, 2);
+    print_dashes();
+    do_write_read_check_be(trans, 3 * (MEM_SIZE / 4) - 8, (uint8_t*)&data, 16, (uint8_t*)&byt, 7);
+    print_dashes();
+    do_write_read_check_be(trans, 3 * (MEM_SIZE / 4) - 4, (uint8_t*)&data, 16, (uint8_t*)&byt, 8);
+    print_dashes();
+}
+
 int sc_main(int argc, char* argv[])
 {
     cci_utils::consuming_broker broker("global_broker");
