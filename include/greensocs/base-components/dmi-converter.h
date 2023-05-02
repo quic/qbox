@@ -35,6 +35,8 @@
 #include <tlm_utils/multi_passthrough_target_socket.h>
 #include <map>
 #include <string>
+#include <memory>
+#include <cstring>
 
 namespace gs {
 
@@ -81,6 +83,19 @@ private:
         uint64_t len = trans.get_data_length();
         tlm::tlm_command cmd = trans.get_command();
         unsigned char* trans_data_ptr = trans.get_data_ptr();
+        unsigned char* ref_byt = trans.get_byte_enable_ptr();
+        unsigned int bel = trans.get_byte_enable_length();
+        if(ref_byt && (bel <= 0))
+             SCP_FATAL(()) << "byte enable ptr is not NULL but byte enable length <= 0!";
+        std::unique_ptr<unsigned char[]> byt;
+        if(ref_byt){
+            byt = std::make_unique<unsigned char[]>(bel);
+            std::memcpy(byt.get(), ref_byt, bel);
+        }
+        else{
+            byt = nullptr;
+        }
+        unsigned int bel_remaining_len = bel;
         uint64_t remaining_len = len;
         uint64_t current_block_len = 0;
         tlm::tlm_dmi* dmi_data;
@@ -102,25 +117,45 @@ private:
                                  << iter_len << " bytes starting from: 0x" << std::hex << addr
                                  << ", cache block used starts at: 0x" << std::hex << start_addr
                                  << " and ends at: 0x" << std::hex << end_addr;
-                    memcpy(reinterpret_cast<unsigned char*>(&dmi_ptr[addr - start_addr]),
-                           reinterpret_cast<unsigned char*>(trans_data_ptr), iter_len);
+                    if (byt) {
+                        for (unsigned int i = 0; i < iter_len; i++){
+                            if (byt[i % bel] == TLM_BYTE_ENABLED) {
+                                dmi_ptr[(addr - start_addr) + i] = trans_data_ptr[i];
+                            }
+                        }
+                    }
+                    else{
+                        memcpy(reinterpret_cast<unsigned char*>(&dmi_ptr[addr - start_addr]),
+                            reinterpret_cast<unsigned char*>(trans_data_ptr), iter_len);
+                    }
                     break;
                 case tlm::TLM_READ_COMMAND:
                     SCP_DEBUG(()) << "(read request) cache is used to read " << std::hex << iter_len
                                  << " bytes starting from: 0x" << std::hex << addr
                                  << ", cache block used starts at: 0x" << std::hex << start_addr
                                  << " and ends at: 0x" << std::hex << end_addr;
-                    memcpy(reinterpret_cast<unsigned char*>(trans_data_ptr),
-                           reinterpret_cast<unsigned char*>(&dmi_ptr[addr - start_addr]), iter_len);
+                    if (byt) {
+                        for (unsigned int i = 0; i < iter_len; i++){
+                            if (byt[i % bel] == TLM_BYTE_ENABLED) {
+                                trans_data_ptr[i] = dmi_ptr[(addr - start_addr) + i];
+                            }
+                        }
+                    }
+                    else{
+                        memcpy(reinterpret_cast<unsigned char*>(trans_data_ptr),
+                            reinterpret_cast<unsigned char*>(&dmi_ptr[addr - start_addr]), iter_len);
+                    }
                     break;
                 default:
                     SCP_FATAL(()) << "invalid tlm_command at address: 0x" << std::hex << addr;
                     break;
                 }
-                remaining_len = (iter_len == remaining_len ? 0 : remaining_len - iter_len);
+                remaining_len -= iter_len;
                 addr += iter_len;
                 trans_data_ptr += iter_len;
                 len = remaining_len;
+                unsigned char* mutated_byt = byt.get();
+                update_byte_enable(trans, &mutated_byt, &bel_remaining_len, iter_len);
                 if (remaining_len == 0) {
                     trans.set_dmi_allowed(true);
                     trans.set_response_status(tlm::TLM_OK_RESPONSE);
@@ -136,6 +171,8 @@ private:
                     t_trans.set_address(addr);
                     t_trans.set_data_length(len);
                     t_trans.set_data_ptr(trans_data_ptr);
+                    t_trans.set_byte_enable_length(bel_remaining_len);
+                    t_trans.set_byte_enable_ptr(byt.get());
                 }
                 bool dmi_ptr_valid = initiator_sockets[id]->get_direct_mem_ptr(
                     (is_cache_used ? t_trans : trans), t_dmi_data);
@@ -197,6 +234,25 @@ private:
         cache_clean(start, end);
         for (int i = 0; i < target_sockets.size(); i++) {
             target_sockets[i]->invalidate_direct_mem_ptr(start, end);
+        }
+    }
+
+    void update_byte_enable(tlm::tlm_generic_payload& trans, unsigned char** byt, unsigned int *bel_remaining_len, uint64_t iter_len){
+        if(!*byt)
+            return;
+
+        unsigned int trans_dl = trans.get_data_length();
+        unsigned int trans_bel = trans.get_byte_enable_length();
+
+        if (trans_bel >= trans_dl){
+            *byt += iter_len;
+            *bel_remaining_len = trans_bel - iter_len;
+        }
+        else if(trans_bel < trans_dl) {
+            if (!(iter_len % trans_bel))
+                return; // nothing to do if the iter_len == (n * trans_bel)
+            std::rotate(*byt, *byt + (iter_len % trans_bel), *byt + trans_bel); // keep trans_bel and adjust the position of bytes
+            *bel_remaining_len = trans_bel;
         }
     }
 

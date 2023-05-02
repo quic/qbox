@@ -9,6 +9,7 @@
 #include <vector>
 #include <sstream>
 #include <memory>
+#include <cstring>
 
 #define MEM_SIZE       4096
 #define MIN_ALLOC_UNIT 8
@@ -29,6 +30,7 @@ public:
     {
         target_socket.register_b_transport(this, &SimpleMemory::b_transport);
         target_socket.register_get_direct_mem_ptr(this, &SimpleMemory::get_direct_mem_ptr);
+        clear();
     }
     ~SimpleMemory() { delete[] m_mem; }
 
@@ -39,6 +41,8 @@ private:
         tlm::tlm_command cmd = trans.get_command();
         unsigned char* data = trans.get_data_ptr();
         unsigned int len = trans.get_data_length();
+        unsigned char* byt = trans.get_byte_enable_ptr();
+        unsigned int bel = trans.get_byte_enable_length();
 
         if ((addr + len) > MEM_SIZE) {
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
@@ -47,10 +51,22 @@ private:
 
         switch (cmd) {
         case tlm::TLM_WRITE_COMMAND:
-            memcpy(&m_mem[addr], data, len);
+            if (byt) {
+                for (int i = 0; i < len; i++) {
+                    if (byt[i % bel] == TLM_BYTE_ENABLED)
+                        m_mem[addr + i] = data[i];
+                }
+            } else
+                memcpy(&m_mem[addr], data, len);
             break;
         case tlm::TLM_READ_COMMAND:
-            memcpy(data, &m_mem[addr], len);
+            if (byt) {
+                for (int i = 0; i < len; i++) {
+                    if (byt[i % bel] == TLM_BYTE_ENABLED)
+                        data[i] = m_mem[addr + i];
+                }
+            } else
+                memcpy(data, &m_mem[addr], len);
             break;
         case tlm::TLM_IGNORE_COMMAND:
             return;
@@ -99,6 +115,8 @@ private:
 public:
     uint8_t read_byte(uint64_t addr) const { return static_cast<uint8_t>(m_mem[addr]); }
 
+    void clear(){ std::memset(m_mem, 0, MEM_SIZE); }
+
 private:
     unsigned char* m_mem;
 };
@@ -117,7 +135,7 @@ public:
         m_dmi_converter.initiator_sockets[0].bind(m_simple_mem.target_socket);
     }
 
-    void do_write_read_check(uint64_t addr, u_int8_t* w_data, size_t len)
+    void do_write_read_check(uint64_t addr, uint8_t* w_data, size_t len)
     {
         std::stringstream sstr;
         std::unique_ptr<uint8_t[]> r_data{ new uint8_t[len] };
@@ -137,6 +155,54 @@ public:
         sstr << "Read data: {";
         for (int i = 0; i < len; i++) {
             ASSERT_EQ(m_simple_mem.read_byte(addr + i), r_data[i]);
+            sstr << "0x" << std::hex << static_cast<uint64_t>(r_data[i])
+                 << (i < (len - 1) ? "," : "");
+        }
+        sstr << "}";
+        SCP_INFO(()) << sstr.str();
+    }
+
+    void do_write_read_check_be(tlm::tlm_generic_payload &trans, uint64_t addr, uint8_t* w_data, size_t len, uint8_t *byt, size_t bel){
+        std::stringstream sstr;
+        std::unique_ptr<uint8_t[]> r_data{ new uint8_t[len] };
+        std::unique_ptr<uint8_t[]> ref_byt{ new uint8_t[bel] };
+        std::memset(r_data.get(), 0, len);
+        std::memcpy(ref_byt.get(), byt, bel);
+        m_simple_mem.clear();
+        trans.set_address(addr);
+        trans.set_data_length(len);
+        trans.set_data_ptr(w_data);
+        trans.set_byte_enable_length(bel);
+        trans.set_byte_enable_ptr(byt);
+        trans.set_command(tlm::TLM_WRITE_COMMAND);
+        ASSERT_EQ(m_initiator.do_b_transport(trans), tlm::TLM_OK_RESPONSE);
+        sstr << "Written data: {";
+        for (int i = 0; i < len; i++) {
+            ASSERT_EQ(m_simple_mem.read_byte(addr + i), w_data[i] & ref_byt[i % bel]);
+            sstr << "0x" << std::hex << static_cast<uint64_t>(m_simple_mem.read_byte(addr + i))
+                 << (i < (len - 1) ? "," : "");
+        }
+        sstr << "}";
+        SCP_INFO(()) << sstr.str();
+        sstr.str("");
+
+        sstr << "Byte Enable:  {";
+        for (int i = 0; i < len; i++) {
+            sstr << "0x" << std::hex << static_cast<uint64_t>(ref_byt[i % bel])
+                 << (i < (len - 1) ? "," : "");
+        }
+        sstr << "}";
+        SCP_INFO(()) << sstr.str();
+        sstr.str("");
+
+
+        // Assuming that other trans data members are not mutated by the memory
+        trans.set_data_ptr(r_data.get());
+        trans.set_command(tlm::TLM_READ_COMMAND);
+        ASSERT_EQ(m_initiator.do_b_transport(trans),tlm::TLM_OK_RESPONSE);
+        sstr << "Read data:    {";
+        for (int i = 0; i < len; i++) {
+            ASSERT_EQ(r_data[i], w_data[i] & ref_byt[i % bel]);
             sstr << "0x" << std::hex << static_cast<uint64_t>(r_data[i])
                  << (i < (len - 1) ? "," : "");
         }
