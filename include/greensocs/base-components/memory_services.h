@@ -195,10 +195,21 @@ public:
             shm_unlink(memname);
             SCP_FATAL(()) << "can't shm_open create " << memname << " " << strerror(errno);
         }
+#if defined(__APPLE__)
         if (ftruncate(fd, size) == -1) {
             shm_unlink(memname);
             SCP_FATAL(()) << "can't truncate " << memname << " " << strerror(errno);
         }
+#elif defined(__linux__)
+        if (fallocate64(fd, 0, 0, size) == -1) {
+            shm_unlink(memname);
+            SCP_FATAL(()) << "can't allocate " << memname << " " << strerror(errno);
+        }
+#else
+        // FIXME: use an equivalent fallocate function for other platforms
+        shm_unlink(memname);
+        SCP_FATAL(()) << "no fallocate() equivalent function for this platform!";
+#endif
         SCP_DEBUG(()) << "Create Length " << size;
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
         close(fd);
