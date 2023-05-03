@@ -61,6 +61,13 @@ private:
         SigHandler::get().register_on_exit_cb(MemoryServices::cleanupexit);
         SigHandler::get().add_sig_handler(SIGINT, SigHandler::Handler_CB::PASS);
     }
+
+    void die_sys_api(int error, const char* memname, const std::string& die_msg){
+        if(shm_unlink(memname) == -1)
+            perror("shm_unlink");
+        SCP_FATAL(()) << die_msg << " " << memname << " [Error: " << strerror(error) << "]";
+    }
+
     struct shmem_info {
         uint8_t* base;
         size_t size;
@@ -174,12 +181,13 @@ public:
     {
         int fd = open(mapfile, O_RDWR);
         if (fd < 0) {
-            SCP_FATAL(()) << "Unable to find backing file";
+            SCP_FATAL(()) << "Unable to find backing file [Error: " << strerror(errno) << "]";
         }
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
+        int mmap_error = errno;
         close(fd);
         if (ptr == MAP_FAILED) {
-            SCP_FATAL(()) << "Unable to map backing file";
+            SCP_FATAL(()) << "Unable to map backing file [Error: " << strerror(mmap_error) << "]";
         }
         return ptr;
     }
@@ -192,18 +200,15 @@ public:
         assert(m_shmem_info_map.count(memname) == 0);
         int fd = shm_open(memname, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
-            shm_unlink(memname);
-            SCP_FATAL(()) << "can't shm_open create " << memname << " " << strerror(errno);
+            die_sys_api(errno, memname, "can't shm_open create");
         }
 #if defined(__APPLE__)
         if (ftruncate(fd, size) == -1) {
-            shm_unlink(memname);
-            SCP_FATAL(()) << "can't truncate " << memname << " " << strerror(errno);
+           die_sys_api(errno, memname, "can't truncate");
         }
 #elif defined(__linux__)
         if (fallocate64(fd, 0, 0, size) == -1) {
-            shm_unlink(memname);
-            SCP_FATAL(()) << "can't allocate " << memname << " " << strerror(errno);
+            die_sys_api(errno, memname, "can't allocate");
         }
 #else
         // FIXME: use an equivalent fallocate function for other platforms
@@ -212,11 +217,10 @@ public:
 #endif
         SCP_DEBUG(()) << "Create Length " << size;
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        int mmap_error = errno; //even if no error happens here, we need to capture errno directly after mmap()
         close(fd);
         if (ptr == MAP_FAILED) {
-            shm_unlink(memname);
-            SCP_FATAL(()) << "can't mmap(shared memory create) " << memname << " "
-                          << strerror(errno);
+            die_sys_api(mmap_error, memname, "can't mmap(shared memory create)");
         }
         SCP_DEBUG(()) << "Shared memory created: " << memname << " length " << size;
         m_shmem_info_map.insert({ std::string(memname), { ptr, size } });
@@ -240,15 +244,14 @@ public:
 
         int fd = shm_open(memname, O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
-            shm_unlink(memname);
-            SCP_FATAL(()) << "can't shm_open join " << memname << " " << strerror(errno);
+            die_sys_api(errno, memname, "can't shm_open join");
         }
         SCP_INFO(()) << "Join Length " << size;
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        int mmap_error = errno;
         close(fd);
         if (ptr == MAP_FAILED) {
-            shm_unlink(memname);
-            SCP_FATAL(()) << "can't mmap(shared memory join) " << memname << " " << strerror(errno);
+            die_sys_api(mmap_error, memname, "can't mmap(shared memory join)");
         }
         m_shmem_info_map.insert({ std::string(memname), { ptr, size } });
         return ptr;
