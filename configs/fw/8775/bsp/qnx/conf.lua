@@ -18,4 +18,4 @@ tableJoin(platform["load"], {
     { elf_file = valid_file(top() .. "/../../dsp/bootimage_lemans.cdsp1.prodQ.pbn") };
 });
 
---platform["with_gpu"] = true;
+platform["with_gpu"] = true;

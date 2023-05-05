@@ -69,4 +69,4 @@ tableJoin(platform["load"], {
 
 print (_KERNEL64_LOAD_ADDR);
 print (_DTB_LOAD_ADDR);
---platform["with_gpu"] = true;
+platform["with_gpu"] = true;
