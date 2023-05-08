@@ -16,7 +16,7 @@ include:
     - echo "Using commit id ${QQVP_FIRMWARE_REPO_SHA} of firmware-repo"
     - eval $(ssh-agent -s)
     - echo "$LFS_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    - git clone --no-checkout git@gitlab.qualcomm.com:qqvp/firmware-images.git
+    - git clone --no-checkout $AUTHENTICATED_GIT_URL/qqvp/firmware-images.git
     - cd firmware-images
     - git checkout $QQVP_FIRMWARE_REPO_SHA
     - export QQVP_FIRMWARE_REPO_DIR="$(pwd)"
