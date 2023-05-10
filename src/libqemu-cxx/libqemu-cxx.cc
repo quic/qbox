@@ -153,6 +153,11 @@ std::shared_ptr<AddressSpace> LibQemu::address_space_get_system_memory() {
     return std::make_shared<AddressSpace>(as, m_int);
 }
 
+std::shared_ptr<MemoryRegion> LibQemu::get_system_memory() {
+    QemuMemoryRegion* mr = m_int->exports().get_system_memory();
+    return std::make_shared<MemoryRegion>(mr, m_int);
+}
+
 std::shared_ptr<MemoryListener> LibQemu::memory_listener_new() {
     auto ret = std::make_shared<MemoryListener>(m_int);
     QemuMemoryListener* ml = m_int->exports().memory_listener_new(ret.get(), "QboxMemoryListener");

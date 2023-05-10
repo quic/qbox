@@ -89,8 +89,11 @@ protected:
     class m_mem_obj
     {
     public:
-        qemu::MemoryRegion m_root;
-        m_mem_obj(qemu::LibQemu& inst) { m_root = inst.object_new<qemu::MemoryRegion>(); }
+        std::shared_ptr<qemu::MemoryRegion> m_root;
+        m_mem_obj(qemu::LibQemu& inst) {
+            m_root.reset(new qemu::MemoryRegion(inst.object_new<qemu::MemoryRegion>()));
+        }
+        m_mem_obj(std::shared_ptr<qemu::MemoryRegion> memory): m_root(std::move(memory)) {}
     };
     m_mem_obj* m_r = nullptr;
 
@@ -115,7 +118,7 @@ protected:
     void add_dmi_mr_alias(DmiRegionAlias::Ptr alias) {
         SCP_INFO(SCMOD) << "Adding " << *alias;
         qemu::MemoryRegion alias_mr = alias->get_alias_mr();
-        m_r->m_root.add_subregion(alias_mr, alias->get_start());
+        m_r->m_root->add_subregion(alias_mr, alias->get_start());
         alias->set_installed();
     }
 
@@ -124,7 +127,7 @@ protected:
             return;
         }
         SCP_INFO(SCMOD) << "Removing " << *alias;
-        m_r->m_root.del_subregion(alias->get_alias_mr());
+        m_r->m_root->del_subregion(alias->get_alias_mr());
     }
 
     /**
@@ -300,7 +303,7 @@ protected:
         qemu::MemoryRegion mr(m_inst.get().template object_new<qemu::MemoryRegion>());
 
         mr.init_alias(m_dev, "mr-alias", target_mr, 0, target_mr.get_size());
-        m_r->m_root.add_subregion(mr, mapping_addr);
+        m_r->m_root->add_subregion(mr, mapping_addr);
     }
 
     void do_regular_access(TlmPayload& trans) {
@@ -391,10 +394,10 @@ public:
             std::bind(&QemuInitiatorSocket::qemu_io_write, this, _1, _2, _3, _4));
         ops->set_max_access_size(8);
 
-        m_r->m_root.init_io(dev, TlmInitiatorSocket::name(), std::numeric_limits<uint64_t>::max(),
-                            ops);
+        m_r->m_root->init_io(dev, TlmInitiatorSocket::name(), std::numeric_limits<uint64_t>::max(),
+                             ops);
 
-        dev.set_prop_link(prop, m_r->m_root);
+        dev.set_prop_link(prop, *m_r->m_root);
 
         m_dev = dev;
     }
@@ -449,7 +452,6 @@ public:
 
         qemu::LibQemu& inst = m_inst.get();
         qemu::MemoryRegionOpsPtr ops;
-        m_r = new m_mem_obj(inst); // oot = inst.object_new<qemu::MemoryRegion>();
         ops = inst.memory_region_ops_new();
 
         ops->set_read_callback(std::bind(&QemuInitiatorSocket::qemu_io_read, this, _1, _2, _3, _4));
@@ -457,11 +459,15 @@ public:
             std::bind(&QemuInitiatorSocket::qemu_io_write, this, _1, _2, _3, _4));
         ops->set_max_access_size(8);
 
-        m_r->m_root.init_io(dev, TlmInitiatorSocket::name(), std::numeric_limits<uint64_t>::max(),
-                            ops);
+        auto system_memory = inst.get_system_memory();
+        system_memory->init_io(dev, TlmInitiatorSocket::name(),
+                               std::numeric_limits<uint64_t>::max(), ops);
+        m_r = new m_mem_obj(std::move(system_memory));
 
         m_as = inst.address_space_get_system_memory();
-        m_as->init(m_r->m_root, "global-peripheral-initiator", true);
+        // System memory has been changed from container to "io", this is relevant
+        // for flatview, and to reflect that we can just update the topology
+        m_as->update_topology();
 
         m_listener = inst.memory_listener_new();
         m_listener->set_map_callback(std::bind(&QemuInitiatorSocket::qemu_map, this, _1, _2, _3));

@@ -113,6 +113,9 @@ void MemoryRegionOps::set_max_access_size(unsigned size) {
  * MemoryRegion
  * ============
  */
+MemoryRegion::MemoryRegion(QemuMemoryRegion* mr, std::shared_ptr<LibQemuInternals> internals)
+    : Object(reinterpret_cast<QemuObject*>(mr), internals) {
+}
 
 MemoryRegion::~MemoryRegion() {
     for (auto& mr : m_subregions) {
@@ -214,6 +217,13 @@ MemoryRegion::MemTxResult MemoryRegion::dispatch_write(uint64_t addr, uint64_t d
     return QEMU_TO_LIB_MEMTXRESULT_MAPPING(qemu_res);
 }
 
+void MemoryRegion::set_ops(const MemoryRegionOpsPtr ops) {
+    m_ops = ops;
+    QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
+    QemuMemoryRegionOps* qemu_ops = ops->get_qemu_mr_ops();
+    m_int->exports().memory_region_set_ops(mr, qemu_ops);
+}
+
 AddressSpace::AddressSpace(QemuAddressSpace* as, std::shared_ptr<LibQemuInternals> internals)
     : m_as(as), m_int(internals) {
 }
@@ -261,6 +271,10 @@ AddressSpace::MemTxResult AddressSpace::write(uint64_t addr, const void* data, s
     qemu_res = m_int->exports().address_space_write(m_as, addr, qemu_attrs, data, size);
 
     return QEMU_TO_LIB_MEMTXRESULT_MAPPING(qemu_res);
+}
+
+void AddressSpace::update_topology() {
+    m_int->exports().address_space_update_topology(m_as);
 }
 
 MemoryListener::MemoryListener(std::shared_ptr<LibQemuInternals> internals)

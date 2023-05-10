@@ -44,6 +44,7 @@ struct sdl2_console;
 struct DisplayChangeListenerOps;
 struct DisplayChangeListener;
 struct MemTxAttrs;
+struct QemuMemoryRegion;
 struct QemuMemoryRegionOps;
 struct QemuAddressSpace;
 struct QemuMemoryListener;
@@ -66,6 +67,7 @@ namespace qemu {
 
 class LibQemuInternals;
 class Object;
+class MemoryRegion;
 class MemoryRegionOps;
 class AddressSpace;
 class MemoryListener;
@@ -152,6 +154,7 @@ public:
     std::shared_ptr<MemoryRegionOps> memory_region_ops_new();
     std::shared_ptr<AddressSpace> address_space_new();
     std::shared_ptr<AddressSpace> address_space_get_system_memory();
+    std::shared_ptr<MemoryRegion> get_system_memory();
     std::shared_ptr<MemoryListener> memory_listener_new();
     Gpio gpio_new();
 
@@ -349,6 +352,7 @@ public:
     MemoryRegion() = default;
     MemoryRegion(const MemoryRegion&) = default;
     MemoryRegion(const Object& o): Object(o) {}
+    MemoryRegion(QemuMemoryRegion* mr, std::shared_ptr<LibQemuInternals> internals);
 
     ~MemoryRegion();
 
@@ -370,6 +374,8 @@ public:
     MemTxResult dispatch_read(uint64_t addr, uint64_t* data, uint64_t size, MemTxAttrs attrs);
 
     MemTxResult dispatch_write(uint64_t addr, uint64_t data, uint64_t size, MemTxAttrs attrs);
+
+    void set_ops(const MemoryRegionOpsPtr ops);
 
     bool operator<(const MemoryRegion& mr) const { return m_obj < mr.m_obj; }
 };
@@ -398,6 +404,8 @@ public:
 
     MemTxResult read(uint64_t addr, void* data, size_t size, MemTxAttrs attrs);
     MemTxResult write(uint64_t addr, const void* data, size_t size, MemTxAttrs attrs);
+
+    void update_topology();
 };
 
 class MemoryListener
