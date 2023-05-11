@@ -30,21 +30,14 @@ def vp_test():
     lua_path = Path(args.lua)
 
     # start vp platform
-
-    if os.geteuid() != 0:
-        print("-------------------------------------")
-        print("You need to use sudo to run this test")
-        print("-------------------------------------")
-        return test
-    else:
-        cmd = ["ip", "tuntap", "add", "qbox0", "mode", "tap"]
-        proc = subprocess.Popen(
-            cmd,
-            shell=True,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+    cmd = ["ip", "tuntap", "add", "qbox0", "mode", "tap"]
+    proc = subprocess.Popen(
+        cmd,
+        shell=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
 
     child = pexpect.spawn(vp_path.as_posix(), ["--gs_luafile", args.lua])
     child.logfile = stdout.buffer
