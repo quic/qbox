@@ -69,6 +69,7 @@ public:
                               "Start and reset the CPU "
                               "in powered-off state")
         , p_sched_limit("sched_limit", true, "use sched limit")
+        , p_paranoid("paranoid_commit_state", false, "enable per-packet checks")
 
     /*
      * We have no choice but to attach-suspend here. This is fixable but
@@ -101,6 +102,7 @@ public:
         cpu.set_prop_int("start-evb", m_exec_start_addr);
         cpu.set_prop_bool("sched-limit", p_sched_limit);
         cpu.set_prop_bool("virtual-platform-mode", true);
+        cpu.set_prop_bool("paranoid-commit-state", p_paranoid);
     }
 
     void end_of_elaboration() override {
@@ -120,5 +122,6 @@ protected:
 public:
     cci::cci_param<bool> p_start_powered_off;
     cci::cci_param<bool> p_sched_limit;
+    cci::cci_param<bool> p_paranoid;
     cci::cci_param<std::string> p_dsp_arch;
 };
