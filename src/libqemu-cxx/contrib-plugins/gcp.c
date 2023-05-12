@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <glib.h>
 #include <inttypes.h>
+#include <pthread.h>
 #include <qemu-plugin.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -24,10 +25,7 @@
 #define QEMU_PACKED __attribute__((packed))
 #endif
 
-struct etrace_entry32 {
-  uint32_t duration;
-  uint32_t start, end;
-};
+#define EXEC_CACHE_SIZE (64 * 1024)
 
 struct etrace_entry64 {
   uint32_t duration;
@@ -38,19 +36,8 @@ struct etracer {
   const char *filename;
   FILE *fp;
   unsigned int arch_bits;
-
-#define EXEC_CACHE_SIZE (16 * 1024)
-  uint64_t exec_start;
-  uint64_t exec_end;
-  bool exec_start_valid;
-  int64_t exec_start_time;
   struct {
-    union {
-      struct etrace_entry64 t64[EXEC_CACHE_SIZE];
-      struct etrace_entry32 t32[2 * EXEC_CACHE_SIZE];
-    };
     uint64_t start_time;
-    unsigned int pos;
     unsigned int unit_id;
   } exec_cache;
 };
@@ -58,7 +45,6 @@ struct etracer {
 /* Still under development.  */
 #define ETRACE_VERSION_MAJOR 0
 #define ETRACE_VERSION_MINOR 0
-
 enum {
   TYPE_EXEC = 1,
   TYPE_TB = 2,
@@ -97,14 +83,30 @@ struct etrace_exec {
   uint64_t start_time;
 } QEMU_PACKED;
 
-typedef struct {
-  uint32_t start;
-  uint32_t end;
+struct tb_entry {
+  uint64_t start;
+  uint64_t end;
   uint16_t size;
-} tb_entry;
+};
 
+struct cache {
+  uint64_t index;
+  struct etrace_entry64 t64[EXEC_CACHE_SIZE];
+  uint64_t id;
+  uint64_t full;
+  uint64_t flush_first;
+};
+
+pthread_cond_t both_full = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_t thread_id;
+
+struct cache c1;
+struct cache c2;
+struct cache *current_cache;
 struct etracer qemu_etracer = {0};
-bool plugin_init_enabled;
+
+void *cache_flusher(void *arg);
 
 QEMU_PLUGIN_EXPORT int qemu_plugin_version = QEMU_PLUGIN_VERSION;
 
@@ -135,7 +137,6 @@ static void etrace_write(struct etracer *t, const void *buf, size_t len) {
 
 static void etrace_write_header(struct etracer *t, uint16_t type,
                                 uint16_t unit_id, uint32_t len) {
-
   struct etrace_hdr hdr = {.type = type, .unit_id = unit_id, .len = len};
   etrace_write(t, &hdr, sizeof hdr);
 }
@@ -151,7 +152,12 @@ static bool plugin_init(struct etracer *t, const char *filename,
     return false;
   }
 
+  c1 = (struct cache){0, {{0}}, 1, false, false};
+  c2 = (struct cache){0, {{0}}, 2, false, false};
+  current_cache = &c1;
+
   memset(&id, 0, sizeof id);
+
   id.version.major = ETRACE_VERSION_MAJOR;
   id.version.minor = ETRACE_VERSION_MINOR;
   id.attr = 0;
@@ -176,70 +182,109 @@ static bool plugin_init(struct etracer *t, const char *filename,
   return true;
 }
 
-static void etrace_flush_exec_cache(struct etracer *t) {
+static void flush_all_caches(struct etracer *t) {
+  struct cache *flash_first;
+  while ((c1.index != 0) || (c2.index != 0)) {
+    flash_first = (c1.index >= c2.index) ? &c1 : &c2;
+    size_t size64 = flash_first->index * sizeof flash_first->t64[0];
+    size_t size = size64;
+    struct etrace_exec ex;
 
-  size_t size64 = t->exec_cache.pos * sizeof t->exec_cache.t64[0];
-  size_t size32 = t->exec_cache.pos * sizeof t->exec_cache.t32[0];
-  size_t size = t->arch_bits == 32 ? size32 : size64;
-
-  struct etrace_exec ex;
-  if (!size) {
-    return;
+    if (!size) {
+      return;
+    }
+    ex.start_time = t->exec_cache.start_time;
+    etrace_write_header(t, TYPE_EXEC, t->exec_cache.unit_id, size + sizeof ex);
+    etrace_write(t, &ex, sizeof ex);
+    etrace_write(t, &flash_first->t64[0], size);
+    pthread_mutex_lock(&lock);
+    flash_first->full = false;
+    flash_first->index = 0;
+    pthread_mutex_unlock(&lock);
+    /* A barrier indicates that the other side can assume order across the
+       the barrier.  */
+    etrace_write_header(t, TYPE_BARRIER, t->exec_cache.unit_id, 0);
   }
+}
 
-  ex.start_time = t->exec_cache.start_time;
+void *cache_flusher(void *arg) {
+  struct etracer *t = &qemu_etracer;
+  struct cache *full_cache;
+  while (1) {
+    if (c1.full || c2.full) {
+      if (c1.full && c1.flush_first)
+        full_cache = &c1;
+      else if (c2.full && c2.flush_first)
+        full_cache = &c2;
+      else if (c1.full)
+        full_cache = &c1;
+      else
+        full_cache = &c2;
 
-  etrace_write_header(t, TYPE_EXEC, t->exec_cache.unit_id, size + sizeof ex);
-  etrace_write(t, &ex, sizeof ex);
-  etrace_write(t, &t->exec_cache.t64[0], size);
-  t->exec_cache.pos = 0;
-  memset(&t->exec_cache.t64[0], 0, sizeof t->exec_cache.t64);
+      struct etrace_exec ex;
+      size_t size = full_cache->index * sizeof full_cache->t64[0];
+      if (!size) {
+        return NULL;
+      }
+      ex.start_time = t->exec_cache.start_time;
 
-  /* A barrier indicates that the other side can assume order across the
-     the barrier.  */
-  etrace_write_header(t, TYPE_BARRIER, t->exec_cache.unit_id, 0);
+      etrace_write_header(t, TYPE_EXEC, t->exec_cache.unit_id,
+                          size + sizeof ex);
+      etrace_write(t, &ex, sizeof ex);
+      etrace_write(t, &full_cache->t64[0], size);
+
+      pthread_mutex_lock(&lock);
+      full_cache->full = false;
+      full_cache->index = 0;
+      full_cache->flush_first = false;
+      pthread_mutex_unlock(&lock);
+      pthread_cond_signal(&both_full);
+
+      etrace_write_header(t, TYPE_BARRIER, t->exec_cache.unit_id, 0);
+    }
+  }
+  return NULL;
 }
 
 static void vcpu_tb_exec(unsigned int cpu_index, void *udata) {
+  struct tb_entry *bb = (struct tb_entry *)udata;
+  if (current_cache->index < EXEC_CACHE_SIZE) {
+    uint64_t index = current_cache->index;
+    struct etrace_entry64 *t64 = &(current_cache->t64[index]);
 
-  tb_entry *bb = (tb_entry *)udata;
-
-  struct etracer *t = &qemu_etracer;
-
-  unsigned int pos;
-
-  if (cpu_index != t->exec_cache.unit_id) {
-    etrace_flush_exec_cache(t);
-    t->exec_cache.unit_id = cpu_index;
-  }
-
-  pos = t->exec_cache.pos;
-  if (pos == 0) {
-    t->exec_cache.start_time = t->exec_start_time;
-  }
-
-  assert(t->arch_bits == 32 || t->arch_bits == 64);
-  if (t->arch_bits == 64) {
-    t->exec_cache.pos += 1;
-    t->exec_cache.t64[pos].start = bb->start;
-    t->exec_cache.t64[pos].duration = 0; // tdiff
-    t->exec_cache.t64[pos].end = bb->end;
+    t64->start = bb->start;
+    t64->duration = 0;
+    t64->end = bb->end;
+    current_cache->index += 1;
   } else {
-    t->exec_cache.pos += 1;
-    t->exec_cache.t32[pos].start = bb->start;
-    t->exec_cache.t32[pos].duration = 0; // tdiff
-    t->exec_cache.t32[pos].end = bb->end;
-  }
-  if (t->exec_cache.pos == EXEC_CACHE_SIZE) {
-    etrace_flush_exec_cache(t);
+    pthread_mutex_lock(&lock);
+    current_cache->full = true;
+    if (!c1.flush_first &&
+        !c2.flush_first) { /* FIXME: Make this more robust.  */
+      current_cache->flush_first = true;
+    }
+    if (c1.full && c2.full) {
+      pthread_cond_wait(&both_full, &lock);
+      current_cache = (c1.full) ? &c2 : &c1;
+    } else {
+      current_cache = (current_cache->id == 1) ? &c2 : &c1;
+    }
+    pthread_mutex_unlock(&lock);
+
+    uint64_t index = current_cache->index;
+    struct etrace_entry64 *t64 = &(current_cache->t64[index]);
+
+    t64->start = bb->start;
+    t64->duration = 0;
+    t64->end = bb->end;
+    current_cache->index += 1;
   }
 }
 
 static void vcpu_tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb *tb) {
   uint64_t pc = qemu_plugin_tb_vaddr(tb);
   size_t n = qemu_plugin_tb_n_insns(tb);
-
-  tb_entry *bb = calloc(1, sizeof *bb); // #fixme free this later
+  struct tb_entry *bb = calloc(1, sizeof *bb); // #fixme free this later
 
   for (int i = 0; i < n; i++) {
     bb->size += qemu_plugin_insn_size(qemu_plugin_tb_get_insn(tb, i));
@@ -252,7 +297,7 @@ static void vcpu_tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb *tb) {
 
 static void etrace_close(struct etracer *t) {
   if (t->fp) {
-    etrace_flush_exec_cache(t);
+    flush_all_caches(t);
     fclose(t->fp);
   }
 }
@@ -283,12 +328,14 @@ int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_t *info, int argc,
       return -1;
     }
   }
-  plugin_init_enabled =
+  bool plugin_init_enabled =
       plugin_init(&qemu_etracer, filename, arch_id, arch_bits);
+
   if (!plugin_init_enabled) {
     perror("gcp-plugin arguments invalid");
     exit(1);
   }
+  pthread_create(&thread_id, NULL, cache_flusher, NULL);
   qemu_plugin_register_vcpu_tb_trans_cb(id, vcpu_tb_trans);
   qemu_plugin_register_atexit_cb(id, plugin_exit, NULL);
   return 0;
