@@ -27,6 +27,7 @@
 #include <iostream>
 #include <list>
 #include <regex>
+#include <unordered_set>
 
 #include "luafile_tool.h"
 #include <cci_configuration>
@@ -284,6 +285,9 @@ protected:
     cci_originator m_originator;
     cci_param<ConfigurableBroker*>* m_child_ref;
 
+    std::unordered_set<std::string> m_initialized;
+    std::function<void(std::string)> m_uninitialized_cb;
+
     friend class cci_value_converter<ConfigurableBroker>;
 
     // convenience function for constructor
@@ -320,6 +324,14 @@ protected:
      */
     virtual bool sendToParent(const std::string& parname) const
     {
+        auto pos = parname.find_last_of('.');
+        if (pos != std::string::npos) {
+            auto parent = parname.substr(0, pos);
+            if (m_uninitialized_cb && m_initialized.count(parent) == 0) {
+                const_cast<ConfigurableBroker*>(this)->m_initialized.insert(parent);
+                m_uninitialized_cb(parent);
+            }
+        }
         return ((hide.find(parname) == hide.end()) && (!is_global_broker()));
     }
 
@@ -528,7 +540,8 @@ public:
      * @param load_conf_file : request that configuration file is loaded (default true)
      */
 #define BROKERNAME "gs::ConfigurableBroker"
-    ConfigurableBroker(const std::string& name = BROKERNAME, bool load_conf_file = true)
+    ConfigurableBroker(const std::string& name = BROKERNAME, bool load_conf_file = true,
+                       std::function<void(std::string)> uninitialized_cb = nullptr)
         : m_orig_name(hierarchical_name())
         , m_originator(get_cci_originator(name.c_str()))
         , consuming_broker(hierarchical_name() + "." + name)
@@ -537,6 +550,8 @@ public:
         , m_parent(get_parent_broker()) // local convenience function
         , m_child_ref(NULL)
         , m_help_helper("help_helper")
+        , m_uninitialized_cb(uninitialized_cb)
+
     {
         if (has_parent) {
             m_child_ref = new cci_param<ConfigurableBroker*>(
@@ -555,8 +570,8 @@ public:
      *
      * @param load_conf_file request that configuration file is loaded
      */
-    ConfigurableBroker(bool load_conf_file)
-        : ConfigurableBroker(BROKERNAME, load_conf_file)
+    ConfigurableBroker(bool load_conf_file, std::function<void(std::string)> uninitialized_cb = nullptr)
+        : ConfigurableBroker(BROKERNAME, load_conf_file, uninitialized_cb)
     {
     }
     /**
@@ -568,8 +583,8 @@ public:
      */
     ConfigurableBroker(std::initializer_list<cci_name_value_pair> list,
                        std::initializer_list<std::pair<std::string, std::string>> alias_list = {},
-                       bool load_conf_file = true)
-        : ConfigurableBroker(false)
+                       bool load_conf_file = true, std::function<void(std::string)> uninitialized_cb = nullptr)
+        : ConfigurableBroker(false, uninitialized_cb)
     {
         initialize_params(list);
         alias_params(alias_list);
@@ -590,8 +605,9 @@ public:
      * @param load_conf_file
      */
     ConfigurableBroker(const int argc, char* const argv[], std::initializer_list<cci_name_value_pair> list = {},
-                       bool load_conf_file = true, bool enforce_config_file = false)
-        : ConfigurableBroker(false)
+                       bool load_conf_file = true, bool enforce_config_file = false,
+                       std::function<void(std::string)> uninitialized_cb = nullptr)
+        : ConfigurableBroker(false, uninitialized_cb)
     {
         for (auto& p : list) {
             set_preset_cci_value(relname(p.first), p.second, m_originator);
@@ -623,8 +639,9 @@ public:
         }
     }
 
-    ConfigurableBroker(const int argc, char* const argv[], bool enforce_config_file)
-        : ConfigurableBroker(argc, argv, {}, true, enforce_config_file)
+    ConfigurableBroker(const int argc, char* const argv[], bool enforce_config_file,
+                       std::function<void(std::string)> uninitialized_cb = nullptr)
+        : ConfigurableBroker(argc, argv, {}, true, enforce_config_file, uninitialized_cb)
     {
     }
 
@@ -638,6 +655,11 @@ public:
         if (m_child_ref) {
             delete m_child_ref;
         }
+    }
+
+    void set_uninitialized_cb(std::function<void(std::string)> uninitialized_cb)
+    {
+        m_uninitialized_cb = uninitialized_cb;
     }
 
     cci_originator get_value_origin(const std::string& parname) const override
@@ -800,6 +822,17 @@ class PrivateConfigurableBroker : public gs::ConfigurableBroker
     std::set<std::string> parent;
     bool sendToParent(const std::string& parname) const override
     {
+        if (m_uninitialized_cb) {
+            auto pos = parname.find_last_of('.');
+            if (pos != std::string::npos) {
+                auto parent = parname.substr(0, pos);
+                if (m_uninitialized_cb && m_initialized.count(parent) == 0) {
+                    const_cast<PrivateConfigurableBroker*>(this)->m_initialized.insert(parent);
+                    m_uninitialized_cb(parent);
+                }
+            }
+        }
+
         if (parent.count(parname) > 0) {
             return true;
         }
@@ -811,8 +844,20 @@ class PrivateConfigurableBroker : public gs::ConfigurableBroker
     }
 
 public:
-    PrivateConfigurableBroker(const std::string& name)
-        : gs::ConfigurableBroker(name, false)
+    PrivateConfigurableBroker(std::string name)
+        : gs::ConfigurableBroker(name)
+    {
+        m_name = hierarchical_name();
+        m_name_length = m_name.length();
+
+        auto uncon = m_parent.get_unconsumed_preset_values(
+            [&](const std::pair<std::string, cci_value>& iv) { return iv.first.find(m_name + ".") == 0; });
+        for (auto p : uncon) {
+            parent.insert(p.first);
+        }
+    }
+    PrivateConfigurableBroker(std::function<void(std::string)> uninitialized_cb)
+        : gs::ConfigurableBroker(true, uninitialized_cb)
     {
         m_name = hierarchical_name();
         m_name_length = m_name.length();
