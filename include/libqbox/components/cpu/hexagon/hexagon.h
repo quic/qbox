@@ -103,6 +103,9 @@ public:
         cpu.set_prop_bool("sched-limit", p_sched_limit);
         cpu.set_prop_bool("virtual-platform-mode", true);
         cpu.set_prop_bool("paranoid-commit-state", p_paranoid);
+
+        std::string parent = gs::get_parent_name(name());
+        cpu.set_prop_int("thread-count", gs::cci_get<uint32_t>(parent + ".hexagon_num_threads"));
     }
 
     void end_of_elaboration() override {
