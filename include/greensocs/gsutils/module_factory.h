@@ -118,8 +118,14 @@ SC_MODULE (container) {
              * object Note that the names are relative to the current module (this).
              */
 
-            std::string bindname = std::string(m->name()) + "." + param + ".bind";
             std::string targetname = std::string(m->name()) + "." + param;
+            if (m_broker.get_preset_cci_value(targetname + ".0").is_string()) {
+                // deal with an alias
+                std::string src = m_broker.get_preset_cci_value(targetname + ".0").get_string();
+                m_broker.set_preset_cci_value(targetname + ".address", m_broker.get_preset_cci_value(src + ".address"));
+                m_broker.set_preset_cci_value(targetname + ".size", m_broker.get_preset_cci_value(src + ".size"));
+            }
+            std::string bindname = targetname + ".bind";
             if (!m_broker.get_preset_cci_value(bindname).is_string()) {
                 continue;
             }

@@ -232,6 +232,7 @@ private:
     std::vector<target_info*> targets;
     std::vector<target_info*> cb_targets;
     std::vector<target_info*> id_targets;
+    std::vector<target_info*> dynamic_targets;
 
     std::vector<PathIDExtension*> m_pathIDPool; // at most one per thread!
 #if THREAD_SAFE == true
@@ -277,6 +278,14 @@ private:
         sc_dt::uint64 addr = trans.get_address();
         auto ti = decode_address(trans);
         if (!ti) {
+            for (auto dti : dynamic_targets) {
+                initiator_socket[dti->index]->b_transport(trans, delay);
+                if (trans.get_response_status() == tlm::TLM_OK_RESPONSE) {
+                    return;
+                }
+            }
+        }
+        if (!ti) {
             SCP_WARN(())("Attempt to access unknown register at offset 0x{:x}", addr);
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return;
@@ -305,6 +314,14 @@ private:
         sc_dt::uint64 addr = trans.get_address();
         auto ti = decode_address(trans);
         if (!ti) {
+            for (auto dti : dynamic_targets) {
+                unsigned int ret = initiator_socket[dti->index]->transport_dbg(trans);
+                if (trans.get_response_status() == tlm::TLM_OK_RESPONSE) {
+                    return ret;
+                }
+            }
+        }
+        if (!ti) {
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return 0;
         }
@@ -320,6 +337,14 @@ private:
     {
         sc_dt::uint64 addr = trans.get_address();
         auto ti = decode_address(trans);
+        if (!ti) {
+            for (auto dti : dynamic_targets) {
+                unsigned int ret = initiator_socket[dti->index]->get_direct_mem_ptr(trans, dmi_data);
+                if (ret) {
+                    return ret;
+                }
+            }
+        }
         if (!ti) {
             return false;
         }
@@ -483,6 +508,10 @@ private:
         initialized = true;
 
         for (auto& ti : bound_targets) {
+            if (get_val<bool>(ti.name + ".dynamic", false) == true) {
+                dynamic_targets.push_back(&ti);
+                continue;
+            }
             ti.address = get_val<uint64_t>(ti.name + ".address");
             ti.size = get_val<uint64_t>(ti.name + ".size");
             ti.use_offset = get_val<bool>(ti.name + ".relative_addresses", true);
