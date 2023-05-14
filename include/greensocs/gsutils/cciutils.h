@@ -209,7 +209,7 @@ static std::list<std::string> sc_cci_list_items(sc_core::sc_module_name module_n
                                      ? cci_get_broker()
                                      : cci_get_global_broker(cci_originator("gs__sc_cci_children"));
     std::string name = std::string(module_name) + "." + list_name;
-    std::regex search(name + "_[0-9]+\\.");
+    std::regex search(name + "_[0-9]+(\\.|$)");
     std::list<std::string> children;
     int l = strlen(module_name) + 1;
     auto uncon = m_broker.get_unconsumed_preset_values(
@@ -267,6 +267,8 @@ std::vector<T> cci_get_vector(const std::string base)
  */
 class ConfigurableBroker : public cci_utils::consuming_broker
 {
+private:
+    std::set<std::string> m_unignored; // before conf_file
 public:
     // a set of perameters that should be exposed up the broker stack
     std::set<std::string> hide;
@@ -506,6 +508,10 @@ public:
             }
         }
         if (top) {
+            std::cerr << std::endl << "Logging parameters :" << std::endl;
+            for (auto p : scp::get_logging_parameters()) {
+                std::cerr << p << std::endl;
+            }
             std::cerr << "---" << std::endl;
         }
     }
@@ -670,9 +676,9 @@ public:
                             const cci::cci_originator& originator = cci::cci_originator()) const override
     {
         if (sendToParent(parname)) {
-            return m_parent.get_cci_value(parname);
+            return m_parent.get_cci_value(parname, originator);
         } else {
-            return consuming_broker::get_cci_value(parname);
+            return consuming_broker::get_cci_value(parname, originator);
         }
     }
 
@@ -681,6 +687,10 @@ public:
         if (sendToParent(par->name())) {
             return m_parent.add_param(par);
         } else {
+            auto iter = m_unignored.find(par->name());
+            if (iter != m_unignored.end()) {
+                m_unignored.erase(iter);
+            }
             return consuming_broker::add_param(par);
         }
     }
@@ -690,6 +700,7 @@ public:
         if (sendToParent(par->name())) {
             return m_parent.remove_param(par);
         } else {
+            m_unignored.insert(par->name());
             return consuming_broker::remove_param(par);
         }
     }
@@ -715,7 +726,13 @@ public:
         if (has_parent) {
             m_parent.ignore_unconsumed_preset_values(pred);
         }
-        consuming_broker::ignore_unconsumed_preset_values(pred);
+        for (auto u = m_unignored.begin(); u != m_unignored.end();) {
+            if (pred(make_pair(*u, cci_value(0)))) {
+                u = m_unignored.erase(u);
+            } else {
+                ++u;
+            }
+        }
     }
 
     cci_preset_value_range get_unconsumed_preset_values(const cci_preset_value_predicate& pred) const override
@@ -732,6 +749,7 @@ public:
         if (sendToParent(parname)) {
             return m_parent.set_preset_cci_value(parname, cci_value, originator);
         } else {
+            m_unignored.insert(parname);
             return consuming_broker::set_preset_cci_value(parname, cci_value, originator);
         }
     }
@@ -766,7 +784,7 @@ public:
         }
     }
 
-    bool is_global_broker() const { return (!has_parent); }
+    bool is_global_broker() const override { return (!has_parent); }
 };
 
 class PrivateConfigurableBroker : public gs::ConfigurableBroker
