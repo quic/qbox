@@ -140,7 +140,8 @@ static std::list<std::string> sc_cci_list_items(sc_core::sc_module_name module_n
     for (auto p : uncon) {
         std::smatch match;
         std::regex_search(p.first, match, search);
-        children.push_back(p.first.substr(l, (match.length() - l) - (match.str().back() == '.' ? 1 : 0)));
+        children.push_back(
+            p.first.substr(l, (match.length() - l) - (match.str().back() == '.' ? 1 : 0)));
     }
     children.sort();
     children.unique();
@@ -156,10 +157,25 @@ T cci_get(std::string name) {
         });
     m_broker.lock_preset_value(name);
     T ret;
+    auto h = m_broker.get_param_handle(name);
+    if (h.is_valid()) {
+        return h.get_cci_value().get<T>();
+    }
+
     if (!m_broker.get_preset_cci_value(name).template try_get<T>(ret)) {
-        SCP_ERR("cciutils.cci_get") << "Unable to get parameter " << name << "\nIs your .lua file up-to-date?";
+        SCP_ERR("cciutils.cci_get")
+            << "Unable to get parameter " << name << "\nIs your .lua file up-to-date?";
     };
     return ret;
+}
+
+static std::string get_parent_name(sc_core::sc_module_name n) {
+    std::string name(n);
+    auto pos = name.find_last_of('.');
+    if (pos != std::string::npos) {
+        return name.substr(0, pos);
+    }
+    return "";
 }
 
 /**
