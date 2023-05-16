@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
-import argparse, pprint
+import argparse
 import os
-from os import sched_get_priority_max
 from pathlib import Path
 import sys
-from sys import exit, stdout
-import pexpect
-from pexpect import *
-import getpass
 from truth.truth import AssertThat
-import subprocess
-from subprocess import Popen, PIPE
 import psutil
-
+import time
+from QCSubprocess import QCSubprocess
 
 def fastrpc_calc_test():
     test = False
@@ -21,6 +15,7 @@ def fastrpc_calc_test():
     parser.add_argument("-e", "--exe", metavar="", help="Path to vp executable")
     parser.add_argument("-l", "--lua", metavar="", help="Path to luafile")
     parser.add_argument("-i", "--img", metavar="", help="Path to binary images")
+    parser.add_argument("-p", "--port", metavar="", help="SSH port of the vp")
     parser.add_argument('extra_args', nargs='*',
         help="Forward additional arguments to vp")
     args = parser.parse_args()
@@ -33,6 +28,7 @@ def fastrpc_calc_test():
     if not args.img:
         print("img argument is required")
         return test
+    ssh_port = args.port or "2222"
 
     vp_path = Path(args.exe)
     lua_path = Path(args.lua)
@@ -43,7 +39,9 @@ def fastrpc_calc_test():
     timeout_scale = 1
     if (load > 0.0):
         timeout_scale = 1 + (load / 100)
+    timeout = timeout_sec * timeout_scale
     print ("Timeout Scale: ", timeout_scale)
+    print ("Timeout (s): ", timeout)
 
     env = {
         "QQVP_IMAGE_DIR": img_path.as_posix(),
@@ -56,31 +54,29 @@ def fastrpc_calc_test():
         env["LD_LIBRARY_PATH"] = os.environ["LD_LIBRARY_PATH"]
 
     print("Starting platform with ENV", env)
-    vp_args = ["--gs_luafile", args.lua, "--param", "platform.with_gpu=false", ]
+    vp_args = [vp_path.as_posix(), "--gs_luafile", args.lua,
+               "--param", "platform.with_gpu=false"]
     if args.extra_args:
         vp_args += args.extra_args
 
-    child = pexpect.spawn(
-                vp_path.as_posix(),
-                vp_args,
-                env=env,
-                timeout=timeout_sec*timeout_scale
-            )
+    vp = QCSubprocess(vp_args, env, timeout)
+    vp.expect(r"DSP Image Creation Date:.+\s*\n") # CDSP{0,1}
+    vp.expect(r"DSP Image Creation Date:.+\s*\n") # CDSP{0,1}
+    time.sleep(4)
 
-    child.logfile = stdout.buffer
-    child.expect(r"DSP Image Creation Date:.+\s*\n") # CDSP{0,1}
-    child.expect(r"DSP Image Creation Date:.+\s*\n") # CDSP{0,1}
+    ssh_args = ["ssh", "-p", ssh_port, "root@localhost",
+                "-o", "UserKnownHostsFile=/dev/null",
+                "-o", "StrictHostKeyChecking=no",
+                "sh -c '/mnt/bin/fastrpc_calc_test 0 100 3 && "
+                       "/mnt/bin/fastrpc_calc_test 0 100 4'"]
 
-    cdsp0 = 3
-    cdsp1 = 4
-    for cdsp_index in (cdsp0, cdsp1):
-        child.send("\n")
-        child.send("\n")
-        child.send("\n")
-        child.expect("#")
-        child.sendline('fastrpc_calc_test 0 100 {}'.format(cdsp_index))
-        child.expect('- sum = 4950', timeout=300*timeout_scale)
-        child.expect('- success')
+    # NOTE: we use ssh here instead of directly communicating through pexpect
+    # and VP's UART due to oddnesses with /dev/tty in QNX when running on
+    # MacOS CI. For more details, see QTOOL-95796.
+    ssh = QCSubprocess(ssh_args, timeout=timeout)
+    for _ in range(2):
+        ssh.expect('- sum = 4950')
+        ssh.expect('- success')
 
     test = True
     return test

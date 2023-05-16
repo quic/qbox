@@ -21,13 +21,10 @@ endmacro()
 
 set(SYNC --param platform.ArmQemuInstance.sync_policy=\"multithread-quantum\")
 
-# TODO: these tests are disable on macOS CI due to a known failure. See QTOOL-95796
-if(NOT ("${QQVP_CI}" STREQUAL "Yes" AND "${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin"))
-    gs_add_test(Makena_fastrpc_calc_test_quantum 8540/SA8540P_conf.lua "makena/default" "${SYNC}")
-    gs_add_test(LeMans_fastrpc_calc_test_quantum 8775/SA8775P_conf.lua "lemans" "${SYNC}")
-    gs_add_test(Makena_fastrpc_calc_test 8540/SA8540P_conf.lua "makena/default" "")
-    gs_add_test(LeMans_fastrpc_calc_test 8775/SA8775P_conf.lua "lemans" "")
-endif()
+gs_add_test(Makena_fastrpc_calc_test_quantum 8540/SA8540P_conf.lua "makena/default" "${SYNC}")
+gs_add_test(LeMans_fastrpc_calc_test_quantum 8775/SA8775P_conf.lua "lemans" "${SYNC}")
+gs_add_test(Makena_fastrpc_calc_test 8540/SA8540P_conf.lua "makena/default" "")
+gs_add_test(LeMans_fastrpc_calc_test 8775/SA8775P_conf.lua "lemans" "")
 
 foreach(flavor IN ITEMS opengl red_hat)
     if(EXISTS ${QQVP_FIRMWARE_REPO_DIR}/${flavor}_linux)

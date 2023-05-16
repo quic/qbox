@@ -26,8 +26,6 @@ include:
   extends:
     - .clone_firmware_images_repo
     - .general_build_job_template
-  variables:
-    REPO_CMAKE_ARGS: -DQQVP_CI=Yes
 
 lua-check:
   extends: .mr-job
