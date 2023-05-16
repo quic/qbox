@@ -50,32 +50,37 @@ using namespace cci;
 template <typename, typename... U>
 class cci_function; // undefined
 template <typename T, typename... U>
-class cci_function<T(U...)> : public std::function<T(U...)> {
+class cci_function<T(U...)> : public std::function<T(U...)>
+{
     using std::function<T(U...)>::function;
 
 public:
     // add operater== as required by CCI
-    bool operator==(const cci_function& rhs) const { assert(false); return false; }
+    bool operator==(const cci_function& rhs) const
+    {
+        assert(false);
+        return false;
+    }
 };
 
 /**
  * @brief sc_module constructor container for CCI
- * This uses the CCI Function container, and the FactoryMaker in order to parameterise the constructor and maintain type safety
- * The actual parameters will be extracted (in a type safe manor) from a CCI list
+ * This uses the CCI Function container, and the FactoryMaker in order to parameterise the constructor and maintain type
+ * safety The actual parameters will be extracted (in a type safe manor) from a CCI list
  */
-class cci_constructor_vl : public std::function<sc_core::sc_module*(
-                               sc_core::sc_module_name, cci::cci_value_list)> {
-    using std::function<sc_core::sc_module*(sc_core::sc_module_name,
-        cci::cci_value_list)>::function;
+class cci_constructor_vl : public std::function<sc_core::sc_module*(sc_core::sc_module_name, cci::cci_value_list)>
+{
+    using std::function<sc_core::sc_module*(sc_core::sc_module_name, cci::cci_value_list)>::function;
 
 public:
     /**
-    * @brief The FactoryMaker carries the type infomation into the constructor functor.
-    * 
-    * @tparam Templated over T(U..)
-    */
+     * @brief The FactoryMaker carries the type infomation into the constructor functor.
+     *
+     * @tparam Templated over T(U..)
+     */
     template <typename T, typename... U>
-    class FactoryMaker {
+    class FactoryMaker
+    {
     public:
         const char* type;
         FactoryMaker<T, U...>(const char* _t)
@@ -95,31 +100,28 @@ public:
      */
     template <typename _T, typename... U>
     cci_constructor_vl(FactoryMaker<_T, U...> fm)
-        : std::function<sc_core::sc_module*(sc_core::sc_module_name name,
-            cci::cci_value_list v)>(
-            [&](sc_core::sc_module_name name,
-                cci::cci_value_list v) -> sc_core::sc_module* {
-                if (sizeof...(U) != v.size()) {
-                    SC_REPORT_ERROR("GS CCI UTILS",
-                        ("Wrong number of CCI arguments for module " + std::string(name))
-                            .c_str());
-                }
-                int n = 0;
-                try {
-                    return new _T(name, v[n++].get<U>()...);
-                } catch (...) {
-                    SC_REPORT_ERROR("GS CCI UTILS",
-                        ("CCI argument types dont match for module " + std::string(name))
-                            .c_str());
-                }
-                return nullptr;
-            })
+        : std::function<sc_core::sc_module*(sc_core::sc_module_name name, cci::cci_value_list v)>(
+              [&](sc_core::sc_module_name name, cci::cci_value_list v) -> sc_core::sc_module* {
+                  if (sizeof...(U) != v.size()) {
+                      SC_REPORT_ERROR("GS CCI UTILS",
+                                      ("Wrong number of CCI arguments for module " + std::string(name)).c_str());
+                  }
+                  int n = 0;
+                  try {
+                      return new _T(name, v[n++].get<U>()...);
+                  } catch (...) {
+                      SC_REPORT_ERROR("GS CCI UTILS",
+                                      ("CCI argument types dont match for module " + std::string(name)).c_str());
+                  }
+                  return nullptr;
+              })
     {
         type = fm.type;
     }
 
     // add operater== as required by CCI
-    bool operator==(const cci_constructor_vl& rhs) const {
+    bool operator==(const cci_constructor_vl& rhs) const
+    {
         SCP_FATAL("cciutils.operator") << "Operator required by CCI";
         return false;
     }
@@ -479,7 +481,8 @@ public:
         return consumed_preset_cci_values;
     }
 
-    void print_debug(bool top = true) {
+    void print_debug(bool top = true)
+    {
         /* NB there is a race condition between this and the QEMU uart which
          * has a tendency to wipe the buffer. We will use cerr here */
 
@@ -586,10 +589,10 @@ public:
      * @param list list of pre-configred values (to be hidden)
      * @param load_conf_file
      */
-    ConfigurableBroker(const int argc, char* const argv[],
-                       std::initializer_list<cci_name_value_pair> list = {},
+    ConfigurableBroker(const int argc, char* const argv[], std::initializer_list<cci_name_value_pair> list = {},
                        bool load_conf_file = true, bool enforce_config_file = false)
-        : ConfigurableBroker(false) {
+        : ConfigurableBroker(false)
+    {
         for (auto& p : list) {
             set_preset_cci_value(relname(p.first), p.second, m_originator);
         }
@@ -621,9 +624,12 @@ public:
     }
 
     ConfigurableBroker(const int argc, char* const argv[], bool enforce_config_file)
-        : ConfigurableBroker(argc, argv, {}, true, enforce_config_file) {}
+        : ConfigurableBroker(argc, argv, {}, true, enforce_config_file)
+    {
+    }
 
-    std::string relname(const std::string& n) const {
+    std::string relname(const std::string& n) const
+    {
         return (m_orig_name.empty()) ? n : m_orig_name + std::string(".") + n;
     }
 
@@ -834,58 +840,9 @@ public:
 };
 } // namespace gs
 
-#define CCI_GS_MF_NAME "__GS.ModuleFactory."
-/**
- * @brief Helper macro to register an sc_module constructor, complete with its (typed) arguments
- *
- */
-
-#define GSC_MODULE_REGISTER(__NAME__, ...)                                              \
-    cci::cci_param<gs::cci_constructor_vl>                                              \
-        GS_MODULEFACTORY_moduleReg_##__NAME__(                                          \
-            CCI_GS_MF_NAME #__NAME__,                                                   \
-            gs::cci_constructor_vl::FactoryMaker<__NAME__, ##__VA_ARGS__>(#__NAME__),   \
-            "default constructor", cci::CCI_ABSOLUTE_NAME,                              \
-            cci::cci_originator("GreenSocs Module Factory"))
-
-/**
- * @brief CCI value converted
- * notice that NO conversion is provided.
- *
- */
-template <>
-struct cci::cci_value_converter<gs::cci_constructor_vl> {
-    typedef gs::cci_constructor_vl type;
-    static bool pack(cci::cci_value::reference dst, type const& src)
-    {
-        dst.set_string(src.type);
-        return true;
-    }
-    static bool unpack(type& dst, cci::cci_value::const_reference src)
-    {
-        if (!src.is_string()) {
-            return false;
-        }
-        std::string moduletype;
-        if (!src.try_get(moduletype)) {
-            return false;
-        }
-        cci::cci_param_typed_handle<gs::cci_constructor_vl> m_fac(
-            cci::cci_get_broker().get_param_handle(CCI_GS_MF_NAME + moduletype));
-        if (!m_fac.is_valid()) {
-            SC_REPORT_ERROR("ModuleFactory",
-                ("Can't find module type: " + moduletype).c_str());
-            return false;
-        }
-        dst = *m_fac;
-
-        return true;
-    }
-};
-
 /**
  * @brief Provide support for sc_core::sc_object as a CCI param, based on their fully qualified name
- * 
+ *
  */
 template <>
 struct cci::cci_value_converter<sc_core::sc_object*> {
@@ -913,7 +870,7 @@ struct cci::cci_value_converter<sc_core::sc_object*> {
 /**
  * @brief CCI value converted
  * notice that NO conversion is provided.
- * 
+ *
  */
 template <typename T, typename... U>
 struct cci::cci_value_converter<gs::cci_function<T(U...)>> {
