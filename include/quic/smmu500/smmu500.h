@@ -206,6 +206,7 @@ private:
     REG32(SMMU_STLBIALL, 0x60)
     REG32(SMMU_TLBIVMID, 0x64)
     FIELD(SMMU_TLBIVMID, VMID, 0, 8)
+    REG32(SMMU_TLBIALLH, 0x6c)
     REG32(SMMU_TLBIALLNSNH, 0x68)
     REG32(SMMU_STLBGSYNC, 0x70)
     REG32(SMMU_STLBGSTATUS, 0x74)
@@ -2049,6 +2050,10 @@ protected:
                                                        {
                                                            .name = "SMMU_TLBIVMID",
                                                            .addr = A_SMMU_TLBIVMID,
+                                                       },
+                                                       {
+                                                           .name = "SMMU_TLBIALLH",
+                                                           .addr = A_SMMU_TLBIALLH,
                                                        },
                                                        {
                                                            .name = "SMMU_TLBIALLNSNH",
