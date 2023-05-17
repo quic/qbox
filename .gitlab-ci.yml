@@ -3,6 +3,8 @@ include:
     file: 'gitlab-ci-template.yml'
 
 .clone_firmware_images_repo:
+  variables:
+    CACHED_FW_REPO: /var/firmware-images
   before_script:
     - |
       if [[ -z "$QQVP_FIRMWARE_REPO_SHA" ]]; then
@@ -14,13 +16,18 @@ include:
           fi
       fi
     - echo "Using commit id ${QQVP_FIRMWARE_REPO_SHA} of firmware-repo"
-    - eval $(ssh-agent -s)
-    - echo "$LFS_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    - git clone --no-checkout $AUTHENTICATED_GIT_URL/qqvp/firmware-images.git
-    - cd firmware-images
-    - git checkout $QQVP_FIRMWARE_REPO_SHA
-    - export QQVP_FIRMWARE_REPO_DIR="$(pwd)"
-    - cd -
+    - if git -C $CACHED_FW_REPO rev-parse --git-dir >/dev/null 2>&1; then
+        echo "Using existing fw repo at $CACHED_FW_REPO" &&
+        mkdir firmware-images &&
+        git -C $CACHED_FW_REPO archive $QQVP_FIRMWARE_REPO_SHA | tar -x -C $PWD/firmware-images;
+      else
+        echo "Cloning fw repo" &&
+        eval $(ssh-agent -s) &&
+        echo "$LFS_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - &&
+        git clone --no-checkout $AUTHENTICATED_GIT_URL/qqvp/firmware-images.git &&
+        git -C firmware-images checkout $QQVP_FIRMWARE_REPO_SHA;
+      fi
+    - export QQVP_FIRMWARE_REPO_DIR="$(pwd)/firmware-images"
 
 .build_job_template:
   extends:
