@@ -12,7 +12,11 @@ class QCSubprocess:
 
     def __init__(self, args, env=None, timeout=None):
         self.proc = None
-        atexit.register(lambda: self.proc.kill() if self.proc and self.proc.poll() is None else None)
+        @atexit.register
+        def cleanup():
+            if self.proc is not None:
+                self.proc.kill()
+                self.proc.wait()
         self.proc = subprocess.Popen(
                     args,
                     env=env,
