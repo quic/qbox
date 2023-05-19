@@ -1140,8 +1140,8 @@ public:
 
                 // execlp("lldb", "lldb", "--", exec_path.c_str(), exec_path.c_str(), "-p",
                 // conf_arg, nullptr);
-                SCP_FATAL(()) << "Unable to exec the remote child process, error: "
-                              << std::strerror(errno);
+                SCP_FATAL(()) << "Unable to exec the remote child process, '" << exec_path
+                              << "', error: " << std::strerror(errno);
             } else {
                 SCP_FATAL(()) << "failed to fork remote process, error: " << std::strerror(errno);
             }
