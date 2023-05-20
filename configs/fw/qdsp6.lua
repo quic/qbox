@@ -283,6 +283,8 @@ function _get_dsp(dsp_type, arch, base, ahbs_base, cfgtable, start_addr, ahb_siz
     assert(num_threads >= 1);
     local dsp = {
         hexagon_num_threads = num_threads;
+        isdben_secure  = true;
+        isdben_trusted = true;
         hexagon_thread_0={ start_powered_off = false,
             start_halted=true,
             sched_limit=sched_limit,

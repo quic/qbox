@@ -85,6 +85,8 @@ class hexagon_cluster : public sc_core::sc_module
 public:
     cci::cci_param<unsigned> p_hexagon_num_threads;
     cci::cci_param<uint32_t> p_hexagon_start_addr;
+    cci::cci_param<bool> p_isdben_secure;
+    cci::cci_param<bool> p_isdben_trusted;
     cci::cci_param<uint32_t> p_cfgbase;
     // keep public so that smmu can be associated with hexagon
     QemuInstance& m_qemu_hex_inst;
@@ -113,6 +115,8 @@ public:
         : sc_core::sc_module(n)
         , p_hexagon_num_threads("hexagon_num_threads", 8, "Number of Hexagon threads")
         , p_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
+        , p_isdben_trusted("isdben_trusted", false, "Value of ISDBEN.TRUSTED reg field")
+        , p_isdben_secure("isdben_secure", false, "Value of ISDBEN.SECURE reg field")
         , p_cfgbase("cfgtable_base", 0, "config table base address")
         , m_qemu_hex_inst(
               m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
