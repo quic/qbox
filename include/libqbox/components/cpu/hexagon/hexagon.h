@@ -106,6 +106,8 @@ public:
 
         std::string parent = gs::get_parent_name(name());
         cpu.set_prop_int("thread-count", gs::cci_get<uint32_t>(parent + ".hexagon_num_threads"));
+        cpu.set_prop_bool("isdben-trusted", gs::cci_get<bool>(parent + ".isdben_trusted"));
+        cpu.set_prop_bool("isdben-secure", gs::cci_get<bool>(parent + ".isdben_secure"));
     }
 
     void end_of_elaboration() override {
