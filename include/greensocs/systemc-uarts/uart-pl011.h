@@ -152,6 +152,9 @@ public:
         unsigned char* ptr = trans.get_data_ptr();
         uint64_t addr = trans.get_address();
         unsigned int len = trans.get_data_length();
+        uint8_t val8;
+        uint16_t val16;
+        uint32_t val32;
 
         trans.set_dmi_allowed(false);
         trans.set_response_status(tlm::TLM_OK_RESPONSE);
@@ -160,13 +163,16 @@ public:
         case tlm::TLM_WRITE_COMMAND:
             switch (len) {
             case 1:
-                pl011_write(addr, *ptr);
+                memcpy(&val8, ptr, sizeof(val8));
+                pl011_write(addr, val8);
                 break;
             case 2:
-                pl011_write(addr, *(uint16_t*)ptr);
+                memcpy(&val16, ptr, sizeof(val16));
+                pl011_write(addr, val16);
                 break;
             case 4:
-                pl011_write(addr, *(uint32_t*)ptr);
+                memcpy(&val32, ptr, sizeof(val32));
+                pl011_write(addr, val32);
                 break;
             default:
                 SCP_FATAL(SCMOD) << "Incorrect transaction size";
@@ -176,13 +182,16 @@ public:
         case tlm::TLM_READ_COMMAND:
             switch (len) {
             case 1:
-                *ptr = (uint8_t)pl011_read(addr);
+                val8 = (uint8_t)pl011_read(addr);
+                memcpy(&val8, ptr, sizeof(val8));
                 break;
             case 2:
-                *ptr = (uint16_t)pl011_read(addr);
+                val16 = (uint16_t)pl011_read(addr);
+                memcpy(&val16, ptr, sizeof(val16));
                 break;
             case 4:
-                *(uint32_t*)ptr = pl011_read(addr);
+                val32 = (uint32_t)pl011_read(addr);
+                memcpy(&val32, ptr, sizeof(val32));
                 break;
             default:
                 SCP_FATAL(SCMOD) << "Incorrect transaction size";
