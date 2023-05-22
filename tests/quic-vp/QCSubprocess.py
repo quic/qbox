@@ -6,10 +6,11 @@ import sys
 import atexit
 from threading import Thread
 from queue import Queue
+from collections import deque
 
 # A simpler and non-interactive version of pexpect
 class QCSubprocess:
-
+    EOF = object()
     def __init__(self, args, env=None, timeout=None):
         self.proc = None
         @atexit.register
@@ -31,19 +32,32 @@ class QCSubprocess:
                 raise Exception(f"Timeout after {secs} secs: {args[0]}")
             signal.signal(signal.SIGALRM, handler)
             signal.alarm(secs)
-   
+
         self.buf = Queue()
         def read_thread():
             for line in self.proc.stdout:
                 print(line, end="")
                 self.buf.put(line)
+            self.buf.put(QCSubprocess.EOF)
         Thread(target=read_thread, daemon=True).start()
-    
+
+    def success(self, timeout_sec=20.):
+        try:
+            self.proc.wait(timeout=timeout_sec)
+        except subprocess.TimeoutExpired:
+            return False
+        return self.proc.returncode == 0
+
     def expect(self, regex_string):
+        recent_lines = deque([], maxlen=30)
         regex = re.compile(regex_string)
         while True:
             line = self.buf.get()
-            if line == "":
-                raise Exception(f"expected '{regex_string}' but got EOF")
+            if line == QCSubprocess.EOF:
+                raise Exception(f"""expected '{regex_string}' but got EOF
+context:
+{''.join(recent_lines)}
+""")
             if regex.search(line) is not None:
                 break
+            recent_lines.append(line)

@@ -16,6 +16,8 @@ def fastrpc_calc_test():
     parser.add_argument("-l", "--lua", metavar="", help="Path to luafile")
     parser.add_argument("-i", "--img", metavar="", help="Path to binary images")
     parser.add_argument("-p", "--port", metavar="", help="SSH port of the vp")
+    parser.add_argument("-g", "--enable-gpu",
+        action='store_true', help="Enable platform GPU")
     parser.add_argument('extra_args', nargs='*',
         help="Forward additional arguments to vp")
     args = parser.parse_args()
@@ -54,8 +56,11 @@ def fastrpc_calc_test():
         env["LD_LIBRARY_PATH"] = os.environ["LD_LIBRARY_PATH"]
 
     print("Starting platform with ENV", env)
-    vp_args = [vp_path.as_posix(), "--gs_luafile", args.lua,
-               "--param", "platform.with_gpu=false"]
+    vp_args = [vp_path.as_posix(), "--gs_luafile", args.lua, ]
+
+    if not args.enable_gpu:
+        vp_args += [ "--param", "platform.with_gpu=false", ]
+
     if args.extra_args:
         vp_args += args.extra_args
 
@@ -67,19 +72,30 @@ def fastrpc_calc_test():
     ssh_args = ["ssh", "-p", ssh_port, "root@localhost",
                 "-o", "UserKnownHostsFile=/dev/null",
                 "-o", "StrictHostKeyChecking=no",
-                "sh -c '/mnt/bin/fastrpc_calc_test 0 100 3 && "
-                       "/mnt/bin/fastrpc_calc_test 0 100 4'"]
+    ]
+    frpc_calc_args = ssh_args + [
+        "sh -c '/mnt/bin/fastrpc_calc_test 0 100 3 && "
+               "/mnt/bin/fastrpc_calc_test 0 100 4'",
+    ]
 
     # NOTE: we use ssh here instead of directly communicating through pexpect
     # and VP's UART due to oddnesses with /dev/tty in QNX when running on
     # MacOS CI. For more details, see QTOOL-95796.
-    ssh = QCSubprocess(ssh_args, timeout=timeout)
+    calc = QCSubprocess(frpc_calc_args, timeout=timeout)
     for _ in range(2):
-        ssh.expect('- sum = 4950')
-        ssh.expect('- success')
+        calc.expect('- sum = 4950')
+        calc.expect('- success')
 
-    test = True
-    return test
+    pcitool_args = ssh_args + [ "/mnt/bin/pci-tool", "-v", ]
+    # Look for GPU device:
+    pci = QCSubprocess(pcitool_args, timeout=timeout)
+    pci.expect('B000:D00:F00 @ idx 0')
+    if not args.enable_gpu:
+        pci.expect('vid/did: ffff/ffff')
+    else:
+        pci.expect('vid/did: 1b36/0008')
+
+    return pci.success() and calc.success()
 
 
 AssertThat(fastrpc_calc_test()).IsTrue()
