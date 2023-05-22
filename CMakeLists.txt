@@ -88,6 +88,7 @@ set(srcs
     src/libqemu-cxx/target/riscv.cc
     src/libqemu-cxx/target/microblaze.cc
     src/libqemu-cxx/target-info.cc
+    src/libqbox/dmi_utils.cc
 )
 
 add_library(${PROJECT_NAME} SHARED
