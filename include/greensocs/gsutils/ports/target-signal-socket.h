@@ -48,7 +48,8 @@ protected:
     sc_core::sc_event m_ev;
 
 public:
-    TargetSignalSocketProxy(TargetSignalSocket<T>& parent): m_parent(parent) {}
+    TargetSignalSocketProxy(TargetSignalSocket<T>& parent)
+        : m_parent{ parent }, m_val{}, m_cb{ nullptr }, m_ev{} {}
 
     void register_value_changed_cb(const ValueChangedCallback& cb) { m_cb = cb; }
 
@@ -106,7 +107,8 @@ protected:
     sc_core::sc_event m_negedge_ev;
 
 public:
-    TargetSignalSocketProxy<bool>(TargetSignalSocket<bool>& parent): m_parent(parent) {}
+    TargetSignalSocketProxy<bool>(TargetSignalSocket<bool>& parent)
+        : m_parent{ parent }, m_val{ false }, m_cb{ nullptr }, m_ev{} {}
 
     void register_value_changed_cb(const ValueChangedCallback& cb) { m_cb = cb; }
 
