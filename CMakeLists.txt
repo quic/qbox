@@ -7,6 +7,7 @@ project(qbox  VERSION 1.0)
 set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositories")
 
 execute_process(COMMAND git config --get remote.origin.url
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE GIT_URL)
 
