@@ -318,16 +318,31 @@ protected:
             return cci_originator();
         }
     }
+    const std::string s_SCP_LOG_LEVEL_PARAM_NAME = SCP_LOG_LEVEL_PARAM_NAME;
+    int s_SCP_LOG_LEVEL_PARAM_NAME_length = s_SCP_LOG_LEVEL_PARAM_NAME.length();
+    inline bool is_log_param(const std::string& parname) const
+    {
+        int p_len = parname.length();
+        if (p_len >= s_SCP_LOG_LEVEL_PARAM_NAME_length) {
+            return (parname.compare(p_len - s_SCP_LOG_LEVEL_PARAM_NAME_length, s_SCP_LOG_LEVEL_PARAM_NAME_length,
+                                    s_SCP_LOG_LEVEL_PARAM_NAME) == 0);
+        } else {
+            return false;
+        }
+    }
     /**
      * @brief private function to determine if we send to the parent broker or not
      *
      */
     virtual bool sendToParent(const std::string& parname) const
     {
-        auto pos = parname.find_last_of('.');
-        if (pos != std::string::npos) {
-            auto parent = parname.substr(0, pos);
-            if (m_uninitialized_cb && m_initialized.count(parent) == 0) {
+        if (m_uninitialized_cb && (!is_log_param(parname))) {
+            while (1) {
+                auto pos = std::string::npos;
+                pos = parname.find_last_of('.', pos);
+                if (pos == std::string::npos) break;
+                auto parent = parname.substr(0, pos);
+                if (m_initialized.count(parent) != 0) break;
                 const_cast<ConfigurableBroker*>(this)->m_initialized.insert(parent);
                 m_uninitialized_cb(parent);
             }
@@ -554,8 +569,7 @@ public:
 
     {
         if (has_parent) {
-            m_child_ref = new cci_param<ConfigurableBroker*>(
-                (hierarchical_name() + "." + name + ".childbroker").c_str(), (this), "");
+            m_child_ref = new cci_param<ConfigurableBroker*>((name + ".childbroker").c_str(), (this), "");
         }
 
         cci_register_broker(this);
@@ -661,6 +675,7 @@ public:
     {
         m_uninitialized_cb = uninitialized_cb;
     }
+    void clear_uninitialized_cb() { m_uninitialized_cb = nullptr; }
 
     cci_originator get_value_origin(const std::string& parname) const override
     {
@@ -825,10 +840,10 @@ class PrivateConfigurableBroker : public gs::ConfigurableBroker
         if (m_uninitialized_cb) {
             auto pos = parname.find_last_of('.');
             if (pos != std::string::npos) {
-                auto parent = parname.substr(0, pos);
-                if (m_uninitialized_cb && m_initialized.count(parent) == 0) {
-                    const_cast<PrivateConfigurableBroker*>(this)->m_initialized.insert(parent);
-                    m_uninitialized_cb(parent);
+                auto p = parname.substr(0, pos);
+                if (m_uninitialized_cb && m_initialized.count(p) == 0) {
+                    const_cast<PrivateConfigurableBroker*>(this)->m_initialized.insert(p);
+                    m_uninitialized_cb(p);
                 }
             }
         }
@@ -846,18 +861,6 @@ class PrivateConfigurableBroker : public gs::ConfigurableBroker
 public:
     PrivateConfigurableBroker(std::string name)
         : gs::ConfigurableBroker(name)
-    {
-        m_name = hierarchical_name();
-        m_name_length = m_name.length();
-
-        auto uncon = m_parent.get_unconsumed_preset_values(
-            [&](const std::pair<std::string, cci_value>& iv) { return iv.first.find(m_name + ".") == 0; });
-        for (auto p : uncon) {
-            parent.insert(p.first);
-        }
-    }
-    PrivateConfigurableBroker(std::function<void(std::string)> uninitialized_cb)
-        : gs::ConfigurableBroker(true, uninitialized_cb)
     {
         m_name = hierarchical_name();
         m_name_length = m_name.length();

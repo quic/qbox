@@ -47,6 +47,7 @@
 
 #include <greensocs/base-components/pathid_extension.h>
 #include <greensocs/gsutils/cciutils.h>
+#include <greensocs/gsutils/module_factory.h>
 
 namespace gs {
 
@@ -512,6 +513,17 @@ private:
                 dynamic_targets.push_back(&ti);
                 continue;
             }
+            if (m_broker.get_preset_cci_value(ti.name + ".0").is_string()) {
+                // deal with an alias
+                std::string src = m_broker.get_preset_cci_value(ti.name + ".0").get_string();
+                if (!m_broker.has_preset_value(ti.name + ".address")) {
+                    m_broker.set_preset_cci_value(ti.name + ".address",
+                                                  cci::cci_value(get_val<uint64_t>(src + ".address")));
+                    m_broker.set_preset_cci_value(ti.name + ".size", cci::cci_value(get_val<uint64_t>(src + ".size")));
+                    m_broker.set_preset_cci_value(ti.name + ".size", m_broker.get_preset_cci_value(src + ".size"));
+                }
+            }
+
             ti.address = get_val<uint64_t>(ti.name + ".address");
             ti.size = get_val<uint64_t>(ti.name + ".size");
             ti.use_offset = get_val<bool>(ti.name + ".relative_addresses", true);
@@ -608,4 +620,8 @@ public:
     }
 };
 } // namespace gs
+
+// C++17 will do away with this
+typedef gs::Router<> Router;
+GSC_MODULE_REGISTER(Router);
 #endif
