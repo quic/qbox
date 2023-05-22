@@ -31,15 +31,39 @@
  * @brief Helper macro to register an sc_module constructor, complete with its (typed) arguments
  *
  */
+namespace gs {
+namespace ModuleFactory {
+static std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>>* GetAvailableModuleList()
+{
+    static std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>> list;
+    return &list;
+}
+struct ModuleRegistrationWrapper {
+    ModuleRegistrationWrapper(std::function<cci::cci_param<gs::cci_constructor_vl>*()> fn)
+    {
+        auto mods = gs::ModuleFactory::GetAvailableModuleList();
+        mods->push_back(fn);
+    }
+};
+} // namespace ModuleFactory
+} // namespace gs
 
-#define GSC_MODULE_REGISTER(__NAME__, ...)                                                                          \
-    struct ModuleRegistrationWrapper GS_MODULEFACTORY_moduleReg_##__NAME__(                                         \
-        []() -> cci::cci_param<gs::cci_constructor_vl>* {                                                           \
-            return new cci::cci_param<gs::cci_constructor_vl>(                                                      \
-                CCI_GS_MF_NAME #__NAME__, gs::cci_constructor_vl::FactoryMaker<__NAME__, ##__VA_ARGS__>(#__NAME__), \
-                "default constructor", cci::CCI_ABSOLUTE_NAME, cci::cci_originator("GreenSocs Module Factory"));    \
-        })
-
+#define GSC_MODULE_REGISTER(__NAME__, ...)                                                                             \
+    struct GS_MODULEFACTORY_moduleReg_##__NAME__ {                                                                     \
+        GS_MODULEFACTORY_moduleReg_##__NAME__() {}                                                                     \
+        static gs::ModuleFactory::ModuleRegistrationWrapper& get()                                                     \
+        {                                                                                                              \
+            static gs::ModuleFactory::ModuleRegistrationWrapper inst([]() -> cci::cci_param<gs::cci_constructor_vl>* { \
+                return new cci::cci_param<gs::cci_constructor_vl>(                                                     \
+                    CCI_GS_MF_NAME #__NAME__,                                                                          \
+                    gs::cci_constructor_vl::FactoryMaker<__NAME__, ##__VA_ARGS__>(#__NAME__), "default constructor",   \
+                    cci::CCI_ABSOLUTE_NAME);                                                                           \
+            });                                                                                                        \
+            return inst;                                                                                               \
+        }                                                                                                              \
+    };                                                                                                                 \
+    static struct gs::ModuleFactory::ModuleRegistrationWrapper&                                                        \
+        GS_MODULEFACTORY_moduleReg_##__NAME__inst = GS_MODULEFACTORY_moduleReg_##__NAME__::get()
 /**
  * @brief CCI value converted
  * notice that NO conversion is provided.
@@ -75,13 +99,8 @@ struct cci::cci_value_converter<gs::cci_constructor_vl> {
 };
 namespace gs {
 namespace ModuleFactory {
-static std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>> getAvailableModuleList()
-{
-    static std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>> _vec;
-    return _vec;
-}
 
-SC_MODULE (container) {
+SC_MODULE (Container) {
     /**
      * @brief construct a module using the pre-register CCI functor, with typed arguments from a CCI
      * value list. The functor is expected to call new.
@@ -324,36 +343,29 @@ SC_MODULE (container) {
 
     cci_param<std::string> moduletype; // for consistency
     /**
-     * @brief construct a container, and all modules within it, and perform binding
+     * @brief construct a Container, and all modules within it, and perform binding
      *
      * @param _n name to give the container
      */
     std::vector<cci::cci_param<gs::cci_constructor_vl>*> registered_mods;
 
-    container(const sc_core::sc_module_name _n)
+    Container(const sc_core::sc_module_name _n)
         : moduletype("moduletype", "", "Module type for the TLM container, must be \"Container\"")
     {
         assert((std::string)moduletype == "Container");
+        auto mods = gs::ModuleFactory::GetAvailableModuleList();
 
-        auto mods = getAvailableModuleList();
-        while (mods.size()) {
-            registered_mods.push_back((mods.back())());
-            mods.pop_back();
+        while (mods->size()) {
+            registered_mods.push_back((mods->back())());
+            mods->pop_back();
         }
 
         ModulesConstruct();
     }
 };
+GSC_MODULE_REGISTER(Container);
 
 } // namespace ModuleFactory
 } // namespace gs
-
-struct ModuleRegistrationWrapper {
-    ModuleRegistrationWrapper(std::function<cci::cci_param<gs::cci_constructor_vl>*()> fn)
-    {
-        auto mods = gs::ModuleFactory::getAvailableModuleList();
-        mods.push_back(fn);
-    }
-};
 
 #endif
