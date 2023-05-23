@@ -29,16 +29,34 @@
 class QemuVirtioGpuGlPci : public QemuGPEX::Device
 {
 public:
+    cci::cci_param<uint64_t> p_hostmem_mb;
+
     QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, QemuInstance& inst)
-        : QemuGPEX::Device(name, inst, "virtio-gpu-gl-pci") {
+        : QemuGPEX::Device(name, inst, "virtio-gpu-gl-pci")
+        , p_hostmem_mb("hostmem_mb", 2048, "MB to allocate for host visible shared memory") {
 #ifndef __APPLE__
         // Use QEMU's integrated display only if we are NOT on MacOS.
         // On MacOS use libqbox's QemuDisplay SystemC module.
         m_inst.set_display_arg("sdl,gl=on");
+
+        m_inst.add_arg("-object");
+        auto memory_object = "memory-backend-memfd,id=mem1,size=" +
+                             std::to_string(p_hostmem_mb.get_value()) + "M";
+        m_inst.add_arg(memory_object.c_str());
+        m_inst.add_arg("-machine");
+        m_inst.add_arg("memory-backend=mem1");
 #endif
     }
 
-    void before_end_of_elaboration() override { QemuGPEX::Device::before_end_of_elaboration(); }
+    void before_end_of_elaboration() override {
+        QemuGPEX::Device::before_end_of_elaboration();
+
+#ifndef __APPLE__
+        get_qemu_dev().set_prop_bool("blob", true);
+        get_qemu_dev().set_prop_int("hostmem", p_hostmem_mb);
+        get_qemu_dev().set_prop_bool("context_init", true);
+#endif
+    }
 
     void gpex_realize(qemu::Bus& bus) override { QemuGPEX::Device::gpex_realize(bus); }
 };
