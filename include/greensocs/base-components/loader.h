@@ -292,15 +292,19 @@ protected:
     void end_of_elaboration()
     {
         int i = 0;
-        for (std::string s : sc_cci_children(name())) {
+        auto children = sc_cci_children(name());
+        for (std::string s : children) {
             if (std::count_if(s.begin(), s.end(),
                               [](unsigned char c) { return std::isdigit(c); })) {
                 load(std::string(name()) + "." + s);
                 i++;
+            } else {
+                SCP_FATAL(SCMOD)
+                    << "Load clause must be a list of load clauses (e.g. load={{elf_file=\"....\"}}) name:";
             }
         }
-        if (i == 0){
-            SCP_WARN(SCMOD) << "No load clause found";
+        if (i == 0 && children.size() > 0) {
+            SCP_FATAL(SCMOD) << "No load clause found for " << name();
         }
     }
 
