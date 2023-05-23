@@ -29,6 +29,7 @@
 #include "libqbox/ports/target-signal-socket.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/sc-qemu-instance.h"
+#include <greensocs/gsutils/module_factory_registery.h>
 
 class QemuHexagonQtimer : public QemuDevice
 {
@@ -87,5 +88,5 @@ public:
         }
     }
 };
-
+GSC_MODULE_REGISTER(QemuHexagonQtimer, sc_core::sc_object*);
 #endif

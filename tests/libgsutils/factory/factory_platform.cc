@@ -44,17 +44,17 @@
 #include "greensocs/libgsutils.h"
 #include "greensocs/gsutils/tests/initiator-tester.h"
 #include "greensocs/gsutils/tests/test-bench.h"
-#include "greensocs/gsutils/module_factory.h"
+#include "greensocs/gsutils/module_factory_container.h"
 
 using testing::AnyOf;
 using testing::Eq;
 
-class FactoryPlatform : public gs::ModuleFactory::container
+class FactoryPlatform : public gs::ModuleFactory::Container
 {
 
 public:
     FactoryPlatform(const sc_core::sc_module_name& n)
-    : gs::ModuleFactory::container(n)
+        : gs::ModuleFactory::Container(n)
     {
     }
 };
@@ -63,12 +63,12 @@ int sc_main(int argc, char** argv)
 {
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
 
-    typedef gs::Memory<> Memory;
-    typedef gs::Router<> Router;
+    // typedef gs::Memory<> Memory;
+    // typedef gs::Router<> Router;
 
-    GSC_MODULE_REGISTER(InitiatorTester);
-    GSC_MODULE_REGISTER(Memory);
-    GSC_MODULE_REGISTER(Router);
+    // GSC_MODULE_REGISTER(InitiatorTester);
+    //    GSC_MODULE_REGISTER(Memory);
+    //    GSC_MODULE_REGISTER(Router);
 
     FactoryPlatform platform("platform");
 

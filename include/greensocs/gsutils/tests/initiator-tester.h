@@ -30,6 +30,7 @@
 #include <systemc>
 #include <tlm>
 #include <tlm_utils/simple_initiator_socket.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 
 /**
  * @class InitiatorTester
@@ -417,5 +418,7 @@ public:
      */
     void register_invalidate_direct_mem_ptr(InvalidateDirectMemPtrFn cb) { m_dmi_inval_cb = cb; }
 };
+
+GSC_MODULE_REGISTER(InitiatorTester);
 
 #endif

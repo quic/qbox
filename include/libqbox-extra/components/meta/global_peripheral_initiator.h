@@ -23,6 +23,7 @@
 #include "libqbox/ports/initiator.h"
 #include "libqbox/components/device.h"
 #include "libqbox/sc-qemu-instance.h"
+#include <greensocs/gsutils/module_factory_registery.h>
 
 class GlobalPeripheralInitiator : public QemuInitiatorIface, public sc_core::sc_module
 {
@@ -55,5 +56,5 @@ public:
 private:
     QemuDevice& m_owner;
 };
-
+GSC_MODULE_REGISTER(GlobalPeripheralInitiator, sc_core::sc_object*, sc_core::sc_object*);
 #endif //_LIBQBOX_COMPONENTS_GOLBAL_PERIPHERAL_INITIATOR_H

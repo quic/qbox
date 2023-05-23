@@ -31,6 +31,7 @@
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
 #include "libqbox/sc-qemu-instance.h"
+#include <greensocs/gsutils/module_factory_registery.h>
 
 class QemuCpuArmCortexA76 : public QemuCpu
 {
@@ -253,3 +254,4 @@ public:
         }
     }
 };
+GSC_MODULE_REGISTER(QemuCpuArmCortexA76, sc_core::sc_object*);

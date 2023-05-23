@@ -31,6 +31,7 @@
 
 #include <tlm_utils/simple_initiator_socket.h>
 #include "greensocs/gsutils/cciutils.h"
+#include <greensocs/gsutils/module_factory_registery.h>
 
 namespace gs {
 
@@ -165,4 +166,6 @@ void memorydumper_tgr_helper()
 }
 
 } // namespace gs
+typedef gs::MemoryDumper<> MemoryDumper;
+GSC_MODULE_REGISTER(MemoryDumper);
 #endif

@@ -31,6 +31,7 @@
 #include <tlm>
 #include <tlm_utils/simple_initiator_socket.h>
 #include <scp/report.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 
 #include <cinttypes>
 #include <fcntl.h>
@@ -635,4 +636,6 @@ private:
     };
 };
 } // namespace gs
+typedef gs::Loader<> Loader;
+GSC_MODULE_REGISTER(Loader);
 #endif

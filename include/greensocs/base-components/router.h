@@ -47,7 +47,9 @@
 
 #include <greensocs/base-components/pathid_extension.h>
 #include <greensocs/gsutils/cciutils.h>
-#include <greensocs/gsutils/module_factory.h>
+// #include <greensocs/gsutils/module_factory.h>
+#include <greensocs/gsutils/module_factory_registery.h>
+
 
 namespace gs {
 

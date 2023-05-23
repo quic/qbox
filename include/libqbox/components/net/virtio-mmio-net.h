@@ -28,6 +28,7 @@
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/components/virtio/virtio-mmio.h"
 #include "libqbox/sc-qemu-instance.h"
+#include <greensocs/gsutils/module_factory_registery.h>
 
 class QemuVirtioMMIONet : public QemuVirtioMMIO
 {
@@ -59,3 +60,5 @@ public:
         m_dev.set_prop_str("netdev", netdev_id.c_str());
     }
 };
+
+GSC_MODULE_REGISTER(QemuVirtioMMIONet, sc_core::sc_object*);

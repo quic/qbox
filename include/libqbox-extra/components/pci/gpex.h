@@ -31,6 +31,7 @@
 #include "libqbox/ports/initiator.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/sc-qemu-instance.h"
+#include <greensocs/gsutils/module_factory_registery.h>
 
 #include <cinttypes>
 
@@ -201,5 +202,5 @@ public:
      */
     virtual void initiator_async_run(qemu::Cpu::AsyncJobFn job) override {}
 };
-
+GSC_MODULE_REGISTER(QemuGPEX, sc_core::sc_object*);
 #endif

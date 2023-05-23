@@ -38,6 +38,7 @@
 #include "memory_services.h"
 
 #include "shmem_extension.h"
+#include <greensocs/gsutils/module_factory_registery.h>
 
 #ifndef _WIN32
 #include <fcntl.h>
@@ -520,4 +521,6 @@ public:
     }
 };
 } // namespace gs
+typedef gs::Memory<> Memory;
+GSC_MODULE_REGISTER(Memory);
 #endif

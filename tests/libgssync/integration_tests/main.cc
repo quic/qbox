@@ -49,7 +49,7 @@
 using namespace sc_core;
 
 namespace gs {
-class ModuleFactory
+class ModuleFactoryOrig
 {
     template <class... Args>
     struct MapHolder {
@@ -83,15 +83,14 @@ public:
     }
 };
 
-#define GSC_MODULE_REGISTER(__name__)                                               \
-    bool __name__##_gs_module_reg_entry = gs::ModuleFactory::Reg(                   \
-        #__name__, (std::function<sc_core::sc_module*(sc_core::sc_module_name)>)[]( \
-                       sc_core::sc_module_name _instname)                           \
-                           ->sc_core::sc_module *                                   \
+#define GSC_MODULE_REGISTER_ORIG(__name__)                                                                            \
+    bool __name__##_gs_module_reg_entry = gs::ModuleFactoryOrig::Reg(                                                 \
+        #__name__, (std::function<sc_core::sc_module*(sc_core::sc_module_name)>)[](sc_core::sc_module_name _instname) \
+                           ->sc_core::sc_module *                                                                     \
                        { return new __name__(_instname); })
 
-#define GSC_MODULE_REGISTER_1(__name__, __T1__)                                             \
-    bool __name__##_gs_module_reg_entry = gs::ModuleFactory::Reg(                           \
+#define GSC_MODULE_REGISTER_ORIG_1(__name__, __T1__)                                        \
+    bool __name__##_gs_module_reg_entry = gs::ModuleFactoryOrig::Reg(                       \
         #__name__, (std::function<sc_core::sc_module*(sc_core::sc_module_name, __T1__)>)[]( \
                        sc_core::sc_module_name _instname, __T1__ _t1)                       \
                            ->sc_core::sc_module *                                           \
@@ -357,7 +356,7 @@ public:
         m_worker_thread_active = false;
     }
 };
-GSC_MODULE_REGISTER_1(QemuLikeMaster, Checker&);
+GSC_MODULE_REGISTER_ORIG_1(QemuLikeMaster, Checker&);
 
 class MasterSimple : public Initiator
 {
@@ -413,7 +412,7 @@ public:
     void stop() { running = false; }
     void exit() {}
 };
-GSC_MODULE_REGISTER_1(MasterSimple, Checker&);
+GSC_MODULE_REGISTER_ORIG_1(MasterSimple, Checker&);
 
 class Slave : public Target
 {
@@ -441,7 +440,7 @@ public:
     }
     bool requires_systemc() { return (ns_wait); }
 };
-GSC_MODULE_REGISTER_1(Slave, Checker&);
+GSC_MODULE_REGISTER_ORIG_1(Slave, Checker&);
 
 class TLMClockedSlave : public Target
 {
@@ -507,7 +506,7 @@ public:
 
     bool requires_systemc() { return (ns_wait != 0); }
 };
-GSC_MODULE_REGISTER_1(TLMClockedSlave, Checker&);
+GSC_MODULE_REGISTER_ORIG_1(TLMClockedSlave, Checker&);
 
 class Clock : public Model
 {
@@ -547,7 +546,7 @@ public:
 
     void exit() {}
 };
-GSC_MODULE_REGISTER_1(Clock, Checker&);
+GSC_MODULE_REGISTER_ORIG_1(Clock, Checker&);
 
 class RealTimeClockLimiter : public Model
 {
@@ -567,7 +566,7 @@ public:
         SCP_DEBUG(SCMOD) << "In the constructor RealTimeClockLimiter";
     }
 };
-GSC_MODULE_REGISTER_1(RealTimeClockLimiter, Checker&);
+GSC_MODULE_REGISTER_ORIG_1(RealTimeClockLimiter, Checker&);
 
 SC_MODULE (tests) {
     Checker& checker;
@@ -605,7 +604,7 @@ SC_MODULE (tests) {
                                            .get_preset_cci_value(std::string(sc_module::name()) +
                                                                  "." + name + ".moduletype")
                                            .get_string();
-                    Model* m = (Model*)gs::ModuleFactory::Create(type, name.c_str(), checker);
+                    Model* m = (Model*)gs::ModuleFactoryOrig::Create(type, name.c_str(), checker);
                     if (m) {
                         //                        std::cout << "adding a "<<type<<" with name
                         //                        "<<std::string(sc_module::name())+"."+name<<"\n";

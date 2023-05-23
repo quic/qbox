@@ -34,6 +34,7 @@
 
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
 #include <greensocs/libgssync/async_event.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 #include <scp/report.h>
 
 #define PL011_INT_TX 0x20
@@ -398,3 +399,4 @@ public:
 
     ~Pl011() { delete s; }
 };
+GSC_MODULE_REGISTER(Pl011, sc_core::sc_object*);
