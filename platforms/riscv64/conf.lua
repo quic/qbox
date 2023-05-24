@@ -30,6 +30,8 @@ _KERNEL64_LOAD_ADDR =0x1000000000
 _DTB_ALIGN = 2 * 1024 * 1024;
 _DTB_LOAD_ADDR = ((_KERNEL64_LOAD_ADDR + _KERNEL_FILE_SIZE)
                         & ~(_DTB_ALIGN - 1)) + _DTB_ALIGN;
+
+dofile(top().."../fw/utils.lua");
 dofile (top().."fw/config/riscv64_bootloader.lua")
 
 platform = {
@@ -54,9 +56,6 @@ platform = {
     fallback_memory = { target_socket={address=0x0, size=0x100000000}, dmi_allow=true, verbose=true};
 
     load={
-        {bin_file=top().."fw/images/Image",    address=_KERNEL64_LOAD_ADDR};
-        {bin_file=top().."fw/images/platform.dtb", address=_DTB_LOAD_ADDR};
-        {bin_file=top().."fw/images/opensbi.bin", address=_OPENSBI_LOAD_ADDR};
         {data=_bootloader_riscv64, address=0x10040 };
     }
 };
@@ -65,4 +64,21 @@ if (platform.riscv_num_cpus > 0) then
     for i=0,(platform.riscv_num_cpus-1) do
         platform["cpu_"..tostring(i)]=cpu;
     end
+end
+
+-- read in any local configuration (Before convenience switches)
+local IMAGE_DIR;
+if os.getenv("QBOX_IMAGE_DIR") == nil then
+    IMAGE_DIR = "./"
+else
+    IMAGE_DIR = os.getenv("QBOX_IMAGE_DIR").."/"
+end
+
+if (file_exists(IMAGE_DIR.."conf.lua"))
+then
+    print ("Running local "..IMAGE_DIR.."conf.lua");
+    dofile(IMAGE_DIR.."conf.lua");
+else
+    print ("A local conf.lua file is required in the directory containing your images. That defaults to the current directory or you can set it using QQVP_IMAGE_DIR\n");
+    os.exit(1);
 end

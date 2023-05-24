@@ -11,6 +11,7 @@ function top()
     end
  end
 
+dofile(top().."../fw/utils.lua");
 print ("Lua config running. . . ");
 
 _KERNEL64_LOAD_ADDR =0x00080000
@@ -28,14 +29,11 @@ platform = {
     gic=   { dist_iface     = {address=0xc8000000, size=0x10000 };
              redist_iface_0 = {address=0xc8010000, size=0x20000 }};
     ram=   { target_socket  = {address=0x00000000, size=0x10000000}};
-    flash= { target_socket  = {address=0x200000000, size=0x10000000}, load={bin_file=top().."fw/images/rootfs.squashfs", offset=0}};
     uart=  { mem = {address= 0xc0000000, size=0x1000}, irq=1};
 
     fallback_memory = { target_socket={address=0x0, size=0x100000000}, dmi_allow=false, verbose=true};
 
     load={
-        {bin_file=top().."fw/images/Image",    address=_KERNEL64_LOAD_ADDR};
-        {bin_file=top().."fw/images/platform.dtb", address=_DTB_LOAD_ADDR};
         {data=_bootloader_aarch64, address=0x00000000 }; -- align address with rvbar
         {data={0x30001000, -- stack pointer
                0x30000000} -- reset pointer
@@ -62,3 +60,20 @@ end
 
 -- platform["ArmQemuInstance.args.-netdev"]={}
 -- platform["ArmQemuInstance.args.-netdev"]="type=user,id=gs_net_id"
+
+-- read in any local configuration (Before convenience switches)
+local IMAGE_DIR;
+if os.getenv("QBOX_IMAGE_DIR") == nil then
+    IMAGE_DIR = "./"
+else
+    IMAGE_DIR = os.getenv("QBOX_IMAGE_DIR").."/"
+end
+
+if (file_exists(IMAGE_DIR.."conf.lua"))
+then
+    print ("Running local "..IMAGE_DIR.."conf.lua");
+    dofile(IMAGE_DIR.."conf.lua");
+else
+    print ("A local conf.lua file is required in the directory containing your images. That defaults to the current directory or you can set it using QQVP_IMAGE_DIR\n");
+    os.exit(1);
+end

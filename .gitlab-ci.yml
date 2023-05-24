@@ -2,7 +2,30 @@ include:
   - project: 'qqvp/cmake-boilerplate'
     file: 'gitlab-ci-template.yml'
 
+.clone_firmware_images_repo:
+  before_script:
+    - |
+      if [[ -z "$QBOX_FIRMWARE_REPO_SHA" ]]; then
+          echo "$QBOX_FIRMWARE_REPO_SHA not defined in CI. Falling back to source code"
+          export QBOX_FIRMWARE_REPO_SHA=$(cat ./platforms/fw/firmware-repo-sha.txt)
+          if [[ -z "$QBOX_FIRMWARE_REPO_SHA" ]]; then
+            echo "Either QBOX_FIRMWARE_REPO_SHA or ./tests/firmware-repo-sha.txt needs to be defined"
+            exit 1
+          fi
+      fi
+    - echo "Using commit id ${QBOX_FIRMWARE_REPO_SHA} of firmware-repo"
+    - eval $(ssh-agent -s)
+    - echo "$LFS_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - git clone --no-checkout git@gitlab.qualcomm.com:qqvp/firmware-images.git
+    - cd firmware-images && ls -ll
+    - git checkout $QBOX_FIRMWARE_REPO_SHA
+    - export QBOX_FIRMWARE_REPO_DIR="$(pwd)"
+    - cd -
+
 .build_job_template:
+    extends:
+    - .clone_firmware_images_repo
+    - .general_build_job_template
     variables:
       REPO_CMAKE_ARGS: -DLIBQEMU_TARGETS=aarch64
 

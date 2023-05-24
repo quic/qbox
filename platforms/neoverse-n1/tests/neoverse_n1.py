@@ -19,6 +19,7 @@ def vp_test():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--exe", metavar="", help="Path to vp executable")
     parser.add_argument("-l", "--lua", metavar="", help="Path to luafile")
+    parser.add_argument("-i", "--img", metavar="", help="Path to binary images")
     args = parser.parse_args()
     if not args.exe:
         print("vp executable file not found")
@@ -26,21 +27,34 @@ def vp_test():
     if not args.lua:
         print("luafile is required")
         return test
+    if not args.img:
+        print("img argument is required")
+        return test
+
     vp_path = Path(args.exe)
     lua_path = Path(args.lua)
+    img_path = Path(args.img)
+
+    env = {
+        "QBOX_IMAGE_DIR": img_path.as_posix(),
+    }
+
+    # Useful for local developement when using custom compiler installation
+    # for building vp
+    if os.environ.get("LD_LIBRARY_PATH") is not None:
+        env["LD_LIBRARY_PATH"] = os.environ["LD_LIBRARY_PATH"]
 
     # start vp platform
+        cmd = ["ip", "tuntap", "add", "qbox0", "mode", "tap"]
+        proc = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
-    cmd = ["ip", "tuntap", "add", "qbox0", "mode", "tap"]
-    proc = subprocess.Popen(
-        cmd,
-        shell=True,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    child = pexpect.spawn(vp_path.as_posix(), ["--gs_luafile", args.lua])
+    child = pexpect.spawn(vp_path.as_posix(), ["--gs_luafile", args.lua], env=env)
     child.logfile = stdout.buffer
     child.expect("buildroot login:")
     child.sendline("root")
