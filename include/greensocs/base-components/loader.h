@@ -96,19 +96,20 @@ static std::istream& operator>>(std::istream& str, CSVRow& data)
 template <unsigned int BUSWIDTH = 32>
 class Loader : public sc_core::sc_module
 {
+    SCP_LOGGER();
     template <typename MODULE, typename TYPES = tlm::tlm_base_protocol_types>
     class simple_initiator_socket_zero
-        : public tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES,
-                                                      sc_core::SC_ZERO_OR_MORE_BOUND>
+        : public tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES, sc_core::SC_ZERO_OR_MORE_BOUND>
     {
-        using typename tlm_utils::simple_initiator_socket_b<
-            MODULE, BUSWIDTH, TYPES, sc_core::SC_ZERO_OR_MORE_BOUND>::base_target_socket_type;
-        typedef tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES,
-                                                     sc_core::SC_ZERO_OR_MORE_BOUND>
-            socket_b;
+        using typename tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES,
+                                                            sc_core::SC_ZERO_OR_MORE_BOUND>::base_target_socket_type;
+        typedef tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES, sc_core::SC_ZERO_OR_MORE_BOUND> socket_b;
 
     public:
-        simple_initiator_socket_zero(const char* name): socket_b(name) {}
+        simple_initiator_socket_zero(const char* name)
+            : socket_b(name)
+        {
+        }
     };
 
 public:
@@ -127,19 +128,16 @@ private:
         auto m_broker = cci::cci_get_broker();
         std::string fullname = std::string(sc_module::name()) + "." + name;
         m_broker.ignore_unconsumed_preset_values(
-            [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool {
-                return iv.first == fullname;
-            });
+            [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == fullname; });
     }
 
     std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
     {
         std::list<std::string> children;
         int l = strlen(name) + 1;
-        auto uncon = m_broker.get_unconsumed_preset_values(
-            [&name](const std::pair<std::string, cci::cci_value>& iv) {
-                return iv.first.find(std::string(name) + ".") == 0;
-            });
+        auto uncon = m_broker.get_unconsumed_preset_values([&name](const std::pair<std::string, cci::cci_value>& iv) {
+            return iv.first.find(std::string(name) + ".") == 0;
+        });
         for (auto p : uncon) {
             children.push_back(p.first.substr(l, p.first.find(".", l) - l));
         }
@@ -162,10 +160,8 @@ private:
             trans.set_streaming_width(len);
             trans.set_byte_enable_length(0);
             if (initiator_socket->transport_dbg(trans) != len) {
-                std::stringstream info;
-                info << name() << " : Error loading data to memory @ "
-                     << "0x" << std::hex << addr;
-                SCP_FATAL(SCMOD) << info.str();
+                SCP_FATAL(()) << name() << " : Error loading data to memory @ "
+                              << "0x" << std::hex << addr;
             }
         }
     }
@@ -174,13 +170,11 @@ private:
     T cci_get(std::string name)
     {
         m_broker.ignore_unconsumed_preset_values(
-            [name](const std::pair<std::string, cci::cci_value>& iv) -> bool {
-                return iv.first == name;
-            });
+            [name](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == name; });
         m_broker.lock_preset_value(name);
         T ret;
         if (!m_broker.get_preset_cci_value(name).template try_get<T>(ret)) {
-            SCP_FATAL(SCMOD) << "Unable to get parameter " << name;
+            SCP_FATAL(()) << "Unable to get parameter " << name;
         };
         return ret;
     }
@@ -205,17 +199,16 @@ private:
 public:
     Loader(sc_core::sc_module_name name)
         : m_broker(cci::cci_get_broker())
-        , initiator_socket(
-              "initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
+        , initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
     {
+        SCP_TRACE(())("default constructor");
     }
-    Loader(sc_core::sc_module_name name,
-           std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> _write)
+    Loader(sc_core::sc_module_name name, std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> _write)
         : m_broker(cci::cci_get_broker())
-        , initiator_socket(
-              "initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
+        , initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
         , write_cb(_write)
     {
+        SCP_TRACE(())("constructor with callback");
         m_use_callback = true;
     }
 
@@ -227,8 +220,8 @@ protected:
         bool read = false;
         if (m_broker.has_preset_value(name + ".elf_file")) {
             if (m_use_callback) {
-                SCP_WARN(SCMOD) << "elf file loading into local memory will interpret addresses "
-                                   "relative to the memory - probably not what you want?";
+                SCP_WARN(()) << "elf file loading into local memory will interpret addresses "
+                                "relative to the memory - probably not what you want?";
             }
             std::string file = cci_get<std::string>(name + ".elf_file");
             elf_load(file);
@@ -239,16 +232,16 @@ protected:
                 if (m_broker.has_preset_value(name + ".offset"))
                     addr = cci_get<uint64_t>(name + ".offset");
                 else
-                    SCP_FATAL(SCMOD) << "No offset found for '" << name << "'";
+                    SCP_FATAL(()) << "No offset found for '" << name << "'";
             } else {
                 if (m_broker.has_preset_value(name + ".address"))
                     addr = cci_get<uint64_t>(name + ".address");
                 else
-                    SCP_FATAL(SCMOD) << "No address found for '" << name << "'";
+                    SCP_FATAL(()) << "No address found for '" << name << "'";
             }
             if (m_broker.has_preset_value(name + ".bin_file")) {
                 std::string file = cci_get<std::string>(name + ".bin_file");
-                SCP_INFO(SCMOD) << "Loading binary file " << file;
+                SCP_INFO(())("Loading binary file {} to {:#x}", file, addr);
                 file_load(file, addr);
                 read = true;
             }
@@ -260,7 +253,7 @@ protected:
                 if (m_broker.has_preset_value(name + ".byte_swap")) {
                     byte_swap = cci_get<bool>(name + ".byte_swap");
                 }
-                SCP_INFO(SCMOD) << "Loading csv file " << file << ", " << (name + ".csv_file");
+                SCP_INFO(())("Loading csv file {}, ({}) to {:#x}", file, (name + ".csv_file"), addr);
                 csv_load(file, addr, addr_str, val_str, byte_swap);
                 read = true;
             }
@@ -268,10 +261,9 @@ protected:
                 std::string param = cci_get<std::string>(name + ".param");
                 cci::cci_param_typed_handle<std::string> data(m_broker.get_param_handle(param));
                 if (!data.is_valid()) {
-                    SCP_FATAL(SCMOD) << "Unable to find valid source param '" << param << "' for '"
-                                     << name << "'";
+                    SCP_FATAL(()) << "Unable to find valid source param '" << param << "' for '" << name << "'";
                 }
-                SCP_INFO(SCMOD) << "Loading string parameter " << param;
+                SCP_INFO(())("Loading string parameter {} to {:#x}", param, addr);
                 str_load(data.get_value(), addr);
                 read = true;
             }
@@ -280,13 +272,13 @@ protected:
                 if (m_broker.has_preset_value(name + ".byte_swap")) {
                     byte_swap = cci_get<bool>(name + ".byte_swap");
                 }
-                SCP_INFO(SCMOD) << "Loading config data";
+                SCP_INFO(())("Loading config data to {:#x}", addr);
                 data_load(name + ".data", addr, byte_swap);
                 read = true;
             }
         }
         if (!read) {
-            SCP_FATAL(SCMOD) << "Unknown loader type: '" << name << "'";
+            SCP_FATAL(()) << "Unknown loader type: '" << name << "'";
         }
     }
     void end_of_elaboration()
@@ -294,17 +286,13 @@ protected:
         int i = 0;
         auto children = sc_cci_children(name());
         for (std::string s : children) {
-            if (std::count_if(s.begin(), s.end(),
-                              [](unsigned char c) { return std::isdigit(c); })) {
+            if (std::count_if(s.begin(), s.end(), [](unsigned char c) { return std::isdigit(c); })) {
                 load(std::string(name()) + "." + s);
                 i++;
-            } else {
-                SCP_FATAL(SCMOD)
-                    << "Load clause must be a list of load clauses (e.g. load={{elf_file=\"....\"}}) name:";
             }
         }
         if (i == 0 && children.size() > 0) {
-            SCP_FATAL(SCMOD) << "No load clause found for " << name();
+            load(name());
         }
     }
 
@@ -320,7 +308,7 @@ public:
     {
         std::ifstream fin(filename, std::ios::in | std::ios::binary);
         if (!fin.good()) {
-            SCP_FATAL(SCMOD) << "Memory::load(): error file not found (" << filename << ")";
+            SCP_FATAL(()) << "Memory::load(): error file not found (" << filename << ")";
         }
 
         uint8_t buffer[1024];
@@ -334,14 +322,13 @@ public:
         fin.close();
     }
 
-    void csv_load(std::string filename, uint64_t offset, std::string addr_str,
-                  std::string value_str, bool byte_swap)
+    void csv_load(std::string filename, uint64_t offset, std::string addr_str, std::string value_str, bool byte_swap)
     {
         std::ifstream file(filename);
 
         CSVRow row;
         if (!(file >> row)) {
-            SCP_FATAL(SCMOD) << "Unable to find " << filename;
+            SCP_FATAL(()) << "Unable to find " << filename;
         }
         int addr_i = -1;
         int value_i = -1;
@@ -354,7 +341,7 @@ public:
             }
         }
         if (addr_i == -1 || value_i == -1) {
-            SCP_FATAL(SCMOD) << "Unable to find " << filename;
+            SCP_FATAL(()) << "Unable to find " << filename;
         }
         int min_field_count = std::max(addr_i, value_i);
         while (file >> row) {
@@ -363,8 +350,7 @@ public:
             }
             const std::string addr = std::string(row[addr_i]);
             uint64_t value = std::stoll(std::string(row[value_i]), nullptr, 0);
-            if (byte_swap)
-                value = byte_swap32(value);
+            if (byte_swap) value = byte_swap32(value);
             uint64_t addr_p = std::stoll(addr, nullptr, 0) + offset;
             send(addr_p, (uint8_t*)(&value), sizeof(value));
         }
@@ -376,8 +362,7 @@ private:
     void data_load(std::string param, uint64_t addr, bool byte_swap)
     {
         for (std::string s : sc_cci_children(param.c_str())) {
-            if (std::count_if(s.begin(), s.end(),
-                              [](unsigned char c) { return std::isdigit(c); })) {
+            if (std::count_if(s.begin(), s.end(), [](unsigned char c) { return std::isdigit(c); })) {
                 union {
                     uint32_t d;
                     uint8_t b[sizeof(uint32_t)];
@@ -388,7 +373,7 @@ private:
                 }
                 send(addr + (stoi(s) * 0x4), &(data.b[0]), 4);
             } else {
-                SCP_FATAL(SCMOD) << "unknown format for parameter load";
+                SCP_FATAL(()) << "unknown format for parameter load";
                 break;
             }
         }
@@ -404,9 +389,7 @@ public:
 
     void elf_load(const std::string& path)
     {
-        elf_reader(path, [&](uint64_t addr, uint8_t* data, uint64_t len) -> void {
-            send(addr, data, len);
-        });
+        elf_reader(path, [&](uint64_t addr, uint8_t* data, uint64_t len) -> void { send(addr, data, len); });
     }
 
     /* Elf reader helper class */
@@ -483,8 +466,7 @@ private:
         static endianess elf_endianess(Elf* elf)
         {
             const char* ident = elf_getident(elf, nullptr);
-            if (ident == nullptr)
-                return ENDIAN_UNKNOWN;
+            if (ident == nullptr) return ENDIAN_UNKNOWN;
 
             switch (ident[EI_DATA]) {
             case ELFDATA2LSB:
@@ -501,8 +483,7 @@ private:
         {
             size_t count = 0;
             int err = elf_getphdrnum(elf, &count);
-            if (err)
-                SCP_FATAL("elf_reader") << "elf_begin failed: " << elf_errmsg(err);
+            if (err) SCP_FATAL("elf_reader") << "elf_begin failed: " << elf_errmsg(err);
 
             std::vector<elf_segment> segments;
             typename T::Elf_Phdr* hdr = T::elf_getphdr(elf);
@@ -511,8 +492,8 @@ private:
                     bool r = hdr->p_flags & PF_R;
                     bool w = hdr->p_flags & PF_W;
                     bool x = hdr->p_flags & PF_X;
-                    segments.push_back({ hdr->p_vaddr, hdr->p_paddr, hdr->p_memsz, hdr->p_filesz,
-                                         hdr->p_offset, r, w, x });
+                    segments.push_back(
+                        { hdr->p_vaddr, hdr->p_paddr, hdr->p_memsz, hdr->p_filesz, hdr->p_offset, r, w, x });
                 }
             }
 
@@ -525,20 +506,17 @@ private:
             Elf_Scn* scn = nullptr;
             while ((scn = elf_nextscn(elf, scn)) != nullptr) {
                 typename T::Elf_Shdr* shdr = T::elf_getshdr(scn);
-                if (shdr->sh_type != SHT_SYMTAB)
-                    continue;
+                if (shdr->sh_type != SHT_SYMTAB) continue;
 
                 Elf_Data* data = elf_getdata(scn, nullptr);
                 size_t num_symbols = shdr->sh_size / shdr->sh_entsize;
                 typename T::Elf_Sym* syms = (typename T::Elf_Sym*)(data->d_buf);
 
                 for (size_t i = 0; i < num_symbols; i++) {
-                    if (syms[i].st_size == 0)
-                        continue;
+                    if (syms[i].st_size == 0) continue;
 
                     char* name = elf_strptr(elf, shdr->sh_link, syms[i].st_name);
-                    if (name == nullptr || strlen(name) == 0)
-                        continue;
+                    if (name == nullptr || strlen(name) == 0) continue;
 
                     uint64_t size = syms[i].st_size;
                     uint64_t virt = syms[i].st_value;
@@ -550,8 +528,7 @@ private:
         uint64_t to_phys(uint64_t virt) const
         {
             for (auto& seg : m_segments) {
-                if ((virt >= seg.virt) && virt < (seg.virt + seg.size))
-                    return seg.phys + virt - seg.virt;
+                if ((virt >= seg.virt) && virt < (seg.virt + seg.size)) return seg.phys + virt - seg.virt;
             }
 
             return virt;
@@ -565,20 +542,15 @@ private:
             , m_machine(0)
             , m_endian(ENDIAN_UNKNOWN)
         {
-            if (elf_version(EV_CURRENT) == EV_NONE)
-                SCP_FATAL("elf_reader") << "failed to read libelf version";
+            if (elf_version(EV_CURRENT) == EV_NONE) SCP_FATAL("elf_reader") << "failed to read libelf version";
 
             m_fd = open(filename(), O_RDONLY, 0);
-            if (m_fd < 0)
-                SCP_FATAL("elf_reader") << "cannot open elf file " << filename();
+            if (m_fd < 0) SCP_FATAL("elf_reader") << "cannot open elf file " << filename();
 
             Elf* elf = elf_begin(m_fd, ELF_C_READ, nullptr);
-            if (elf == nullptr)
-                SCP_FATAL("elf_reader")
-                    << "error reading " << filename() << " : " << elf_errmsg(-1);
+            if (elf == nullptr) SCP_FATAL("elf_reader") << "error reading " << filename() << " : " << elf_errmsg(-1);
 
-            if (elf_kind(elf) != ELF_K_ELF)
-                SCP_FATAL("elf_reader") << "ELF version error in " << filename();
+            if (elf_kind(elf) != ELF_K_ELF) SCP_FATAL("elf_reader") << "ELF version error in " << filename();
 
             Elf32_Ehdr* ehdr32 = elf32_getehdr(elf);
             Elf64_Ehdr* ehdr64 = elf64_getehdr(elf);
@@ -607,14 +579,12 @@ private:
 
         ~elf_reader()
         {
-            if (m_fd >= 0)
-                close(m_fd);
+            if (m_fd >= 0) close(m_fd);
         }
 
         uint64_t read_segment(const elf_segment& segment)
         {
-            if (m_fd < 0)
-                SCP_FATAL("elf_reader") << "ELF file '" << filename() << "' not open";
+            if (m_fd < 0) SCP_FATAL("elf_reader") << "ELF file '" << filename() << "' not open";
 
             if (lseek(m_fd, segment.offset, SEEK_SET) != (ssize_t)segment.offset)
                 SCP_FATAL("elf_reader") << "cannot seek within ELF file " << filename();
@@ -632,8 +602,7 @@ private:
                 m_send(segment.phys + offset, buff, s);
                 offset += s;
             }
-            if (lseek(m_fd, 0, SEEK_SET) != 0)
-                SCP_FATAL("elf_reader") << "cannot seek within ELF file " << filename();
+            if (lseek(m_fd, 0, SEEK_SET) != 0) SCP_FATAL("elf_reader") << "cannot seek within ELF file " << filename();
 
             return segment.size;
         }
