@@ -871,6 +871,62 @@ X server indicated by the {\small{\lstinline!DISPLAY!}} environment variable.
 This model feature is enabled only if the Lua config
 {\small{\lstinline!platform.with_gpu!}} setting is {\small{\lstinline!true!}}.
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{OpenCL}
+\label{sec:openCL}
+
+OpenCL experimental support can be enabled by installing
+{\small{\lstinline!clvk!}} in the guest. Please, refer to clvk's
+{\small{\lstinline!README.md!}} for more information about supported
+applications, dependencies, building and testing: {\color{blue}{\url{https://github.com/kpet/clvk#readme}}}.
+
+\note Keep in mind that building clvk on the guest can be quite slow without VM
+acceleration such as KVM or HVF.
+
+For example, to build clvk on a Fedora 36 guest:
+
+\small
+\begin{lstlisting}[language=bash]
+    sudo dnf install @development-tools cmake gcc-g++ ninja-build \
+        libxml2-devel spirv-tools-devel vulkan-tools spirv-headers-devel \
+        libedit-devel glslc glslang git vulkan-loader-devel spirv-tools
+
+    git clone https://github.com/kpet/clvk.git
+    cd clvk
+    git submodule update --init --recursive
+    python3 external/clspv/utils/fetch_sources.py --deps llvm
+
+    cmake -S. -Bbuild -GNinja
+    ninja -C build
+\end{lstlisting}
+\normalsize
+
+Compilation artifacts include {\small{\lstinline!OpenCL.so!}},
+{\small{\lstinline!clspv!}}, and various test binaries. You can run a simple
+test with the following:
+
+\small
+\begin{lstlisting}[language=bash]
+    export VK_ICD_FILENAMES=<path to icd vulkan driver json>
+    export CLVK_CLSPV_PATH="build/clspv"
+    export LD_LIBRARY_PATH="build/OpenCL.so"
+    ./build/simple_test
+\end{lstlisting}
+\normalsize
+
+Using {\small{\lstinline!llvmpipe!}} as Vulkan driver you should expect an
+output similar to the following:
+
+\small
+\begin{lstlisting}[language=bash]
+    WARNING: lavapipe is not a conformant vulkan implementation, testing use only.
+    Platform: clvk# LD_LIBRARY_PATH=/usr/local/lib64 /usr/local/share/clvk-build/./simple_test
+    Device: llvmpipe (LLVM 14.0.0, 128 bits)
+    Buffer content verified, test passed.
+\end{lstlisting}
+\normalsize
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Troubleshooting}
