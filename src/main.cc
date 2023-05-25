@@ -205,8 +205,8 @@ public:
     GreenSocsPlatform(const sc_core::sc_module_name& n)
         : gs::ModuleFactory::Container(n)
         , p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
-        , m_fallback_mem("fallback_memory", gs::sc_cci_list_items(sc_module::name(), "fallback_memory").size(),
-                 [this](const char* n, size_t i) { return new gs::Memory<>(n); })
+        // , m_fallback_mem("fallback_memory", gs::sc_cci_list_items(sc_module::name(), "fallback_memory").size(),
+        //          [this](const char* n, size_t i) { return new gs::Memory<>(n); })
         {
         using tlm_utils::tlm_quantumkeeper;
 
@@ -224,14 +224,14 @@ public:
         //     }
         // }
 
-        for (auto& fallback : m_fallback_mem){
-            // MUST be added last
-            sc_core::sc_object* rout_obj = gs::find_sc_obj(nullptr, "platform.router");
-            auto rout = dynamic_cast<gs::Router<>*>(rout_obj);
-            if (rout) {
-                rout->initiator_socket.bind(fallback.socket);
-            }
-        }
+        // for (auto& fallback : m_fallback_mem){
+        //     // MUST be added last
+        //     sc_core::sc_object* rout_obj = gs::find_sc_obj(nullptr, "platform.router");
+        //     auto rout = dynamic_cast<gs::Router<>*>(rout_obj);
+        //     if (rout) {
+        //         rout->initiator_socket.bind(fallback.socket);
+        //     }
+        // }
 
     }
 

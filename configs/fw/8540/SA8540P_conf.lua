@@ -313,7 +313,7 @@ platform = {
     --     irq_1 = 469,
     -- };
 
-    memorydumper_0 = { 
+    memorydumper_0 = {
                 moduletype = "MemoryDumper",
                 initiator_socket = {bind = "&router.target_socket"};
                 target_socket={address=0x1B300040, 
@@ -321,14 +321,20 @@ platform = {
                                 bind = "&router.initiator_socket"}
                     },
 
-    fallback_memory_0 = { 
-                        target_socket={address=0x0, size=0x40000000},
-                        dmi_allow=false, verbose=true,
-                        log_level=0,
-                        -- load={csv_file=MAKENA_REGS_CSV,
-                        -- offset=0, addr_str="Address",
-                        -- value_str="Reset Value", byte_swap=true}
-                      };
+    -- fallback_memory_0 = { 
+    --                     target_socket={address=0x0, size=0x40000000},
+    --                     dmi_allow=false, verbose=true,
+    --                     log_level=0,
+    --                     -- load={csv_file=MAKENA_REGS_CSV,
+    --                     -- offset=0, addr_str="Address",
+    --                     -- value_str="Reset Value", byte_swap=true}
+    --                   };
+    fallback_memory_0={
+                moduletype="json_module";
+                target_socket={dynamic=true},
+                log_level=9,
+                zipfile=valid_file(top().."top.zip")
+    };
     -- fallback_memory_0 = {
     --     -- moduletype="Memory";
     --     -- dont_construct = false;
