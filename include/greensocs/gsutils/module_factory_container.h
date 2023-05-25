@@ -250,11 +250,11 @@ SC_MODULE (Container) {
                                            .get_preset_cci_value(std::string(sc_module::name()) + "." + name +
                                                                  ".moduletype")
                                            .get_string();
-                    std::cout << "adding a " << type << " with name " << std::string(sc_module::name()) + "." + name
-                              << "\n";
+
+                    SCP_INFO(()) << "Adding a " << type << " with name " <<  std::string(sc_module::name()) + "." + name;
 
                     cci::cci_value_list mod_args = get_module_args(std::string(sc_module::name()) + "." + name);
-                    std::cout << mod_args.size() << " arguments found for " << type << "\n";
+                    SCP_INFO(()) << mod_args.size() << " arguments found for " << type;
                     sc_core::sc_module* m = construct_module(type, name.c_str(), mod_args);
 
                     if (!m) {
