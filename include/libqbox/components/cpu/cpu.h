@@ -445,10 +445,6 @@ public:
             SCP_INFO(SCMOD) << "Starting gdb server on TCP port " << p_gdb_port;
             ss << "tcp::" << p_gdb_port;
             m_inst.get().start_gdb_server(ss.str());
-
-            m_inst.get().lock_iothread();
-            m_inst.get().vm_stop_paused();
-            m_inst.get().unlock_iothread();
         }
 
         for (auto p : gs::sc_cci_children(sc_module::name())) {

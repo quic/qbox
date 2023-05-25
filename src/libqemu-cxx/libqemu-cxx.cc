@@ -95,6 +95,7 @@ void LibQemu::init() {
 
 void LibQemu::start_gdb_server(std::string port) {
     m_int->exports().gdbserver_start(port.c_str());
+    m_int->exports().libqemu_set_autostart(0);
 }
 
 void LibQemu::vm_start() {
