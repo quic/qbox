@@ -36,9 +36,13 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 set(LIBQEMU_TARGETS aarch64 hexagon)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_modules")
+
 gs_systemc()
 
 gs_addpackage(qbox)
+
+find_package(LibZip REQUIRED)
 
 add_library(${PROJECT_NAME} INTERFACE)
 add_executable(vp
@@ -52,6 +56,7 @@ execute_process(
     COMMAND_ERROR_IS_FATAL ANY)
 message(STATUS "QQVP_VERSION = ${QQVP_VERSION}")
 target_compile_definitions(vp PRIVATE -DQQVP_VERSION="${QQVP_VERSION}")
+target_include_directories(${PROJECT_NAME} INTERFACE ${LIBZIP_INCLUDE_DIRS})
 
 target_include_directories(
     ${PROJECT_NAME} INTERFACE
@@ -61,6 +66,7 @@ target_include_directories(
 
 target_link_libraries(${PROJECT_NAME} INTERFACE
     ${TARGET_LIBS}
+    ${LIBZIP_LIBRARY}
 )
 
 gs_export()
