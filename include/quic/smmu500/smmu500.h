@@ -2863,7 +2863,7 @@ protected:
 
 public:
     smmu500(sc_core::sc_module_name name)
-        : socket("socket")
+        : socket("target_socket")
         , p_pamax("pamax", 48, "")
         , p_num_smr("num_smr", 48, "")
         , p_num_cb("num_cb", 16, "")

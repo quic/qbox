@@ -125,6 +125,8 @@ local ARM_NUM_CPUS = 8;
 local NUM_REDISTS = 1;
 local HEXAGON_NUM_CLUSTERS = 2;
 
+zipfile = valid_file(top().."../top.zip");
+
 platform = {
     with_gpu = false;
 
@@ -143,18 +145,28 @@ platform = {
         -- target_socket = {bind = "&tbu_2.downstream_socket"};
     },
 
-    ram_0 = {
-        moduletype="Memory";
-        target_socket= {size = DDR_SPACE_SIZE/2,
-                        address=INITIAL_DDR_SPACE_14GB;
-                        bind = "&router.initiator_socket";}
-    },
-    ram_1 = {
-        moduletype="Memory";
-        target_socket= {size = DDR_SPACE_SIZE/2,
-                        address=INITIAL_DDR_SPACE_14GB+(DDR_SPACE_SIZE/2);
-                        bind = "&router.initiator_socket";}
-    },
+    DDR_space = {moduletype="Memory";
+                target_socket = {bind = "&router.initiator_socket";}
+                };
+    
+    -- ram_0 = {
+    --     moduletype="Memory";
+    --     target_socket = {"&platform.DDR_space", bind= "&router.initiator_socket"},
+    --     -- target_socket= {size = DDR_SPACE_SIZE/2,
+    --     --                 address=INITIAL_DDR_SPACE_14GB;
+    --     --                 bind = "&router.initiator_socket";}
+    -- },
+    DDR_space_1 = {moduletype="Memory";
+                target_socket = {bind = "&router.initiator_socket";}
+                };
+
+    -- ram_1 = {
+    --     moduletype="Memory";
+    --     target_socket= {size = DDR_SPACE_SIZE/2,
+    --                     address=INITIAL_DDR_SPACE_14GB+(DDR_SPACE_SIZE/2);
+    --                     bind = "&router.initiator_socket";}
+    -- },
+
     hexagon_ram_0 = {
         moduletype="Memory";
         target_socket= {size = NSP0_VTCM_SIZE_BYTES,
@@ -199,7 +211,6 @@ platform = {
                     args = {"&platform.qemu_inst"};
                     mem    =   {address=0x1c120000, size=0x10000, bind = "&router.initiator_socket"},
                     irq_out = {bind = "&gic_0.spi_in_18"},
-
                     netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21",
     };
 --    virtioblk_0= { mem    =   {address=0x1c0d0000, size=0x2000}, 
@@ -237,9 +248,9 @@ platform = {
         irq = {bind = "&gic_0.spi_in_379"},
     };
 
-    ipcc_0= {
+    ipc_router_top = {
             moduletype = "IPCC",
-            target_socket = {address=IPC_ROUTER_TOP, size=0xfc000, bind = "&router.initiator_socket"},
+            target_socket = {bind = "&router.initiator_socket"},
             irq_8 = {bind = "&gic_0.spi_in_229"},
             irq_18 = {bind = "&hexagon_cluster_1.l2vic.irq_in_30"},
             irq_6 = {bind = "&hexagon_cluster_0.l2vic.irq_in_30"},
@@ -321,30 +332,12 @@ platform = {
                                 bind = "&router.initiator_socket"}
                     },
 
-    -- fallback_memory_0 = { 
-    --                     target_socket={address=0x0, size=0x40000000},
-    --                     dmi_allow=false, verbose=true,
-    --                     log_level=0,
-    --                     -- load={csv_file=MAKENA_REGS_CSV,
-    --                     -- offset=0, addr_str="Address",
-    --                     -- value_str="Reset Value", byte_swap=true}
-    --                   };
-    fallback_memory_0={
-                moduletype="json_module";
-                target_socket={dynamic=true},
-                log_level=9,
-                zipfile=valid_file(top().."top.zip")
+    fallback_0={
+                moduletype="json_fallback_module";
+                target_socket={dynamic=true, bind="&router.initiator_socket"},
+                log_level=0,
+                zipfile=zipfile
     };
-    -- fallback_memory_0 = {
-    --     -- moduletype="Memory";
-    --     -- dont_construct = false;
-    --     target_socket={address=0x0, size=0x40000000, bind = "&router.initiator_socket"},
-    --                     dmi_allow=false, verbose=true,
-    --                     log_level=3,
-    --                     load={csv_file=MAKENA_REGS_CSV,
-    --                     offset=0, addr_str="Address",
-    --                     value_str="Reset Value", byte_swap=true}
-    -- },
 
     global_peripheral_initiator_arm_0 = {
                    moduletype = "GlobalPeripheralInitiator",
@@ -399,7 +392,7 @@ for i = 0, num_cb - 1 do
     local smmu = {
         moduletype = "smmu500",
         dma = {bind = "&router.target_socket"},
-        socket = {address=0x15000000, size=0x100000, bind= "&router.initiator_socket"},
+        target_socket = {"&platform.sys_tcu_cfg_v2smmu_500_apps_reg_wrapper", bind= "&router.initiator_socket"},
         num_tbu = 2,
         num_pages = 128,
         num_cb = 128;

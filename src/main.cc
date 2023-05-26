@@ -76,6 +76,7 @@
 #include <quic/mpm/mpm.h>
 #include <quic/smmu500/smmu500.h>
 #include <quic/qup/uart/uart-qupv3.h>
+#include <quic/gen_boilerplate/reg_model_maker.h>
 
 #include "wdog.h"
 #include "pll.h"
@@ -151,6 +152,7 @@ public:
                                 /* here n is already "hexagon-cpu_<vector-index>" */
                                 uint64_t l2vic_base = gs::cci_get<uint64_t>(std::string(name()) +
                                                                             ".l2vic.mem.address");
+                                                        
                                 uint64_t qtmr_rg0 = gs::cci_get<uint64_t>(
                                     std::string(name()) + ".qtimer.mem_view.address");
                                 return new QemuCpuHexagon(
@@ -205,8 +207,6 @@ public:
     GreenSocsPlatform(const sc_core::sc_module_name& n)
         : gs::ModuleFactory::Container(n)
         , p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
-        // , m_fallback_mem("fallback_memory", gs::sc_cci_list_items(sc_module::name(), "fallback_memory").size(),
-        //          [this](const char* n, size_t i) { return new gs::Memory<>(n); })
         {
         using tlm_utils::tlm_quantumkeeper;
 
@@ -221,15 +221,6 @@ public:
         //         m_gpu = new QemuVirtioGpuGlPci("gpu", m_qemu_inst);
         //         gpex.add_device(*m_gpu);
         //     // m_display = new QemuDisplay("display", *m_gpu);
-        //     }
-        // }
-
-        // for (auto& fallback : m_fallback_mem){
-        //     // MUST be added last
-        //     sc_core::sc_object* rout_obj = gs::find_sc_obj(nullptr, "platform.router");
-        //     auto rout = dynamic_cast<gs::Router<>*>(rout_obj);
-        //     if (rout) {
-        //         rout->initiator_socket.bind(fallback.socket);
         //     }
         // }
 
@@ -308,10 +299,16 @@ int sc_main(int argc, char* argv[]) {
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
 
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
+    gs::ConfigurableBroker m_broker(argc, argv);
     cci::cci_originator orig("sc_main");
-    cci::cci_param<int> p_log_level{ "log_level", 0, "Default log level", cci::CCI_ABSOLUTE_NAME,
-                                     orig };
+    cci::cci_param<int> p_log_level{ "log_level", 0, "Default log level", cci::CCI_ABSOLUTE_NAME, orig };
+    cci::cci_param<std::string> p_zipfile{ "zipfile", "", "Default log level", cci::CCI_ABSOLUTE_NAME, orig };
+
+    gs::json_zip_archive jza(zip_open(p_zipfile.get_value().c_str(), ZIP_RDONLY, nullptr));
+
+    jza.json_read_cci(m_broker.create_broker_handle(orig), "platform");
+
+
 
     typedef gs::PassRPC<PASSRPC_TLM_PORTS_NUM, PASSRPC_SIGNALS_NUM> PassRPC;
 
@@ -319,7 +316,7 @@ int sc_main(int argc, char* argv[]) {
     GSC_MODULE_REGISTER(SC_QemuInstance, sc_core::sc_object*, std::string);
     GSC_MODULE_REGISTER(hexagon_cluster, sc_core::sc_object*, sc_core::sc_object*);
 
-    GreenSocsPlatform* platform = new GreenSocsPlatform("platform");
+    GreenSocsPlatform platform("platform");
 
     auto start = std::chrono::system_clock::now();
     try {
@@ -343,6 +340,5 @@ int sc_main(int argc, char* argv[]) {
               << std::endl;
     std::cout << "Simulation Duration: " << elapsed.count() << "s (Wall Clock)" << std::endl;
 
-    free(platform);
     return 0;
 }
