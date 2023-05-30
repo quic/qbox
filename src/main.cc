@@ -45,6 +45,7 @@
 
 #include <libqbox-extra/components/meta/global_peripheral_initiator.h>
 #include <libqbox-extra/components/pci/gpex.h>
+#include <libqbox-extra/components/pci/rtl8139.h>
 #include <libqbox-extra/components/pci/virtio-gpu-gl-pci.h>
 #include <libqbox-extra/components/pci/nvme.h>
 #include <libqbox-extra/components/display/display.h>
@@ -295,6 +296,7 @@ protected:
     QemuVirtioGpuGlPci* m_gpu;
     QemuDisplay* m_display = nullptr;
     sc_core::sc_vector<QemuHexagonQtimer> m_qtimers;
+    QemuRtl8139Pci *m_rtl8139;
 
     gs::Memory<> m_fallback_mem;
 
@@ -528,6 +530,7 @@ public:
 
         m_gpex = new QemuGPEX("gpex", m_qemu_inst, mmio_addr, mmio_size, mmio_iface_high_addr,
                               mmio_iface_high_size);
+        m_rtl8139 = new QemuRtl8139Pci("rtl8139", m_qemu_inst, m_gpex);
 
         if (p_with_gpu.get_value()) {
             m_gpu = new QemuVirtioGpuGlPci("gpu", m_qemu_inst);
@@ -691,6 +694,7 @@ public:
             delete m_gpu;
         }
         delete m_gpex;
+        delete m_rtl8139;
 
         if (m_uart) {
             delete m_uart;
