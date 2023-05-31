@@ -86,14 +86,14 @@ def fastrpc_calc_test():
         calc.expect('- sum = 4950')
         calc.expect('- success')
 
-    pcitool_args = ssh_args + [ "/mnt/bin/pci-tool", "-v", ]
-    # Look for GPU device:
+    pcitool_args = ssh_args + [ "sh -l -c '/mnt/bin/pci-tool -v'", ]
     pci = QCSubprocess(pcitool_args, timeout=timeout)
     pci.expect('B000:D00:F00 @ idx 0')
-    if not args.enable_gpu:
-        pci.expect('vid/did: ffff/ffff')
-    else:
-        pci.expect('vid/did: 1b36/0008')
+    # Look for the rtl8139 PCI Ethernet Network Controller device:
+    pci.expect('vid/did: 10ec/8139')
+    # Look for GPU device:
+    if args.enable_gpu:
+        pci.expect('vid/did: 1af4/1050')
 
     return pci.success() and calc.success()
 
