@@ -192,6 +192,11 @@ protected:
          */
 #define MAX_MAP 250
 
+        // Current function may be called by the MMIO thread which does not hold
+        // any RCU read lock. This is required in case of a memory transaction
+        // commit on a TCG accelerated Qemu instance
+        qemu::RcuReadLock rcu_read_lock = m_inst.get().rcu_read_lock_new();
+
         while (m_dmi_aliases.size() > MAX_MAP) {
             auto d = m_dmi_aliases.begin();
             std::advance(d, std::rand() % m_dmi_aliases.size());
