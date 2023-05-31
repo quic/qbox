@@ -79,6 +79,7 @@ class Console;
 class SDL2Console;
 class Dcl;
 class DclOps;
+class RcuReadLock;
 
 class LibQemu
 {
@@ -98,6 +99,9 @@ private:
     void check_cast(Object& o, const char* type);
 
     void init_callbacks();
+
+    void rcu_read_lock();
+    void rcu_read_unlock();
 
 public:
     LibQemu(LibraryLoaderIface& library_loader, const char* lib_path);
@@ -119,6 +123,8 @@ public:
 
     void lock_iothread();
     void unlock_iothread();
+
+    RcuReadLock rcu_read_lock_new();
 
     void finish_qemu_init();
     Bus sysbus_get_default();
@@ -175,6 +181,22 @@ public:
     QEMUGLContext sdl2_gl_create_context(DisplayGLCtx* dgc, QEMUGLParams* p);
     void sdl2_gl_destroy_context(DisplayGLCtx* dgc, QEMUGLContext gl_ctx);
     int sdl2_gl_make_context_current(DisplayGLCtx* dgc, QEMUGLContext gl_ctx);
+};
+
+class RcuReadLock
+{
+private:
+    std::shared_ptr<LibQemuInternals> m_int;
+    RcuReadLock() = default;
+
+public:
+    RcuReadLock(std::shared_ptr<LibQemuInternals> internals);
+    ~RcuReadLock();
+
+    RcuReadLock(const RcuReadLock&) = delete;
+    RcuReadLock& operator=(const RcuReadLock&) = delete;
+    RcuReadLock(RcuReadLock&&);
+    RcuReadLock& operator=(RcuReadLock&&);
 };
 
 class Object

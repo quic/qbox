@@ -199,6 +199,18 @@ void LibQemu::unlock_iothread() {
     m_int->exports().qemu_mutex_unlock_iothread();
 }
 
+void LibQemu::rcu_read_lock() {
+    m_int->exports().rcu_read_lock();
+}
+
+void LibQemu::rcu_read_unlock() {
+    m_int->exports().rcu_read_unlock();
+}
+
+RcuReadLock LibQemu::rcu_read_lock_new() {
+    return RcuReadLock(m_int);
+}
+
 void LibQemu::coroutine_yield() {
     m_int->exports().coroutine_yield();
 }

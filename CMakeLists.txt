@@ -81,6 +81,7 @@ set(srcs
     src/libqemu-cxx/loader.cc
     src/libqemu-cxx/memory.cc
     src/libqemu-cxx/object.cc
+    src/libqemu-cxx/rcu-read-lock.cc
     src/libqemu-cxx/sysbus.cc
     src/libqemu-cxx/timer.cc
     src/libqemu-cxx/target/aarch64.cc
