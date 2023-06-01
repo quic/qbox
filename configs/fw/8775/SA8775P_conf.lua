@@ -29,12 +29,17 @@ local NSP0_BASE     = 0x24000000 -- TURING_SS_0TURING
 local NSP1_BASE     = 0x28000000 -- TURING_SS_1TURING
    -- ^^ This val is also described as 'TCM_BASE_ADDRESS' in
    -- Sys arch spec "TCM region memory map"
-local LPASS_BASE    = 0x02c00000
 local TURING_SS_0TURING_QDSP6V68SS_CSR= 0x26380000
 local TURING_SS_1TURING_QDSP6V68SS_CSR= 0x2A380000
 local LPASS_QDSP6V68SS_CSR= 0x03080000
 -- The QDSP6v67SS private registers include CSR, L2VIC, QTMR registers.
 -- The address base is determined by parameter QDSP6SS_PRIV_BASEADDR
+
+-- ipcat says LPASS subsystem starts at 0x2c00000, with a 4MiB "unused"
+-- region. However, our calculations from get_dsp() only match the expected
+-- registers if we consider LPASS' base to start at 0x200000 further, right in
+-- the middle of the "unused" region.
+local LPASS_BASE = 0x2c00000 + 0x200000
 
 -- These values were pulled out from the silicom by SiVal team
 local NSP0_AHB_LOW = 0x2600000 -- TURINGNSP_0_TURING_QDSP6SS_STRAP_AHBLOWER_STATUS
@@ -114,7 +119,7 @@ local NSP1_VTCM_SIZE_BYTES = (SA8775P_nsp1_config_table[16] * 1024)
 
 -- ADSP configuration
 local SA8775P_adsp_config_table= get_SA8775P_adsp_config_table();
-local adsp = get_adsp(
+local adsp = get_dsp(
         "v66",
         LPASS_BASE,
         0x03000000, -- LPASS_QDSP6V68SS_PUB
@@ -123,6 +128,7 @@ local adsp = get_adsp(
         ADSP_AHB_SIZE,
         2 -- threads
         );
+assert((SA8775P_adsp_config_table[11] << 16) == adsp.l2vic.fastmem.address)
 assert((SA8775P_adsp_config_table[3] << 16) == LPASS_QDSP6V68SS_CSR)
 
 -- TODO: remove this when we get the fw image working at qqvp

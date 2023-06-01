@@ -282,14 +282,9 @@ function get_SA8775P_adsp_config_table()
  };
 end
 
-function _get_dsp(dsp_type, arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
-                  num_threads)
-    local offset = 0
-    if dsp_type == "adsp" then
-        -- ADSP addresses are offset
-        offset = 0x200000
-    end
-    local cfgtable_base_addr = base + offset + 0x180000
+function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
+                 num_threads)
+    local cfgtable_base_addr = base + 0x180000
     local sched_limit = true;
     assert(num_threads >= 1);
     local dsp = {
@@ -304,20 +299,20 @@ function _get_dsp(dsp_type, arch, base, ahbs_base, cfgtable, start_addr, ahb_siz
         HexagonQemuInstance = { tcg_mode="SINGLE",
             sync_policy = "multithread-unconstrained"};
         hexagon_start_addr = start_addr;
-        l2vic={  mem           = {address=ahbs_base + offset + 0x90000, size=0x1000};
-                 fastmem       = {address=base      + offset + 0x1e0000, size=0x10000}};
-        qtimer={ mem           = {address=ahbs_base + offset + 0xA0000, size=0x1000};
-                 mem_view      = {address=ahbs_base + offset + 0xA1000, size=0x2000}};
-        pass = {target_socket  = {address=0x0 , size=base + offset + ahb_size,
+        l2vic={  mem           = {address=ahbs_base + 0x90000,  size=0x1000};
+                 fastmem       = {address=base      + 0x1e0000, size=0x10000}};
+        qtimer={ mem           = {address=ahbs_base + 0xA0000,  size=0x1000};
+                 mem_view      = {address=ahbs_base + 0xA1000,  size=0x2000}};
+        pass = {target_socket  = {address=0x0 , size=base + ahb_size,
             relative_addresses=false}};
         cfgtable_base = cfgtable_base_addr;
 
-        wdog  = { socket        = {address=ahbs_base + offset + 0x84000,    size=0x1000}};
-        pll_0 = { socket        = {address=ahbs_base + offset + 0x40000,    size=0x10000}};
+        wdog  = { socket        = {address=ahbs_base + 0x84000,    size=0x1000}};
+        pll_0 = { socket        = {address=ahbs_base + 0x40000,    size=0x10000}};
         rom   = { target_socket = {address=cfgtable_base_addr, size=0x100 },
             read_only=true, load={data=cfgtable, offset=0}};
 
-        csr = { socket = {address=ahbs_base + offset, size=0x1000}};
+        csr = { socket = {address=ahbs_base, size=0x1000}};
     };
     for th=1,num_threads-1 do
       dsp["hexagon_thread_" .. th] = {
@@ -327,16 +322,4 @@ function _get_dsp(dsp_type, arch, base, ahbs_base, cfgtable, start_addr, ahb_siz
       };
     end
     return dsp
-end
-
-function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
-                 num_threads)
-    return _get_dsp("cdsp", arch, base, ahbs_base, cfgtable, start_addr,
-                    ahb_size, num_threads)
-end
-
-function get_adsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
-                 num_threads)
-    return _get_dsp("adsp", arch, base, ahbs_base, cfgtable, start_addr,
-                    ahb_size, num_threads)
 end
