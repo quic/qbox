@@ -36,5 +36,17 @@ function tableJoin(t1,t2)
     end
     return t1
 end
+
+-- Override assert() as the default leads to odd errors in qqvp
+function assert(exp, msg)
+  if msg == nil then
+    msg = "Assertion failed!"
+  end
+  if not exp then
+    print(msg)
+    print(debug.traceback())
+    os.exit(1)
+  end
+end
 -- ** End of convenience functions **
 

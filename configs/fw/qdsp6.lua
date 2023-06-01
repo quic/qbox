@@ -1,3 +1,14 @@
+function top()
+    local str = debug.getinfo(2, "S").source:sub(2)
+    if str:match("(.*/)")
+    then
+        return str:match("(.*/)")
+    else
+        return "./"
+    end
+ end
+
+dofile(top().."/utils.lua");
 
 function get_SA8540P_nsp0_config_table()
  return {
