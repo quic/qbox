@@ -125,7 +125,7 @@ public:
         , m_qtimer("qtimer",
                    m_qemu_hex_inst) // are we sure it's in the hex cluster?????
         , m_wdog("wdog")
-        , m_plls("pll", 4)
+        , m_plls("pll", 1)
         //        , m_pll2("pll2")
         , m_csr("csr")
         , m_rom("rom")
