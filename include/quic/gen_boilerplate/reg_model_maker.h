@@ -75,13 +75,13 @@ public:
     rapidjson::Document& get_json(std::string file, rapidjson::Document& d)
     {
         zip_stat_t stat;
-        SCP_INFO("json_cci")("Looking for {} in archive", file.c_str());
+        SCP_TRACE("json_cci")("Looking for {} in archive", file.c_str());
 
         if (file.empty()) {
             file = get_json_topname() + ".json";
         }
         if (zip_stat(m_archive, file.c_str(), ZIP_FL_NOCASE, &stat) != 0) {
-            SCP_INFO("json_cci")("Unable to find {} in archive", file.c_str());
+            SCP_DEBUG("json_cci")("Unable to find {} in archive", file.c_str());
             return d;
         }
 
@@ -106,7 +106,7 @@ private:
     void cci_set(cci::cci_broker_handle broker, std::string n, T value)
     {
         if (!broker.has_preset_value(n)) {
-            SCP_INFO("json_cci")("set {} to {}", n, value);
+            SCP_DEBUG("json_cci")("set {} to {}", n, value);
             broker.set_preset_cci_value(n, cci::cci_value(value));
         } else {
             SCP_FATAL("json_cci")("Trying to re-set a value? {}", n);
@@ -127,7 +127,7 @@ public:
         if (m_loaded.count(sc_name)) return true;
         m_loaded.insert(sc_name);
 
-        SCP_INFO("json_cci")("JSON read to sc object {} from JSON node {}", sc_name, node["NAME"].GetString());
+        SCP_INFO("json_cci")("JSON read into sc object {} from JSON node {}", sc_name, node["NAME"].GetString());
 
         uint64_t min = 0;
         uint64_t max = 0;
@@ -250,6 +250,7 @@ class json_fallback_module : public virtual sc_core::sc_module
     cci::cci_broker_handle m_broker;
     //    zip_t* m_zip_archive;
     cci::cci_param<std::string> p_zipfile;
+    cci::cci_param<bool> p_strict;
     json_zip_archive jza;
 
     gs::Memory<> m_memory;
@@ -299,14 +300,14 @@ public:
         uint64_t addr = txn.get_address();
         for (auto& ti : targets) {
             if (addr >= ti.address && addr <= ti.address + ti.size) {
-                SCP_INFO(())("Access to {:#x} which is in {} (Unimplemented)", addr, ti.name);
+                SCP_DEBUG(())("Access to {:#x} which is in {} (Register only implementation)", addr, ti.name);
                 return true;
             }
         }
         std::string f = json_find_module(txn, name());
         if (f.empty()) {
             SCP_WARN(())("NO MODULE FOUND for Access to {:#x}!", addr);
-            return true;
+            return !p_strict;
         }
 
         target_info ti;
@@ -314,7 +315,7 @@ public:
         ti.address = cci_get<uint64_t>(f + ".target_socket.address");
         ti.size = cci_get<uint64_t>(f + ".target_socket.size");
         targets.push_back(ti);
-        SCP_WARN(())("First Access to {:#x} which is in {} (Unimplemented)", addr, ti.name);
+        SCP_WARN(())("First Access to {:#x} which is in {} (Register only implementation)", addr, ti.name);
         return true;
     }
     void b_transport(int id, tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
@@ -375,6 +376,7 @@ public:
         , target_socket("target_socket")
         , init_socket("internal_init_socket")
         , m_memory("memory", max_size())
+        , p_strict("strict", false, "Fail on accesses to unknown memory areas")
     {
         SCP_TRACE(())("Constructor");
 
@@ -439,7 +441,7 @@ public:
         }
 
         if ((!node.HasMember("SIZE")) || (!node.HasMember("ADDRESS"))) {
-            SCP_TRACE("json_cci")("JSON no range for address {:#x} (size: {}) in {}", address, len, sc_name);
+            SCP_DEBUG("json_cci")("JSON no range for address {:#x} (size: {}) in {}", address, len, sc_name);
             return "";
         }
 
@@ -447,7 +449,7 @@ public:
         uint64_t laddr = jza.getNumber(node["ADDRESS"]);
 
         if (address < laddr || address + len > laddr + lsize) {
-            SCP_TRACE("json_cci")("JSON address out of range {:#x} (size: {}) in {}", address, len, sc_name);
+            SCP_DEBUG("json_cci")("JSON address out of range {:#x} (size: {}) in {}", address, len, sc_name);
             return "";
         }
 
