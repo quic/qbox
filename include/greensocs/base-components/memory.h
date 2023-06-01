@@ -489,6 +489,17 @@ public:
         if (!m_size) {
             auto m_broker = cci::cci_get_broker();
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
+            if (m_broker.get_preset_cci_value(ts_name + ".0").is_string()) {
+                // deal with an alias
+                if (m_broker.has_preset_value(ts_name + ".size") && m_broker.get_preset_cci_value(ts_name + ".size").is_number()) {
+                    SCP_WARN(SCMOD)
+                    ("The configuration alias provided ({}) will be ignored as a valid size is also provided.",
+                     ts_name);
+                } else {
+                    ts_name = m_broker.get_preset_cci_value(ts_name + ".0").get_string();
+                    if (ts_name[0] == '&') ts_name = (ts_name.erase(0, 1)) + ".target_socket";
+                }
+            }
             if (!m_broker.has_preset_value(ts_name + ".size")) {
                 SCP_FATAL(SCMOD) << "Can't find " << ts_name << ".size";
             }
@@ -508,6 +519,17 @@ public:
         if (!m_address_valid) {
             auto m_broker = cci::cci_get_broker();
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
+            if (m_broker.get_preset_cci_value(ts_name + ".0").is_string()) {
+                // deal with an alias
+                if (m_broker.has_preset_value(ts_name + ".address") && m_broker.get_preset_cci_value(ts_name + ".address").is_number()) {
+                    SCP_WARN(SCMOD)
+                    ("The configuration alias provided ({}) will be ignored as a valid address is also provided.",
+                     ts_name);
+                } else {
+                    ts_name = m_broker.get_preset_cci_value(ts_name + ".0").get_string();
+                    if (ts_name[0] == '&') ts_name = (ts_name.erase(0, 1)) + ".target_socket";
+                }
+            }
             if (!m_broker.has_preset_value(ts_name + ".address")) {
                 m_address = 0; // fine for relative addressing
                 SCP_WARN(SCMOD) << "Can't find " << ts_name << ".address";

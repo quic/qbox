@@ -515,22 +515,28 @@ private:
                 dynamic_targets.push_back(&ti);
                 continue;
             }
+            std::string name = ti.name;
             if (m_broker.get_preset_cci_value(ti.name + ".0").is_string()) {
                 // deal with an alias
                 std::string src = m_broker.get_preset_cci_value(ti.name + ".0").get_string();
-                if (!m_broker.has_preset_value(ti.name + ".address")) {
-                    m_broker.set_preset_cci_value(ti.name + ".address",
-                                                  cci::cci_value(get_val<uint64_t>(src + ".address")));
-                    m_broker.set_preset_cci_value(ti.name + ".size", cci::cci_value(get_val<uint64_t>(src + ".size")));
-                    m_broker.set_preset_cci_value(ti.name + ".size", m_broker.get_preset_cci_value(src + ".size"));
+                if (m_broker.has_preset_value(ti.name + ".address") && m_broker.get_preset_cci_value(ti.name + ".address").is_number()) {
+                    SCP_WARN((D[ti.index]), ti.name)
+                    ("The configuration alias provided ({}) will be ignored as a valid address is also provided.", src);
+                } else {
+                    if (src[0] == '&') src = (src.erase(0, 1)) + ".target_socket";
+                    if (!m_broker.has_preset_value(src + ".address")) {
+                        SCP_FATAL((D[ti.index]), ti.name)
+                        ("The configuration alias provided ({}) can not be found.", src);
+                    }
+                    name = src;
                 }
             }
 
-            ti.address = get_val<uint64_t>(ti.name + ".address");
-            ti.size = get_val<uint64_t>(ti.name + ".size");
-            ti.use_offset = get_val<bool>(ti.name + ".relative_addresses", true);
-            ti.is_callback = get_val<bool>(ti.name + ".is_callback", false);
-            ti.chained = get_val<bool>(ti.name + ".chained", false);
+            ti.address = get_val<uint64_t>(name + ".address");
+            ti.size = get_val<uint64_t>(name + ".size");
+            ti.use_offset = get_val<bool>(name + ".relative_addresses", true);
+            ti.is_callback = get_val<bool>(name + ".is_callback", false);
+            ti.chained = get_val<bool>(name + ".chained", false);
 
             SCP_INFO((D[ti.index]), ti.name)
                 << "Address map " << ti.name + " at"
