@@ -265,6 +265,8 @@ platform = {
          address=LPASS_QDSP6SS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
         {data={0x01180214},
          address=LPASS_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
+        -- RPMH_PDC_AUDIO_PDC_PARAM_RESOURCE_DRVd
+        {data={0x000A5381}, address=0xB251004};
 
 --      {data={0x00020400}, address=0x10E0000};
 --      {data={0x60000003}, address=0x10E000C};
