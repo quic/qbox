@@ -279,10 +279,10 @@ public:
     friend class PrivateConfigurableBroker;
 
 protected:
-    bool has_parent;
-    cci_broker_if& m_parent;
     std::string m_orig_name;
     cci_originator m_originator;
+    bool has_parent;
+    cci_broker_if& m_parent;
     cci_param<ConfigurableBroker*>* m_child_ref;
 
     std::unordered_set<std::string> m_initialized;
@@ -480,6 +480,7 @@ protected:
             if (help_cb) exit(0);
         }
     };
+
     help_helper m_help_helper;
 
 public:
@@ -557,15 +558,15 @@ public:
 #define BROKERNAME "gs::ConfigurableBroker"
     ConfigurableBroker(const std::string& name = BROKERNAME, bool load_conf_file = true,
                        std::function<void(std::string)> uninitialized_cb = nullptr)
-        : m_orig_name(hierarchical_name())
-        , m_originator(get_cci_originator(name.c_str()))
-        , consuming_broker(hierarchical_name() + "." + name)
+        : consuming_broker(hierarchical_name() + "." + name)
         , conf_file("lua_conf", "", cci_broker_handle(get_parent_broker(), get_cci_originator(name.c_str())),
                     "Local lua configuration file", CCI_RELATIVE_NAME, get_cci_originator(name.c_str()))
+        , m_orig_name(hierarchical_name())
+        , m_originator(get_cci_originator(name.c_str()))
         , m_parent(get_parent_broker()) // local convenience function
         , m_child_ref(NULL)
-        , m_help_helper("help_helper")
         , m_uninitialized_cb(uninitialized_cb)
+        , m_help_helper("help_helper")
 
     {
         if (has_parent) {

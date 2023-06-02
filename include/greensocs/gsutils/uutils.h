@@ -68,7 +68,7 @@ public:
     static void pass_sig_handler(int sig) {
         gs::SigHandler::get().set_sig_num(sig);
         char ch[1] = { 's' };
-        ssize_t ret = ::write(gs::SigHandler::get().get_write_sock_end(), &ch, 1);
+        (void) ::write(gs::SigHandler::get().get_write_sock_end(), &ch, 1);
     }
 
     static void force_exit_sig_handler(int sig) {
@@ -220,17 +220,18 @@ private:
                          { SIGABRT, "abnormal termination (SIGABRT)!" } }
         , is_pass_handler_requested{ false }
         , stop_running{ false }
-        , exit_act{ 0 }
-        , pass_act{ 0 }
-        , ign_act{ 0 }
-        , dfl_act{ 0 } {
-        if (socketpair(AF_UNIX, SOCK_STREAM, 0, self_sockpair_fd) == -1) {
-            perror("SigHnadler socketpair");
-            std::exit(EXIT_FAILURE);
+        {
+            memset(&dfl_act, 0, sizeof(dfl_act));
+            memset(&ign_act, 0, sizeof(ign_act));
+            memset(&pass_act, 0, sizeof(pass_act));
+            memset(&exit_act, 0, sizeof(exit_act));
+            if (socketpair(AF_UNIX, SOCK_STREAM, 0, self_sockpair_fd) == -1) {
+                perror("SigHnadler socketpair");
+                std::exit(EXIT_FAILURE);
+            }
+            reset_block_set();
+            _update_all_sigs_cb();
         }
-        reset_block_set();
-        _update_all_sigs_cb();
-    }
 
     SigHandler(const SigHandler&) = delete;
     SigHandler& operator()(const SigHandler&) = delete;

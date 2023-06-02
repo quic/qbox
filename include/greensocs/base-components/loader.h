@@ -198,14 +198,15 @@ private:
 
 public:
     Loader(sc_core::sc_module_name name)
-        : m_broker(cci::cci_get_broker())
-        , initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
+        : initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
+        , m_broker(cci::cci_get_broker())
+        
     {
         SCP_TRACE(())("default constructor");
     }
     Loader(sc_core::sc_module_name name, std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> _write)
-        : m_broker(cci::cci_get_broker())
-        , initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
+        : initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
+        , m_broker(cci::cci_get_broker())
         , write_cb(_write)
     {
         SCP_TRACE(())("constructor with callback");
@@ -332,7 +333,7 @@ public:
         }
         int addr_i = -1;
         int value_i = -1;
-        for (int i = 0; i < row.size(); i++) {
+        for (std::size_t i = 0; i < row.size(); i++) {
             if (row[i] == addr_str) {
                 addr_i = i;
             }
@@ -343,7 +344,7 @@ public:
         if (addr_i == -1 || value_i == -1) {
             SCP_FATAL(()) << "Unable to find " << filename;
         }
-        int min_field_count = std::max(addr_i, value_i);
+        std::size_t min_field_count = std::max(addr_i, value_i);
         while (file >> row) {
             if (row.size() <= min_field_count) {
                 continue;
@@ -413,15 +414,16 @@ private:
     class elf_reader
     {
     private:
+
+        std::vector<struct elf_segment> m_segments;
+
+        std::function<void(uint64_t, uint8_t*, uint64_t)> m_send;
+
         std::string m_filename;
         int m_fd;
         uint64_t m_entry;
         uint64_t m_machine;
         endianess m_endian;
-
-        std::vector<struct elf_segment> m_segments;
-
-        std::function<void(uint64_t, uint8_t*, uint64_t)> m_send;
 
     public:
         uint64_t entry() const { return m_entry; }
@@ -518,9 +520,6 @@ private:
                     char* name = elf_strptr(elf, shdr->sh_link, syms[i].st_name);
                     if (name == nullptr || strlen(name) == 0) continue;
 
-                    uint64_t size = syms[i].st_size;
-                    uint64_t virt = syms[i].st_value;
-                    uint64_t phys = to_phys(virt);
                 }
             }
         }
@@ -535,8 +534,8 @@ private:
         }
 
         elf_reader(const std::string& path, std::function<void(uint64_t, uint8_t*, uint64_t)> _send)
-            : m_filename(path)
-            , m_send(_send)
+            : m_send(_send)
+            , m_filename(path)
             , m_fd(-1)
             , m_entry(0)
             , m_machine(0)

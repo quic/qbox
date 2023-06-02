@@ -91,8 +91,8 @@ class Memory : public sc_core::sc_module
 
     public:
         SubBlock(uint64_t address, uint64_t len, Memory& mem)
-            : m_address(address)
-            , m_len(len)
+            : m_len(len)
+            , m_address(address)
             , m_mem(mem)
         {
         }
@@ -386,7 +386,6 @@ protected:
     }
 
 public:
-    gs::Loader<> load;
 
     tlm_utils::multi_passthrough_target_socket<Memory<BUSWIDTH>> socket;
     cci::cci_param<bool> p_rom;
@@ -398,13 +397,16 @@ public:
     cci::cci_param<uint64_t> p_min_block_size;
     cci::cci_param<bool> p_shmem;
 
+    gs::Loader<> load;
+
     // NB
     // A size given by a config will always take precedence
     // A size set on the constructor will take precedence over
     // the size given on an e.g. 'add_target' in the router
 
     Memory(sc_core::sc_module_name name, uint64_t _size = 0)
-        : socket("target_socket")
+        : m_sub_block(nullptr)
+        , socket("target_socket")
         , p_rom("read_only", false, "Read Only Memory (default false)")
         , p_dmi("dmi_allow", true, "DMI allowed (default true)")
         , p_verbose("verbose", false, "Switch on verbose logging")
@@ -419,7 +421,6 @@ public:
                        SCP_WARN(SCMOD) << " Offset : 0x" << std::hex << offset << " of the out of range";
                    }
                })
-        , m_sub_block(nullptr)
     {
         SCP_DEBUG(SCMOD) << "Memory constructor";
         MemoryServices::get().init(); // allow any init required

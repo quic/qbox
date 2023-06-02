@@ -55,16 +55,20 @@ private:
     QemuInstance& strtotarget(SC_QemuInstanceManager* inst_mgr, std::string s)
     {
         if (s == "AARCH64") {
-            std::cout << "Making an AARCH64 target instance\n";
+            SCP_INFO(SCMOD) << "Making an AARCH64 target instance\n";
             return inst_mgr->getInstMng().new_instance(QemuInstance::Target::AARCH64);
         }
-        // if (s != "RISCV64") {
-        //     SC_REPORT_ERROR("Module Factory", "Unable to find QEMU target container");
-        // }
-        // {
-        //     std::cout << "Making an RISCV64 target instance\n";
-        //     return m_inst_mgr.new_instance(QemuInstance::Target::RISCV64);
-        // }
+        else if (s == "RISCV64") {
+            SCP_INFO(SCMOD) << "Making an RISCV64 target instance\n";
+            return inst_mgr->getInstMng().new_instance(QemuInstance::Target::RISCV64);
+        }
+        else if (s == "HEXAGON") {
+            SCP_INFO(SCMOD) << "Making an RISCV64 target instance\n";
+            return inst_mgr->getInstMng().new_instance(QemuInstance::Target::HEXAGON);
+        }
+        else {
+            SCP_FATAL(SCMOD) << "Unable to find QEMU target container";
+        }
     }
 
 public:
