@@ -131,9 +131,6 @@ local adsp = get_dsp(
 assert((SA8775P_adsp_config_table[11] << 16) == adsp.l2vic.fastmem.address)
 assert((SA8775P_adsp_config_table[3] << 16) == LPASS_QDSP6V68SS_CSR)
 
--- TODO: remove this when we get the fw image working at qqvp
-adsp.hexagon_thread_0.start_powered_off=true
-
 local IS_SHARED_MEM = false
 if os.getenv("QQVP_PLUGIN_DIR") ~= nil then
     IS_SHARED_MEM = true
