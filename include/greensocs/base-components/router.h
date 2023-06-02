@@ -549,6 +549,12 @@ private:
             if (ti.is_callback) {
                 cb_targets.push_back(&ti);
             } else {
+                for (auto tti : targets) {
+                    if (tti->address >= ti.address && (ti.address - tti->address) < tti->size) {
+                        SCP_WARN((D[ti.index]), ti.name)("{} overlaps with {}", ti.name, tti->name);
+                    }
+                }
+
                 targets.push_back(&ti);
 
                 for (std::string n : gs::sc_cci_children((ti.name + ".aliases").c_str())) {
