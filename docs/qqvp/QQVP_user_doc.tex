@@ -422,6 +422,63 @@ In this mode, the simulation will not start until a connection is made to the TC
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Trace guest instruction translation}
+
+When debugging, particularly when focusing on the earliest boot stage(s)
+of a CPU, it's helpful to trace guest instruction translation. \leavevmode
+
+\small
+\begin{lstlisting}[language=bash]
+    --param 'platform.ArmQemuInstance.args.-d="in_asm"'
+\end{lstlisting}
+\normalsize
+
+In this mode, the simulation will record all of the instructions as they
+are translated. Note that this trace is not a record of all of the instructions
+executed, because once the code is translated, it can execute many times.
+
+Here's an example of what you should see with this mode:
+
+\small
+\begin{lstlisting}[language=bash]
+    ----------------
+    IN:
+    0xe0005d50:  aa1603e0  mov      x0, x22
+    0xe0005d54:  94007adb  bl       #0xe00248c0
+
+    ----------------
+    IN:
+    0xe0005d58:  aa0003e2  mov      x2, x0
+    0xe0005d5c:  aa1603e1  mov      x1, x22
+    0xe0005d60:  aa1703e0  mov      x0, x23
+    0xe0005d64:  94007be7  bl       #0xe0024d00
+\end{lstlisting}
+\normalsize
+
+If instead you see something like the below output with
+'{\small{\lstinline!OBJ-T!}}', you are trying to trace translation for a
+CPU architecture that does not supported native disassembly by QEMU. In
+that case, you will need to build QQVP with the cmake option
+{\small{\lstinline!GS_ENABLE_CAPSTONE!}} and install the capstone library
+on build systems and systems intended for execution.  On Ubuntu, that package
+is called {\small{\lstinline!libcapstone-dev!}}.
+
+\small
+\begin{lstlisting}[language=bash]
+    ----------------
+    IN:
+    0x000000008000304c:
+    OBJD-T: 1f00009140d03ed500a0009140d01ed5
+
+    ----------------
+    IN:
+    0x000000008000305c:
+    OBJD-T: 010400f9e1030091010000f940a005101f000091f5fcff17
+
+\end{lstlisting}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Connect the debugger to the CPUs}
 \label{sec:connect-debugger-cpus}
 
