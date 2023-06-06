@@ -176,7 +176,7 @@ platform = {
                 {irq=8, dst = "platform.gic.spi_in_229"},
                 {irq=18, dst = "platform.hexagon_cluster_1.l2vic.irq_in_30"}, -- NB relies on 2 clusters
                 {irq=6,  dst = "platform.hexagon_cluster_0.l2vic.irq_in_30"},
-                {irq=3,  dst = "platform.hexagon_cluster_2.l2vic.irq_in_27"},
+                {irq=3,  dst = "platform.hexagon_cluster_2.l2vic.irq_in_153"},
             }
         };
 
