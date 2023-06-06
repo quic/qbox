@@ -18,6 +18,7 @@ def fastrpc_calc_test():
     parser.add_argument("-p", "--port", metavar="", help="SSH port of the vp")
     parser.add_argument("-g", "--enable-gpu",
         action='store_true', help="Enable platform GPU")
+    parser.add_argument("-d", "--log-dir", metavar="", help="Dir to store log files at")
     parser.add_argument('extra_args', nargs='*',
         help="Forward additional arguments to vp")
     args = parser.parse_args()
@@ -35,6 +36,12 @@ def fastrpc_calc_test():
     vp_path = Path(args.exe)
     lua_path = Path(args.lua)
     img_path = Path(args.img)
+
+    if args.log_dir:
+        log_dir = Path(args.log_dir)
+        log_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        log_dir = None
 
     load = psutil.cpu_percent(2)
     timeout_sec = 60 * 3.
@@ -69,11 +76,15 @@ def fastrpc_calc_test():
     vp.expect(r"DSP Image Creation Date:.+\s*\n") # CDSP{0,1}
     time.sleep(4)
 
-    ssh_args = ["ssh", "-p", ssh_port, "root@localhost",
+    def get_ssh_args(logname):
+        args = ["ssh", "-p", ssh_port, "root@localhost",
                 "-o", "UserKnownHostsFile=/dev/null",
-                "-o", "StrictHostKeyChecking=no",
-    ]
-    frpc_calc_args = ssh_args + [
+                "-o", "StrictHostKeyChecking=no"]
+        if log_dir is not None:
+            args.extend(["-v", "-E", log_dir.joinpath(logname).as_posix()])
+        return args
+    
+    frpc_calc_args = get_ssh_args("frpc_ssh.log") + [
         "sh -c '/mnt/bin/fastrpc_calc_test 0 100 3 && "
                "/mnt/bin/fastrpc_calc_test 0 100 4'",
     ]
@@ -86,7 +97,7 @@ def fastrpc_calc_test():
         calc.expect('- sum = 4950')
         calc.expect('- success')
 
-    pcitool_args = ssh_args + [ "sh -l -c '/mnt/bin/pci-tool -v'", ]
+    pcitool_args = get_ssh_args("pcitool_ssh.log") + [ "sh -l -c '/mnt/bin/pci-tool -v'", ]
     pci = QCSubprocess(pcitool_args, timeout=timeout)
     pci.expect('B000:D00:F00 @ idx 0')
     # Look for the rtl8139 PCI Ethernet Network Controller device:

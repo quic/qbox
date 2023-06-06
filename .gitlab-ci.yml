@@ -33,6 +33,8 @@ include:
   extends:
     - .clone_firmware_images_repo
     - .general_build_job_template
+  variables:
+    REPO_CMAKE_ARGS: -DQQVP_RESULTS_DIR=${RESULTS_DIR} # From cmake-boilerplate
 
 lua-check:
   extends: .mr-job
