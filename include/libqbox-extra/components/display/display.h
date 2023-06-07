@@ -189,7 +189,7 @@ public:
      * @param[in] name SystemC module name
      * @param[in] gpu GPU module associated to this diplay.
      */
-    QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioGpuGlPci& gpu)
+    QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu)
         : QemuDisplay(name, reinterpret_cast<QemuDevice&>(gpu)) {}
 
     /**

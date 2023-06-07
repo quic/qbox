@@ -20,25 +20,23 @@
 #ifndef _LIBQBOX_COMPONENTS_VIRTIO_GPU_GL_PCI_H
 #define _LIBQBOX_COMPONENTS_VIRTIO_GPU_GL_PCI_H
 
-#include <cci_configuration>
+#include "virtio-gpu.h"
 
-#include <greensocs/libgssync.h>
-
-#include "gpex.h"
-
-class QemuVirtioGpuGlPci : public QemuGPEX::Device
+class QemuVirtioGpuGlPci : public QemuVirtioGpu
 {
 public:
     cci::cci_param<uint64_t> p_hostmem_mb;
 
     QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, QemuInstance& inst)
-        : QemuGPEX::Device(name, inst, "virtio-gpu-gl-pci")
+        : QemuVirtioGpu(name, inst, "gl-pci")
         , p_hostmem_mb("hostmem_mb", 2048, "MB to allocate for host visible shared memory") {
 #ifndef __APPLE__
         // Use QEMU's integrated display only if we are NOT on MacOS.
         // On MacOS use libqbox's QemuDisplay SystemC module.
         m_inst.set_display_arg("sdl,gl=on");
 
+        // Create memory object for host visible shared memory only if we are
+        // NOT on MacOS as it does not have memfd support.
         m_inst.add_arg("-object");
         auto memory_object = "memory-backend-memfd,id=mem1,size=" +
                              std::to_string(p_hostmem_mb.get_value()) + "M";
@@ -49,15 +47,15 @@ public:
     }
 
     void before_end_of_elaboration() override {
-        QemuGPEX::Device::before_end_of_elaboration();
+        QemuVirtioGpu::before_end_of_elaboration();
 
 #ifndef __APPLE__
+        // Enable blob resources and host visible shared memory only if we are
+        // NOT on MacOS as it does not have /dev/udmabuf support.
         get_qemu_dev().set_prop_bool("blob", true);
         get_qemu_dev().set_prop_int("hostmem", p_hostmem_mb);
         get_qemu_dev().set_prop_bool("context_init", true);
 #endif
     }
-
-    void gpex_realize(qemu::Bus& bus) override { QemuGPEX::Device::gpex_realize(bus); }
 };
 #endif
