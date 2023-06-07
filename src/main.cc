@@ -46,6 +46,7 @@
 #include <libqbox-extra/components/meta/global_peripheral_initiator.h>
 #include <libqbox-extra/components/pci/gpex.h>
 #include <libqbox-extra/components/pci/rtl8139.h>
+#include <libqbox-extra/components/pci/virtio-gpu-pci.h>
 #include <libqbox-extra/components/pci/virtio-gpu-gl-pci.h>
 #include <libqbox-extra/components/pci/nvme.h>
 #include <libqbox-extra/components/display/display.h>
@@ -293,10 +294,10 @@ protected:
     sc_core::sc_vector<QemuVirtioMMIOBlk> m_virtio_blks;
 
     QemuGPEX* m_gpex;
-    QemuVirtioGpuGlPci* m_gpu;
+    sc_core::sc_vector<QemuVirtioGpu> m_gpus;
     QemuDisplay* m_display = nullptr;
     sc_core::sc_vector<QemuHexagonQtimer> m_qtimers;
-    QemuRtl8139Pci *m_rtl8139;
+    QemuRtl8139Pci* m_rtl8139;
 
     gs::Memory<> m_fallback_mem;
 
@@ -500,6 +501,17 @@ public:
         , m_virtio_blks(
               "virtioblk", gs::sc_cci_list_items(sc_module::name(), "virtioblk").size(),
               [this](const char* n, size_t i) { return new QemuVirtioMMIOBlk(n, m_qemu_inst); })
+        , m_gpus("gpu", gs::sc_cci_list_items(sc_module::name(), "gpu").size(),
+                 [this](const char* n, size_t i) {
+                     QemuVirtioGpu* ret = nullptr;
+                     if (i == 0) {
+                         // First GPU is accelerated
+                         ret = new QemuVirtioGpuGlPci(n, m_qemu_inst);
+                     } else {
+                         ret = new QemuVirtioGpuPci(n, m_qemu_inst);
+                     }
+                     return ret;
+                 })
         , m_qtimers(
               "qtimer", gs::sc_cci_list_items(sc_module::name(), "qtimer").size(),
               [this](const char* n, size_t i) { return new QemuHexagonQtimer(n, m_qemu_inst); })
@@ -532,13 +544,25 @@ public:
                               mmio_iface_high_size);
 
         if (p_with_gpu.get_value()) {
-            m_gpu = new QemuVirtioGpuGlPci("gpu", m_qemu_inst);
-            m_gpex->add_device(*m_gpu);
+            if (m_gpus.size() == 0) {
+                SCP_ERR(SCMOD) << "Please specify at least one gpu (gpu_0)";
+            }
+
+            for (QemuVirtioGpu& gpu : m_gpus) {
+                m_gpex->add_device(gpu);
+            }
 #ifdef __APPLE__
-            // Our custom QemuDisplay is only required on MacOS
-            m_display = new QemuDisplay("display", *m_gpu);
+            if (m_gpus.size() > 0) {
+                // Our custom QemuDisplay is only required on MacOS
+                m_display = new QemuDisplay("display", m_gpus[0]);
+            }
 #endif
+        } else if (m_gpus.size() > 0) {
+            // In case at least one GPU is specified and with_gpu is false
+            SCP_WARN(SCMOD)
+                << "GPUs are disabled, you can enable them with `platform.with_gpu = true`";
         }
+
         m_rtl8139 = new QemuRtl8139Pci("rtl8139", m_qemu_inst, m_gpex);
         if (m_rams.size() <= 0) {
             SCP_ERR(SCMOD) << "Please specify at least one memory (ram_0)";
@@ -687,11 +711,8 @@ public:
             delete m_smmu;
         }
 #endif
-        if (p_with_gpu.get_value()) {
-            if (m_display) {
-                delete m_display;
-            }
-            delete m_gpu;
+        if (m_display) {
+            delete m_display;
         }
         delete m_gpex;
         delete m_rtl8139;
