@@ -135,35 +135,7 @@ public:
  * @param name  name being searched for
  * @return sc_core::sc_object* return object if found
  */
-static sc_core::sc_object* find_sc_obj(sc_core::sc_object* m, std::string name, bool test = false)
-{
-    if (m && name == m->name()) {
-        return m;
-    }
-
-    std::vector<sc_core::sc_object*> children;
-    if (m) {
-        children = m->get_child_objects();
-    } else {
-        children = sc_core::sc_get_top_level_objects();
-    }
-
-    auto ip_it = std::find_if(begin(children), end(children), [&name](sc_core::sc_object* o) {
-        return (name.compare(0, strlen(o->name()), o->name()) == 0) && find_sc_obj(o, name, true);
-    });
-    if (ip_it != end(children)) {
-        return find_sc_obj(*ip_it, name);
-    } else {
-        if (!test) {
-            if (m) {
-                SCP_ERR("cciutils.find_sc_obj") << "Unable to find " << name << " in sc_object " << m->name();
-            } else {
-                SCP_ERR("cciutils.find_sc_obj") << "Unable to find " << name;
-            }
-        }
-    }
-    return nullptr;
-}
+sc_core::sc_object* find_sc_obj(sc_core::sc_object* m, std::string name, bool test = false);
 
 /**
  * @brief return the leaf name of the given systemc hierarchical name
@@ -171,7 +143,7 @@ static sc_core::sc_object* find_sc_obj(sc_core::sc_object* m, std::string name, 
  * @param name
  * @return std::string
  */
-static std::string sc_cci_leaf_name(std::string name) { return name.substr(name.find_last_of(".") + 1); }
+std::string sc_cci_leaf_name(std::string name);
 
 /**
  * @brief return a list of 'unconsumed' children from the given module name, can be used inside
@@ -180,22 +152,7 @@ static std::string sc_cci_leaf_name(std::string name) { return name.substr(name.
  * @param name
  * @return std::list<std::string>
  */
-static std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
-{
-    cci_broker_handle m_broker = (sc_core::sc_get_current_object())
-                                     ? cci_get_broker()
-                                     : cci_get_global_broker(cci_originator("gs__sc_cci_children"));
-    std::list<std::string> children;
-    int l = strlen(name) + 1;
-    auto uncon = m_broker.get_unconsumed_preset_values(
-        [&name](const std::pair<std::string, cci_value>& iv) { return iv.first.find(std::string(name) + ".") == 0; });
-    for (auto p : uncon) {
-        children.push_back(p.first.substr(l, p.first.find(".", l) - l));
-    }
-    children.sort();
-    children.unique();
-    return children;
-}
+std::list<std::string> sc_cci_children(sc_core::sc_module_name name);
 
 /**
  * @brief return a list of 'unconsumed' items in the module matching the base name given, plus '_'
@@ -206,26 +163,7 @@ static std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
  * @param list_name : base name of the list (e.g. name of the sc_vector)
  * @return std::list<std::string>
  */
-static std::list<std::string> sc_cci_list_items(sc_core::sc_module_name module_name, std::string list_name)
-{
-    cci_broker_handle m_broker = (sc_core::sc_get_current_object())
-                                     ? cci_get_broker()
-                                     : cci_get_global_broker(cci_originator("gs__sc_cci_children"));
-    std::string name = std::string(module_name) + "." + list_name;
-    std::regex search(name + "_[0-9]+(\\.|$)");
-    std::list<std::string> children;
-    int l = strlen(module_name) + 1;
-    auto uncon = m_broker.get_unconsumed_preset_values(
-        [&search](const std::pair<std::string, cci::cci_value>& iv) { return std::regex_search(iv.first, search); });
-    for (auto p : uncon) {
-        std::smatch match;
-        std::regex_search(p.first, match, search);
-        children.push_back(p.first.substr(l, (match.length() - l) - (match.str().back() == '.' ? 1 : 0)));
-    }
-    children.sort();
-    children.unique();
-    return children;
-}
+std::list<std::string> sc_cci_list_items(sc_core::sc_module_name module_name, std::string list_name);
 
 template <typename T>
 T cci_get(std::string name)

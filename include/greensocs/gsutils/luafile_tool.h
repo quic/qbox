@@ -358,7 +358,7 @@ protected:
         const int MAX_NAME_SIZE = 1000;
         static char static_key[MAX_NAME_SIZE];
         static char* key;
-        static char value[100]; // used only to convert LUA_TNUMBER
+        // static char value[100]; // used only to convert LUA_TNUMBER
         int should_inc_integer_index_count;
         int integer_index_count = 0;
         char* next_level;
