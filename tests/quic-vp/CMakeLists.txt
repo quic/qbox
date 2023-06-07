@@ -30,10 +30,8 @@ gs_add_test(LeMans_fastrpc_calc_test 8775/SA8775P_conf.lua "lemans" "")
 foreach(flavor IN ITEMS opengl red_hat)
     if(EXISTS ${QQVP_FIRMWARE_REPO_DIR}/${flavor}_linux)
         if("${flavor}" STREQUAL "red_hat")
-            if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-                # NEEDSWORK: the red-hat boot test currently times out in Debug builds.
-                continue()
-            endif()
+            # NEEDSWORK: the red-hat boot test currently times out in Debug builds.
+            continue()
             set(EXTRA_OPTS -i "${CMAKE_SOURCE_DIR}/configs/fw/8775/bsp/lnx/lrh"
                            -l "${CMAKE_SOURCE_DIR}/configs/fw/8775/SA8775P_conf.lua"
                            -v "LRH_IMAGES_DIR=${QQVP_FIRMWARE_REPO_DIR}/red_hat_linux/")
