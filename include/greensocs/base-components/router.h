@@ -50,7 +50,6 @@
 // #include <greensocs/gsutils/module_factory.h>
 #include <greensocs/gsutils/module_factory_registery.h>
 
-
 namespace gs {
 
 template <unsigned int BUSWIDTH = 32>
@@ -176,24 +175,37 @@ private:
             bool found = false;
             for (auto cbti : cb_targets) {
                 if (addr >= cbti->address && (addr - cbti->address) < cbti->size) {
-                    info << cbti->shortname << " ";
+                    info << cbti->shortname;
                     found = true;
                 }
             }
             if (!found) {
                 if (name_map.empty()) {
+                    uint64_t maxa;
                     for (auto nn : gs::sc_cci_children(parent(name()).c_str())) {
                         std::string fn = parent(name()) + "." + nn;
-                        uint64_t n_addr = get_val<uint64_t>(fn + ".target_socket.address", 0);
                         uint64_t n_size = get_val<uint64_t>(fn + ".target_socket.size", 0);
-                        uint64_t n_num = get_val<uint64_t>(fn + ".number", 0);
-                        if (!n_num) { // handle vectors?
+                        if (n_size) {
+                            uint64_t n_addr = get_val<uint64_t>(fn + ".target_socket.address", 0);
+                            uint64_t n_num = get_val<uint64_t>(fn + ".number", 0);
                             name_map[n_addr] = nn + " " + name_map[n_addr];
+                            if (n_addr + (n_num ? n_num * n_size : n_size) > maxa) {
+                                maxa = n_addr + (n_num ? n_num * n_size : n_size);
+                            }
                         }
                     }
+                    name_map[maxa + 1] = "END"; // this will never be used.
                 }
-                if (name_map.count(addr)) {
-                    info << name_map[addr];
+                auto it = name_map.upper_bound(addr);
+                if (it != name_map.end() && it != name_map.begin()) {
+                    it--;
+                    if (it->first == addr) {
+                        info << it->second;
+                    } else {
+                        info << it->second << "[0x" << std::hex << addr - it->first << "]";
+                    }
+                } else {
+                    info << "No Info for " + parent(name());
                 }
             }
         }
@@ -519,7 +531,8 @@ private:
             if (m_broker.get_preset_cci_value(ti.name + ".0").is_string()) {
                 // deal with an alias
                 std::string src = m_broker.get_preset_cci_value(ti.name + ".0").get_string();
-                if (m_broker.has_preset_value(ti.name + ".address") && m_broker.get_preset_cci_value(ti.name + ".address").is_number()) {
+                if (m_broker.has_preset_value(ti.name + ".address") &&
+                    m_broker.get_preset_cci_value(ti.name + ".address").is_number()) {
                     SCP_WARN((D[ti.index]), ti.name)
                     ("The configuration alias provided ({}) will be ignored as a valid address is also provided.", src);
                 } else {
