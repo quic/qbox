@@ -73,6 +73,13 @@ class cci_constructor_vl : public std::function<sc_core::sc_module*(sc_core::sc_
 {
     using std::function<sc_core::sc_module*(sc_core::sc_module_name, cci::cci_value_list)>::function;
 
+    /* local 'apply' helper */
+    template <typename _T, typename... U, size_t... I>
+    _T* new_t(sc_core::sc_module_name name, std::tuple<U...> tuple, std::index_sequence<I...>)
+    {
+        return new _T(name, std::get<I>(tuple)...);
+    }
+
 public:
     /**
      * @brief The FactoryMaker carries the type infomation into the constructor functor.
@@ -109,7 +116,9 @@ public:
                   }
                   int n = 0;
                   try {
-                      return new _T(name, v[n++].get<U>()...);
+                      std::tuple<U...> tuple = { v[n++].get<U>()... };
+                      auto is = std::make_index_sequence<sizeof...(U)>{};
+                      return new_t<_T, U...>(name, tuple, is);
                   } catch (...) {
                       SC_REPORT_ERROR("GS CCI UTILS",
                                       ("CCI argument types dont match for module " + std::string(name)).c_str());
