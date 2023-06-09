@@ -309,7 +309,7 @@ function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
 
         wdog  = { socket        = {address=ahbs_base + 0x84000,    size=0x1000}};
         pll_0 = { socket        = {address=ahbs_base + 0x40000,    size=0x10000}};
-        rom   = { target_socket = {address=cfgtable_base_addr, size=0x100 },
+        rom   = { target_socket = {address=cfgtable_base_addr, size=#cfgtable*4 },
             read_only=true, load={data=cfgtable, offset=0}};
 
         csr = { socket = {address=ahbs_base, size=0x1000}};
