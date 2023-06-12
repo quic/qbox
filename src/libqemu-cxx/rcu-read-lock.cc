@@ -40,6 +40,7 @@ RcuReadLock::RcuReadLock(RcuReadLock&& o): m_int(o.m_int) {
 
 RcuReadLock& RcuReadLock::operator=(RcuReadLock&& o) {
     std::swap(m_int, o.m_int);
+    return *this;
 }
 
 } // namespace qemu
