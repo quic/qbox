@@ -76,15 +76,12 @@ def fastrpc_calc_test():
     vp.expect(r"DSP Image Creation Date:.+\s*\n") # CDSP{0,1}
     time.sleep(4)
 
-    def get_ssh_args(logname):
-        args = ["ssh", "-p", ssh_port, "root@localhost",
-                "-o", "UserKnownHostsFile=/dev/null",
-                "-o", "StrictHostKeyChecking=no"]
+    def get_logfile(name):
         if log_dir is not None:
-            args.extend(["-v", "-E", log_dir.joinpath(logname).as_posix()])
-        return args
+            return log_dir.joinpath(logname).as_posix()
+        return None
     
-    frpc_calc_args = get_ssh_args("frpc_ssh.log") + [
+    frpc_calc_args = [
         "sh -c '/mnt/bin/fastrpc_calc_test 0 100 3 && "
                "/mnt/bin/fastrpc_calc_test 0 100 4'",
     ]
@@ -92,13 +89,17 @@ def fastrpc_calc_test():
     # NOTE: we use ssh here instead of directly communicating through pexpect
     # and VP's UART due to oddnesses with /dev/tty in QNX when running on
     # MacOS CI. For more details, see QTOOL-95796.
-    calc = QCSubprocess(frpc_calc_args, timeout=timeout)
+    calc = QCSubprocess.ssh(frpc_calc_args, ssh_port,
+                            logfile=get_logfile("frpc_ssh.log"),
+                            timeout=timeout)
     for _ in range(2):
         calc.expect('- sum = 4950')
         calc.expect('- success')
 
-    pcitool_args = get_ssh_args("pcitool_ssh.log") + [ "sh -l -c '/mnt/bin/pci-tool -v'", ]
-    pci = QCSubprocess(pcitool_args, timeout=timeout)
+    pcitool_args = [ "sh -l -c '/mnt/bin/pci-tool -v'", ]
+    pci = QCSubprocess.ssh(pcitool_args, ssh_port,
+                           logfile=get_logfile("pcitool_ssh.log"),
+                           timeout=timeout)
     pci.expect('B000:D00:F00 @ idx 0')
     # Look for the rtl8139 PCI Ethernet Network Controller device:
     pci.expect('vid/did: 10ec/8139')

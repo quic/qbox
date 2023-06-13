@@ -29,7 +29,7 @@ class QCSubprocess:
             secs = int(round(timeout))
             def handler(signum, _):
                 self.proc.kill()
-                raise Exception(f"Timeout after {secs} secs: {args[0]}")
+                raise subprocess.TimeoutExpired(args[0], secs)
             signal.signal(signal.SIGALRM, handler)
             signal.alarm(secs)
 
@@ -61,3 +61,24 @@ context:
             if regex.search(line) is not None:
                 break
             recent_lines.append(line)
+
+    @classmethod
+    def _ensure_ssh_connects(cls, args, timeout=6, attempts=3):
+        for _ in range(attempts):
+            try:
+                assert(cls(args + ["true"], timeout=timeout).success())
+                print("SSH connection test passed.")
+                return
+            except (subprocess.TimeoutExpired, AssertionError):
+                pass
+        raise Exception(f"Failed to connect to sshd after {attempts} attempts")
+
+    @classmethod
+    def ssh(cls, args, port, logfile=None, env=None, timeout=None):
+        ssh_args = ["ssh", "-p", port, "root@localhost",
+                "-o", "UserKnownHostsFile=/dev/null",
+                "-o", "StrictHostKeyChecking=no"]
+        if logfile is not None:
+            ssh_args.extend(["-v", "-E", logfile])
+        cls._ensure_ssh_connects(ssh_args)
+        return cls(ssh_args + args, env=env, timeout=timeout)
