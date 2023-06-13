@@ -25,7 +25,7 @@
 #include <gmock/gmock.h>
 #include <memory>
 #include <cci/utils/broker.h>
-#define GS_USE_TARGET_MODULE_FACTORY
+
 #include <greensocs/base-components/memory.h>
 #include <greensocs/base-components/router.h>
 #include <greensocs/libgsutils.h>
@@ -63,12 +63,8 @@ int sc_main(int argc, char** argv)
 {
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
 
-    // typedef gs::Memory<> Memory;
-    // typedef gs::Router<> Router;
-
-    // GSC_MODULE_REGISTER(InitiatorTester);
-    //    GSC_MODULE_REGISTER(Memory);
-    //    GSC_MODULE_REGISTER(Router);
+    typedef gs::Memory<> Memory;
+    GSC_MODULE_REGISTER(Memory);
 
     FactoryPlatform platform("platform");
 
