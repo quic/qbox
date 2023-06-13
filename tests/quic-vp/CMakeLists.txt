@@ -4,6 +4,12 @@ set(QQVP_FIRMWARE_REPO_DIR "$ENV{QQVP_FIRMWARE_REPO_DIR}" CACHE STRING "")
 macro(gs_add_test test conf_lua image_dir extra)
     set(test_dir "${QQVP_FIRMWARE_REPO_DIR}/${image_dir}")
 
+    if ("${test}" MATCHES "LeMans.*")
+	set(ADSP_OPTS -a)
+    else()
+	unset(ADSP_OPTS)
+    endif()
+
     if(EXISTS ${test_dir})
 	if (${QQVP_RESULTS_DIR})
 		set(DIR_OPTS -d ${QQVP_RESULTS_DIR}/${test})
@@ -15,6 +21,7 @@ macro(gs_add_test test conf_lua image_dir extra)
                 -l ${CMAKE_SOURCE_DIR}/configs/fw/${conf_lua}
                 -i ${test_dir}
 		${DIR_OPTS}
+		${ADSP_OPTS}
                 -- ${extra}
         )
         set_tests_properties(${test} PROPERTIES TIMEOUT 600)

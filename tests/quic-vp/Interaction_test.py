@@ -16,6 +16,7 @@ def fastrpc_calc_test():
     parser.add_argument("-l", "--lua", metavar="", help="Path to luafile")
     parser.add_argument("-i", "--img", metavar="", help="Path to binary images")
     parser.add_argument("-p", "--port", metavar="", help="SSH port of the vp")
+    parser.add_argument("-a", "--adsp", action='store_true', help="Test ADSP too")
     parser.add_argument("-g", "--enable-gpu",
         action='store_true', help="Enable platform GPU")
     parser.add_argument("-d", "--log-dir", metavar="", help="Dir to store log files at")
@@ -72,8 +73,9 @@ def fastrpc_calc_test():
         vp_args += args.extra_args
 
     vp = QCSubprocess(vp_args, env, timeout)
-    vp.expect(r"DSP Image Creation Date:.+\s*\n") # CDSP{0,1}
-    vp.expect(r"DSP Image Creation Date:.+\s*\n") # CDSP{0,1}
+    num_dsps = 3 if args.adsp else 2
+    for _ in range(num_dsps):
+        vp.expect(r"DSP Image Creation Date:.+\s*\n")
     time.sleep(4)
 
     def get_logfile(name):
@@ -81,9 +83,12 @@ def fastrpc_calc_test():
             return log_dir.joinpath(logname).as_posix()
         return None
     
+    adsp_args = "&& /mnt/bin/fastrpc_calc_test 0 100 0" if args.adsp else ""
+
     frpc_calc_args = [
-        "sh -c '/mnt/bin/fastrpc_calc_test 0 100 3 && "
-               "/mnt/bin/fastrpc_calc_test 0 100 4'",
+        "sh -c '/mnt/bin/fastrpc_calc_test 0 100 3 && " # CDSP0
+               "/mnt/bin/fastrpc_calc_test 0 100 4 "    # CDSP1
+               f"{adsp_args}'"                          # ADSP
     ]
 
     # NOTE: we use ssh here instead of directly communicating through pexpect
