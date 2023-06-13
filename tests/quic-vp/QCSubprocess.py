@@ -18,6 +18,8 @@ class QCSubprocess:
             if self.proc is not None:
                 self.proc.kill()
                 self.proc.wait()
+        print(f"QCSubprocess: running '{' '.join(args)}'")
+        print("With env: ", env)
         self.proc = subprocess.Popen(
                     args,
                     env=env,
