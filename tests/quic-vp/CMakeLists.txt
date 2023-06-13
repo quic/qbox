@@ -5,13 +5,16 @@ macro(gs_add_test test conf_lua image_dir extra)
     set(test_dir "${QQVP_FIRMWARE_REPO_DIR}/${image_dir}")
 
     if(EXISTS ${test_dir})
+	if (${QQVP_RESULTS_DIR})
+		set(DIR_OPTS -d ${QQVP_RESULTS_DIR}/${test})
+	endif()
         add_test(
             NAME ${test}
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/Interaction_test.py
                 -e ${CMAKE_BINARY_DIR}/vp
                 -l ${CMAKE_SOURCE_DIR}/configs/fw/${conf_lua}
                 -i ${test_dir}
-		-d ${QQVP_RESULTS_DIR}/${test}
+		${DIR_OPTS}
                 -- ${extra}
         )
         set_tests_properties(${test} PROPERTIES TIMEOUT 600)
