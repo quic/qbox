@@ -213,6 +213,14 @@ platform = {
          address=TURING_SS_1TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd};
 
 
+        -- GCC_QUPV3_WRAP0_S3_CFG_RCGR
+        {data={0x2601}, address=0x1174dc};
+        -- GCC_QUPV3_WRAP0_S3_M
+        {data={0x180}, address=0x1174e0};
+        -- GCC_QUPV3_WRAP0_S3_N
+        {data={0xc476}, address=0X1174e4};
+        -- GCC_QUPV3_WRAP0_S3_D
+        {data={0xc2f6}, address=0x1174e8};
 --      {data={0x00020400}, address=0x10E0000};
 --      {data={0x60000003}, address=0x10E000C};
     };

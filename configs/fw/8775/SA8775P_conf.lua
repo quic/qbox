@@ -265,6 +265,15 @@ platform = {
         -- RPMH_PDC_AUDIO_PDC_PARAM_RESOURCE_DRVd
         {data={0x000A5381}, address=0xB251004};
 
+        -- GCC_QUPV3_WRAP0_S3_CFG_RCGR
+        {data={0x2601}, address=0x1234f4};
+        -- GCC_QUPV3_WRAP0_S3_M
+        {data={0x180}, address=0x1234f8};
+        -- GCC_QUPV3_WRAP0_S3_N
+        {data={0xc476}, address=0x1234fc};
+        -- GCC_QUPV3_WRAP0_S3_D
+        {data={0xc2f6}, address=0x123500};
+
 --      {data={0x00020400}, address=0x10E0000};
 --      {data={0x60000003}, address=0x10E000C};
     };
