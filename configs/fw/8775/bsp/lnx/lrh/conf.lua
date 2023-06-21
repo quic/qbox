@@ -43,7 +43,7 @@ tableMerge(platform, {
         port=nil,
     };
 -- Overwrite virtionet irq
-    virtionet0= { mem    =   {address=0x16120000, size=0x10000}, irq=0x2d, netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21,hostfwd=tcp::56283-:56283,hostfwd=tcp::55534-:65534,hostfwd=tcp::55535-:65535"};
+    virtionet0= { mem    =   {address=0x16120000, size=0x10000}, irq=0x2d, netdev_str="tap,ifname=tap0,script=" .. top() .. "/adb_debug,downscript=no"};
 });
 
 for i=0,(platform.arm_num_cpus-1) do
