@@ -66,10 +66,13 @@ tableJoin(platform["load"], {
   { bin_file = valid_file(LRH_IMAGES_DIR .. "cmd_db.bin"), address = 0x80860000 };
 });
 
-platform.gpex.irq_0=3
-platform.gpex.irq_1=4
-platform.gpex.irq_2=5
-platform.gpex.irq_3=6
+tableMerge(platform, {
+    gpex=       { pio_iface             = {address=0x60200000, size=0x0000100000};
+    mmio_iface            = {address=0x60300000, size=0x001fd00000};
+    ecam_iface            = {address=0x43B50000, size=0x0010000000};
+    mmio_iface_high       = {address=0x9000000000, size=0x8000000000},
+    irq_0=3, irq_1=4, irq_2=5, irq_3=6};
+});
 
 print (_KERNEL64_LOAD_ADDR);
 print (_DTB_LOAD_ADDR);
