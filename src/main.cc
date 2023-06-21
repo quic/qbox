@@ -530,7 +530,6 @@ public:
 
         m_gpex = new QemuGPEX("gpex", m_qemu_inst, mmio_addr, mmio_size, mmio_iface_high_addr,
                               mmio_iface_high_size);
-        m_rtl8139 = new QemuRtl8139Pci("rtl8139", m_qemu_inst, m_gpex);
 
         if (p_with_gpu.get_value()) {
             m_gpu = new QemuVirtioGpuGlPci("gpu", m_qemu_inst);
@@ -540,6 +539,7 @@ public:
             m_display = new QemuDisplay("display", *m_gpu);
 #endif
         }
+        m_rtl8139 = new QemuRtl8139Pci("rtl8139", m_qemu_inst, m_gpex);
         if (m_rams.size() <= 0) {
             SCP_ERR(SCMOD) << "Please specify at least one memory (ram_0)";
         }
