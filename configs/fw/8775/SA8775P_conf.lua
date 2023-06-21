@@ -375,16 +375,4 @@ then
     dofile(PLUGIN_DIR.."conf.lua");
 end
 
--- convenience switches
-if (platform.with_gpu) then
-    tableMerge(platform, {
-        gpex=     { pio_iface             = {address=0x003eff0000, size=0x0000010000};
-        mmio_iface            = {address=0x0060000000, size=0x002B500000};
-        ecam_iface            = {address=0x4010000000, size=0x0001000000};
-        mmio_iface_high       = {address=0x8000000000, size=0x8000000000},
-    irq_0=0, irq_1=0, irq_2=0, irq_3=0};
-    });
-end
-
-
 print ("Lua config Finished.");

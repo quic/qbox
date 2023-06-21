@@ -25,7 +25,6 @@ local QUPV3_1_SE2 = 0x00A8C000
 --Overwrite & disable QUPV3_1
 platform["uart_qup_17"].input = false
 
-
 tableMerge(platform, {
     virtioblk_0 = { mem = { address = 0x160d0000, size = 0x2000 }, irq = 0x2e, blkdev_str = "file=" .. valid_file(LRH_IMAGES_DIR .. "rootfs.ext4") .. ",format=raw,if=none,readonly=off" };
     virtioblk_1 = { mem = { address = 0x160d2000, size = 0x2000 }, irq = 0x2f, blkdev_str = "file=" .. valid_file(LRH_IMAGES_DIR .. "disk20G.img") .. ",format=raw,if=none,readonly=off" };
@@ -67,6 +66,10 @@ tableJoin(platform["load"], {
   { bin_file = valid_file(LRH_IMAGES_DIR .. "cmd_db.bin"), address = 0x80860000 };
 });
 
+platform.gpex.irq_0=3
+platform.gpex.irq_1=4
+platform.gpex.irq_2=5
+platform.gpex.irq_3=6
 
 print (_KERNEL64_LOAD_ADDR);
 print (_DTB_LOAD_ADDR);
