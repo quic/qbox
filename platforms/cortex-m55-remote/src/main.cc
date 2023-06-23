@@ -68,8 +68,8 @@ private:
         std::transform(argv_cci_children.begin(), argv_cci_children.end(), std::back_inserter(argv),
                        [this](std::string arg) {
                            std::string args = (std::string(name()) + ".remote_argv." + arg);
-                           return gs::cci_get<std::string>(args + ".key") + "=" +
-                                  gs::cci_get<std::string>(args + ".val");
+                           return gs::cci_get<std::string>(cci::cci_get_broker(), args + ".key") + "=" +
+                                  gs::cci_get<std::string>(cci::cci_get_broker(), args + ".val");
                        });
         return argv;
     }
@@ -92,7 +92,7 @@ protected:
     CharBackend* uart_backend;
 
     void setup_irq_mapping() {
-        int irq = gs::cci_get<int>(std::string(m_uart.name()) + ".irq");
+        int irq = gs::cci_get<int>(cci::cci_get_broker(), std::string(m_uart.name()) + ".irq");
         m_remote.bind_irq(m_uart.irq, irq);
     }
 

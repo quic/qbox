@@ -37,6 +37,9 @@
 
 class QemuCpuHexagon : public QemuCpu
 {
+
+    cci::cci_broker_handle m_broker;
+
 public:
     static constexpr qemu::Target ARCH = qemu::Target::HEXAGON;
 
@@ -59,6 +62,7 @@ public:
                    Rev_t rev, uint32_t l2vic_base_addr, uint32_t qtimer_base_addr,
                    uint32_t exec_start_addr, bool vp_mode = true)
         : QemuCpu(name, inst, "v67-hexagon")
+        , m_broker(cci::cci_get_broker())
         , irq_in("irq_in", 8, [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
         , m_cfgbase(cfgbase)
         , m_l2vic_base_addr(l2vic_base_addr)
@@ -106,9 +110,9 @@ public:
         cpu.set_prop_bool("paranoid-commit-state", p_paranoid);
 
         std::string parent = gs::get_parent_name(name());
-        cpu.set_prop_int("thread-count", gs::cci_get<uint32_t>(parent + ".hexagon_num_threads"));
-        cpu.set_prop_bool("isdben-trusted", gs::cci_get<bool>(parent + ".isdben_trusted"));
-        cpu.set_prop_bool("isdben-secure", gs::cci_get<bool>(parent + ".isdben_secure"));
+        cpu.set_prop_int("thread-count", gs::cci_get<uint32_t>(m_broker, parent + ".hexagon_num_threads"));
+        cpu.set_prop_bool("isdben-trusted", gs::cci_get<bool>(m_broker, parent + ".isdben_trusted"));
+        cpu.set_prop_bool("isdben-secure", gs::cci_get<bool>(m_broker, parent + ".isdben_secure"));
     }
 
     void end_of_elaboration() override {

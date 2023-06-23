@@ -125,7 +125,6 @@ private:
 
     void cci_ignore(std::string name)
     {
-        auto m_broker = cci::cci_get_broker();
         std::string fullname = std::string(sc_module::name()) + "." + name;
         m_broker.ignore_unconsumed_preset_values(
             [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == fullname; });
@@ -169,14 +168,7 @@ private:
     template <typename T>
     T cci_get(std::string name)
     {
-        m_broker.ignore_unconsumed_preset_values(
-            [name](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == name; });
-        m_broker.lock_preset_value(name);
-        T ret;
-        if (!m_broker.get_preset_cci_value(name).template try_get<T>(ret)) {
-            SCP_FATAL(()) << "Unable to get parameter " << name;
-        };
-        return ret;
+        return gs::cci_get<T>(m_broker, name);
     }
 
     uint32_t byte_swap32(uint32_t in)

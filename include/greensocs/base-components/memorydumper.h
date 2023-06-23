@@ -74,6 +74,8 @@ std::vector<std::string> find_object_of_type(sc_core::sc_object* m = NULL)
 template <unsigned int BUSWIDTH = 32>
 class MemoryDumper : public sc_core::sc_module
 {
+    cci::cci_broker_handle m_broker;
+
     cci::cci_param<bool> p_dump;
     cci::cci_param<std::string> p_outfile;
 
@@ -82,8 +84,8 @@ protected:
     void dump()
     {
         for (std::string m : gs::find_object_of_type<Memory<BUSWIDTH>>()) {
-            uint64_t addr = gs::cci_get<uint64_t>(m + ".target_socket.address");
-            uint64_t size = gs::cci_get<uint64_t>(m + ".target_socket.size");
+            uint64_t addr = gs::cci_get<uint64_t>(m_broker, m + ".target_socket.address");
+            uint64_t size = gs::cci_get<uint64_t>(m_broker, m + ".target_socket.size");
             tlm::tlm_generic_payload trans;
             std::stringstream fnamestr;
             fnamestr << m << ".0x" << std::hex << addr << "-0x" << (addr + size) << "."
@@ -139,7 +141,8 @@ public:
     tlm_utils::simple_target_socket<MemoryDumper<BUSWIDTH>> target_socket;
 
     MemoryDumper(sc_core::sc_module_name name)
-        : p_dump("MemoryDumper_trigger", false)
+        : m_broker(cci::cci_get_broker())
+        , p_dump("MemoryDumper_trigger", false)
         , p_outfile("outfile", "dumpfile")
         , initiator_socket("initiator_socket")
         , target_socket("target_socket")
@@ -158,9 +161,8 @@ public:
 void memorydumper_tgr_helper()
 {
     for (std::string m : gs::find_object_of_type<MemoryDumper<>>()) {
-        auto broker = cci::cci_get_broker();
         auto ph = cci::cci_param_typed_handle<bool>(
-            broker.get_param_handle(std::string(m) + ".MemoryDumper_trigger"));
+            cci::cci_get_broker().get_param_handle(std::string(m) + ".MemoryDumper_trigger"));
         ph.set_value(true);
     }
 }

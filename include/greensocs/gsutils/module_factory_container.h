@@ -115,7 +115,6 @@ SC_MODULE (Container) {
      */
     void name_bind(sc_core::sc_module * m)
     {
-        cci::cci_broker_handle m_broker = cci::cci_get_broker();
 
         for (auto param : sc_cci_children(m->name())) {
             /* We should have a param like
@@ -181,7 +180,6 @@ SC_MODULE (Container) {
 
     std::list<std::string> PriorityConstruct(void)
     {
-        cci::cci_broker_handle m_broker = cci::cci_get_broker();
 
         std::list<std::string> args;
         std::set<std::string> done;
@@ -229,8 +227,6 @@ SC_MODULE (Container) {
 
     void ModulesConstruct(void)
     {
-        cci::cci_broker_handle m_broker = cci::cci_get_broker();
-
         std::list<sc_core::sc_module*> allModules;
 
         for (auto name : PriorityConstruct()) {
@@ -272,6 +268,7 @@ SC_MODULE (Container) {
         }
     }
 
+    cci::cci_broker_handle m_broker;
     cci_param<std::string> moduletype; // for consistency
     /**
      * @brief construct a Container, and all modules within it, and perform binding
@@ -281,7 +278,8 @@ SC_MODULE (Container) {
     std::vector<cci::cci_param<gs::cci_constructor_vl>*> registered_mods;
 
     Container(const sc_core::sc_module_name _n)
-        : moduletype("moduletype", "", "Module type for the TLM container, must be \"Container\"")
+        : m_broker(cci::cci_get_broker())
+        , moduletype("moduletype", "", "Module type for the TLM container, must be \"Container\"")
     {
         assert((std::string)moduletype == "Container");
         auto mods = gs::ModuleFactory::GetAvailableModuleList();

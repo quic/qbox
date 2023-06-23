@@ -108,12 +108,12 @@ protected:
     {
         if (p_arm_num_cpus) {
         {
-            int irq = gs::cci_get<int>(std::string(m_uart.name()) + ".irq");
+            int irq = gs::cci_get<int>(cci::cci_get_broker(), std::string(m_uart.name()) + ".irq");
             m_uart.irq_out.bind(m_gic->spi_in[irq]);
         }
         // See this JIRA ticket https://jira-dc.qualcomm.com/jira/browse/QTOOL-90283
         // {
-        //     int irq = gs::cci_get<int>(std::string(m_eth.name()) + ".irq");
+        //     int irq = gs::cci_get<int>(m_broker, std::string(m_eth.name()) + ".irq");
         //     m_eth.irq_out.bind(m_gic->spi_in[irq]);
         // }
         int i=0;

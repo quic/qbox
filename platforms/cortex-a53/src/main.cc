@@ -86,7 +86,7 @@ protected:
   void setup_irq_mapping() {
     if (p_arm_num_cpus) {
       {
-        int irq = gs::cci_get<int>(std::string(m_uart.name()) + ".irq");
+        int irq = gs::cci_get<int>(cci::cci_get_broker(), std::string(m_uart.name()) + ".irq");
         m_uart.irq_out.bind(m_gic.spi_in[irq]);
       }
       int i = 0;

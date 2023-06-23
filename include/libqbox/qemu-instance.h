@@ -55,6 +55,7 @@ private:
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_first_qk = NULL;
     std::mutex m_lock;
     std::list<QemuDeviceBaseIF*> devices;
+    cci::cci_broker_handle m_conf_broker;
 
     bool m_running = false;
 
@@ -123,7 +124,6 @@ protected:
     cci::cci_param<std::string> p_accel;
 
     void push_default_args() {
-        auto m_conf_broker = cci::cci_get_broker();
         const size_t l = strlen(name()) + 1;
 
         m_inst.push_qemu_arg("libqbox"); /* argv[0] */
@@ -211,6 +211,7 @@ protected:
 public:
     QemuInstance(const sc_core::sc_module_name& n, LibLoader& loader, Target t)
         : sc_core::sc_module(n)
+        , m_conf_broker(cci::cci_get_broker())
         , m_inst(loader, t)
         , m_dmi_mgr(m_inst)
         , p_args("args", "", "additional space separated arguments")

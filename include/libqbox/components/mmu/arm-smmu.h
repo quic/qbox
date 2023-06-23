@@ -33,7 +33,6 @@
 class QemuArmSmmu : public QemuDevice, public QemuInitiatorIface
 {
     inline uint64_t get_uint64(std::string s) {
-        cci::cci_broker_handle m_broker = cci::cci_get_broker();
 
         m_broker.lock_preset_value(s);
         m_broker.ignore_unconsumed_preset_values(
@@ -47,6 +46,8 @@ class QemuArmSmmu : public QemuDevice, public QemuInitiatorIface
             return v.get_int64();
         }
     }
+
+    cci::cci_broker_handle m_broker;
 
 public:
     cci::cci_param<uint32_t> p_pamax;
@@ -66,6 +67,7 @@ public:
 
     QemuArmSmmu(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuDevice(nm, inst, "arm.mmu-500")
+        , m_broker(cci::cci_get_broker())
         , p_pamax("pamax", 48, "")
         , p_num_smr("num_smr", 48, "")
         , p_num_cb("num_cb", 16, "")
@@ -98,7 +100,7 @@ public:
         m_dev.set_prop_int("num-tbu", p_num_tbu);
 
         std::string base_string = "mr-";
-        cci::cci_broker_handle m_broker = cci::cci_get_broker();
+        
         for (uint32_t i = 0; i < p_num_tbu; ++i) {
             downstream_socket[i].init(m_dev, (base_string + std::to_string(i)).c_str());
 

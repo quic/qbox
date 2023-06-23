@@ -175,14 +175,13 @@ std::list<std::string> sc_cci_children(sc_core::sc_module_name name);
 std::list<std::string> sc_cci_list_items(sc_core::sc_module_name module_name, std::string list_name);
 
 template <typename T>
-T cci_get(std::string name)
+T cci_get(cci::cci_broker_handle broker, std::string name)
 {
-    auto m_broker = cci::cci_get_broker();
-    m_broker.ignore_unconsumed_preset_values(
+    broker.ignore_unconsumed_preset_values(
         [name](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == name; });
-    m_broker.lock_preset_value(name);
+    broker.lock_preset_value(name);
     T ret;
-    if (!m_broker.get_preset_cci_value(name).template try_get<T>(ret)) {
+    if (!broker.get_preset_cci_value(name).template try_get<T>(ret)) {
         SCP_ERR("cciutils.cci_get") << "Unable to get parameter " << name << "\nIs your .lua file up-to-date?";
     };
     return ret;
@@ -198,12 +197,12 @@ static std::string get_parent_name(sc_core::sc_module_name n) {
 }
 
 template <typename T>
-std::vector<T> cci_get_vector(const std::string base)
+std::vector<T> cci_get_vector(cci::cci_broker_handle broker, const std::string base)
 {
     std::vector<T> ret;
     for (std::string s : sc_cci_children(base.c_str())) {
         if (std::count_if(s.begin(), s.end(), [](unsigned char c) { return std::isdigit(c); })) {
-            ret.push_back(cci_get<T>(base + "." + s));
+            ret.push_back(cci_get<T>(broker, base + "." + s));
         }
     }
     return ret;
@@ -265,10 +264,10 @@ protected:
             return cci_originator();
         }
     }
-    const std::string s_SCP_LOG_LEVEL_PARAM_NAME = SCP_LOG_LEVEL_PARAM_NAME;
-    int s_SCP_LOG_LEVEL_PARAM_NAME_length = s_SCP_LOG_LEVEL_PARAM_NAME.length();
     inline bool is_log_param(const std::string& parname) const
     {
+        std::string s_SCP_LOG_LEVEL_PARAM_NAME = SCP_LOG_LEVEL_PARAM_NAME;
+        int s_SCP_LOG_LEVEL_PARAM_NAME_length = s_SCP_LOG_LEVEL_PARAM_NAME.length();
         int p_len = parname.length();
         if (p_len >= s_SCP_LOG_LEVEL_PARAM_NAME_length) {
             return (parname.compare(p_len - s_SCP_LOG_LEVEL_PARAM_NAME_length, s_SCP_LOG_LEVEL_PARAM_NAME_length,
@@ -409,9 +408,9 @@ protected:
         }
 
         void start_of_simulation()
-        {
+        {   
+            cci::cci_broker_handle m_broker = cci::cci_get_broker();
             if (!help_cb) return;
-            auto m_broker = cci::cci_get_broker();
             // remove lua builtins
             m_broker.ignore_unconsumed_preset_values([](const std::pair<std::string, cci::cci_value>& iv) -> bool {
                 return ((iv.first)[0] == '_' || iv.first == "math.maxinteger") || (iv.first == "math.mininteger") ||

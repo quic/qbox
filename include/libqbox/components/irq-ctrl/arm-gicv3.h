@@ -73,7 +73,7 @@ public:
         , p_revision("revision", 3, "Revision of the GIC (3 -> v3, the only supported revision)")
         // , p_redist_region("redist_region", std::vector<unsigned int>({}),
         //                   "Redistributor regions configuration")
-        , p_redist_region("redist_region", std::vector<unsigned int>(gs::cci_get_vector<unsigned int>(std::string(sc_module::name())+".redist_region")),
+        , p_redist_region("redist_region", std::vector<unsigned int>(gs::cci_get_vector<unsigned int>(cci::cci_get_broker(), std::string(sc_module::name())+".redist_region")),
                                                             "Redistributor regions configuration")
         , p_has_security_extensions("has_security_extensions", false, "Enable security extensions")
         , dist_iface("dist_iface", inst)

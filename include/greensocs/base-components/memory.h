@@ -196,6 +196,7 @@ class Memory : public sc_core::sc_module
 
 private:
     std::unique_ptr<Memory<BUSWIDTH>::SubBlock<>> m_sub_block;
+    cci::cci_broker_handle m_broker;
 
 protected:
     virtual bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data) {
@@ -329,8 +330,8 @@ protected:
             return 0;
     }
 
-    void cci_ignore(std::string name) {
-        auto m_broker = cci::cci_get_broker();
+    void cci_ignore(std::string name)
+    {
         std::string fullname = std::string(sc_module::name()) + "." + name;
         m_broker.ignore_unconsumed_preset_values(
             [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool {
@@ -410,6 +411,7 @@ public:
 
     Memory(sc_core::sc_module_name name, uint64_t _size = 0)
         : m_sub_block(nullptr)
+        , m_broker(cci::cci_get_broker())
         , socket("target_socket")
         , p_rom("read_only", false, "Read Only Memory (default false)")
         , p_dmi("dmi_allow", true, "DMI allowed (default true)")
@@ -429,7 +431,6 @@ public:
         }) {
         SCP_DEBUG(SCMOD) << "Memory constructor";
         MemoryServices::get().init(); // allow any init required
-        auto m_broker = cci::cci_get_broker();
         if (_size) {
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
             if (!m_broker.has_preset_value(ts_name + ".size")) {
@@ -462,7 +463,6 @@ public:
             return;
         }
 
-        auto m_broker = cci::cci_get_broker();
         std::string ts_name = std::string(sc_module::name()) + ".target_socket";
 
         m_address = base();
@@ -493,7 +493,6 @@ public:
      */
     uint64_t size() {
         if (!m_size) {
-            auto m_broker = cci::cci_get_broker();
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
             if (m_broker.get_preset_cci_value(ts_name + ".0").is_string()) {
                 // deal with an alias
@@ -525,7 +524,6 @@ public:
      */
     uint64_t base() {
         if (!m_address_valid) {
-            auto m_broker = cci::cci_get_broker();
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
             if (m_broker.get_preset_cci_value(ts_name + ".0").is_string()) {
                 // deal with an alias
