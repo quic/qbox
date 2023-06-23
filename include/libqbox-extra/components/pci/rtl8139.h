@@ -23,6 +23,7 @@
 #include <cci_configuration>
 
 #include <greensocs/libgssync.h>
+#include <libqbox/sc-qemu-instance.h>
 
 #include "gpex.h"
 
@@ -33,6 +34,10 @@ class QemuRtl8139Pci : public QemuGPEX::Device
     cci::cci_param<std::string> p_netdev_str;
 
 public:
+    QemuRtl8139Pci(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
+    : QemuRtl8139Pci(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst(), (dynamic_cast<QemuGPEX*>(t)))
+    {
+    }
     QemuRtl8139Pci(const sc_core::sc_module_name& name, QemuInstance& inst, QemuGPEX* gpex)
         : QemuGPEX::Device(name, inst, "rtl8139")
         , p_mac("mac", "", "MAC address of NIC")
@@ -60,4 +65,7 @@ public:
         m_dev.set_prop_str("romfile", "");
     }
 };
+
+GSC_MODULE_REGISTER(QemuRtl8139Pci, sc_core::sc_object*, sc_core::sc_object*);
+
 #endif
