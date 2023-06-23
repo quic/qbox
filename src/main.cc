@@ -150,10 +150,10 @@ public:
         , m_hexagon_threads("hexagon_thread", p_hexagon_num_threads,
                             [this](const char* n, size_t i) {
                                 /* here n is already "hexagon-cpu_<vector-index>" */
-                                uint64_t l2vic_base = gs::cci_get<uint64_t>(std::string(name()) +
+                                uint64_t l2vic_base = gs::cci_get<uint64_t>(cci::cci_get_broker(), std::string(name()) +
                                                                             ".l2vic.mem.address");
                                                         
-                                uint64_t qtmr_rg0 = gs::cci_get<uint64_t>(
+                                uint64_t qtmr_rg0 = gs::cci_get<uint64_t>(cci::cci_get_broker(),
                                     std::string(name()) + ".qtimer.mem_view.address");
                                 return new QemuCpuHexagon(
                                     n, m_qemu_hex_inst, p_cfgbase, QemuCpuHexagon::v68_rev,
