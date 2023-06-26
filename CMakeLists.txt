@@ -67,6 +67,18 @@ target_link_libraries(vp
     ${TARGET_LIBS}
 )
 
+# Apply HVF entitlements on MacOS
+if(APPLE)
+    add_custom_command(
+        TARGET vp
+        POST_BUILD
+        COMMAND codesign
+                --entitlements ${CPM_libqemu_SOURCE}/accel/hvf/entitlements.plist
+                --force -s - $<TARGET_FILE:vp>
+        COMMENT "Applying HVF entitlements to $<TARGET_FILE:vp>"
+    )
+endif()
+
 install (TARGETS vp DESTINATION ${CMAKE_INSTALL_BINDIR})
 file(GLOB REF_USER_CONF_FILES "${CMAKE_SOURCE_DIR}/configs/*.lua")
 install(FILES ${REF_USER_CONF_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/examples)
