@@ -1,0 +1,20 @@
+{
+    "llvm-target": "aarch64-unknown-none-elf",
+    "target-endian": "little",
+    "target-c-int-width": "32",
+    "target-pointer-width": "64",
+    "os": "none",
+    "env": "elf",
+    "vendor": "unknown",
+    "arch": "aarch64",
+    "features": "+strict-align,-neon",
+    "pre-link-args": {
+        "ld.lld": ["-T", "crates/bootloader/src/bootloader.ld"]
+    },
+    "linker": "rust-lld",
+    "linker-flavor": "ld.lld",
+    "data-layout": "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128",
+    "executables": true,
+    "relocation-model": "static",
+    "panic-strategy": "abort"
+}

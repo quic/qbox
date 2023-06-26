@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "crates/bootloader",
+    "crates/xtask",
+]
+
+resolver = "2"

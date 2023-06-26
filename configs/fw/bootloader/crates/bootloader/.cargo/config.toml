@@ -1,0 +1,5 @@
+[build]
+target = "../../aarch64.json"
+
+[unstable]
+build-std = ["core"]

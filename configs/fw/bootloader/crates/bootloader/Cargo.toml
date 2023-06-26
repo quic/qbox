@@ -1,0 +1,7 @@
+[package]
+name = "bootloader"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aarch64-cpu = "9.3.1"
