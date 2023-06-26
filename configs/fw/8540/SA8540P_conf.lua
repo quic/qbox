@@ -213,6 +213,12 @@ platform = {
                     irq_out = {bind = "&gic_0.spi_in_18"},
                     netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21",
     };
+
+    rtl8139_0= {
+                moduletype = "QemuRtl8139Pci",
+                args = {"&platform.qemu_inst", "&platform.gpex_0"},
+                netdev_str = "type=user",
+    };
 --    virtioblk_0= { mem    =   {address=0x1c0d0000, size=0x2000}, 
 --                     irqs = {
 --                         {irq=9, dst = "platform.gic.spi_in_9"},

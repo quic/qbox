@@ -242,6 +242,12 @@ platform = {
                     netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21,hostfwd=tcp::56283-:56283,hostfwd=tcp::55534-:65534,hostfwd=tcp::55535-:65535"};
 --    virtioblk_0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..SYSTEM_QDRIVE..",format=raw,if=none"};
 
+    rtl8139_0= {
+        moduletype = "QemuRtl8139Pci",
+        args = {"&platform.qemu_inst", "&platform.gpex_0"},
+        netdev_str = "type=user",
+    };
+
     qtimer_0=   {
                     moduletype = "QemuHexagonQtimer",
                     args = {"&platform.qemu_inst"};
