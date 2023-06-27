@@ -48,6 +48,7 @@
 
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
 #include <greensocs/gsutils/ports/target-signal-socket.h>
+#include <greensocs/libgssync/async_event.h>
 #include <greensocs/gsutils/module_factory_registery.h>
 
 #include "qupv3_regs.h"
@@ -67,6 +68,8 @@ typedef QUPv3 uart_qup;
 class QUPv3 : public sc_core::sc_module
 {
     SCP_LOGGER();
+
+    gs::async_event m_event;
 
 public:
     CharBackend* chr;
@@ -293,13 +296,19 @@ public:
             SCP_DEBUG(())("Manual RFR write");
             break;
 
+        case GENI_M_IRQ_EN_CLEAR:
+        case GENI_S_IRQ_EN_CLEAR:
+            SCP_DEBUG(()) << hex << "Clear IRQ";
+            m_event.async_detach_suspending();
+            break;
+        case GENI_M_IRQ_EN_SET:
+        case GENI_S_IRQ_EN_SET:
+            SCP_DEBUG(()) << hex << "set IRQ";
+            m_event.async_attach_suspending();
+            break;
         case SE_GSI_EVENT_EN:
         case GENI_S_IRQ_ENABLE:
         case SE_IRQ_EN:
-        case GENI_M_IRQ_EN_CLEAR:
-        case GENI_S_IRQ_EN_CLEAR:
-        case GENI_M_IRQ_EN_SET:
-        case GENI_S_IRQ_EN_SET:
         case GENI_DMA_MODE_EN:
         case GENI_S_CMD0:
         case UNKNOWN_TX_FIFO:

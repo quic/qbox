@@ -152,19 +152,15 @@ platform = {
     -- ram_0 = {
     --     moduletype="Memory";
     --     target_socket = {"&platform.DDR_space", bind= "&router.initiator_socket"},
-    --     -- target_socket= {size = DDR_SPACE_SIZE/2,
-    --     --                 address=INITIAL_DDR_SPACE_14GB;
-    --     --                 bind = "&router.initiator_socket";}
     -- },
+
     DDR_space_1 = {moduletype="Memory";
                 target_socket = {bind = "&router.initiator_socket";}
                 };
 
     -- ram_1 = {
     --     moduletype="Memory";
-    --     target_socket= {size = DDR_SPACE_SIZE/2,
-    --                     address=INITIAL_DDR_SPACE_14GB+(DDR_SPACE_SIZE/2);
-    --                     bind = "&router.initiator_socket";}
+    --     target_socket= {"&platform.DDR_space_1", bind = "&router.initiator_socket";}
     -- },
 
     hexagon_ram_0 = {
@@ -240,19 +236,32 @@ platform = {
         irq_6 = {bind = "&gic_0.spi_in_46"},
         nr_frames=7;nr_views=2;cnttid=0x1111515};
 
-    charbackend_stdio_0 = {
-        moduletype = "CharBackendStdio";
-        args = {false};
-    };
+    -- charbackend_stdio_0 = {
+    --     moduletype = "CharBackendStdio";
+    --     args = {false};
+    -- };
 
-    pl011 = {
-        moduletype = "Pl011",
-        args = {"&platform.charbackend_stdio_0"};
-        simple_target_socket_0 = {address= UART0,
-                                  size=0x1000, 
-                                  bind = "&router.initiator_socket"},
-        irq = {bind = "&gic_0.spi_in_379"},
-    };
+    -- pl011 = {
+    --     moduletype = "Pl011",
+    --     args = {"&platform.charbackend_stdio_0"};
+    --     simple_target_socket_0 = {address= UART0,
+    --                               size=0x1000, 
+    --                               bind = "&router.initiator_socket"},
+    --     irq = {bind = "&gic_0.spi_in_379"},
+    -- };
+
+    -- qupv3_qupv3_se_wrapper_se0_backend_0 = {
+    --     moduletype = "CharBFBackendStdio";
+    --     biflow_socket = {bind = "&qupv3_qupv3_se_wrapper_se0_0.backend_socket"},
+    -- };
+
+    -- qupv3_qupv3_se_wrapper_se0_0 = {
+    --     moduletype = "qupv3_qupv3_se_wrapper_se0",
+    --     target_socket={"&platform.qupv3_0_qupv3_id_0", bind = "&router.initiator_socket"},
+    --     -- target_socket={address=0x880000, size=0x10000, bind = "&router.initiator_socket"},
+    --     irq = {bind = "&gic_0.spi_in_666"},
+    --     input = true
+    -- };
 
     ipc_router_top = {
             moduletype = "IPCC",
@@ -433,15 +442,19 @@ if (ARM_NUM_CPUS > 0) then
         for i, spi_irq in next, bank.qgic_spi_irqs do
             local i_0 = i - 1;
             local backend = {
-                moduletype = "CharBackendStdio";
+                moduletype = "CharBFBackendStdio";
                 args = {(i_0 == bank.primary_idx)};
+                biflow_socket = {bind = "&uart_qup_"..tostring(qup_index)..".backend_socket"},
             };
             platform["backend_"..tostring(qup_index)] = backend;
             local qup = {
-                moduletype = "QUPv3",
-                args = {"&platform.backend_"..tostring(qup_index)};
-                simple_target_socket_0 = {address=bank.addr + (i_0*QUP_PITCH),
+                moduletype = "qupv3_qupv3_se_wrapper_se0",
+                -- args = {"&platform.backend_"..tostring(qup_index)};
+                -- simple_target_socket_0 = {address=bank.addr + (i_0*QUP_PITCH),
+                --     size=QUP_SIZE, bind="&router.initiator_socket"},
+                target_socket = {address=bank.addr + (i_0*QUP_PITCH),
                     size=QUP_SIZE, bind="&router.initiator_socket"},
+                -- target_socket={"&platform.qupv3_"..i.."_qupv3_id_0", bind = "&router.initiator_socket"},
                 irq = {bind = "&gic_0.spi_in_"..spi_irq},
             };
             platform["uart_qup_"..tostring(qup_index)] = qup;

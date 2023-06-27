@@ -68,6 +68,7 @@
 #include "greensocs/systemc-uarts/uart-pl011.h"
 #include "greensocs/systemc-uarts/backends/char-backend.h"
 #include <greensocs/systemc-uarts/backends/char/stdio.h>
+#include <greensocs/systemc-uarts/backends/char-bf/stdio.h>
 #include <greensocs/systemc-uarts/backends/char/socket.h>
 
 #include <quic/ipcc/ipcc.h>
@@ -76,6 +77,7 @@
 #include <quic/mpm/mpm.h>
 #include <quic/smmu500/smmu500.h>
 #include <quic/qup/uart/uart-qupv3.h>
+#include <quic/qupv3_qupv3_se_wrapper_se0/qupv3_qupv3_se_wrapper_se0.h>
 #include <quic/gen_boilerplate/reg_model_maker.h>
 
 #include "wdog.h"

@@ -45,8 +45,10 @@ gs_addpackage(qbox)
 find_package(LibZip REQUIRED)
 
 add_library(${PROJECT_NAME} INTERFACE)
+file(GLOB_RECURSE SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cc)
 add_executable(vp
     src/main.cc
+    ${SRC_FILES}
 )
 
 execute_process(

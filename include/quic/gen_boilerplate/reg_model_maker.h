@@ -321,7 +321,8 @@ public:
     void b_transport(int id, tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
         if (check_mapping(txn)) {
-            return init_socket->b_transport(txn, delay);
+            init_socket->b_transport(txn, delay);
+            SCP_TRACE(())("{}", scp::scp_txn_tostring(txn));
         }
         return;
     }
@@ -381,6 +382,8 @@ public:
         SCP_TRACE(())("Constructor");
 
         m_memory.p_dmi = false;
+        m_memory.p_init_mem = true;
+        m_memory.p_init_mem_val = 0x0; // NB this must be 0 as the JSON file assumes 0 initialization
         cci_set<uint64_t>(std::string(name()) + ".memory.target_socket.address", 0);
         target_socket.register_b_transport(this, &json_fallback_module::b_transport);
         target_socket.register_transport_dbg(this, &json_fallback_module::transport_dbg);

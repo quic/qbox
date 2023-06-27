@@ -1,0 +1,8 @@
+CPMAddPackage("gh:google/googletest#main")
+macro(gs_add_test test)
+    add_executable(${test} ${test}.cc)
+    target_link_libraries(${test} PRIVATE gtest gmock genmod_qupv3_qupv3_se_wrapper_se0 ${TARGET_LIBS})
+    add_test(NAME ${test} COMMAND ${test})
+    set_tests_properties(${test} PROPERTIES TIMEOUT 10)
+endmacro()
+gs_add_test(qupv3_qupv3_se_wrapper_se0-test)
