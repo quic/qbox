@@ -860,6 +860,22 @@ List the tracing options:
 \end{lstlisting}
 \normalsize
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{HVF acceleration}
+
+On Apple Silicon, QQVP can take advantage of the Hypervisor Framework to greatly speed up {\small{\lstinline!ArmQemuInstance!}}.
+
+Configuration file example:
+
+\small
+\begin{lstlisting}[language=bash]
+    platform = {
+    ...
+        ArmQemuInstance = { accel = "hvf", sync_policy = "multithread-unconstrained" };
+    ...
+\end{lstlisting}
+\normalsize
+
 \clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Model Features}
@@ -1139,6 +1155,22 @@ tableMerge(platform, {
 The {\small{\lstinline!netstat!}} command on many hosts can show which
 ports are already in use. Consult your host system manuals for details
 on how to query for TCP ports.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Example of a problem while running QQVP: HV denied}
+\label{sec:hvDenied}
+
+The following error indicates that QQVP did not have the entitlements to use the
+Hypervisor Framework. This is generally due to a failed attempt to
+{\small{\lstinline!codesign!}} the {\small{\lstinline!vp!}} executable after
+building. If you encounter this error, please contact your support channel as it
+might be a QQVP defect.
+
+\small
+\begin{lstlisting}[language=bash]
+    Error: HV_DENIED
+\end{lstlisting}
+\normalsize
 
 \clearpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
