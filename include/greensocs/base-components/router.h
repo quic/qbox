@@ -592,7 +592,6 @@ private:
     cci::cci_broker_handle m_broker;
 
 public:
-    cci::cci_param<bool> thread_safe;
     cci::cci_param<bool> lazy_init;
 
     explicit Router(const sc_core::sc_module_name& nm, cci::cci_broker_handle broker = cci::cci_get_broker())
@@ -600,7 +599,6 @@ public:
         , initiator_socket("initiator_socket", [&](std::string s) -> void { register_boundto(s); })
         , target_socket("target_socket")
         , m_broker(broker)
-        , thread_safe("thread_safe", THREAD_SAFE, "Is this model thread safe")
         , lazy_init("lazy_init", false, "Initialize the router lazily (eg. during simulation rather than BEOL)")
     {
         SCP_DEBUG(()) << "Router constructed";

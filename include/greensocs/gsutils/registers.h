@@ -318,13 +318,13 @@ class gs_register : public port_fnct, public proxy_data<TYPE>
 
 public:
     gs_register() = delete;
-    gs_register(std::string name, std::string path = "")
-        : port_fnct(name, path)
-        , proxy_data<TYPE>(SCP_LOGGER_NAME(), name, path)
+    gs_register(std::string _name, std::string path = "")
+        : port_fnct(_name, path)
+        , proxy_data<TYPE>(SCP_LOGGER_NAME(), _name, path)
     {
-        std::string n(sc_core::sc_module::name());
+        std::string n(name());
         n = n.substr(0, n.length() - strlen("_target_socket")); // get rid of last part of string
-        SCP_TRACE((), n)("constructor : {} attching in {}", name, path);
+        SCP_TRACE((), n)("constructor : {} attching in {}", _name, path);
     }
     void operator=(TYPE value) { proxy_data<TYPE>::set(value); }
     operator TYPE() { return proxy_data<TYPE>::get(); }

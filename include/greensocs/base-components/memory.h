@@ -313,7 +313,7 @@ protected:
             SCP_FATAL(SCMOD) << "TLM command not supported";
             break;
         }
-
+        delay += p_latency;
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
 
         if (p_dmi)
