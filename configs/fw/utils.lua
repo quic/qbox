@@ -48,5 +48,7 @@ function assert(exp, msg)
     os.exit(1)
   end
 end
+
+GiB = 1024*1024*1024
 -- ** End of convenience functions **
 

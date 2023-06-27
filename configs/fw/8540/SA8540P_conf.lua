@@ -14,14 +14,6 @@ function top()
 dofile(top().."../utils.lua");
 print ("Lua config running. . . ");
 
--- these values are helpful for local configuration, so make them global
- INITIAL_DDR_SPACE_14GB = 0x80000000
- OFFSET_MIFS_DDR_SPACE  = 0x20000000
- OFFSET_SMEM_DDR_SPACE  = 0x00900000
- DDR_SPACE_SIZE = 14*1024*1024*1024
-
-
-
 local MAKENA_REGS_CSV = valid_file(top().."8540_Registers.csv")
 local QDSP6_CFG   = valid_file(top().."../qdsp6.lua")
 
@@ -121,7 +113,8 @@ platform = {
 
     ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
 
-    ram_0=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=DDR_SPACE_SIZE}};
+    ram_0=  {  target_socket = {address=0x80000000, size=14*GiB}};
+    ram_1=  {  target_socket = {address=0x800000000, size=32*GiB}};
     hexagon_ram_0={target_socket={address=NSP0_VTCM_BASE_ADDR, size=NSP0_VTCM_SIZE_BYTES}};
     hexagon_ram_1={target_socket={address=NSP1_VTCM_BASE_ADDR, size=NSP1_VTCM_SIZE_BYTES}};
     gic=  {  dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR};
@@ -272,13 +265,18 @@ if (platform.arm_num_cpus > 0) then
             start_powered_off = true;
         };
         if (i==0) then
-            cpu["rvbar"] = INITIAL_DDR_SPACE_14GB;
+            cpu["rvbar"] = platform.ram_0.target_socket.address;
             cpu["start_powered_off"] = false;
         end
         platform["cpu_"..tostring(i)]=cpu;
     end
 end
 
+-- these values are helpful for local configuration, so make them global
+ OFFSET_MIFS_DDR_SPACE  = 0x20000000
+ OFFSET_SMEM_DDR_SPACE  = 0x00900000
+-- Provided for backwards compatibility with local configs that use this var:
+ INITIAL_DDR_SPACE_14GB = platform.ram_0.target_socket.address
 
 -- read in any local configuration (Before convenience switches)
 local IMAGE_DIR;
