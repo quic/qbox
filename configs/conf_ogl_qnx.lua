@@ -1,5 +1,6 @@
 print("  local configuration in " .. top());
 tableMerge(platform, {
+    gpu_0 = 1;
     virtioblk_0 = { mem = { address = 0x1c0d0000, size = 0x2000 }, irq = 9,
     blkdev_str = "file=" .. valid_file(top() .. "system_8540_qdrive_qvp.img") .. ",format=raw,if=none,readonly=off" };
 });

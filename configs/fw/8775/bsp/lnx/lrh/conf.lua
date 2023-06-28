@@ -60,6 +60,7 @@ tableJoin(platform["load"], {
 });
 
 tableMerge(platform, {
+    gpu_0 = 1;
     gpex=       { pio_iface             = {address=0x60200000, size=0x0000100000};
     mmio_iface            = {address=0x60300000, size=0x001fd00000};
     ecam_iface            = {address=0x43B50000, size=0x0010000000};
