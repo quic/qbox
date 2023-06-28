@@ -1,9 +1,6 @@
 print("  local configuration in " .. top());
 tableMerge(platform, {
     virtioblk_0 = { mem = { address = 0x1c0d0000, size = 0x2000 }, irq = 9, blkdev_str = "file=" .. valid_file(top() .. "system_lemans_qdrive_qvp.img") .. ",format=raw,if=none,readonly=off" };
-    ram_1 = { target_socket = { address = 0xd00000000, size = 0x252c00000 } };
-    ram_2 = { target_socket = { address = 0x940000000, size = 0x292d00000 } };
-    ram_3 = { target_socket = { address = 0x900000000, size = 0x35200000 } };
 });
 
 tableJoin(platform["load"], {

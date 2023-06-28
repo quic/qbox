@@ -2,8 +2,6 @@ print("  local configuration in " .. top());
 tableMerge(platform, {
     virtioblk_0 = { mem = { address = 0x1c0d0000, size = 0x2000 }, irq = 9,
     blkdev_str = "file=" .. valid_file(top() .. "system_8540_qdrive_qvp.img") .. ",format=raw,if=none,readonly=off" };
-    ram_1 = { target_socket = { address = 0x800000000, size = 0x80000000 } };
-    ram_2 = { target_socket = { address = 0xc0000000, size = 0x340000000 } };
 });
 
 
