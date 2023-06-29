@@ -26,6 +26,8 @@
 #include <libqbox/ports/target-signal-socket.h>
 #include <libqbox/ports/initiator-signal-socket.h>
 
+#include <greensocs/systemc-uarts/backends/char-bf/stdio.h>
+#include <greensocs/gsutils/ports/biflow-socket.h>
 #include <greensocs/gsutils/module_factory_registery.h>
 
 namespace gs {
@@ -122,7 +124,6 @@ SC_MODULE (Container) {
              * foo should relate to an object in this model. a.b.bar should relate to an other
              * object Note that the names are relative to the current module (this).
              */
-
             std::string targetname = std::string(m->name()) + "." + param;
             if (m_broker.get_preset_cci_value(targetname + ".0").is_string()) {
                 // deal with an alias
@@ -166,6 +167,7 @@ SC_MODULE (Container) {
                                                             1, sc_core::SC_ZERO_OR_MORE_BOUND>,
                              tlm_utils::multi_target_base<>>(i_obj, t_obj))
                     break;
+                if (try_bind<gs::biflow_bindable, gs::biflow_bindable>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, tlm::tlm_base_target_socket<>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, tlm_utils::multi_target_base<>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, QemuTargetSocket<>>(i_obj, t_obj)) break;

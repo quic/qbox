@@ -58,8 +58,17 @@
 #include <tlm_utils/simple_initiator_socket.h>
 
 namespace gs {
+struct biflow_bindable {
+    virtual void bind(biflow_bindable& other) = 0;
+
+    virtual tlm::tlm_target_socket<>& get_target_socket() = 0;
+    virtual tlm::tlm_initiator_socket<>& get_initiator_socket() = 0;
+    virtual tlm::tlm_initiator_socket<>& get_target_control_socket() = 0;
+    virtual tlm::tlm_target_socket<>& get_initiator_control_socket() = 0;
+};
+
 template <class MODULE, class T = uint8_t>
-class biflow_socket : public sc_core::sc_module
+class biflow_socket : public sc_core::sc_module, public biflow_bindable
 {
     SCP_LOGGER();
 
@@ -161,19 +170,22 @@ public:
         m_send_event.async_detach_suspending();
     }
 
+    tlm::tlm_target_socket<>& get_target_socket() { return target_socket; }
+    tlm::tlm_initiator_socket<>& get_initiator_socket() { return initiator_socket; };
+    tlm::tlm_initiator_socket<>& get_target_control_socket() { return target_control_socket; };
+    tlm::tlm_target_socket<>& get_initiator_control_socket() { return initiator_control_socket; };
     /**
      * @brief Bind method to connect two biflow sockets
      *
      * @tparam M
      * @param other : other socket
      */
-    template <class M>
-    void bind(biflow_socket<M>& other)
+    void bind(biflow_bindable& other)
     {
-        initiator_socket.bind(other.target_socket);
-        target_control_socket.bind(other.initiator_control_socket);
-        other.initiator_socket.bind(target_socket);
-        other.target_control_socket.bind(initiator_control_socket);
+        initiator_socket.bind(other.get_target_socket());
+        target_control_socket.bind(other.get_initiator_control_socket());
+        other.get_initiator_socket().bind(target_socket);
+        other.get_target_control_socket().bind(initiator_control_socket);
     }
 
     /* target socket handlng */
