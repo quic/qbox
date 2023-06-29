@@ -33,6 +33,7 @@
 #include <greensocs/libgssync/async_event.h>
 #include <greensocs/gsutils/uutils.h>
 #include <greensocs/gsutils/ports/biflow-socket.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 #include <queue>
 #include <signal.h>
 #include <termios.h>
@@ -143,5 +144,5 @@ public:
         if (rcv_thread_id.joinable()) rcv_thread_id.join();
     }
 };
-
+GSC_MODULE_REGISTER(CharBFBackendStdio, bool);
 #endif
