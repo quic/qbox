@@ -78,7 +78,7 @@ private:
     uint64_t ret_cfg;
 
 public:
-    InitiatorSignalSocket<bool> hex_halt;
+    sc_core::sc_port<sc_core::sc_signal_inout_if<bool>, 0, sc_core::SC_ZERO_OR_MORE_BOUND> hex_halt;
     InitiatorSignalSocket<bool> nmi;
     tlm_utils::simple_target_socket<csr> socket;
 
@@ -93,7 +93,9 @@ private:
             nmi_triggered_csr = false;
         }
 
-        hex_halt->write(!boot_status);
+        for (int i = 0; i < hex_halt.size(); i++) {
+            hex_halt[i]->write(!boot_status);
+        }
     }
 
     void csr_write(uint64_t offset, uint64_t val, unsigned size) {

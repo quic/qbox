@@ -156,7 +156,9 @@ public:
         parent_router.initiator_socket.bind(m_rom.socket);
 
         parent_router.initiator_socket.bind(m_csr.socket);
-        m_csr.hex_halt.bind(m_hexagon_threads[0].halt);
+        for (int i = 0; i < p_hexagon_num_threads; i++) {
+            m_csr.hex_halt.bind(m_hexagon_threads[i].halt);
+        }
 
         // pass through transactions.
         m_router.initiator_socket.bind(m_pass.target_socket);
