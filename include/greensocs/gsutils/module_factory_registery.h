@@ -18,11 +18,8 @@
 
 namespace gs {
 namespace ModuleFactory {
-static std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>>* GetAvailableModuleList()
-{
-    static std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>> list;
-    return &list;
-}
+std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>>* GetAvailableModuleList();
+
 struct ModuleRegistrationWrapper {
     ModuleRegistrationWrapper(std::function<cci::cci_param<gs::cci_constructor_vl>*()> fn)
     {
@@ -67,7 +64,6 @@ struct cci::cci_value_converter<gs::cci_constructor_vl> {
 };
 #define GSC_MODULE_REGISTER(__NAME__, ...)                                                                             \
     struct GS_MODULEFACTORY_moduleReg_##__NAME__ {                                                                     \
-        GS_MODULEFACTORY_moduleReg_##__NAME__() {}                                                                     \
         static gs::ModuleFactory::ModuleRegistrationWrapper& get()                                                     \
         {                                                                                                              \
             static gs::ModuleFactory::ModuleRegistrationWrapper inst([]() -> cci::cci_param<gs::cci_constructor_vl>* { \

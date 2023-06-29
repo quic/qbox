@@ -138,3 +138,12 @@ std::list<std::string> gs::sc_cci_list_items(sc_core::sc_module_name module_name
     children.unique();
     return children;
 }
+
+/* handle static list for CCI parameter pre-registration */
+#include <greensocs/gsutils/module_factory_registery.h>
+
+std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>>* gs::ModuleFactory::GetAvailableModuleList()
+{
+    static std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>> list;
+    return &list;
+}
