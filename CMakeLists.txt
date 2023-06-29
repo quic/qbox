@@ -73,7 +73,7 @@ if(APPLE)
         TARGET vp
         POST_BUILD
         COMMAND codesign
-                --entitlements ${CPM_libqemu_SOURCE}/accel/hvf/entitlements.plist
+                --entitlements ${libqemu_SOURCE_DIR}/accel/hvf/entitlements.plist
                 --force -s - $<TARGET_FILE:vp>
         COMMENT "Applying HVF entitlements to $<TARGET_FILE:vp>"
     )
