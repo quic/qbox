@@ -141,6 +141,7 @@ platform = {
                 {irq=6,  dst = "platform.hexagon_cluster_0.l2vic.irq_in_30"},
             }
         };
+    mpm = { socket = {address=0x0C210000, size=0x1000}};
 
     gpex = { pio_iface = { address = 0x003eff0000, size = 0x0000010000 };
         mmio_iface = { address = 0x0060000000, size = 0x002B500000 };

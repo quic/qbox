@@ -64,6 +64,7 @@
 #include <quic/ipcc/ipcc.h>
 #include <quic/qtb/qtb.h>
 #include <quic/csr/csr.h>
+#include <quic/mpm/mpm.h>
 #include <quic/smmu500/smmu500.h>
 #include <quic/qup/uart/uart-qupv3.h>
 
@@ -285,6 +286,7 @@ protected:
     sc_core::sc_vector<QUPv3> m_uart_qups;
 
     IPCC m_ipcc;
+    mpm_control m_mpm;
 #ifdef newsmmu
     sc_core::sc_vector<smmu500<>> m_smmus;
     sc_core::sc_vector<smmu500_tbu<>> m_tbus;
@@ -332,6 +334,7 @@ protected:
         if (m_uart)
             m_router.initiator_socket.bind(m_uart->socket);
         m_router.initiator_socket.bind(m_ipcc.socket);
+        m_router.initiator_socket.bind(m_mpm.socket);
         for (auto& qup : m_uart_qups) {
             m_router.initiator_socket.bind(qup.socket);
         }
@@ -490,6 +493,7 @@ public:
         , m_uart_qups("uart_qup", gs::sc_cci_list_items(sc_module::name(), "uart_qup").size(),
                       [this](const char* n, size_t i) { return new QUPv3(n); })
         , m_ipcc("ipcc")
+        , m_mpm("mpm")
 #ifdef newsmmu
         , m_smmus("smmu", gs::sc_cci_list_items(sc_module::name(), "smmu").size(),
                   [this](const char* n, size_t i) { return new smmu500<>(n); })
