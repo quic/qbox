@@ -77,8 +77,7 @@
 class qupv3_qupv3_se_wrapper_se0 : public sc_core::sc_module
 {
     SCP_LOGGER();
-    gs::PrivateConfigurableBroker m_broker; // Should be a private broker for efficiency, but requires fixes to cci utils to
-                                     // prevent use of cci_get_broker()
+    gs::PrivateConfigurableBroker m_broker; // Should be a private broker for efficiency
     gs::json_zip_archive m_jza;
     bool loaded_ok;
     gs::json_module M;
@@ -87,24 +86,29 @@ class qupv3_qupv3_se_wrapper_se0 : public sc_core::sc_module
     uint rx_fifo_slot = 0;
     sc_core::sc_event irq_update;
 
-    void update_irq()
-    {
-        bool level = ((GENI_M_IRQ_STATUS & GENI_M_IRQ_ENABLE) != 0) || ((GENI_S_IRQ_STATUS & GENI_S_IRQ_ENABLE) != 0);
+    void update_irq() {
+        bool level = ((GENI_M_IRQ_STATUS & GENI_M_IRQ_ENABLE) != 0) ||
+                     ((GENI_S_IRQ_STATUS & GENI_S_IRQ_ENABLE) != 0);
         irq->write(level);
         SCP_DEBUG(())("Writing IRQ = {}", level);
+        /* in the case that the driver has requested to clear the irq but there is still data
+         * available, re-set them */
+        if (level == 0 && rx_fifo_slot) {
+            set_FIFO_STATUS();
+            irq_update.notify();
+        }
     }
 
-    void set_FIFO_STATUS()
-    {
+    void set_FIFO_STATUS() {
         RX_LAST = rx_fifo_slot ? 1 : 0;
         RX_FIFO_LAST = RX_LAST;
         RX_LAST_BYTE_VALID = rx_fifo_slot;
     }
-    void receive(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
-    {
+    void receive(tlm::tlm_generic_payload& txn, sc_core::sc_time& t) {
         uint8_t* data = txn.get_data_ptr();
         for (int i = 0; i < txn.get_data_length(); i++) {
             sc_assert(rx_fifo_slot < GENI_RX_FIFO_MAX);
+            SCP_TRACE(())("adding {} to rx fifo slot {}", data[i], rx_fifo_slot);
             GENI_RX_FIFO[rx_fifo_slot++] = data[i];
         }
         set_FIFO_STATUS();
@@ -120,23 +124,22 @@ public:
 
     qupv3_qupv3_se_wrapper_se0(sc_core::sc_module_name _name);
 
-    void start_of_simulation()
-    {
+    void start_of_simulation() {
         /* NB writes should not happen before simulation starts, it's safe to do this here. */
         GENI_FW_REVISION_RO = 0x2ff; // implement UART protocol
     }
 
-    void end_of_elaboration()
-    {
+    void end_of_elaboration() {
+        GENI_M_IRQ_ENABLE = 0xffffffff; // hack to handle broken driver (for now)
         backend_socket.can_receive_set(GENI_RX_FIFO_MAX);
         /* READ functionality */
         GENI_RX_FIFO.post_read([&](TXN()) {
             sc_assert(rx_fifo_slot > 0);
-            rx_fifo_slot--;
-            backend_socket.can_receive_more(1);
             for (int i = 0; i < GENI_RX_FIFO_MAX - 1; i++) {
                 GENI_RX_FIFO[i] = GENI_RX_FIFO[i + 1];
             }
+            rx_fifo_slot--;
+            backend_socket.can_receive_more(1);
             set_FIFO_STATUS();
             irq_update.notify();
         });
@@ -173,6 +176,8 @@ public:
                     TX_FIFO_WATERMARK = 1;
                 }
                 irq_update.notify();
+            } else {
+                SCP_ERR(()) << "Error: M_CMD_0 and UART_TX_LEN is not set properly";
             }
         });
         UART_MANUAL_RFR.post_write([&](TXN()) {
