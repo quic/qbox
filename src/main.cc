@@ -49,7 +49,10 @@
 #include <libqbox-extra/components/pci/virtio-gpu-pci.h>
 #include <libqbox-extra/components/pci/virtio-gpu-gl-pci.h>
 #include <libqbox-extra/components/pci/nvme.h>
+#include <libqbox-extra/components/pci/xhci.h>
 #include <libqbox-extra/components/display/display.h>
+#include <libqbox-extra/components/usb/kbd.h>
+#include <libqbox-extra/components/usb/tablet.h>
 
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/memory.h>
@@ -303,6 +306,10 @@ protected:
     sc_core::sc_vector<QemuHexagonQtimer> m_qtimers;
     QemuRtl8139Pci* m_rtl8139;
 
+    std::unique_ptr<QemuXhci> m_xhci;
+    std::unique_ptr<QemuKbd> m_kbd;
+    std::unique_ptr<QemuTablet> m_tablet;
+
     gs::Memory<> m_fallback_mem;
 
     gs::MemoryDumper<> m_memorydumper;
@@ -548,6 +555,13 @@ public:
 
         m_gpex = new QemuGPEX("gpex", m_qemu_inst, mmio_addr, mmio_size, mmio_iface_high_addr,
                               mmio_iface_high_size);
+
+        m_xhci = std::make_unique<QemuXhci>("usb", m_qemu_inst);
+        m_gpex->add_device(*m_xhci);
+        m_kbd = std::make_unique<QemuKbd>("kbd", m_qemu_inst);
+        m_xhci->add_device(*m_kbd);
+        m_tablet = std::make_unique<QemuTablet>("mouse", m_qemu_inst);
+        m_xhci->add_device(*m_tablet);
 
         if (p_with_gpu.get_value()) {
             if (m_gpus.size() == 0) {
