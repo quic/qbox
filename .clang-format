@@ -29,7 +29,7 @@ BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass: true
   AfterFunction: true
-PackConstructorInitializers: Never
+# PackConstructorInitializers: Never # When we have clang14
 
 SpaceBeforeCtorInitializerColon: false
 SpacesBeforeTrailingComments: 1
