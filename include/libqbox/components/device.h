@@ -82,7 +82,9 @@ public:
      * @param[in] qom_type Device QOM type name
      */
     QemuDevice(const sc_core::sc_module_name& name, QemuInstance& inst, const char* qom_type)
-        : sc_module(name), m_qom_type(qom_type), m_inst(inst) {}
+        : sc_module(name), m_qom_type(qom_type), m_inst(inst) {
+            SCP_WARN(())("QOM Device creation {}", qom_type);
+        }
 
     virtual ~QemuDevice() {}
 

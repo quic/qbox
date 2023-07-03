@@ -78,7 +78,7 @@ protected:
         m_qk = m_inst.create_quantum_keeper();
 
         if (!m_qk) {
-            SCP_FATAL(SCMOD) << "qbox : Sync policy unknown";
+            SCP_FATAL(()) << "qbox : Sync policy unknown";
         }
 
         m_qk->reset();
@@ -440,9 +440,13 @@ public:
 
         if (!p_gdb_port.is_default_value()) {
             std::stringstream ss;
-            SCP_INFO(SCMOD) << "Starting gdb server on TCP port " << p_gdb_port;
+            SCP_INFO(()) << "Starting gdb server on TCP port " << p_gdb_port;
             ss << "tcp::" << p_gdb_port;
             m_inst.get().start_gdb_server(ss.str());
+        }
+
+        for (auto p : gs::sc_cci_children(sc_module::name())) {
+            SCP_WARN(()) << "Unexpected parameter " + p + " to " + sc_module::name();
         }
     }
 

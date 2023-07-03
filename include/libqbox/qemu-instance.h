@@ -42,6 +42,7 @@ class QemuDeviceBaseIF
 {
 public:
     virtual bool can_run() { return true; }
+    SCP_LOGGER();
 };
 
 class QemuInstance;
@@ -133,6 +134,7 @@ private:
     cci::cci_broker_handle m_conf_broker;
 
     bool m_running = false;
+    SCP_LOGGER();
 
 public:
     // these will be used by wait_for_work when it needs a global lock
@@ -178,7 +180,7 @@ public:
             return TCG_COROUTINE;
         if (s == "MULTI")
             return TCG_MULTI;
-        SCP_WARN(SCMOD) << "Unknown TCG mode " << s;
+        SCP_WARN(()) << "Unknown TCG mode " << s;
         return TCG_UNSPECIFIED;
     }
 
@@ -217,10 +219,10 @@ protected:
             if (p.second.get_string().is_string()) {
                 const std::string arg_name = p.first.substr(l + strlen(args));
                 const std::string arg_value = p.second.get_string();
-                SCP_INFO(SCMOD) << "Added QEMU argument : " << arg_name << " " << arg_value;
+                SCP_INFO(()) << "Added QEMU argument : " << arg_name << " " << arg_value;
                 m_inst.push_qemu_arg({ arg_name.c_str(), arg_value.c_str() });
             } else {
-                SCP_FATAL(SCMOD) << "The value of the argument is not a string";
+                SCP_FATAL(()) << "The value of the argument is not a string";
             }
         }
 
@@ -241,7 +243,7 @@ protected:
         if (!p_icount)
             return;
         if (m_tcg_mode == TCG_MULTI) {
-            SCP_FATAL(SCMOD) << "MULTI threading can not be used with icount";
+            SCP_FATAL(()) << "MULTI threading can not be used with icount";
             assert(m_tcg_mode != TCG_MULTI);
         }
         m_inst.push_qemu_arg("-icount");
@@ -263,7 +265,7 @@ protected:
         case TCG_MULTI:
             m_inst.push_qemu_arg("tcg,thread=multi");
             if (p_icount) {
-                SCP_FATAL(SCMOD) << "MULTI threading can not be used with icount";
+                SCP_FATAL(()) << "MULTI threading can not be used with icount";
                 assert(!p_icount);
             }
             break;
@@ -329,7 +331,7 @@ public:
                         "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
         , p_display_argument_set(false)
         , p_accel("accel", "tcg", "Virtualization accelerator") {
-        SCP_DEBUG(SCMOD) << "Libqbox QemuInstance constructor";
+        SCP_DEBUG(()) << "Libqbox QemuInstance constructor";
         m_running = true;
         p_tcg_mode.lock();
         push_default_args();
@@ -406,18 +408,18 @@ public:
         assert(!is_inited());
 
         if (m_tcg_mode == TCG_UNSPECIFIED) {
-            SCP_FATAL(SCMOD) << "Unknow tcg mode : " << std::string(p_tcg_mode);
+            SCP_FATAL(()) << "Unknow tcg mode : " << std::string(p_tcg_mode);
         }
         // By now, if there is a CPU, it would be loaded into QEMU, and we would have a QK
         if (m_first_qk) {
             if (m_first_qk->get_thread_type() == gs::SyncPolicy::SYSTEMC_THREAD) {
                 if (p_tcg_mode.is_preset_value() && m_tcg_mode != TCG_COROUTINE) {
-                    SCP_WARN(SCMOD) << "This quantum keeper can only be used with TCG_COROUTINES";
+                    SCP_WARN(()) << "This quantum keeper can only be used with TCG_COROUTINES";
                 }
                 m_tcg_mode = TCG_COROUTINE;
             } else {
                 if (m_tcg_mode == TCG_COROUTINE) {
-                    SCP_FATAL(SCMOD) << "Please select a suitable threading mode for this quantum "
+                    SCP_FATAL(()) << "Please select a suitable threading mode for this quantum "
                                         "keeper, it can't be used with COROUTINES";
                 }
             }
@@ -432,10 +434,16 @@ public:
             });
         }
 
-        SCP_INFO(SCMOD) << "Initializing QEMU instance with args:";
+        bool trace=(SCP_LOGGER_NAME().level >= sc_core::SC_FULL);
+        if (trace) {
+            SCP_WARN(())("Enabling QEMU debug logging");
+            m_inst.push_qemu_arg({"-d", "in_asm,int,mmu,unimp,guest_errors"});
+        }
+
+        SCP_INFO(()) << "Initializing QEMU instance with args:";
 
         for (const char* arg : m_inst.get_qemu_args()) {
-            SCP_INFO(SCMOD) << arg;
+            SCP_INFO(()) << arg;
         }
 
         m_inst.init();
