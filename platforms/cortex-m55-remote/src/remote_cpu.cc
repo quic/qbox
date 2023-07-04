@@ -33,9 +33,6 @@
 #include "greensocs/base-components/router.h"
 #include "greensocs/base-components/remote.h"
 
-#define TLM_PORTS_NUM 1
-#define SIGNALS_NUM   256
-
 class RemoteCPU : public sc_core::sc_module
 {
     SCP_LOGGER();
@@ -58,10 +55,10 @@ public:
         if (!m_gdb_port.is_default_value())
             m_cpu.p_gdb_port = m_gdb_port;
 
-        if (m_irq_num > SIGNALS_NUM)
+        if (m_irq_num > m_rpc_pass.p_initiator_signals_num)
             SCP_FATAL(()) << std::string(this->name()) << ".cpu.nvic.num_irq"
                           << "(" << m_irq_num << ") > RemoteCPU number of available signals ("
-                          << SIGNALS_NUM << ")!";
+                          << m_rpc_pass.p_initiator_signals_num << ")!";
 
         SCP_INFO(()) << "number of irqs  = " << m_irq_num;
 
@@ -80,28 +77,32 @@ private:
     QemuInstance& m_qemu_inst;
     gs::Router<> m_router;
     CpuArmCortexM55 m_cpu;
-    gs::PassRPC<TLM_PORTS_NUM, SIGNALS_NUM> m_rpc_pass;
+    gs::PassRPC<> m_rpc_pass;
 };
 
 int sc_main(int argc, char* argv[]) {
-    try {
-        std::cout << "RemoteCPU started\n";
-        gs::ConfigurableBroker m_broker(
+    std::cout << "RemoteCPU started\n";
+    auto m_broker = new gs::ConfigurableBroker(
             argc, argv,
             { { "remote_cpu.qemu_instance.sync_policy", cci::cci_value("multithread-freerunning") },
+              { "remote_cpu.remote_pass.tlm_target_ports_num", cci::cci_value(1) },
+              { "remote_cpu.remote_pass.tlm_initiator_ports_num", cci::cci_value(0) },
+              { "remote_cpu.remote_pass.initiator_signals_num", cci::cci_value(1) },
               { "remote_cpu.remote_pass.target_socket_0.address", cci::cci_value(0) },
               { "remote_cpu.remote_pass.target_socket_0.size",
                 cci::cci_value(std::numeric_limits<uint64_t>::max()) },
               { "remote_cpu.cpu.nvic.mem.address", cci::cci_value(0xE000E000) },
               { "remote_cpu.cpu.nvic.mem.size", cci::cci_value(0x10000) },
               { "remote_cpu.cpu.nvic.num_irq", cci::cci_value(1) } });
-        RemoteCPU remote("remote_cpu");
+
+    RemoteCPU remote("remote_cpu");
+    try {
         sc_core::sc_start();
     } catch (std::runtime_error const& e) {
-        std::cerr << "Error: '" << e.what() << "'\n";
+        std::cerr << "Error: (Remote CPU )  '" << e.what() << "'\n";
         exit(1);
     } catch (...) {
-        std::cerr << "Unknown error (Remote EVA)!\n";
+        std::cerr << "Unknown error (Remote CPU)!\n";
         exit(2);
     }
     return 0;

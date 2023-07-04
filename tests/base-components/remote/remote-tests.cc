@@ -75,6 +75,9 @@ int sc_main(int argc, char* argv[])
             { "test_bench.mem1.shared_memory", cci::cci_value(true) },
             { "test_bench.mem2.shared_memory", cci::cci_value(true) },
             { "test_bench.mem3.shared_memory", cci::cci_value(true) },
+
+            { "test_bench.pass.tlm_initiator_ports_num", cci::cci_value(1) },
+            { "test_bench.pass.tlm_target_ports_num", cci::cci_value(2) },
         });
 
     ::testing::InitGoogleTest(&argc, argv);

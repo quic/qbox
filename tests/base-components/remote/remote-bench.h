@@ -61,7 +61,7 @@ std::string getexepath()
 class RemotePassTest : public TestBench
 {
 private:
-    gs::PassRPC<2, 0> m_pass; // should be first model, to handle BEOE
+    gs::PassRPC<> m_pass; // should be first model, to handle BEOE
     InitiatorTester m_initiator;
     InitiatorTester m_initiator_dma;
     gs::Router<> m_router;

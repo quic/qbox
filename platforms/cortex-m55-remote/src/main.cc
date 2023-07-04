@@ -37,9 +37,6 @@
 #include <greensocs/systemc-uarts/backends/char/stdio.h>
 #include <greensocs/systemc-uarts/backends/char/socket.h>
 
-#define TLM_PORTS_NUM 1
-#define SIGNALS_NUM   256
-
 class CPUPassRPC : public sc_core::sc_module
 {
 public:
@@ -77,7 +74,7 @@ private:
 private:
     std::vector<std::string> argv;
     cci::cci_param<std::string> remote_exec_path;
-    gs::PassRPC<TLM_PORTS_NUM, SIGNALS_NUM> m_rpc_pass;
+    gs::PassRPC<> m_rpc_pass;
 };
 
 class GreenSocsPlatform : public sc_core::sc_module
@@ -126,7 +123,19 @@ int sc_main(int argc, char* argv[]) {
     GreenSocsPlatform platform("platform");
 
     auto start = std::chrono::system_clock::now();
-    sc_core::sc_start();
+    try {
+        SCP_INFO() << "SC_START";
+        sc_core::sc_start();
+    } catch (std::runtime_error const& e) {
+        std::cerr << argv[0] << "Error: '" << e.what() << std::endl;
+        exit(1);
+    } catch (const std::exception& exc) {
+        std::cerr << argv[0] << " Error: '" << exc.what() << std::endl;
+        exit(2);
+    } catch (...) {
+        SCP_ERR() << "Unknown error (main.cc)!";
+        exit(3);
+    }
     auto end = std::chrono::system_clock::now();
 
     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start);
