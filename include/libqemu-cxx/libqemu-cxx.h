@@ -168,11 +168,12 @@ public:
     DisplayOptions display_options_new();
     std::vector<Console> get_all_consoles();
     Console console_lookup_by_index(int index);
-    SDL2Console sdl2_console_new(Console& con, void* user_data);
     DisplayGLCtxOps display_gl_ctx_ops_new(LibQemuIsCompatibleDclFn);
     Dcl dcl_new(DisplayChangeListener* dcl);
     DclOps dcl_ops_new();
 
+    std::vector<SDL2Console> sdl2_create_consoles(int num);
+    void sdl2_cleanup();
     void sdl2_2d_update(DisplayChangeListener* dcl, int x, int y, int w, int h);
     void sdl2_2d_switch(DisplayChangeListener* dcl, DisplaySurface* new_surface);
     void sdl2_2d_refresh(DisplayChangeListener* dcl);
@@ -481,6 +482,7 @@ public:
     SDL2Console(struct sdl2_console* cons, std::shared_ptr<LibQemuInternals>& internals);
     SDL2Console(const SDL2Console&) = default;
 
+    void init(Console& con, void* user_data);
     void set_hidden(bool hidden);
     void set_idx(int idx);
     void set_opts(DisplayOptions& opts);

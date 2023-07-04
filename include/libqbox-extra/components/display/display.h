@@ -147,9 +147,12 @@ public:
 
         qemu::DisplayOptions dpy_opts = lib.display_options_new();
 
+        m_sdl2_consoles = lib.sdl2_create_consoles(consoles.size());
+
         for (int i = 0; i < consoles.size(); ++i) {
             qemu::Console& cons = consoles[i];
-            qemu::SDL2Console sdl2_console = lib.sdl2_console_new(cons, this);
+            qemu::SDL2Console& sdl2_console = m_sdl2_consoles[i];
+            sdl2_console.init(cons, this);
 
             if (!cons.is_graphic() && cons.get_index() != 0) {
                 sdl2_console.set_hidden(i != 0);
@@ -176,8 +179,6 @@ public:
             SDL_GetWindowWMInfo(sdl2_console.get_real_window(), &info);
             cons.set_window_id((uintptr_t)info.info.cocoa.window);
 #endif
-
-            m_sdl2_consoles.push_back(std::move(sdl2_console));
         }
 
         m_realized = true;
@@ -207,6 +208,7 @@ public:
         m_ops.set_gfx_switch(nullptr);
         m_ops.set_gfx_update(nullptr);
         m_ops.set_refresh(nullptr);
+        inst->get().sdl2_cleanup();
     }
 
     virtual void before_end_of_elaboration() override { instantiate(); }

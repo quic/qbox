@@ -52,6 +52,10 @@ SDL2Console::SDL2Console(struct sdl2_console* cons, std::shared_ptr<LibQemuInter
     : m_cons(cons), m_int(internals) {
 }
 
+void SDL2Console::init(Console& con, void* user_data) {
+    m_int->exports().sdl2_console_init(m_cons, con.m_cons, user_data);
+}
+
 void SDL2Console::set_hidden(bool hidden) {
     m_int->exports().sdl2_console_set_hidden(m_cons, hidden);
 }

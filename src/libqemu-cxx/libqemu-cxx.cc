@@ -256,9 +256,18 @@ std::vector<Console> LibQemu::get_all_consoles() {
     return consoles;
 }
 
-SDL2Console LibQemu::sdl2_console_new(Console& con, void* user_data) {
-    sdl2_console* sdl2_cons = m_int->exports().sdl2_console_new(con.m_cons, user_data);
-    return SDL2Console(sdl2_cons, m_int);
+std::vector<SDL2Console> LibQemu::sdl2_create_consoles(int num) {
+    m_int->exports().sdl2_create_consoles(num);
+    std::vector<SDL2Console> ret;
+    for (int i = 0; i < num; ++i) {
+        sdl2_console* cons = m_int->exports().sdl2_get_console(i);
+        ret.push_back(SDL2Console(cons, m_int));
+    }
+    return ret;
+}
+
+void LibQemu::sdl2_cleanup() {
+    m_int->exports().sdl_cleanup();
 }
 
 DisplayGLCtxOps LibQemu::display_gl_ctx_ops_new(LibQemuIsCompatibleDclFn is_compatible_dcl_fn) {
