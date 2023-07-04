@@ -283,13 +283,13 @@ function get_SA8775P_adsp_config_table()
 end
 
 function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
-                 num_threads)
+                 num_threads, cluster_inst)
     local cfgtable_base_addr = base + 0x180000
     local sched_limit = true;
     assert(num_threads >= 1);
     local dsp = {
         moduletype = "hexagon_cluster";
-        args = {"&platform.qemu_inst_mgr_h", "&platform.router"};
+        args = {cluster_inst, "&platform.router"};
         hexagon_num_threads = num_threads;
         isdben_secure  = true;
         isdben_trusted = true;
@@ -298,8 +298,6 @@ function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
             sched_limit=sched_limit,
             dsp_arch=arch,
         };
-        HexagonQemuInstance = { tcg_mode="SINGLE",
-            sync_policy = "multithread-unconstrained"};
         hexagon_start_addr = start_addr;
         l2vic={  mem           = {address=ahbs_base + 0x90000,  size=0x1000};
                  fastmem       = {address=base      + 0x1e0000, size=0x10000}};

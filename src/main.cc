@@ -126,10 +126,10 @@ public:
     // initiator socket.
     gs::Router<> m_router;
     hexagon_cluster(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
-    : hexagon_cluster(name, (dynamic_cast<SC_QemuInstanceManager*>(o)->getInstMng()), *(dynamic_cast<gs::Router<>*>(t)))
+    : hexagon_cluster(name, *(dynamic_cast<QemuInstance*>(o)), *(dynamic_cast<gs::Router<>*>(t)))
     {
     }
-    hexagon_cluster(const sc_core::sc_module_name& n, QemuInstanceManager& m_inst_mgr,
+    hexagon_cluster(const sc_core::sc_module_name& n, QemuInstance& qemu_hex_inst,
                     gs::Router<>& parent_router)
         : sc_core::sc_module(n)
         , p_hexagon_num_threads("hexagon_num_threads", 8, "Number of Hexagon threads")
@@ -138,8 +138,9 @@ public:
         , p_isdben_secure("isdben_secure", false, "Value of ISDBEN.SECURE reg field")
         , p_cfgbase("cfgtable_base", 0, "config table base address")
         , p_vp_mode("vp_mode", true, "override the vp_mode for testing")
-        , m_qemu_hex_inst(
-              m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
+        // , m_qemu_hex_inst(
+        //       m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
+        , m_qemu_hex_inst(qemu_hex_inst)
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer",
                    m_qemu_hex_inst) // are we sure it's in the hex cluster?????
@@ -162,7 +163,7 @@ public:
                                     l2vic_base, qtmr_rg0, p_hexagon_start_addr, p_vp_mode);
                             })
         , m_router("router")
-        , m_global_peripheral_initiator_hex("glob-per-init-hex", m_qemu_hex_inst,
+        , m_global_peripheral_initiator_hex("glob-per-init-hex", qemu_hex_inst,
                                             m_hexagon_threads[0]) {
         parent_router.initiator_socket.bind(m_l2vic.socket);
         parent_router.initiator_socket.bind(m_l2vic.socket_fast);
@@ -314,8 +315,7 @@ int sc_main(int argc, char* argv[]) {
 
     typedef gs::PassRPC<PASSRPC_TLM_PORTS_NUM, PASSRPC_SIGNALS_NUM> PassRPC;
 
-    GSC_MODULE_REGISTER(SC_QemuInstanceManager);
-    GSC_MODULE_REGISTER(SC_QemuInstance, sc_core::sc_object*, std::string);
+    // GSC_MODULE_REGISTER(PassRPC);
     GSC_MODULE_REGISTER(hexagon_cluster, sc_core::sc_object*, sc_core::sc_object*);
 
     GreenSocsPlatform platform("platform");

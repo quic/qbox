@@ -130,7 +130,7 @@ public:
     }
 
     void end_of_elaboration() {
-        GENI_M_IRQ_ENABLE = 0xffffffff; // hack to handle broken driver (for now)
+        GENI_M_IRQ_ENABLE[M_CMD_DONE]=1; // hack to handle broken driver (for now)
         backend_socket.can_receive_set(GENI_RX_FIFO_MAX);
         /* READ functionality */
         GENI_RX_FIFO.post_read([&](TXN()) {

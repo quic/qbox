@@ -74,7 +74,8 @@ local nsp0ss = get_dsp(
         SA8540P_nsp0_config_table,
         0x89F00000, -- entry point address from bootimage_makena.cdsp0.prodQ.pbn
         NSP0_AHB_SIZE,
-        6 -- threads
+        6, -- threads
+        "&platform.qemu_hex_inst_0"
         );
 
 assert((SA8540P_nsp0_config_table[11] << 16) == nsp0ss.l2vic.fastmem.address)
@@ -92,7 +93,8 @@ local nsp1ss = get_dsp(
         SA8540P_nsp1_config_table,
         0x8C600000, -- entry point address from bootimage_makena.cdsp1.prodQ.pbn
         NSP1_AHB_SIZE,
-        6 -- threads
+        6, -- threads
+        "&platform.qemu_hex_inst_1"
         );
 assert((SA8540P_nsp1_config_table[11] << 16) == nsp1ss.l2vic.fastmem.address)
 assert((SA8540P_nsp1_config_table[3] << 16) == TURING_SS_1TURING_QDSP6V68SS_CSR)
@@ -177,19 +179,33 @@ platform = {
     },
 
     qemu_inst_mgr = {
-        moduletype = "SC_QemuInstanceManager";
+        moduletype = "QemuInstanceManager";
     },
 
     qemu_inst_mgr_h = {
-        moduletype = "SC_QemuInstanceManager";
+        moduletype = "QemuInstanceManager";
     },
 
     qemu_inst= {
-        moduletype="SC_QemuInstance";
+        moduletype="QemuInstance";
         args = {"&platform.qemu_inst_mgr", "AARCH64"};
-        QemuInstance = {tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
+        tcg_mode="MULTI",
+        sync_policy = "multithread-unconstrained"
     },
 
+    qemu_hex_inst_0= {
+        moduletype="QemuInstance";
+        args = {"&platform.qemu_inst_mgr_h", "HEXAGON"};
+        tcg_mode="SINGLE",
+        sync_policy = "multithread-unconstrained"
+    },
+
+    qemu_hex_inst_1= {
+        moduletype="QemuInstance";
+        args = {"&platform.qemu_inst_mgr_h", "HEXAGON"};
+        tcg_mode="SINGLE",
+        sync_policy = "multithread-unconstrained"
+    },
 
     gic_0=  {
                 moduletype = "QemuArmGicv3",
