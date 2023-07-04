@@ -38,7 +38,7 @@ private:
 
 public:
     QemuVirtioMMIOBlk(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : QemuVirtioMMIOBlk(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst())
+        : QemuVirtioMMIOBlk(name, *(dynamic_cast<QemuInstance*>(o)))
         {
         }
     QemuVirtioMMIOBlk(sc_core::sc_module_name nm, QemuInstance& inst)

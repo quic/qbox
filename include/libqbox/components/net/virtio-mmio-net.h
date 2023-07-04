@@ -38,7 +38,7 @@ private:
 
 public:
     QemuVirtioMMIONet(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : QemuVirtioMMIONet(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst())
+        : QemuVirtioMMIONet(name, *(dynamic_cast<QemuInstance*>(o)))
         {
         }
     QemuVirtioMMIONet(sc_core::sc_module_name nm, QemuInstance& inst)

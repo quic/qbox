@@ -976,38 +976,11 @@ public:
 #endif
     }
 
-    void end_of_simulation() { stop(); }
-
-private:
-    cci::cci_broker_handle m_broker;
-    str_pairs m_cci_db;
-    std::mutex m_cci_db_mut;
-    rpc::client* client = nullptr;
-    rpc::server* server = nullptr;
-    int m_child_pid = 0;
-    ProcAliveHandler pahandler;
-    std::condition_variable is_client_connected;
-    std::condition_variable is_sc_status_set;
-    std::mutex client_conncted_mut;
-    std::mutex sc_status_mut;
-    std::atomic_bool cancel_waiting;
-    std::thread::id sc_tid;
-    std::queue<std::pair<int, bool>> sig_queue;
-    std::mutex sig_queue_mut;
-    sc_core::sc_status m_remote_status = static_cast<sc_core::sc_status>(0);
-    int targets_bound = 0;
-    gs::RunOnSysC m_sc;
-    trans_waiter btspt_waiter;
-
-public:
-    sc_core::sc_vector<tlm_target_socket> target_sockets;
-    sc_core::sc_vector<initiator_socket_spying> initiator_sockets;
-    sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets;
-    sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
-    cci::cci_param<int> p_cport;
-    cci::cci_param<int> p_sport;
-    cci::cci_param<std::string> p_exec_path;
-};
-
+    void end_of_simulation()
+    {
+        // m_qk->stop();
+        stop();
+    }
+}; // namespace gs
 } // namespace gs
 #endif

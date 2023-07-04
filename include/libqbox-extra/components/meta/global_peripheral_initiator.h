@@ -22,7 +22,7 @@
 
 #include "libqbox/ports/initiator.h"
 #include "libqbox/components/device.h"
-#include "libqbox/sc-qemu-instance.h"
+#include "libqbox/qemu-instance.h"
 #include <greensocs/gsutils/module_factory_registery.h>
 
 class GlobalPeripheralInitiator : public QemuInitiatorIface, public sc_core::sc_module
@@ -39,7 +39,7 @@ public:
 
     QemuInitiatorSocket<> m_initiator;
     GlobalPeripheralInitiator(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
-        : GlobalPeripheralInitiator(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst(), *(dynamic_cast<QemuDevice*>(t)))
+        : GlobalPeripheralInitiator(name, *(dynamic_cast<QemuInstance*>(o)), *(dynamic_cast<QemuDevice*>(t)))
         {
         }
     GlobalPeripheralInitiator(const sc_core::sc_module_name& nm, QemuInstance& inst,

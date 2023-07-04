@@ -105,7 +105,7 @@ protected:
 
 public:
     QemuGPEX(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : QemuGPEX(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst())
+        : QemuGPEX(name, *(dynamic_cast<QemuInstance*>(o)))
         {
         }
     QemuGPEX(const sc_core::sc_module_name& name, QemuInstance& inst, uint64_t mmio_addr=0x00,

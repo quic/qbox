@@ -29,7 +29,7 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
-#include "libqbox/sc-qemu-instance.h"
+#include "libqbox/qemu-instance.h"
 #include <greensocs/gsutils/module_factory_registery.h>
 
 class QemuArmGicv3 : public QemuDevice
@@ -63,7 +63,7 @@ public:
     sc_core::sc_vector<QemuInitiatorSignalSocket> virq_out;
     sc_core::sc_vector<QemuInitiatorSignalSocket> vfiq_out;
     QemuArmGicv3(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : QemuArmGicv3(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst())
+        : QemuArmGicv3(name, *(dynamic_cast<QemuInstance*>(o)))
         {
         }
     QemuArmGicv3(const sc_core::sc_module_name& name, QemuInstance& inst, unsigned num_cpus = 0)

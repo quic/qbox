@@ -35,7 +35,7 @@ class QemuRtl8139Pci : public QemuGPEX::Device
 
 public:
     QemuRtl8139Pci(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
-    : QemuRtl8139Pci(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst(), (dynamic_cast<QemuGPEX*>(t)))
+    : QemuRtl8139Pci(name, *(dynamic_cast<QemuInstance*>(o)), (dynamic_cast<QemuGPEX*>(t)))
     {
     }
     QemuRtl8139Pci(const sc_core::sc_module_name& name, QemuInstance& inst, QemuGPEX* gpex)

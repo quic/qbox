@@ -43,6 +43,81 @@ class QemuDeviceBaseIF
 public:
     virtual bool can_run() { return true; }
 };
+
+class QemuInstance;
+
+/**
+ * @class QemuInstanceManager
+ *
+ * @brief QEMU instance manager class
+ *
+ * @details This class manages QEMU instances. It allows to create instances
+ * using the same library loader, thus allowing multiple instances of the same
+ * library being loaded.
+ */
+class QemuInstanceManager : public sc_core::sc_module
+{
+public:
+    using Target = qemu::Target;
+    using LibLoader = qemu::LibraryLoaderIface;
+
+protected:
+    LibLoader* m_loader;
+    std::vector<std::reference_wrapper<QemuInstance>> m_insts;
+
+public:
+    /**
+     * @brief Construct a QemuInstanceManager. The manager will use the default
+     * library loader provided by libqemu-cxx.
+     */
+    QemuInstanceManager(const sc_core::sc_module_name& n = "QemuInstanceManager")
+    : sc_core::sc_module(n)
+    , m_loader(qemu::get_default_lib_loader()) {}
+
+    /**
+     * @brief Construct a QemuInstanceManager by providing a custom library loader
+     *
+     * @param[in] loader The custom loader
+     */
+    QemuInstanceManager(const sc_core::sc_module_name& n, LibLoader* loader)
+    : sc_core::sc_module(n)
+    , m_loader(loader) {}
+
+    LibLoader& get_loader(){
+        return *m_loader;
+    }
+
+    /**
+     * @brief Returns a new QEMU instance for target t
+     */
+    QemuInstance& new_instance(const std::string& n, Target t) {
+        // QemuInstance* ptr = new QemuInstance(n.c_str(), *m_loader, t);
+        QemuInstance* ptr = nullptr;
+        reg_inst(ptr);
+
+        return *ptr;
+    }
+
+    void reg_inst(QemuInstance* inst_ptr){
+        m_insts.push_back(*inst_ptr);
+    }
+
+    QemuInstance& new_instance(Target t) { return new_instance("QemuInstance", t); }
+
+    /* Destructor should only be called at the end of the program, if it is called before, then all
+     * Qemu instances that it manages will, of course, be destroyed too
+     */
+    virtual ~QemuInstanceManager() {
+        while (m_insts.size()) {
+            delete &m_insts.back().get();
+            m_insts.pop_back();
+        }
+        delete m_loader;
+    }
+};
+
+GSC_MODULE_REGISTER(QemuInstanceManager);
+
 /**
  * @class QemuInstance
  *
@@ -134,7 +209,7 @@ protected:
             "-serial", "null",  /* no serial backend */
         });
 
-        const char* args = "args.";
+        const char* args = "qemu_args."; /* Update documentations because it's not anymore 'args.' it's 'qemu_args.' */
         for (auto p : m_conf_broker.get_unconsumed_preset_values(
                  [&](const std::pair<std::string, cci::cci_value>& iv) {
                      return iv.first.find(std::string(name()) + "." + args) == 0;
@@ -208,13 +283,44 @@ protected:
         }
     }
 
+    LibLoader& get_loader(sc_core::sc_object* o){
+        QemuInstanceManager* inst_mgr = dynamic_cast<QemuInstanceManager*>(o);
+        if (!inst_mgr){
+            SCP_FATAL(SCMOD) << "Object is not a QemuInstanceManager";
+        }
+        return inst_mgr->get_loader();
+
+    }
+
+    Target strtotarget(std::string s)
+    {
+        if (s == "AARCH64") {
+            return QemuInstance::Target::AARCH64;
+        }
+        else if (s == "RISCV64") {
+            return QemuInstance::Target::RISCV64;
+        }
+        else if (s == "HEXAGON") {
+            return QemuInstance::Target::HEXAGON;
+        }
+        else {
+            SCP_FATAL(SCMOD) << "Unable to find QEMU target container";
+        }
+    }
+
 public:
+    QemuInstance(const sc_core::sc_module_name& n, sc_core::sc_object* o, std::string arch)
+    : QemuInstance(n, get_loader(o), strtotarget(arch))
+    {
+        QemuInstanceManager* inst_mgr = dynamic_cast<QemuInstanceManager*>(o);
+        inst_mgr->reg_inst(this);
+    }
     QemuInstance(const sc_core::sc_module_name& n, LibLoader& loader, Target t)
         : sc_core::sc_module(n)
         , m_conf_broker(cci::cci_get_broker())
         , m_inst(loader, t)
         , m_dmi_mgr(m_inst)
-        , p_args("args", "", "additional space separated arguments")
+        , p_args("qemu_args", "", "additional space separated arguments")
         , p_tcg_mode("tcg_mode", "MULTI", "The TCG mode required, SINGLE, COROUTINE or MULTI")
         , p_sync_policy("sync_policy", "multithread-quantum", "Synchronization Policy to use")
         , m_tcg_mode(StringToTcgMode(p_tcg_mode))
@@ -369,59 +475,6 @@ private:
     void start_of_simulation(void) { get().finish_qemu_init(); }
 };
 
-/**
- * @class QemuInstanceManager
- *
- * @brief QEMU instance manager class
- *
- * @details This class manages QEMU instances. It allows to create instances
- * using the same library loader, thus allowing multiple instances of the same
- * library being loaded.
- */
-class QemuInstanceManager
-{
-public:
-    using Target = qemu::Target;
-    using LibLoader = qemu::LibraryLoaderIface;
+GSC_MODULE_REGISTER(QemuInstance, sc_core::sc_object*, std::string);
 
-protected:
-    LibLoader* m_loader;
-    std::vector<std::reference_wrapper<QemuInstance>> m_insts;
-
-public:
-    /**
-     * @brief Construct a QemuInstanceManager. The manager will use the default
-     * library loader provided by libqemu-cxx.
-     */
-    QemuInstanceManager(): m_loader(qemu::get_default_lib_loader()) {}
-
-    /**
-     * @brief Construct a QemuInstanceManager by providing a custom library loader
-     *
-     * @param[in] loader The custom loader
-     */
-    QemuInstanceManager(LibLoader* loader): m_loader(loader) {}
-
-    /**
-     * @brief Returns a new QEMU instance for target t
-     */
-    QemuInstance& new_instance(const std::string& n, Target t) {
-        QemuInstance* ptr = new QemuInstance(n.c_str(), *m_loader, t);
-        m_insts.push_back(*ptr);
-
-        return *ptr;
-    }
-    QemuInstance& new_instance(Target t) { return new_instance("QemuInstance", t); }
-
-    /* Destructor should only be called at the end of the program, if it is called before, then all
-     * Qemu instances that it manages will, of course, be destroyed too
-     */
-    virtual ~QemuInstanceManager() {
-        while (m_insts.size()) {
-            delete &m_insts.back().get();
-            m_insts.pop_back();
-        }
-        delete m_loader;
-    }
-};
 #endif

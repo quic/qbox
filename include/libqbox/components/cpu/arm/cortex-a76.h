@@ -92,7 +92,7 @@ public:
     QemuInitiatorSignalSocket irq_maintenance_out;
     QemuInitiatorSignalSocket irq_pmu_out;
     QemuCpuArmCortexA76(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : QemuCpuArmCortexA76(name, dynamic_cast<SC_QemuInstance*>(o)->getQemuInst())
+        : QemuCpuArmCortexA76(name, *(dynamic_cast<QemuInstance*>(o)))
         {
         }
     QemuCpuArmCortexA76(const sc_core::sc_module_name& name, QemuInstance& inst)
