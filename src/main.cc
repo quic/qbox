@@ -47,7 +47,7 @@
 #include <libqbox/components/net/virtio-mmio-net.h>
 #include <libqbox/components/blk/virtio-mmio-blk.h>
 #include <libqbox/components/mmu/arm-smmu.h>
-#include <libqbox/sc-qemu-instance.h>
+#include <libqbox/qemu-instance.h>
 
 #include <libqbox-extra/components/meta/global_peripheral_initiator.h>
 #include <libqbox-extra/components/pci/gpex.h>
@@ -203,8 +203,6 @@ class GreenSocsPlatform : public gs::ModuleFactory::Container
 protected:
 
     cci::cci_param<int> p_quantum_ns;
-
-    sc_core::sc_vector<gs::Memory<>> m_fallback_mem;
 
 public:
     GreenSocsPlatform(const sc_core::sc_module_name& n)

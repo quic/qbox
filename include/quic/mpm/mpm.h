@@ -20,6 +20,7 @@
 #pragma once
 
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
+#include <greensocs/gsutils/module_factory_container.h>
 #include <systemc>
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
@@ -162,3 +163,4 @@ public:
         sensitive << update_ev;
     }
 };
+GSC_MODULE_REGISTER(mpm_control);

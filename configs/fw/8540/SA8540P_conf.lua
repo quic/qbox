@@ -14,6 +14,8 @@ function top()
 dofile(top().."../utils.lua");
 print ("Lua config running. . . ");
 
+INITIAL_DDR_SPACE_14GB = 0x80000000
+
 local MAKENA_REGS_CSV = valid_file(top().."8540_Registers.csv")
 local QDSP6_CFG   = valid_file(top().."../qdsp6.lua")
 
@@ -132,7 +134,6 @@ zipfile = valid_file(top().."../top.zip");
 platform = {
     with_gpu = false;
 
-    hexagon_num_clusters = 2;
     quantum_ns = 10000000;
 
     moduletype="Container";
@@ -151,19 +152,19 @@ platform = {
                 target_socket = {bind = "&router.initiator_socket";}
                 };
     
-    -- ram_0 = {
-    --     moduletype="Memory";
-    --     target_socket = {"&platform.DDR_space", bind= "&router.initiator_socket"},
-    -- },
+--    ram_0 = {
+--        moduletype="Memory";
+--        target_socket = {"&platform.DDR_space", bind= "&router.initiator_socket"},
+--    },
 
     DDR_space_1 = {moduletype="Memory";
                 target_socket = {bind = "&router.initiator_socket";}
                 };
 
-    -- ram_1 = {
-    --     moduletype="Memory";
-    --     target_socket= {"&platform.DDR_space_1", bind = "&router.initiator_socket";}
-    -- },
+--    ram_1 = {
+--        moduletype="Memory";
+--        target_socket= {"&platform.DDR_space_1", bind = "&router.initiator_socket";}
+--    },
 
     hexagon_ram_0 = {
         moduletype="Memory";
@@ -231,12 +232,11 @@ platform = {
                 args = {"&platform.qemu_inst", "&platform.gpex_0"},
                 netdev_str = "type=user",
     };
---    virtioblk_0= { mem    =   {address=0x1c0d0000, size=0x2000}, 
---                     irqs = {
---                         {irq=9, dst = "platform.gic.spi_in_9"},
---                     };
---                     blkdev_str="file="..SYSTEM_QDRIVE..",format=raw,if=none",
---     };
+
+    mpm_0 = {
+                    moduletype="mpm_control",
+                    socket = {address=0x0C210000, size=0x1000, bind="&router.initiator_socket"},
+    };
 
     qtimer_0=   { 
         moduletype = "QemuHexagonQtimer",
@@ -252,32 +252,19 @@ platform = {
         irq_6 = {bind = "&gic_0.spi_in_46"},
         nr_frames=7;nr_views=2;cnttid=0x1111515};
 
-    -- charbackend_stdio_0 = {
-    --     moduletype = "CharBackendStdio";
-    --     args = {false};
-    -- };
-
-    -- pl011 = {
-    --     moduletype = "Pl011",
-    --     args = {"&platform.charbackend_stdio_0"};
-    --     simple_target_socket_0 = {address= UART0,
-    --                               size=0x1000, 
-    --                               bind = "&router.initiator_socket"},
-    --     irq = {bind = "&gic_0.spi_in_379"},
-    -- };
-
-    -- qupv3_qupv3_se_wrapper_se0_backend_0 = {
-    --     moduletype = "CharBFBackendStdio";
-    --     biflow_socket = {bind = "&qupv3_qupv3_se_wrapper_se0_0.backend_socket"},
-    -- };
-
-    -- qupv3_qupv3_se_wrapper_se0_0 = {
-    --     moduletype = "qupv3_qupv3_se_wrapper_se0",
-    --     target_socket={"&platform.qupv3_0_qupv3_id_0", bind = "&router.initiator_socket"},
-    --     -- target_socket={address=0x880000, size=0x10000, bind = "&router.initiator_socket"},
-    --     irq = {bind = "&gic_0.spi_in_666"},
-    --     input = true
-    -- };
+--    charbackend_stdio_0 = {
+--        moduletype = "CharBackendStdio";
+--        args = {false};
+--    };
+--
+--    pl011 = {
+--        moduletype = "Pl011",
+--        args = {"&platform.charbackend_stdio_0"};
+--        simple_target_socket_0 = {address= UART0,
+--                                  size=0x1000, 
+--                                  bind = "&router.initiator_socket"},
+--        irq = {bind = "&gic_0.spi_in_379"},
+--    };
 
     ipc_router_top = {
             moduletype = "IPCC",
@@ -286,7 +273,21 @@ platform = {
             irq_18 = {bind = "&hexagon_cluster_1.l2vic.irq_in_30"},
             irq_6 = {bind = "&hexagon_cluster_0.l2vic.irq_in_30"},
         };
-    mpm = { socket = {address=0x0C210000, size=0x1000}};
+
+    usb_0 = {
+        moduletype = "QemuXhci",
+        args = {"&platform.qemu_inst", "&platform.gpex_0"},
+    };
+
+    kbd_0 = {
+        moduletype = "QemuKbd",
+        args = {"&platform.qemu_inst", "&platform.usb_0"},
+    };
+
+    tablet_0 = {
+        moduletype = "QemuTablet",
+        args = {"&platform.qemu_inst", "&platform.usb_0"},
+    };
 
     gpex_0 = {
         moduletype = "QemuGPEX";
@@ -465,12 +466,8 @@ if (ARM_NUM_CPUS > 0) then
             platform["backend_"..tostring(qup_index)] = backend;
             local qup = {
                 moduletype = "qupv3_qupv3_se_wrapper_se0",
-                -- args = {"&platform.backend_"..tostring(qup_index)};
-                -- simple_target_socket_0 = {address=bank.addr + (i_0*QUP_PITCH),
-                --     size=QUP_SIZE, bind="&router.initiator_socket"},
                 target_socket = {address=bank.addr + (i_0*QUP_PITCH),
                     size=QUP_SIZE, bind="&router.initiator_socket"},
-                -- target_socket={"&platform.qupv3_"..i.."_qupv3_id_0", bind = "&router.initiator_socket"},
                 irq = {bind = "&gic_0.spi_in_"..spi_irq},
             };
             platform["uart_qup_"..tostring(qup_index)] = qup;
@@ -500,7 +497,7 @@ if (ARM_NUM_CPUS > 0) then
             start_powered_off = true;
         };
         if (i==0) then
-            cpu["rvbar"] = platform.ram_0.target_socket.address;
+            cpu["rvbar"] = INITIAL_DDR_SPACE_14GB;
             cpu["start_powered_off"] = false;
         end
         platform["cpu_"..tostring(i)]=cpu;

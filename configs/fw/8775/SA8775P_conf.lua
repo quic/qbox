@@ -13,6 +13,8 @@ function top()
 dofile(top().."../utils.lua");
 print ("Lua config running. . . ");
 
+INITIAL_DDR_SPACE_14GB = 0x80000000
+
 local HEX_DIGITS='0123456789ABCDEF'
 
 local MAKENA_REGS_CSV = valid_file(top().."8540_Registers.csv")
@@ -86,7 +88,7 @@ local nsp0ss = get_dsp(
         SA8775P_nsp0_config_table,
         0x9B800000, -- entry point address from bootimage_lemans.cdsp0.prodQ.pbn
         NSP0_AHB_SIZE,
-        6 -- threads
+        6, -- threads
         "&platform.qemu_hex_inst_0"
         );
 assert((SA8775P_nsp0_config_table[3] << 16) == TURING_SS_0TURING_QDSP6V68SS_CSR)
@@ -104,7 +106,7 @@ local nsp1ss = get_dsp(
         SA8775P_nsp1_config_table,
         0x9D700000, -- entry point address from bootimage_lemans.cdsp1.prodQ.pbn
         NSP1_AHB_SIZE,
-        6 -- threads
+        6, -- threads
         "&platform.qemu_hex_inst_1"
         );
 assert((SA8775P_nsp1_config_table[11] << 16) == nsp1ss.l2vic.fastmem.address)
@@ -121,7 +123,7 @@ local adsp = get_dsp(
         SA8775P_adsp_config_table,
         0x95C00000, -- entry point address from bootimage_lemans.adsp.prodQ.pbn
         ADSP_AHB_SIZE,
-        2 -- threads
+        2, -- threads
         "&platform.qemu_hex_inst_2"
         );
 assert((SA8775P_adsp_config_table[11] << 16) == adsp.l2vic.fastmem.address)
@@ -164,14 +166,13 @@ zipfile = valid_file(top().."../top.zip");
 platform = {
     with_gpu = false;
 
-    hexagon_num_clusters = 3;
-    quantum_ns = 10000000;
-
     moduletype="Container";
 
     hexagon_cluster_0 = nsp0ss;
     hexagon_cluster_1 = nsp1ss;
     hexagon_cluster_2 = adsp;
+
+    quantum_ns = 10000000;
 
     router = {
         moduletype="Router";
@@ -179,38 +180,34 @@ platform = {
         -- target_socket = {bind = "&tbu_2.downstream_socket"};
     },
 
-    DDR_space = {moduletype="Memory";
-                target_socket = {bind = "&router.initiator_socket";},
-                shared_memory=IS_SHARED_MEM};
+   DDR_space = {moduletype="Memory";
+               target_socket = {bind = "&router.initiator_socket";},
+               shared_memory=IS_SHARED_MEM};
 
-    -- ram_0=  {  
+    -- ram_0=  {
     --             moduletype="Memory";
-    --             target_socket = {address=INITIAL_DDR_SPACE_14GB,
-    --                                 size=DDR_SPACE_SIZE/2,
-    --                                 bind = "&router.initiator_socket";}, 
+    --             target_socket = {"&platform.DDR_space", bind= "&router.initiator_socket"},
     --             shared_memory=IS_SHARED_MEM};
 
-    DDR_space_1 = {moduletype="Memory";
-                target_socket = {bind = "&router.initiator_socket";},
-                shared_memory=IS_SHARED_MEM};
+   DDR_space_1 = {moduletype="Memory";
+               target_socket = {bind = "&router.initiator_socket";},
+               shared_memory=IS_SHARED_MEM};
 
-    -- ram_1=  {  
+    -- ram_1=  {
     --             moduletype="Memory";
-    --             target_socket = {address=INITIAL_DDR_SPACE_14GB+(DDR_SPACE_SIZE/2),
-    --                             size=DDR_SPACE_SIZE/2,
-    --                             bind = "&router.initiator_socket";},
+    --             target_socket= {"&platform.DDR_space_1", bind = "&router.initiator_socket"},
     --             shared_memory=IS_SHARED_MEM};
 
     hexagon_ram_0={
                     moduletype="Memory";
-                    target_socket={address=NSP0_VTCM_BASE_ADDR,
-                                    size=NSP0_VTCM_SIZE_BYTES,
+                    target_socket={address=NSP0_VTCM_BASE_ADDR, -- 0x25000000
+                                    size=NSP0_VTCM_SIZE_BYTES,  -- 0x00800000
                                     bind = "&router.initiator_socket";}};
 
     hexagon_ram_1={
                     moduletype="Memory";
-                    target_socket={address=NSP1_VTCM_BASE_ADDR,
-                                    size=NSP1_VTCM_SIZE_BYTES;
+                    target_socket={address=NSP1_VTCM_BASE_ADDR, -- 0x29000000
+                                    size=NSP1_VTCM_SIZE_BYTES;  -- 0x00800000
                                     bind = "&router.initiator_socket";}};
 
 
@@ -265,12 +262,16 @@ platform = {
                     mem    =   {address=0x1c120000, size=0x10000, bind = "&router.initiator_socket"},
                     irq_out = {bind = "&gic_0.spi_in_18"},
                     netdev_str="type=user,hostfwd=tcp::2222-:22,hostfwd=tcp::2221-:21,hostfwd=tcp::56283-:56283,hostfwd=tcp::55534-:65534,hostfwd=tcp::55535-:65535"};
---    virtioblk_0= { mem    =   {address=0x1c0d0000, size=0x2000}, irq=9, blkdev_str="file="..SYSTEM_QDRIVE..",format=raw,if=none"};
 
     rtl8139_0= {
         moduletype = "QemuRtl8139Pci",
         args = {"&platform.qemu_inst", "&platform.gpex_0"},
         netdev_str = "type=user",
+    };
+
+    mpm_0 = {
+        moduletype="mpm_control",
+        socket = {address=0x0C210000, size=0x1000, bind="&router.initiator_socket"},
     };
 
     qtimer_0=   {
@@ -301,19 +302,6 @@ platform = {
     --     irq = {bind = "&gic_0.spi_in_379"},
     -- };
 
-    -- qupv3_qupv3_se_wrapper_se0_backend_0 = {
-    --     moduletype = "CharBFBackendStdio";
-    --     biflow_socket = {bind = "&qupv3_qupv3_se_wrapper_se0_0.backend_socket"},
-    -- };
-
-    -- qupv3_qupv3_se_wrapper_se0_0 = {
-    --     moduletype = "qupv3_qupv3_se_wrapper_se0",
-    --     target_socket={"&platform.qupv3_0_qupv3_id_0", bind = "&router.initiator_socket"},
-    --     -- target_socket={address=0x880000, size=0x10000, bind = "&router.initiator_socket"},
-    --     irq = {bind = "&gic_0.spi_in_666"},
-    --     input = true
-    -- };
-
     ipcc_0= {
             moduletype="IPCC",
             target_socket = {address=IPC_ROUTER_TOP, size=0xfc000, bind = "&router.initiator_socket"},
@@ -342,6 +330,21 @@ platform = {
         irq_num_3 = 0;
     };
 
+    usb_0 = {
+        moduletype = "QemuXhci",
+        args = {"&platform.qemu_inst", "&platform.gpex_0"},
+    };
+
+    kbd_0 = {
+        moduletype = "QemuKbd",
+        args = {"&platform.qemu_inst", "&platform.usb_0"},
+    };
+
+    tablet_0 = {
+        moduletype = "QemuTablet",
+        args = {"&platform.qemu_inst", "&platform.usb_0"},
+    };
+
     -- qtb = { control_socket = {address=0x15180000, size=0x80000}};
     -- The QTB model is not active in the system, left here for debug purposes.
 
@@ -350,7 +353,7 @@ platform = {
     tbu_0 = {
         moduletype = "smmu500_tbu",
         args = {"&platform.smmu_0"},
-        topology_id=0x31A0,
+        topology_id=0x21C0,
         upstream_socket = { address=NSP0_AHB_HIGH,
                             size=0xF00000000-NSP0_AHB_HIGH,
                             relative_addresses=false,
@@ -362,7 +365,7 @@ platform = {
     tbu_1 = {
        moduletype = "smmu500_tbu",
        args = {"&platform.smmu_0"},
-       topology_id=0x39A0,
+       topology_id=0x29C0,
        upstream_socket = { address=NSP1_AHB_HIGH,
                            size=0xF00000000-NSP1_AHB_HIGH,
                            relative_addresses=false,
@@ -522,12 +525,8 @@ if (ARM_NUM_CPUS > 0) then
             platform["backend_"..tostring(qup_index)] = backend;
             local qup = {
                 moduletype = "qupv3_qupv3_se_wrapper_se0",
-                -- args = {"&platform.backend_"..tostring(qup_index)};
-                -- simple_target_socket_0 = {address=bank.addr + (i_0*QUP_PITCH),
-                --     size=QUP_SIZE, bind="&router.initiator_socket"},
                 target_socket = {address=bank.addr + (i_0*QUP_PITCH),
                     size=QUP_SIZE, bind="&router.initiator_socket"},
-                -- target_socket={"&platform.qupv3_"..i.."_qupv3_id_0", bind = "&router.initiator_socket"},
                 irq = {bind = "&gic_0.spi_in_"..spi_irq},
             };
             platform["uart_qup_"..tostring(qup_index)] = qup;
@@ -554,7 +553,7 @@ if (ARM_NUM_CPUS > 0) then
             start_powered_off = true;
         };
         if (i==0) then
-            cpu["rvbar"] = platform.ram_0.target_socket.address;
+            cpu["rvbar"] = INITIAL_DDR_SPACE_14GB;
             cpu["start_powered_off"] = false;
         end
         platform["cpu_"..tostring(i)]=cpu;
