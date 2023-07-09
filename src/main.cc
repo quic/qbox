@@ -23,6 +23,7 @@
 
 #include <chrono>
 #include <string>
+#include <getopt.h>
 
 #include <systemc>
 #include <cci_configuration>
@@ -743,7 +744,67 @@ public:
     }
 };
 
+static void parse_local_args(int argc, char* argv[]) {
+    // getopt permutes argv array, so copy it to argv_cp
+    const int BUFFER_SIZE = 8192;
+    char argv_buffer[BUFFER_SIZE];
+    char* buffer_p = argv_buffer;
+    char** argv_cp = new char*[argc];
+    for (int i = 0; i < argc; i++) {
+        size_t len = strlen(argv[i]) + 1; // count \0
+        strcpy(buffer_p, argv[i]);
+        argv_cp[i] = buffer_p;
+        buffer_p += len;
+    }
+
+    // configure getopt
+    optind = 0; // reset of getopt
+    opterr = 0; // avoid error message for not recognized option
+    static const char* optstring = "hv";
+    static struct option long_options[] = { { "help", no_argument, 0, 'h' },
+                                            { "version", no_argument, 0, 'v' },
+                                            { 0, 0, 0, 0 } };
+    while (1) {
+        int c = getopt_long(argc, argv_cp, optstring, long_options, 0);
+        if (c == EOF)
+            break;
+        if (c == 'h') {
+            std::cout << "\nPossible Options/Arguments:\n"
+                         "\n"
+                         "      --gs_luafile <filename>\n"
+                         "        execute a Lua script and loads all the globals as\n"
+                         "        parameters [required]\n"
+                         "\n"
+                         "      --param <param_name=value>\n"
+                         "        set param name (foo.baa) to value\n"
+                         "\n"
+                         "      --debug\n"
+                         "        shows the state of the configurable parameters at\n"
+                         "        the beginning of the simulation and halts.\n"
+                         "\n"
+                         "      --version\n"
+                         "        displays the qqvp version\n"
+                         "\n"
+                         "      --help\n"
+                         "        this help\n"
+                         "\n"
+                         "      Any extra arguments will be treated as lua config\n"
+                         "      files. That is, as --gs_luafile arguments.\n"
+                         "\n"
+                      << std::flush;
+            exit(0);
+        } else if (c == 'v') {
+            std::cout << "\nQualcomm QEMU-Virtual Platform " << QQVP_VERSION << "\n"
+                      << std::flush;
+            exit(0);
+        }
+    }
+
+    delete[] argv_cp;
+}
+
 int sc_main(int argc, char* argv[]) {
+    parse_local_args(argc, argv);
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)
                           .logAsync(false)

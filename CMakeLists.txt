@@ -45,6 +45,14 @@ add_executable(vp
     src/main.cc
 )
 
+execute_process(
+    COMMAND sh -c "{ git describe --dirty --tags --always --abbrev || cat VERSION; } | tr -d '\n'"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE QQVP_VERSION
+    COMMAND_ERROR_IS_FATAL ANY)
+message(STATUS "QQVP_VERSION = ${QQVP_VERSION}")
+target_compile_definitions(vp PRIVATE -DQQVP_VERSION="${QQVP_VERSION}")
+
 target_include_directories(
     ${PROJECT_NAME} INTERFACE
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
