@@ -18,34 +18,82 @@ _KERNEL64_LOAD_ADDR =0x00080000
 _DTB_LOAD_ADDR =     0x08000000
 dofile (top().."fw/config/arm64_bootloader.lua")
 
+local ARCH_TIMER_VIRT_IRQ = 16 + 11
+local ARCH_TIMER_S_EL1_IRQ = 16 + 13
+local ARCH_TIMER_NS_EL1_IRQ = 16 + 14
+local ARCH_TIMER_NS_EL2_IRQ = 16 + 10
+
+local ARM_NUM_CPUS = 4;
+local NUM_REDISTS = 1;
+
 platform = {
-    arm_num_cpus = 4;
+
     quantum_ns = 100000000;
-    
-    ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
+
+    moduletype="Container";
 
     -- cpu_0 = { gdb_port = 1234 };
 
-    gic=   { dist_iface     = {address=0xc8000000, size=0x10000 };
-             redist_iface_0 = {address=0xc8010000, size=0x20000 }};
-    ram=   { target_socket  = {address=0x00000000, size=0x10000000}};
-    uart=  { mem = {address= 0xc0000000, size=0x1000}, irq=1};
+    router = {
+        moduletype="Router";
+    },
 
-    fallback_memory = { target_socket={address=0x0, size=0x100000000}, dmi_allow=false, verbose=true};
+    qemu_inst_mgr = {
+        moduletype = "QemuInstanceManager";
+    },
+
+    qemu_inst= {
+        moduletype="QemuInstance";
+        args = {"&platform.qemu_inst_mgr", "AARCH64"};
+        tcg_mode="MULTI",
+        sync_policy = "multithread-unconstrained"
+    },
+
+    gic_0=  {
+        moduletype = "QemuArmGicv3",
+        args = {"&platform.qemu_inst"},
+        dist_iface    = {address=0xc8000000, size= 0x10000, bind = "&router.initiator_socket"};
+        redist_iface_0= {address=0xc8010000, size=0x20000, bind = "&router.initiator_socket"};
+        num_cpus = ARM_NUM_CPUS,
+        -- 64 seems reasonable, but can be up to
+        -- 960 or 987 depending on how the gic
+        -- is used MUST be a multiple of 32
+        redist_region = {ARM_NUM_CPUS / NUM_REDISTS};
+        num_spi=64};
+
+    ram_0 = {
+       moduletype="Memory";
+       target_socket = {address=0x00000000, size=0x10000000, bind= "&router.initiator_socket"},
+   };
+
+    qemu_pl011 = {
+        moduletype = "QemuUartPl011",
+        args = {"&platform.qemu_inst"};
+        mem = {address= 0xc0000000,
+                                    size=0x1000, 
+                                    bind = "&router.initiator_socket"},
+        irq_out = {bind = "&gic_0.spi_in_1"},
+    };
 
     load={
+        moduletype = "Loader",
+        initiator_socket = {bind = "&router.target_socket"};
         {data=_bootloader_aarch64, address=0x00000000 }; -- align address with rvbar
-        {data={0x30001000, -- stack pointer
-               0x30000000} -- reset pointer
-                            , address = 0x20000000}; -- m7 reset vectors
     }
 };
 
-if (platform.arm_num_cpus > 0) then
-    for i=0,(platform.arm_num_cpus-1) do
+if (ARM_NUM_CPUS > 0) then
+    for i=0,(ARM_NUM_CPUS-1) do
         local cpu = {
+            moduletype = "QemuCpuArmCortexA53";
+            args = {"&platform.qemu_inst"};
+            mem = {bind = "&router.target_socket"};
             has_el3 = true;
             has_el3 = false;
+            irq_timer_phys_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_NS_EL1_IRQ},
+            irq_timer_virt_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_VIRT_IRQ},
+            irq_timer_hyp_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_NS_EL2_IRQ},
+            irq_timer_sec_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_S_EL1_IRQ},
             psci_conduit = "hvc";
             mp_affinity = (math.floor(i / 8) << 8) | (i % 8);
             start_powered_off = true;
@@ -55,6 +103,11 @@ if (platform.arm_num_cpus > 0) then
             cpu["start_powered_off"] = false;
         end
         platform["cpu_"..tostring(i)]=cpu;
+
+        platform["gic_0"]["irq_out_" .. i] = {bind="&cpu_"..i..".irq_in"}
+        platform["gic_0"]["fiq_out_" .. i] = {bind="&cpu_"..i..".fiq_in"}
+        platform["gic_0"]["virq_out_" .. i] = {bind="&cpu_"..i..".virq_in"}
+        platform["gic_0"]["vfiq_out_" .. i] = {bind="&cpu_"..i..".vfiq_in"}
     end
 end
 

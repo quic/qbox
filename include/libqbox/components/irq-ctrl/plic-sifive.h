@@ -28,6 +28,7 @@
 #include <cci_configuration>
 
 #include <libqemu-cxx/target/riscv.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/target-signal-socket.h"
@@ -49,6 +50,10 @@ public:
     QemuTargetSocket<> socket;
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
 
+    QemuRiscvSifivePlic(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : QemuRiscvSifivePlic(name, *(dynamic_cast<QemuInstance*>(o)))
+        {
+        }
     QemuRiscvSifivePlic(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuDevice(nm, inst, "riscv.sifive.plic")
         , p_num_sources("num_sources", 0, "Number of input IRQ lines")
@@ -98,5 +103,5 @@ public:
         }
     }
 };
-
+GSC_MODULE_REGISTER(QemuRiscvSifivePlic, sc_core::sc_object*);
 #endif

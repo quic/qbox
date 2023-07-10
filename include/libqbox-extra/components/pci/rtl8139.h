@@ -23,7 +23,7 @@
 #include <cci_configuration>
 
 #include <greensocs/libgssync.h>
-#include <libqbox/sc-qemu-instance.h>
+#include <libqbox/qemu-instance.h>
 
 #include "gpex.h"
 

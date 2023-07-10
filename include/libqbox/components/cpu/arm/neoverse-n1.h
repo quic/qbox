@@ -26,10 +26,12 @@
 #include <libqemu-cxx/target/aarch64.h>
 
 #include <greensocs/gsutils/tlm-extensions/exclusive-access.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 
 #include "libqbox/components/cpu/cpu.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
+#include "libqbox/qemu-instance.h"
 
 class QemuCpuArmNeoverseN1 : public QemuCpu
 {
@@ -88,6 +90,10 @@ public:
     QemuInitiatorSignalSocket irq_timer_hyp_out;
     QemuInitiatorSignalSocket irq_timer_sec_out;
 
+    QemuCpuArmNeoverseN1(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : QemuCpuArmNeoverseN1(name, *(dynamic_cast<QemuInstance*>(o)))
+        {
+        }
     QemuCpuArmNeoverseN1(sc_core::sc_module_name name, QemuInstance& inst)
         : QemuCpu(name, inst, "neoverse-n1-arm")
         , p_mp_affinity("mp_affinity", 0, "Multi-processor affinity value")
@@ -243,3 +249,5 @@ public:
         }
     }
 };
+
+GSC_MODULE_REGISTER(QemuCpuArmNeoverseN1, sc_core::sc_object*);

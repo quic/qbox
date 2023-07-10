@@ -24,6 +24,7 @@
 #include <cci_configuration>
 
 #include <libqemu-cxx/target/riscv.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 
 #include "libqbox/ports/target.h"
 #include "libqbox/components/device.h"
@@ -35,6 +36,10 @@ public:
 
     QemuTargetSocket<> socket;
 
+    QemuRiscvAclintSwi(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
+        : QemuRiscvAclintSwi(name, *(dynamic_cast<QemuInstance*>(o)))
+        {
+        }
     QemuRiscvAclintSwi(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuDevice(nm, inst, "riscv.aclint.swi")
         , p_num_harts("num_harts", 0, "Number of HARTS this CLINT is connected to")
@@ -54,3 +59,5 @@ public:
         socket.init(qemu::SysBusDevice(m_dev), 0);
     }
 };
+
+GSC_MODULE_REGISTER(QemuRiscvAclintSwi, sc_core::sc_object*, sc_core::sc_object*);

@@ -30,7 +30,7 @@
 #include "libqbox/components/cpu/cpu.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
-#include "libqbox/sc-qemu-instance.h"
+#include "libqbox/qemu-instance.h"
 #include <greensocs/gsutils/module_factory_registery.h>
 
 class QemuCpuArmCortexA76 : public QemuCpu

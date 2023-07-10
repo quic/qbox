@@ -11,12 +11,6 @@
 		device_type = "memory";
 	};
 
-	ethoc: ethernet@c7000000 {
-		compatible = "opencores,ethoc";
-		reg = <0x00 0xc7000000 0x2000>;
-		interrupts = <0x00 0x02 0x04>;
-	};
-
 	pl011@c0000000 {
 		clock-names = "uartclk\0apb_pclk";
 		clocks = <0x8000 0x8000>;
@@ -46,9 +40,9 @@
 		compatible = "arm,psci-0.2\0arm,psci";
 	};
 
-    flash@c5000000 {
+    flash@200000000 {
         compatible = "mtd-ram";
-        reg = <0x02 0x00 0x80000000>;
+        reg = <0x02 0x00 0x10000000>;
         bank-width = <0x02>;
     };
 

@@ -40,9 +40,9 @@
 		compatible = "arm,psci-0.2\0arm,psci";
 	};
 
-    flash@c5000000 {
+    flash@200000000 {
         compatible = "mtd-ram";
-        reg = <0x02 0x00 0x80000000>;
+        reg = <0x02 0x00 0x10000000>;
         bank-width = <0x02>;
     };
 

@@ -23,6 +23,7 @@
 #include <cci_configuration>
 
 #include <greensocs/libgssync.h>
+#include <libqbox/qemu-instance.h>
 
 #include "libqbox/components/device.h"
 #include "libqbox/ports/target.h"
@@ -40,6 +41,10 @@ public:
     QemuTargetSocket<> socket;
     QemuInitiatorSignalSocket irq_out;
 
+    QemuUartPl011(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+    : QemuUartPl011(name, *(dynamic_cast<QemuInstance*>(o)))
+    {
+    }
     QemuUartPl011(const sc_core::sc_module_name& n, QemuInstance& inst)
         : QemuDevice(n, inst, "pl011"), m_ext_ev(true), socket("mem", inst), irq_out("irq_out") {}
 
@@ -61,5 +66,5 @@ public:
         irq_out.init_sbd(sbd, 0);
     }
 };
-
+GSC_MODULE_REGISTER(QemuUartPl011, sc_core::sc_object*);
 #endif

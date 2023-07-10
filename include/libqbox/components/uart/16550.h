@@ -22,6 +22,8 @@
 
 #include <cci_configuration>
 
+#include <greensocs/gsutils/module_factory_registery.h>
+
 #include "libqbox/components/device.h"
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator-signal-socket.h"
@@ -38,6 +40,10 @@ public:
     QemuTargetSocket<> socket;
     QemuInitiatorSignalSocket irq_out;
 
+    QemuUart16550(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : QemuUart16550(name, *(dynamic_cast<QemuInstance*>(o)))
+        {
+        }
     QemuUart16550(const sc_core::sc_module_name& n, QemuInstance& inst)
         : QemuDevice(n, inst, "serial-mm")
         , p_baudbase("baudbase", 38400000,
@@ -70,5 +76,5 @@ public:
         irq_out.init_sbd(sbd, 0);
     }
 };
-
+GSC_MODULE_REGISTER(QemuUart16550, sc_core::sc_object*);
 #endif
