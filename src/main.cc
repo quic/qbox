@@ -518,11 +518,13 @@ public:
         , m_gpus("gpu", gs::sc_cci_list_items(sc_module::name(), "gpu").size(),
                  [this](const char* n, size_t i) {
                      QemuVirtioGpu* ret = nullptr;
-                     if (i == 0) {
-                         // First GPU is accelerated
-                         ret = new QemuVirtioGpuGlPci(n, m_qemu_inst);
-                     } else {
-                         ret = new QemuVirtioGpuPci(n, m_qemu_inst);
+                     if (p_with_gpu.get_value()) {
+                         if (i == 0) {
+                             // First GPU is accelerated
+                             ret = new QemuVirtioGpuGlPci(n, m_qemu_inst);
+                         } else {
+                             ret = new QemuVirtioGpuPci(n, m_qemu_inst);
+                         }
                      }
                      return ret;
                  })
