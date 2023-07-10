@@ -220,17 +220,6 @@ protected:
         SCP_INFO("lua") << "Parse command line for --gs_luafile option (" << argc << " arguments)";
 
         po::options_description desc("Allowed options");
-#ifdef ENABLE_SHORT_COMMAND_LINE_OPTIONS
-        desc.add_options()("help,h", "  Command line usage for command line Config parser")(
-            "gs_luafile,l", po::value<std::vector<std::string>>(),
-            "<filename>   execute a Lua script and loads all the globals as "
-            "parameters");
-#else
-        desc.add_options()("help", "  Command line usage for command line Config parser")(
-            "gs_luafile", po::value<std::vector<std::string>>(),
-            "<filename>   execute a Lua script and loads all the globals as "
-            "parameters");
-#endif
 
         po::variables_map vm;
         // po::store(po::parse_command_line(argc, argv, desc), vm); // without
@@ -240,14 +229,6 @@ protected:
                       .allow_unregistered()
                       .run(),
                   vm); // allows unknown options
-
-        if (vm.count("help")) {
-            std::SCP_INFO("lua") << "Command line usage for lua file command line parser:"
-                                 << std::endl;
-            std::SCP_INFO("lua") << "  Usage: options_description [options]" << std::endl;
-            std::SCP_INFO("lua") << desc;
-            return;
-        }
 
         if (vm.count("gs_luafile")) {
             const std::vector<std::string>* vec = &vm["gs_luafile"].as<std::vector<std::string>>();
@@ -295,7 +276,7 @@ protected:
         optind = 0; // reset of getopt
         opterr = 0; // avoid error message for not recognized option
 #ifdef ENABLE_SHORT_COMMAND_LINE_OPTIONS
-        static const char* optstring = "l:p:dh";
+        static const char* optstring = "l:p:d";
 #else
         static const char* optstring = "";
 #endif
@@ -303,41 +284,8 @@ protected:
             { "gs_luafile", required_argument, 0, 'l' }, // '--luafile filename'
             { "param", required_argument, 0, 'p' },      // --param foo.baa=10
             { "debug", no_argument, 0, 'd' },             // '--debug' = '-d'
-            { "help", no_argument, 0, 'h' },             // '--help' = '-h'
             { 0, 0, 0, 0 }
         };
-
-        while (1) {
-            int c = getopt_long(argc, argv_cp, optstring, long_options, 0);
-            if (c == EOF)
-                break;
-            if (c == 'h') {
-                std::cout << "Lua file command line parser: parse option --help\n"
-                             "  Command line usage for lua file command line parser:\n"
-                             "\n"
-                             "     Possible Options/Arguments:\n"
-                             "\n"
-                             "      --gs_luafile <filename>\n"
-                             "        execute a Lua script and loads all the globals as\n"
-                             "        parameters [required]\n"
-                             "\n"
-                             "      --param <param_name=value>\n"
-                             "        set param name (foo.baa) to value\n"
-                             "\n"
-                             "      --debug\n"
-                             "        shows the state of the configurable parameters at\n"
-                             "        the beginning of the simulation and halts.\n"
-                             "\n"
-                             "      --help\n"
-                             "        this help\n"
-                             "\n"
-                             "      Any extra arguments will be treated as lua config\n"
-                             "      files. That is, as --gs_luafile arguments.\n"
-                             "\n"
-                          << std::flush;
-                exit(0);
-            }
-        }
 
         opterr = 1; // restore error message for not recognized option
         optind = 0; // reset of getopt
@@ -372,7 +320,6 @@ protected:
             }
 
             case 'd':
-            case 'h':
                 /* ignore for now */
                 break;
 
