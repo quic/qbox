@@ -97,7 +97,7 @@ def fastrpc_calc_test():
     calc = QCSubprocess.ssh(frpc_calc_args, ssh_port,
                             logfile=get_logfile("frpc_ssh.log"),
                             timeout_sec=timeout_sec)
-    for _ in range(2):
+    for _ in range(num_dsps):
         calc.expect('- sum = 4950')
         calc.expect('- success')
 
