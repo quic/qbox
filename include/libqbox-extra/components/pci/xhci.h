@@ -20,6 +20,8 @@
 #ifndef _LIBQBOX_COMPONENTS_USB_XHCI_H
 #define _LIBQBOX_COMPONENTS_USB_XHCI_H
 
+#include <greensocs/gsutils/module_factory_registery.h>
+
 #include "gpex.h"
 
 /// @brief This class wraps the qemu's XHCI USB controller: eXtensible Host Controller Interface.
@@ -49,8 +51,15 @@ protected:
     std::vector<Device*> m_devices;
 
 public:
-    QemuXhci(const sc_core::sc_module_name& n, QemuInstance& inst)
-        : QemuGPEX::Device(n, inst, "qemu-xhci") {}
+    QemuXhci(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
+    : QemuXhci(name, *(dynamic_cast<QemuInstance*>(o)), (dynamic_cast<QemuGPEX*>(t)))
+    {
+    }
+    QemuXhci(const sc_core::sc_module_name& n, QemuInstance& inst, QemuGPEX* gpex)
+        : QemuGPEX::Device(n, inst, "qemu-xhci") 
+        {
+            gpex->add_device(*this);
+        }
 
     void add_device(Device& dev) {
         if (m_inst != dev.get_qemu_inst()) {
@@ -68,5 +77,5 @@ public:
         }
     }
 };
-
+GSC_MODULE_REGISTER(QemuXhci, sc_core::sc_object*, sc_core::sc_object*);
 #endif

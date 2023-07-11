@@ -24,6 +24,7 @@
 #include <scp/report.h>
 
 #include <greensocs/libgssync.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 
 #include <libqemu/libqemu.h>
 #include <libqbox/qemu-instance.h>
@@ -58,6 +59,20 @@ private:
             SCP_FATAL(SCMOD) << "Can not create another QemuDisplay on a different QemuInstance";
         }
         QemuDisplay::inst = gpu_qemu_inst;
+    }
+
+    QemuDevice& selectGpu(sc_core::sc_object& o)
+    {
+        if (dynamic_cast<QemuVirtioMMIOGpuGl*>(&o) != nullptr) {
+            return reinterpret_cast<QemuDevice&>(*dynamic_cast<QemuVirtioMMIOGpuGl*>(&o));
+        }
+        else if (dynamic_cast<QemuVirtioGpu*>(&o) != nullptr) {
+            return reinterpret_cast<QemuDevice&>(*dynamic_cast<QemuVirtioGpu*>(&o));
+        }
+        else {
+            // Gérer ici le cas où le type de l'objet n'est ni QemuVirtioMMIOGpuGl ni QemuVirtioGpu
+            SCP_FATAL(SCMOD) << " the type of the object 'o' is not a QemuVirtioMMIOGpuGl or QemuVirtioGpu";
+        }
     }
 
 public:
@@ -184,6 +199,11 @@ public:
         m_realized = true;
     }
 
+    QemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : QemuDisplay(name, selectGpu(*o))
+        {
+        }
+
     /**
      * @brief Construct a QEMUDisplay
      *
@@ -223,5 +243,5 @@ public:
 };
 
 QemuInstance* QemuDisplay::inst = nullptr;
-
+GSC_MODULE_REGISTER(QemuDisplay, sc_core::sc_object*);
 #endif // _LIBQBOX_COMPONENTS_DISPLAY_H

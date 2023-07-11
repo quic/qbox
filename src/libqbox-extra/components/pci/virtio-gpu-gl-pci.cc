@@ -21,6 +21,10 @@
 
 #include <libqemu/config-host.h>
 
+QemuVirtioGpuGlPci::QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : QemuVirtioGpuGlPci(name, *(dynamic_cast<QemuInstance*>(o)))
+        {
+        }
 QemuVirtioGpuGlPci::QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, QemuInstance& inst)
     : QemuVirtioGpu(name, inst, "gl-pci")
     , p_hostmem_mb("hostmem_mb", 2048, "MB to allocate for host visible shared memory") {
