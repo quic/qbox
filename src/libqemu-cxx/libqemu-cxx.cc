@@ -119,15 +119,9 @@ QemuObject* LibQemu::object_new_unparented(const char* type_name) {
 QemuObject* LibQemu::object_new_internal(const char* type_name) {
     QemuObject* o = object_new_unparented(type_name);
     QemuObject* root = m_int->exports().object_get_root();
-    QemuError* err = nullptr;
     char name[20]; // helpful for debugging.
     snprintf(name, sizeof(name), "qbox-%.10s[*]", type_name);
     m_int->exports().object_property_add_child(root, name, o);
-
-    if (err != nullptr) {
-        throw LibQemuException("Error while parenting the new object");
-    }
-
     return o;
 }
 
