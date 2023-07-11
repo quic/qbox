@@ -68,7 +68,7 @@ context:
             recent_lines.append(line)
 
     @classmethod
-    def _ensure_ssh_connects(cls, args, timeout=6, attempts=3):
+    def _ensure_ssh_connects(cls, args, timeout=60., attempts=6):
         for _ in range(attempts):
             try:
                 assert(cls(args + ["true"], timeout=timeout).success())

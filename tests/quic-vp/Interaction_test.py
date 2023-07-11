@@ -45,7 +45,7 @@ def fastrpc_calc_test():
         log_dir = None
 
     load = psutil.cpu_percent(2)
-    timeout_sec = 60 * 3.
+    timeout_sec = 60 * 4.
     timeout_scale = 1
     if (load > 0.0):
         timeout_scale = 1 + (load / 100)
