@@ -11,7 +11,7 @@ from collections import deque
 # A simpler and non-interactive version of pexpect
 class QCSubprocess:
     EOF = object()
-    def __init__(self, args, env=None, timeout=None):
+    def __init__(self, args, env=None, timeout_sec=None):
         self.proc = None
         self.name = args[0]
         @atexit.register
@@ -28,8 +28,8 @@ class QCSubprocess:
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,
                 )
-        if timeout is not None:
-            secs = int(round(timeout))
+        if timeout_sec is not None:
+            secs = int(round(timeout_sec))
             def handler(signum, _):
                 self.proc.kill()
                 raise subprocess.TimeoutExpired(self.name, secs)
@@ -68,10 +68,10 @@ context:
             recent_lines.append(line)
 
     @classmethod
-    def _ensure_ssh_connects(cls, args, timeout=60., attempts=6):
+    def _ensure_ssh_connects(cls, args, timeout_sec=60., attempts=6):
         for _ in range(attempts):
             try:
-                assert(cls(args + ["true"], timeout=timeout).success())
+                assert(cls(args + ["true"], timeout_sec=timeout_sec).success())
                 print("SSH connection test passed.")
                 return
             except (subprocess.TimeoutExpired, AssertionError):
@@ -79,11 +79,11 @@ context:
         raise Exception(f"Failed to connect to sshd after {attempts} attempts")
 
     @classmethod
-    def ssh(cls, args, port, logfile=None, env=None, timeout=None):
+    def ssh(cls, args, port, logfile=None, env=None, timeout_sec=None):
         ssh_args = ["ssh", "-p", port, "root@localhost",
                 "-o", "UserKnownHostsFile=/dev/null",
                 "-o", "StrictHostKeyChecking=no"]
         if logfile is not None:
             ssh_args.extend(["-v", "-E", logfile])
         cls._ensure_ssh_connects(ssh_args)
-        return cls(ssh_args + args, env=env, timeout=timeout)
+        return cls(ssh_args + args, env=env, timeout_sec=timeout_sec)

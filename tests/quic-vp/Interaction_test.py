@@ -49,9 +49,9 @@ def fastrpc_calc_test():
     timeout_scale = 1
     if (load > 0.0):
         timeout_scale = 1 + (load / 100)
-    timeout = timeout_sec * timeout_scale
+    timeout_sec = timeout_sec * timeout_scale
     print ("Timeout Scale: ", timeout_scale)
-    print ("Timeout (s): ", timeout)
+    print ("Timeout (s): ", timeout_sec)
 
     env = {
         "QQVP_IMAGE_DIR": img_path.as_posix(),
@@ -72,7 +72,7 @@ def fastrpc_calc_test():
     if args.extra_args:
         vp_args += args.extra_args
 
-    vp = QCSubprocess(vp_args, env, timeout)
+    vp = QCSubprocess(vp_args, env, timeout_sec)
     num_dsps = 3 if args.adsp else 2
     for _ in range(num_dsps):
         vp.expect(r"DSP Image Creation Date:.+\s*\n")
@@ -82,7 +82,7 @@ def fastrpc_calc_test():
         if log_dir is not None:
             return log_dir.joinpath(logname).as_posix()
         return None
-    
+
     adsp_args = "&& /mnt/bin/fastrpc_calc_test 0 100 0" if args.adsp else ""
 
     frpc_calc_args = [
@@ -96,7 +96,7 @@ def fastrpc_calc_test():
     # MacOS CI. For more details, see QTOOL-95796.
     calc = QCSubprocess.ssh(frpc_calc_args, ssh_port,
                             logfile=get_logfile("frpc_ssh.log"),
-                            timeout=timeout)
+                            timeout_sec=timeout_sec)
     for _ in range(2):
         calc.expect('- sum = 4950')
         calc.expect('- success')
@@ -104,7 +104,7 @@ def fastrpc_calc_test():
     pcitool_args = [ "sh -l -c '/mnt/bin/pci-tool -v'", ]
     pci = QCSubprocess.ssh(pcitool_args, ssh_port,
                            logfile=get_logfile("pcitool_ssh.log"),
-                           timeout=timeout)
+                           timeout_sec=timeout_sec)
     pci.expect('B000:D00:F00 @ idx 0')
     # Look for the rtl8139 PCI Ethernet Network Controller device:
     pci.expect('vid/did: 10ec/8139')
