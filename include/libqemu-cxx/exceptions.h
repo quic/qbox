@@ -67,9 +67,9 @@ public:
 class SetPropertyException : public LibQemuException
 {
 public:
-    SetPropertyException(const char* type, const char* name)
+    SetPropertyException(const char* type, const char* name, const char* err)
         : LibQemuException(std::string("Error while setting ") + type + " property `" + name +
-                           "` on object.") {}
+                           "` on object: " + err) {}
 
     virtual ~SetPropertyException() throw() {}
 };
@@ -77,9 +77,9 @@ public:
 class GetPropertyException : public LibQemuException
 {
 public:
-    GetPropertyException(const char* type, const char* name)
+    GetPropertyException(const char* type, const char* name, const char* err)
         : LibQemuException(std::string("Error while getting ") + type + " property `" + name +
-                           "` on object.") {}
+                           "` on object: " + err) {}
 
     virtual ~GetPropertyException() throw() {}
 };

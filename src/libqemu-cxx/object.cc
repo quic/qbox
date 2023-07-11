@@ -61,7 +61,7 @@ void Object::set_prop_bool(const char* name, bool val) {
     m_int->exports().object_property_set_bool(m_obj, name, val, &e);
 
     if (e != nullptr) {
-        throw SetPropertyException("bool", name);
+        throw SetPropertyException("bool", name, m_int->exports().error_get_pretty(e));
     }
 }
 
@@ -70,7 +70,7 @@ void Object::set_prop_int(const char* name, int64_t val) {
     m_int->exports().object_property_set_int(m_obj, name, val, &e);
 
     if (e != nullptr) {
-        throw SetPropertyException("int", name);
+        throw SetPropertyException("int", name, m_int->exports().error_get_pretty(e));
     }
 }
 
@@ -79,7 +79,7 @@ void Object::set_prop_str(const char* name, const char* val) {
     m_int->exports().object_property_set_str(m_obj, name, val, &e);
 
     if (e != nullptr) {
-        throw SetPropertyException("str", name);
+        throw SetPropertyException("str", name, m_int->exports().error_get_pretty(e));
     }
 }
 
@@ -88,7 +88,7 @@ void Object::set_prop_link(const char* name, const Object& link) {
     m_int->exports().object_property_set_link(m_obj, name, link.m_obj, &e);
 
     if (e != nullptr) {
-        throw SetPropertyException("link", name);
+        throw SetPropertyException("link", name, m_int->exports().error_get_pretty(e));
     }
 }
 
@@ -97,7 +97,7 @@ void Object::set_prop_parse(const char* name, const char* value) {
     m_int->exports().object_property_parse(m_obj, name, value, &e);
 
     if (e != nullptr) {
-        throw SetPropertyException("parse", name);
+        throw SetPropertyException("parse", name, m_int->exports().error_get_pretty(e));
     }
 }
 
@@ -107,7 +107,7 @@ Object Object::get_prop_link(const char* name) {
     obj = m_int->exports().object_property_get_link(m_obj, name, &e);
 
     if (e != nullptr) {
-        throw GetPropertyException("link", name);
+        throw GetPropertyException("link", name, m_int->exports().error_get_pretty(e));
     }
 
     return Object(obj, m_int);
