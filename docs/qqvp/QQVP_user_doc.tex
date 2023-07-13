@@ -70,6 +70,21 @@ Install the build dependencies.
 \end{lstlisting}
 \normalsize
 
+\textbf{Optional packages:}
+
+\begin{enumerate}
+  \item net-tools and bridge-utils: in order to use virtio configs with TUN/TAP.
+        You may also need to do the following initial network setup:
+        \small
+        \begin{lstlisting}[language=bash]
+          mkdir -p /dev/net
+          mknod /dev/net/tun c 10 200
+          chmod 600 /dev/net/tun
+          /etc/init.d/openvpn restart
+        \end{lstlisting}
+        \normalsize
+\end{enumerate}
+
 \clearpage
 \textbf{For macOS:}
 
