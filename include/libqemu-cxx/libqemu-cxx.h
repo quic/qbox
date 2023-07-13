@@ -185,6 +185,8 @@ public:
     QEMUGLContext sdl2_gl_create_context(DisplayGLCtx* dgc, QEMUGLParams* p);
     void sdl2_gl_destroy_context(DisplayGLCtx* dgc, QEMUGLContext gl_ctx);
     int sdl2_gl_make_context_current(DisplayGLCtx* dgc, QEMUGLContext gl_ctx);
+
+    bool virgl_has_blob() const;
 };
 
 class RcuReadLock

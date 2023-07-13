@@ -315,4 +315,8 @@ int LibQemu::sdl2_gl_make_context_current(DisplayGLCtx* dgc, QEMUGLContext gl_ct
     return m_int->exports().sdl2_gl_make_context_current(dgc, gl_ctx);
 }
 
+bool LibQemu::virgl_has_blob() const {
+    return m_int->exports().virgl_has_blob();
+}
+
 } // namespace qemu
