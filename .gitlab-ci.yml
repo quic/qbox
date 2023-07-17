@@ -19,6 +19,9 @@ include:
     - if git -C $CACHED_FW_REPO rev-parse --git-dir >/dev/null 2>&1; then
         echo "Using existing fw repo at $CACHED_FW_REPO" &&
         mkdir firmware-images &&
+        if ! git -C $CACHED_FW_REPO rev-parse $QQVP_FIRMWARE_REPO_SHA >/dev/null 2>&1; then
+          git -C $CACHED_FW_REPO fetch origin;
+        fi &&
         git -C $CACHED_FW_REPO archive $QQVP_FIRMWARE_REPO_SHA | tar -x -C $PWD/firmware-images;
       else
         echo "Cloning fw repo" &&
