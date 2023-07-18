@@ -311,7 +311,7 @@ int sc_main(int argc, char* argv[]) {
 
 
 
-    typedef gs::PassRPC<PASSRPC_TLM_PORTS_NUM, PASSRPC_SIGNALS_NUM> PassRPC;
+    typedef gs::PassRPC<> PassRPC;
 
     // GSC_MODULE_REGISTER(PassRPC);
     GSC_MODULE_REGISTER(hexagon_cluster, sc_core::sc_object*, sc_core::sc_object*);

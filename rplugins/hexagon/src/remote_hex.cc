@@ -40,7 +40,7 @@
 
 class RemoteHex : public sc_core::sc_module
 {
-    gs::PassRPC<3, 1> m_rpass; // for the l2vic IRQ
+    gs::PassRPC<> m_rpass; // for the l2vic IRQ
 
 public:
     cci::cci_param<unsigned> p_hexagon_num_threads;
