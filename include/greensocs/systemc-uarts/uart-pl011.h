@@ -113,7 +113,7 @@ public:
         {
             set_backend(dynamic_cast<CharBackend*>(o));
         }
-    Pl011(sc_core::sc_module_name name): irq("irq"), s(nullptr) {
+    Pl011(sc_core::sc_module_name name): socket("target_socket"), irq("irq"), s(nullptr) {
         SCP_DEBUG(SCMOD) << "Pl011 constructor";
         chr = NULL;
 

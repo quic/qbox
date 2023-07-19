@@ -29,6 +29,8 @@
 #include <greensocs/libgsutils.h>
 #include <limits>
 #include <libqbox/components/cpu/arm/cortex-m55.h>
+#include <greensocs/gsutils/module_factory_container.h>
+#include <libqbox/qemu-instance.h>
 #include "greensocs/base-components/memory.h"
 #include "greensocs/base-components/router.h"
 #include "greensocs/base-components/remote.h"
@@ -38,22 +40,24 @@ class RemoteCPU : public sc_core::sc_module
     SCP_LOGGER();
 
 public:
-    RemoteCPU(const sc_core::sc_module_name& n)
+    RemoteCPU(const sc_core::sc_module_name& n, sc_core::sc_object* obj)
+        : RemoteCPU(n, *(dynamic_cast<QemuInstance*>(obj)))
+    {
+    }
+    RemoteCPU(const sc_core::sc_module_name& n, QemuInstance& qemu_inst)
         : sc_core::sc_module(n)
+        , m_rpc_pass("remote_pass")
         , m_broker(cci::cci_get_broker())
         , m_gdb_port("gdb_port", 0, "GDB port")
-        , m_qemu_inst("qemu_instance", &m_inst_mgr, QemuInstance::Target::AARCH64)
+        , m_qemu_inst(qemu_inst)
         , m_router("remote_router")
         , m_cpu("cpu", m_qemu_inst)
-        , m_rpc_pass("remote_pass") {
-        unsigned int m_irq_num = m_broker
-                                     .get_param_handle(std::string(this->name()) +
-                                                       ".cpu.nvic.num_irq")
+    {
+        unsigned int m_irq_num = m_broker.get_param_handle(std::string(this->name()) + ".cpu.nvic.num_irq")
                                      .get_cci_value()
                                      .get_uint();
 
-        if (!m_gdb_port.is_default_value())
-            m_cpu.p_gdb_port = m_gdb_port;
+        if (!m_gdb_port.is_default_value()) m_cpu.p_gdb_port = m_gdb_port;
 
         if (m_irq_num > m_rpc_pass.p_initiator_signals_num)
             SCP_FATAL(()) << std::string(this->name()) << ".cpu.nvic.num_irq"
@@ -71,31 +75,65 @@ public:
     }
 
 private:
+    gs::PassRPC<> m_rpc_pass;
     cci::cci_broker_handle m_broker;
     cci::cci_param<int> m_gdb_port;
-    QemuInstanceManager m_inst_mgr;
-    QemuInstance m_qemu_inst;
+    QemuInstance& m_qemu_inst;
     gs::Router<> m_router;
     CpuArmCortexM55 m_cpu;
-    gs::PassRPC<> m_rpc_pass;
 };
 
-int sc_main(int argc, char* argv[]) {
-    std::cout << "RemoteCPU started\n";
-    auto m_broker = new gs::ConfigurableBroker(
-            argc, argv,
-            { { "remote_cpu.qemu_instance.sync_policy", cci::cci_value("multithread-freerunning") },
-              { "remote_cpu.remote_pass.tlm_target_ports_num", cci::cci_value(1) },
-              { "remote_cpu.remote_pass.tlm_initiator_ports_num", cci::cci_value(0) },
-              { "remote_cpu.remote_pass.initiator_signals_num", cci::cci_value(1) },
-              { "remote_cpu.remote_pass.target_socket_0.address", cci::cci_value(0) },
-              { "remote_cpu.remote_pass.target_socket_0.size",
-                cci::cci_value(std::numeric_limits<uint64_t>::max()) },
-              { "remote_cpu.cpu.nvic.mem.address", cci::cci_value(0xE000E000) },
-              { "remote_cpu.cpu.nvic.mem.size", cci::cci_value(0x10000) },
-              { "remote_cpu.cpu.nvic.num_irq", cci::cci_value(1) } });
+class RemotePlatform : public gs::ModuleFactory::Container
+{
+protected:
+    cci::cci_param<int> p_quantum_ns;
 
-    RemoteCPU remote("remote_cpu");
+public:
+    RemotePlatform(const sc_core::sc_module_name& n)
+        : gs::ModuleFactory::Container(n), p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
+    {
+        using tlm_utils::tlm_quantumkeeper;
+
+        SCP_DEBUG(()) << "Constructor";
+
+        sc_core::sc_time global_quantum(p_quantum_ns, sc_core::SC_NS);
+        tlm_quantumkeeper::set_global_quantum(global_quantum);
+    }
+
+    SCP_LOGGER(());
+
+    ~RemotePlatform() {}
+};
+
+int sc_main(int argc, char* argv[])
+{
+    std::cout << "RemoteCPU started\n";
+    std::cout << "Passed arguments: " << std::endl;
+    for (int i = 0; i < 2; i++) std::cout << "argv[" << i << "] = " << argv[i] << std::endl;
+    auto m_broker = new gs::ConfigurableBroker(
+        argc, argv,
+        { { "remote_platform.moduletype", cci::cci_value("Container") },
+          { "remote_platform.quantum_ns", cci::cci_value(10000000) },
+          { "remote_platform.qmeu_inst_mgr.moduletype", cci::cci_value("QemuInstanceManager") },
+          { "remote_platform.qemu_inst.moduletype", cci::cci_value("QemuInstance") },
+          { "remote_platform.qemu_inst.args.0", cci::cci_value("&remote_platform.qmeu_inst_mgr") },
+          { "remote_platform.qemu_inst.args.1", cci::cci_value("AARCH64") },
+          { "remote_platform.qemu_inst.sync_policy", cci::cci_value("multithread-freerunning") },
+          { "remote_platform.remote_cpu.moduletype", cci::cci_value("RemoteCPU") },
+          { "remote_platform.remote_cpu.args.0", cci::cci_value("&remote_platform.qemu_inst") },
+          { "remote_platform.remote_cpu.remote_pass.tlm_target_ports_num", cci::cci_value(1) },
+          { "remote_platform.remote_cpu.remote_pass.tlm_initiator_ports_num", cci::cci_value(0) },
+          { "remote_platform.remote_cpu.remote_pass.initiator_signals_num", cci::cci_value(1) },
+          { "remote_platform.remote_cpu.remote_pass.target_socket_0.address", cci::cci_value(0) },
+          { "remote_platform.remote_cpu.remote_pass.target_socket_0.size",
+            cci::cci_value(std::numeric_limits<uint64_t>::max()) },
+          { "remote_platform.remote_cpu.cpu.nvic.mem.address", cci::cci_value(0xE000E000) },
+          { "remote_platform.remote_cpu.cpu.nvic.mem.size", cci::cci_value(0x10000) },
+          { "remote_platform.remote_cpu.cpu.nvic.num_irq", cci::cci_value(1) } });
+
+    GSC_MODULE_REGISTER(RemoteCPU, sc_core::sc_object*);
+
+    RemotePlatform remote("remote_platform");
     try {
         sc_core::sc_start();
     } catch (std::runtime_error const& e) {

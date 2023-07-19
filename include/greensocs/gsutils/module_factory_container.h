@@ -12,6 +12,7 @@
 #include <systemc>
 #include <tlm>
 #include <tlm_utils/multi_passthrough_target_socket.h>
+#include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
 
 #include <scp/report.h>
@@ -168,6 +169,10 @@ SC_MODULE (Container) {
                              tlm_utils::multi_target_base<>>(i_obj, t_obj))
                     break;
                 if (try_bind<gs::biflow_bindable, gs::biflow_bindable>(i_obj, t_obj)) break;
+                if (try_bind<tlm::tlm_base_initiator_socket<32, tlm::tlm_fw_transport_if<>, tlm::tlm_bw_transport_if<>,
+                                                            1, sc_core::SC_ZERO_OR_MORE_BOUND>,
+                             tlm::tlm_base_target_socket<>>(i_obj, t_obj))
+                    break;
                 if (try_bind<QemuInitiatorSocket<>, tlm::tlm_base_target_socket<>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, tlm_utils::multi_target_base<>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, QemuTargetSocket<>>(i_obj, t_obj)) break;
