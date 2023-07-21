@@ -99,6 +99,7 @@ add_library(${PROJECT_NAME} SHARED
    src/systemc-macs/components/mac.cc
    src/systemc-macs/components/phy.cc
    src/systemc-macs/models/xgmac.cc
+   src/libqbox-extra/components/pci/virtio-gpu-gl-pci.cc
    ${srcs}
 )
 
