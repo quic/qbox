@@ -1236,6 +1236,46 @@ private:
         return true;
     }
 
+    void dump_trans_req(TransReq const& tr) {
+        SCP_DEBUG(SCMOD) << "Translation Req\n"
+                         << "VA: 0x" << tr.va << "\n"
+                         << "TCR[0]: 0x" << tr.tcr[0] << "\n"
+                         << "TCR[1]: 0x" << tr.tcr[1] << "\n"
+                         << "TCR[2]: 0x" << tr.tcr[2] << "\n"
+                         << "ACCESS: 0x" << tr.access << "\n"
+                         << "Stage: " << std::dec << tr.stage << "\n"
+                         << "S2_enabled: " << (tr.s2_enabled ? "true" : "false") << "\n"
+                         << "S2_CB: " << tr.s2_cb << "\n"
+                         << std::hex << "PA: 0x" << tr.pa << "\n"
+                         << "Prot: 0x" << tr.prot << "\n"
+                         << "Page size: 0x" << tr.page_size << "\n"
+                         << "Error: " << (tr.err ? "true" : "false") << "\n";
+    }
+
+    void dump_cb_state(unsigned int cb) {
+        unsigned int cb_offset = smmu_cb_offset(cb);
+
+        SCP_DEBUG(SCMOD) << "CB" << cb << ":\n"
+                         << std::hex << "FSR=0x" << regs[R_SMMU_CB0_FSR + cb_offset] << "\n"
+                         << "FAR.low=0x" << regs[R_SMMU_CB0_FAR_LOW + cb_offset] << "\n"
+                         << "FAR.high=0x" << regs[R_SMMU_CB0_FAR_HIGH + cb_offset] << "\n"
+                         << "IPAFAR.low=0x" << regs[R_SMMU_CB0_IPAFAR_LOW + cb_offset] << "\n"
+                         << "IPAFAR.high=0x" << regs[R_SMMU_CB0_IPAFAR_HIGH + cb_offset] << "\n"
+                         << "SCR0=0x" << regs[R_SMMU_SCR0 + cb_offset] << "\n"
+                         << "NSCR0=0x" << regs[R_SMMU_NSCR0 + cb_offset] << "\n"
+                         << "CBFRSYNRA" << std::dec << cb << std::hex << "=0x"
+                         << regs[R_SMMU_CBFRSYNRA0 + cb_offset] << "\n"
+                         << "CBAR" << std::dec << cb << std::hex << "=0x" << regs[R_SMMU_CBAR0 + cb]
+                         << "\n"
+                         << "CBA2R" << std::dec << cb << std::hex << "=0x"
+                         << regs[R_SMMU_CBA2R0 + cb] << "\n"
+                         << "SCTLR=0x" << regs[R_SMMU_CB0_SCTLR + cb_offset] << "\n"
+                         << "TTBR0.low=0x" << regs[R_SMMU_CB0_TTBR0_LOW + cb_offset] << "\n"
+                         << "TTBR0.high=0x" << regs[R_SMMU_CB0_TTBR0_HIGH + cb_offset] << "\n";
+    }
+
+    void dump_state() { SCP_DEBUG(SCMOD) << "smmu regs:"; }
+
     void smmu_ptw64(unsigned int cb, TransReq* req) {
         const unsigned int outsize_map[] = {
             [0] = 32, [1] = 36, [2] = 40, [3] = 42, [4] = 44, [5] = 48, [6] = 48, [7] = 48,
@@ -1555,7 +1595,9 @@ private:
         return;
 
     do_fault:
-        SCP_INFO(SCMOD) << "smmu fault";
+        SCP_INFO(SCMOD) << "smmu fault CB" << cb;
+        dump_trans_req(*req);
+        dump_cb_state(cb);
         smmu_fault(cb, req, level);
     }
 
