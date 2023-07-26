@@ -64,7 +64,8 @@ public:
 
 protected:
     LibLoader* m_loader;
-    std::vector<std::reference_wrapper<QemuInstance>> m_insts;
+
+    std::vector<std::unique_ptr<QemuInstance>> m_insts;
 
 public:
     /**
@@ -100,7 +101,7 @@ public:
     }
 
     void reg_inst(QemuInstance* inst_ptr){
-        m_insts.push_back(*inst_ptr);
+        m_insts.push_back(std::unique_ptr<QemuInstance>(inst_ptr));
     }
 
     QemuInstance& new_instance(Target t) { return new_instance("QemuInstance", t); }
@@ -109,10 +110,6 @@ public:
      * Qemu instances that it manages will, of course, be destroyed too
      */
     virtual ~QemuInstanceManager() {
-        while (m_insts.size()) {
-            delete &m_insts.back().get();
-            m_insts.pop_back();
-        }
         delete m_loader;
     }
 };

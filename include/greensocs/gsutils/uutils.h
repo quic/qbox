@@ -47,6 +47,8 @@
 #include <atomic>
 #include <systemc>
 
+#include <scp/report.h>
+
 namespace gs {
 
 class SigHandler : public sc_core::sc_prim_channel
@@ -68,7 +70,10 @@ public:
     static void pass_sig_handler(int sig) {
         gs::SigHandler::get().set_sig_num(sig);
         char ch[1] = { 's' };
-        (void) ::write(gs::SigHandler::get().get_write_sock_end(), &ch, 1);
+        ssize_t bytes_written = ::write(gs::SigHandler::get().get_write_sock_end(), &ch, 1);
+        if (bytes_written == -1) {
+            SCP_FATAL("SigHandler") << "There is an issue when you try to send some datas";
+        }
     }
 
     static void force_exit_sig_handler(int sig) {

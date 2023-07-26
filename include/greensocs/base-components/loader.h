@@ -220,7 +220,7 @@ protected:
             elf_load(file);
             read = true;
         } else {
-            uint64_t addr;
+            uint64_t addr = 0;
             if (m_use_callback) {
                 if (m_broker.has_preset_value(name + ".offset"))
                     addr = cci_get<uint64_t>(name + ".offset");
