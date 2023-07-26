@@ -2,42 +2,14 @@ include:
   - project: 'qqvp/cmake-boilerplate'
     file: 'gitlab-ci-template.yml'
 
-.clone_firmware_images_repo:
-  variables:
-    CACHED_FW_REPO: /var/firmware-images
-  before_script:
-    - |
-      if [[ -z "$QQVP_FIRMWARE_REPO_SHA" ]]; then
-          echo "$QQVP_FIRMWARE_REPO_SHA not defined in CI. Falling back to source code"
-          export QQVP_FIRMWARE_REPO_SHA=$(cat ./tests/quic-vp/firmware-repo-sha.txt)
-          if [[ -z "$QQVP_FIRMWARE_REPO_SHA" ]]; then
-            echo "Either QQVP_FIRMWARE_REPO_SHA or ./tests/quic-vp/firmware-repo-sha.txt needs to be defined"
-            exit 1
-          fi
-      fi
-    - echo "Using commit id ${QQVP_FIRMWARE_REPO_SHA} of firmware-repo"
-    - if git -C $CACHED_FW_REPO rev-parse --git-dir >/dev/null 2>&1; then
-        echo "Using existing fw repo at $CACHED_FW_REPO" &&
-        mkdir firmware-images &&
-        if ! git -C $CACHED_FW_REPO rev-parse $QQVP_FIRMWARE_REPO_SHA >/dev/null 2>&1; then
-          git -C $CACHED_FW_REPO fetch origin;
-        fi &&
-        git -C $CACHED_FW_REPO archive $QQVP_FIRMWARE_REPO_SHA | tar -x -C $PWD/firmware-images;
-      else
-        echo "Cloning fw repo" &&
-        eval $(ssh-agent -s) &&
-        echo "$LFS_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - &&
-        git clone --no-checkout $AUTHENTICATED_GIT_URL/qqvp/firmware-images.git &&
-        git -C firmware-images checkout $QQVP_FIRMWARE_REPO_SHA;
-      fi
-    - export QQVP_FIRMWARE_REPO_DIR="$(pwd)/firmware-images"
-
 .build_job_template:
   extends:
     - .clone_firmware_images_repo
     - .general_build_job_template
   variables:
     REPO_CMAKE_ARGS: -DQQVP_RESULTS_DIR=${RESULTS_DIR} # From cmake-boilerplate
+    FIRMWARE_REPO_VAR_NAME: QQVP_FIRMWARE_REPO_SHA
+    FIRMWARE_REPO_SHA_FILE: ./tests/quic-vp/firmware-repo-sha.txt
 
 lua-check:
   extends: .mr-job
