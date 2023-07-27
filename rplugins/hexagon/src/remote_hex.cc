@@ -50,7 +50,7 @@ public:
 
 private:
     QemuInstanceManager m_inst_mgr;
-    QemuInstance& m_qemu_hex_inst;
+    QemuInstance m_qemu_hex_inst;
     QemuHexagonL2vic m_l2vic;
     QemuHexagonQtimer m_qtimer;
     sc_core::sc_vector<QemuCpuHexagon> m_hexagon_threads;
@@ -70,8 +70,7 @@ public:
         , p_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
         , p_cfgbase("cfgtable_base", 0, "config table base address")
         , p_quantum_ns("quantum_ns", 10000000, "TLM-2.0 global quantum in ns")
-        , m_qemu_hex_inst(
-              m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
+        , m_qemu_hex_inst("HexagonQemuInstance", &m_inst_mgr, QemuInstance::Target::HEXAGON)
         , m_l2vic("l2vic", m_qemu_hex_inst)
         , m_qtimer("qtimer",
                    m_qemu_hex_inst) // are we sure it's in the hex cluster?????
