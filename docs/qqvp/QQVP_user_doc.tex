@@ -957,7 +957,23 @@ device appears at the specified memory address. It can render to the host
 X server indicated by the {\small{\lstinline!DISPLAY!}} environment variable.
 
 This model feature is enabled only if the Lua config
-{\small{\lstinline!platform.with_gpu!}} setting is {\small{\lstinline!true!}}.
+{\small{\lstinline!platform.with_gpu!}} setting is {\small{\lstinline!true!}}
+and at least one gpu is listed under the platform:
+{\small{\lstinline!platform.gpu_0=1!}};
+
+Multiple GPUs are also supported with the limitation that only the very first
+one would be hardware accelerated via virglrenderer. E.g.:
+
+\small
+\begin{lstlisting}[language=lua]
+    platform = {
+        with_gpu = true;
+        gpu_0 = 1; -- virglrenderer accelerated
+        gpu_1 = 1;
+        ...
+    }
+\end{lstlisting}
+\normalsize
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
