@@ -42,7 +42,7 @@ public:
         : sc_core::sc_module(n)
         , m_broker(cci::cci_get_broker())
         , m_gdb_port("gdb_port", 0, "GDB port")
-        , m_qemu_inst(m_inst_mgr.new_instance("qemu_instance", QemuInstance::Target::AARCH64))
+        , m_qemu_inst("qemu_instance", &m_inst_mgr, QemuInstance::Target::AARCH64)
         , m_router("remote_router")
         , m_cpu("cpu", m_qemu_inst)
         , m_rpc_pass("remote_pass") {
@@ -74,7 +74,7 @@ private:
     cci::cci_broker_handle m_broker;
     cci::cci_param<int> m_gdb_port;
     QemuInstanceManager m_inst_mgr;
-    QemuInstance& m_qemu_inst;
+    QemuInstance m_qemu_inst;
     gs::Router<> m_router;
     CpuArmCortexM55 m_cpu;
     gs::PassRPC<> m_rpc_pass;

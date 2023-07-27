@@ -30,12 +30,15 @@ class DisplayTest : public TestBench
 {
 private:
     QemuInstanceManager m_inst_manager;
-    QemuInstance* m_inst;
+    QemuInstance m_inst;
     std::unique_ptr<QemuVirtioMMIOGpuGl> m_gpu;
     std::unique_ptr<QemuDisplay> m_display;
 
 public:
-    DisplayTest(const sc_core::sc_module_name& n): TestBench(n) {
+    DisplayTest(const sc_core::sc_module_name& n)
+    : TestBench(n)
+    , m_inst("inst", &m_inst_manager, qemu::Target::AARCH64)
+    {
         if (SDL_Init(SDL_INIT_VIDEO) < 0) {
             // Skip this test on platforms with no video device available
             SCP_WARN(SCMOD) << "Skipping Display test: Failed to initialize SDL: "
@@ -43,8 +46,7 @@ public:
             return;
         }
 
-        m_inst = &m_inst_manager.new_instance("inst", qemu::Target::AARCH64);
-        m_gpu = std::make_unique<QemuVirtioMMIOGpuGl>("gpu", *m_inst);
+        m_gpu = std::make_unique<QemuVirtioMMIOGpuGl>("gpu", m_inst);
         m_display = std::make_unique<QemuDisplay>("display", *m_gpu);
     }
 

@@ -149,8 +149,8 @@ class CpuTestBench : public CpuTestBenchBase
 {
 protected:
     QemuInstanceManager m_inst_manager;
-    QemuInstance& m_inst_a;
-    QemuInstance& m_inst_b;
+    QemuInstance m_inst_a;
+    QemuInstance m_inst_b;
 
     bool ab = false;
     sc_core::sc_vector<CPU> m_cpus;
@@ -159,8 +159,8 @@ protected:
 public:
     CpuTestBench(const sc_core::sc_module_name& n)
         : CpuTestBenchBase(n, CPU::ARCH)
-        , m_inst_a(m_inst_manager.new_instance("inst_a", CPU::ARCH))
-        , m_inst_b(m_inst_manager.new_instance("inst_b", CPU::ARCH))
+        , m_inst_a("inst_a", &m_inst_manager, CPU::ARCH)
+        , m_inst_b("inst_b", &m_inst_manager, CPU::ARCH)
         , m_cpus("cpu", p_num_cpu,
                  [this](const char* n, int i) {
                      ab = !ab;

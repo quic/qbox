@@ -65,8 +65,6 @@ public:
 protected:
     LibLoader* m_loader;
 
-    std::vector<std::unique_ptr<QemuInstance>> m_insts;
-
 public:
     /**
      * @brief Construct a QemuInstanceManager. The manager will use the default
@@ -88,23 +86,6 @@ public:
     LibLoader& get_loader(){
         return *m_loader;
     }
-
-    /**
-     * @brief Returns a new QEMU instance for target t
-     */
-    QemuInstance& new_instance(const std::string& n, Target t) {
-        // QemuInstance* ptr = new QemuInstance(n.c_str(), *m_loader, t);
-        QemuInstance* ptr = nullptr;
-        reg_inst(ptr);
-
-        return *ptr;
-    }
-
-    void reg_inst(QemuInstance* inst_ptr){
-        m_insts.push_back(std::unique_ptr<QemuInstance>(inst_ptr));
-    }
-
-    QemuInstance& new_instance(Target t) { return new_instance("QemuInstance", t); }
 
     /* Destructor should only be called at the end of the program, if it is called before, then all
      * Qemu instances that it manages will, of course, be destroyed too
@@ -303,7 +284,7 @@ protected:
             return QemuInstance::Target::HEXAGON;
         }
         else {
-            SCP_FATAL(SCMOD) << "Unable to find QEMU target container";
+            SCP_FATAL(()) << "Unable to find QEMU target container";
         }
     }
 
@@ -311,9 +292,11 @@ public:
     QemuInstance(const sc_core::sc_module_name& n, sc_core::sc_object* o, std::string arch)
     : QemuInstance(n, get_loader(o), strtotarget(arch))
     {
-        QemuInstanceManager* inst_mgr = dynamic_cast<QemuInstanceManager*>(o);
-        inst_mgr->reg_inst(this);
     }
+    QemuInstance(const sc_core::sc_module_name& n, sc_core::sc_object* o, Target t)
+    : QemuInstance(n, get_loader(o), t){
+    }
+
     QemuInstance(const sc_core::sc_module_name& n, LibLoader& loader, Target t)
         : sc_core::sc_module(n)
         , m_conf_broker(cci::cci_get_broker())
