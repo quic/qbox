@@ -96,8 +96,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
 
-    cfgfile = f'{args.qqvp_install}/etc/vp/'
-    cfgfile += f'SA8540P_conf.lua' if args.platform == 'makena' else 'SA8775P_conf.lua'
+    part_num = '8540' if args.platform == 'makena' else '8775'
+    cfgfile = f'{args.qqvp_install}/etc/vp/fw/{part_num}/'
+    cfgfile += f'SA{part_num}P_conf.lua'
     cmd = f'{args.qqvp_install}/bin/vp --gs_luafile {cfgfile} -p platform.with_gpu=false'
 
     firmware_dir = os.path.realpath(f'{args.firmware_images}/makena/default') if args.platform == 'makena' else os.path.realpath(f'{args.firmware_images}/lemans')
