@@ -61,3 +61,14 @@ foreach(flavor IN ITEMS opengl red_hat)
     endif()
 endforeach()
 
+if(EXISTS ${QQVP_FIRMWARE_REPO_DIR})
+    add_test(
+        NAME LLDB_test
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/LLDB_test.py
+                    -e ${CMAKE_BINARY_DIR}/vp
+                    -t ${CMAKE_CURRENT_SOURCE_DIR}/lldb-test/
+                    -i ${QQVP_FIRMWARE_REPO_DIR}/lemans
+    )
+else()
+    message(WARNING "Skipping lldb test, could not find '${QQVP_FIRMWARE_REPO_DIR}'. To enable tests, set QQVP_FIRMWARE_REPO_DIR in environment.")
+endif()

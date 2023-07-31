@@ -1,0 +1,4 @@
+# Should NOT stop on 1, but should stop on 2 and 3
+breakpoint set --name break1 --condition '$r0 == 0x00000000' -C 'br del' --auto-continue true
+breakpoint set --name break2 --condition '$r0 == 0x22222222' -C 'script print("PASS2")' --auto-continue true
+breakpoint set --name break3 --condition '$r0 == 0x33333333' -C 'script print("PASS3"); exit(0)'
