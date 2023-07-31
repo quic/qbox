@@ -13,6 +13,7 @@ class QCSubprocess:
     EOF = object()
     def __init__(self, args, env=None, timeout=None):
         self.proc = None
+        self.name = args[0]
         @atexit.register
         def cleanup():
             if self.proc is not None:
@@ -31,7 +32,7 @@ class QCSubprocess:
             secs = int(round(timeout))
             def handler(signum, _):
                 self.proc.kill()
-                raise subprocess.TimeoutExpired(args[0], secs)
+                raise subprocess.TimeoutExpired(self.name, secs)
             signal.signal(signal.SIGALRM, handler)
             signal.alarm(secs)
 
@@ -47,8 +48,10 @@ class QCSubprocess:
         try:
             self.proc.wait(timeout=timeout_sec)
         except subprocess.TimeoutExpired:
-            return False
-        return self.proc.returncode == 0
+            raise Exception(f"timed out waiting for {self.name} to finish")
+        if self.proc.returncode != 0:
+            raise Exception(f"Expecting returncode 0 from {self.name} but got {self.proc.returncode}")
+        return True
 
     def expect(self, regex_string):
         recent_lines = deque([], maxlen=30)
