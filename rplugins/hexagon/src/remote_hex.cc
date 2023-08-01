@@ -21,142 +21,54 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include <systemc>
-#include <tlm>
-#include <cci_configuration>
+#include "../../../src/hexagon_cluster.h"
+#include <greensocs/base-components/remote.h>
+#include <greensocs/gsutils/module_factory_container.h>
 
-#include <greensocs/libgsutils.h>
-#include <libqbox/components/cpu/hexagon/hexagon.h>
-#include <libqbox/ports/initiator-signal-socket.h>
-#include <libqbox-extra/components/meta/global_peripheral_initiator.h>
-#include <libqbox/components/irq-ctrl/hexagon-l2vic.h>
-#include <libqbox/components/timer/hexagon-qtimer.h>
-#include "greensocs/base-components/memory.h"
-#include "greensocs/base-components/remote.h"
-#include "greensocs/base-components/router.h"
-#include <quic/csr/csr.h>
-#include "../../../src/wdog.h"
-#include "../../../src/pll.h"
-
-class RemoteHex : public sc_core::sc_module
+class RemoteHex : public gs::ModuleFactory::ContainerDeferModulesConstruct
 {
-    gs::PassRPC<> m_rpass; // for the l2vic IRQ
+    SCP_LOGGER(());
 
-public:
-    cci::cci_param<unsigned> p_hexagon_num_threads;
-    cci::cci_param<uint32_t> p_hexagon_start_addr;
-    cci::cci_param<uint32_t> p_cfgbase;
+protected:
     cci::cci_param<int> p_quantum_ns;
-
-private:
-    QemuInstanceManager m_inst_mgr;
-    QemuInstance m_qemu_hex_inst;
-    QemuHexagonL2vic m_l2vic;
-    QemuHexagonQtimer m_qtimer;
-    sc_core::sc_vector<QemuCpuHexagon> m_hexagon_threads;
-    GlobalPeripheralInitiator m_global_peripheral_initiator_hex;
-    WDog<> m_wdog;
-    sc_core::sc_vector<pll<>> m_plls;
-    csr m_csr;
-    gs::Memory<> m_rom;
-    gs::Memory<> m_fallback_mem;
-    gs::Router<> m_router;
 
 public:
     RemoteHex(const sc_core::sc_module_name& n)
-        : sc_core::sc_module(n)
-        , m_rpass("remote")
-        , p_hexagon_num_threads("hexagon_num_threads", 8, "Number of Hexagon threads")
-        , p_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
-        , p_cfgbase("cfgtable_base", 0, "config table base address")
-        , p_quantum_ns("quantum_ns", 10000000, "TLM-2.0 global quantum in ns")
-        , m_qemu_hex_inst("HexagonQemuInstance", &m_inst_mgr, QemuInstance::Target::HEXAGON)
-        , m_l2vic("l2vic", m_qemu_hex_inst)
-        , m_qtimer("qtimer",
-                   m_qemu_hex_inst) // are we sure it's in the hex cluster?????
-        , m_hexagon_threads("hexagon_thread", p_hexagon_num_threads,
-                            [this](const char* n, size_t i) {
-                                /* here n is already "hexagon-cpu_<vector-index>" */
-                                uint64_t l2vic_base = gs::cci_get<uint64_t>(cci::cci_get_broker(), std::string(name()) +
-                                                                            ".l2vic.mem.address");
-                                uint64_t qtmr_rg0 = gs::cci_get<uint64_t>(cci::cci_get_broker(),
-                                    std::string(name()) + ".qtimer.mem_view.address");
-                                return new QemuCpuHexagon(n, m_qemu_hex_inst, p_cfgbase,
-                                                          QemuCpuHexagon::v68_rev, l2vic_base,
-                                                          qtmr_rg0, p_hexagon_start_addr);
-                            })
-        , m_global_peripheral_initiator_hex("glob-per-init-hex", m_qemu_hex_inst,
-                                            m_hexagon_threads[0])
-        , m_wdog("wdog")
-        , m_plls("pll", 4)
-        , m_csr("csr")
-        , m_rom("rom")
-        , m_fallback_mem("fallback_memory")
-        , m_router("router")
-         {
-        /* Set global quantum */
+        : gs::ModuleFactory::ContainerDeferModulesConstruct(n)
+        , p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
+    {
+        using tlm_utils::tlm_quantumkeeper;
+
+        SCP_DEBUG(()) << "RemoteHex Constructor";
+
         sc_core::sc_time global_quantum(p_quantum_ns, sc_core::SC_NS);
-        tlm_utils::tlm_quantumkeeper::set_global_quantum(global_quantum);
+        tlm_quantumkeeper::set_global_quantum(global_quantum);
 
-        int is = 0, ts = 0;
-
-        m_rpass.initiator_sockets[is++].bind(
-            m_router.target_socket); // for traffic from outside comming in.
-        m_rpass.initiator_sockets[is++].bind(
-            m_router.target_socket); // for traffic from outside comming in.
-        //m_rpass.initiator_sockets[is++].bind(
-        //    m_router.target_socket); // for traffic from outside comming in.
-
-        m_router.initiator_socket.bind(m_l2vic.socket);
-        m_router.initiator_socket.bind(m_l2vic.socket_fast);
-        m_router.initiator_socket.bind(m_qtimer.socket);
-        m_router.initiator_socket.bind(m_qtimer.view_socket);
-        m_router.initiator_socket.bind(m_wdog.socket);
-        for (auto& pll : m_plls) {
-            m_router.initiator_socket.bind(pll.socket);
-        }
-        m_router.initiator_socket.bind(m_rom.socket);
-
-        m_router.initiator_socket.bind(m_csr.socket);
-
-        m_csr.hex_halt.bind(m_hexagon_threads[0].halt);
-
-        for (auto& cpu : m_hexagon_threads) {
-            cpu.socket.bind(m_router.target_socket);
-        }
-        for (int i = 0; i < m_l2vic.p_num_outputs; ++i) {
-            m_l2vic.irq_out[i].bind(m_hexagon_threads[0].irq_in[i]);
-        }
-
-        m_qtimer.irq[0].bind(m_l2vic.irq_in[2]); // FIXME: Depends on static boolean
-                                                 // syscfg_is_linux, may be 2
-        m_qtimer.irq[1].bind(m_l2vic.irq_in[3]);
-
-        m_global_peripheral_initiator_hex.m_initiator.bind(m_router.target_socket);
-
-        m_rpass.initiator_signal_sockets[0].bind(m_l2vic.irq_in[30]);
-
-        m_router.initiator_socket.bind(m_rpass.target_sockets[ts++]); // for SMMU traffic
-        m_router.initiator_socket.bind(m_rpass.target_sockets[ts++]); // for non SMMU traffic
-        m_router.initiator_socket.bind(m_rpass.target_sockets[ts++]); // rest of non SMMU traffic
-
-        m_router.initiator_socket.bind(
-            m_fallback_mem.socket); // fallback for all other regions inside the hex cluster
+        sc_core::sc_module* rpass = construct_module("RemotePass", std::string("plugin_pass").c_str(), {});
+        // when we get here, all CCI parameters are communicated from the remote side to the current process after
+        // remote_pass is constructed.
+        ModulesConstruct();
+        name_bind(rpass);
     }
+
+    ~RemoteHex() {}
 };
 
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char* argv[])
+{
     std::cout << "Remote started\n";
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)
                           .logAsync(false)
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
-    auto m_broker = new gs::ConfigurableBroker(argc, argv,
-                                               {
-                                                   { "log_level", cci::cci_value(1) },
-                                               });
-    RemoteHex remote("remote_hex");
+    auto m_broker = new gs::ConfigurableBroker(
+        argc, argv,
+        {
+            { "remote_hex.moduletype", cci::cci_value("ContainerDeferModulesConstruct") },
+            { "remote_hex.quantum_ns", cci::cci_value(10000000) },
+        });
+    RemoteHex platform("remote_hex");
     try {
         sc_core::sc_start();
     } catch (std::runtime_error const& e) {

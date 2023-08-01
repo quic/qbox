@@ -39,11 +39,8 @@
 #include <greensocs/gsutils/module_factory_container.h>
 
 #include <libqbox/components/cpu/arm/cortex-a76.h>
-#include <libqbox/components/cpu/hexagon/hexagon.h>
 #include <libqbox/components/irq-ctrl/arm-gicv3.h>
 #include <libqbox/components/uart/pl011.h>
-#include <libqbox/components/irq-ctrl/hexagon-l2vic.h>
-#include <libqbox/components/timer/hexagon-qtimer.h>
 #include <libqbox/components/net/virtio-mmio-net.h>
 #include <libqbox/components/blk/virtio-mmio-blk.h>
 #include <libqbox/components/mmu/arm-smmu.h>
@@ -73,15 +70,12 @@
 
 #include <quic/ipcc/ipcc.h>
 #include <quic/qtb/qtb.h>
-#include <quic/csr/csr.h>
 #include <quic/mpm/mpm.h>
 #include <quic/smmu500/smmu500.h>
 #include <quic/qup/uart/uart-qupv3.h>
 #include <quic/qupv3_qupv3_se_wrapper_se0/qupv3_qupv3_se_wrapper_se0.h>
 #include <quic/gen_boilerplate/reg_model_maker.h>
-
-#include "wdog.h"
-#include "pll.h"
+#include "hexagon_cluster.h"
 
 #define HEXAGON_CFGSPACE_ENTRIES    (128)
 #define HEXAGON_CFG_ADDR_BASE(addr) ((addr >> 16) & 0x0fffff)
@@ -90,113 +84,6 @@
 #define ARCH_TIMER_S_EL1_IRQ  (16 + 13)
 #define ARCH_TIMER_NS_EL1_IRQ (16 + 14)
 #define ARCH_TIMER_NS_EL2_IRQ (16 + 10)
-
-#define PASSRPC_TLM_PORTS_NUM 20
-#define PASSRPC_SIGNALS_NUM   20
-#define newsmmu
-
-class hexagon_cluster : public sc_core::sc_module
-{
-public:
-    cci::cci_param<unsigned> p_hexagon_num_threads;
-    cci::cci_param<uint32_t> p_hexagon_start_addr;
-    cci::cci_param<bool> p_isdben_secure;
-    cci::cci_param<bool> p_isdben_trusted;
-    cci::cci_param<uint32_t> p_cfgbase;
-    cci::cci_param<bool> p_vp_mode;
-    // keep public so that smmu can be associated with hexagon
-    QemuInstance& m_qemu_hex_inst;
-
-private:
-    QemuHexagonL2vic m_l2vic;
-    QemuHexagonQtimer m_qtimer;
-    WDog<> m_wdog;
-    sc_core::sc_vector<pll<>> m_plls;
-    //    pll<> m_pll2;
-    csr m_csr;
-    gs::pass<> m_pass;
-    gs::Memory<> m_rom;
-
-    sc_core::sc_vector<QemuCpuHexagon> m_hexagon_threads;
-    GlobalPeripheralInitiator m_global_peripheral_initiator_hex;
-
-public:
-    // expose the router, to facilitate binding
-    // otherwise we would need a 'bridge' to bind to the router and an
-    // initiator socket.
-    gs::Router<> m_router;
-    hexagon_cluster(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
-    : hexagon_cluster(name, *(dynamic_cast<QemuInstance*>(o)), *(dynamic_cast<gs::Router<>*>(t)))
-    {
-    }
-    hexagon_cluster(const sc_core::sc_module_name& n, QemuInstance& qemu_hex_inst,
-                    gs::Router<>& parent_router)
-        : sc_core::sc_module(n)
-        , p_hexagon_num_threads("hexagon_num_threads", 8, "Number of Hexagon threads")
-        , p_hexagon_start_addr("hexagon_start_addr", 0x100, "Hexagon execution start address")
-        , p_isdben_trusted("isdben_trusted", false, "Value of ISDBEN.TRUSTED reg field")
-        , p_isdben_secure("isdben_secure", false, "Value of ISDBEN.SECURE reg field")
-        , p_cfgbase("cfgtable_base", 0, "config table base address")
-        , p_vp_mode("vp_mode", true, "override the vp_mode for testing")
-        // , m_qemu_hex_inst(
-        //       m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
-        , m_qemu_hex_inst(qemu_hex_inst)
-        , m_l2vic("l2vic", m_qemu_hex_inst)
-        , m_qtimer("qtimer",
-                   m_qemu_hex_inst) // are we sure it's in the hex cluster?????
-        , m_wdog("wdog")
-        , m_plls("pll", 1)
-        //        , m_pll2("pll2")
-        , m_csr("csr")
-        , m_rom("rom")
-        , m_pass("pass", false)
-        , m_hexagon_threads("hexagon_thread", p_hexagon_num_threads,
-                            [this](const char* n, size_t i) {
-                                /* here n is already "hexagon-cpu_<vector-index>" */
-                                uint64_t l2vic_base = gs::cci_get<uint64_t>(cci::cci_get_broker(), std::string(name()) +
-                                                                            ".l2vic.mem.address");
-                                                        
-                                uint64_t qtmr_rg0 = gs::cci_get<uint64_t>(cci::cci_get_broker(),
-                                    std::string(name()) + ".qtimer.mem_view.address");
-                                return new QemuCpuHexagon(
-                                    n, m_qemu_hex_inst, p_cfgbase, QemuCpuHexagon::v68_rev,
-                                    l2vic_base, qtmr_rg0, p_hexagon_start_addr, p_vp_mode);
-                            })
-        , m_router("router")
-        , m_global_peripheral_initiator_hex("glob-per-init-hex", qemu_hex_inst,
-                                            m_hexagon_threads[0]) {
-        parent_router.initiator_socket.bind(m_l2vic.socket);
-        parent_router.initiator_socket.bind(m_l2vic.socket_fast);
-        parent_router.initiator_socket.bind(m_qtimer.socket);
-        parent_router.initiator_socket.bind(m_qtimer.view_socket);
-        parent_router.initiator_socket.bind(m_wdog.socket);
-        for (auto& pll : m_plls) {
-            parent_router.initiator_socket.bind(pll.socket);
-        }
-        parent_router.initiator_socket.bind(m_rom.socket);
-
-        parent_router.initiator_socket.bind(m_csr.socket);
-        m_csr.hex_halt.bind(m_hexagon_threads[0].halt);
-
-        // pass through transactions.
-        m_router.initiator_socket.bind(m_pass.target_socket);
-        m_pass.initiator_socket.bind(parent_router.target_socket);
-
-        for (auto& cpu : m_hexagon_threads) {
-            cpu.socket.bind(m_router.target_socket);
-        }
-
-        for (int i = 0; i < m_l2vic.p_num_outputs; ++i) {
-            m_l2vic.irq_out[i].bind(m_hexagon_threads[0].irq_in[i]);
-        }
-
-        m_qtimer.irq[0].bind(m_l2vic.irq_in[2]); // FIXME: Depends on static boolean
-                                                 // syscfg_is_linux, may be 2
-        m_qtimer.irq[1].bind(m_l2vic.irq_in[3]);
-
-        m_global_peripheral_initiator_hex.m_initiator.bind(m_router.target_socket);
-    }
-};
 
 class GreenSocsPlatform : public gs::ModuleFactory::Container
 {
@@ -308,13 +195,6 @@ int sc_main(int argc, char* argv[]) {
     gs::json_zip_archive jza(zip_open(p_zipfile.get_value().c_str(), ZIP_RDONLY, nullptr));
 
     jza.json_read_cci(m_broker.create_broker_handle(orig), "platform");
-
-
-
-    typedef gs::PassRPC<> PassRPC;
-
-    // GSC_MODULE_REGISTER(PassRPC);
-    GSC_MODULE_REGISTER(hexagon_cluster, sc_core::sc_object*, sc_core::sc_object*);
 
     GreenSocsPlatform platform("platform");
 

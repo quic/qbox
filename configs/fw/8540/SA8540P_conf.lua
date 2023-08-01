@@ -37,6 +37,13 @@ local NSP1_AHB_SIZE = 0x05000000
 local NSP0_AHB_HIGH = NSP0_BASE + NSP0_AHB_SIZE -- = 0x1f000000
 local NSP1_AHB_HIGH = NSP1_BASE + NSP1_AHB_SIZE -- = 0x25000000
 
+-- This is the actual region size of NSP0 avoiding collisions with other 
+-- devices e.g.  virtioblk_0, virtionet0_0.
+-- (ahb_base + 0xA1000 + 0x2000) is the highest device address allocated in get_dsp() at qdsp6.lua. 
+local NSP0_REGION_SIZE = (0x1B300000 - NSP0_BASE) + 0xA1000 + 0x2000;
+local NSP1_REGION_SIZE = (0x21300000 - NSP1_BASE) + 0xA1000 + 0x2000;
+
+
 local IPC_ROUTER_TOP = 0x00400000
 
 -- TURING_SS_0TURING_QDSP6SS_BOOT_CORE_START:
@@ -67,41 +74,57 @@ local TURING_SS_1TURING_RSCC_RSC_PARAM_RSC_CONFIG_DRVd = 0x210a4008;
 
 dofile(QDSP6_CFG);
 
+local IS_SHARED_MEM = false
+if os.getenv("QQVP_PLUGIN_DIR") ~= nil then
+    IS_SHARED_MEM = true
+end
+
 -- NSP0 configuration --
 local SA8540P_nsp0_config_table= get_SA8540P_nsp0_config_table();
+local NSP0_VTCM_BASE_ADDR = (SA8540P_nsp0_config_table[15] << 16)
+local NSP0_VTCM_SIZE_BYTES = (SA8540P_nsp0_config_table[16] * 1024)
 local nsp0ss = get_dsp(
         "v68",
-        0x1A000000, -- TURING_SS_0TURING
+        NSP0_BASE, -- TURING_SS_0TURING
         0x1B300000, -- TURING_SS_0TURING_QDSP6V68SS
         SA8540P_nsp0_config_table,
         0x89F00000, -- entry point address from bootimage_makena.cdsp0.prodQ.pbn
         NSP0_AHB_SIZE,
         6, -- threads
-        "&platform.qemu_hex_inst_0"
+        "&qemu_hex_inst_0",
+        NSP0_REGION_SIZE, -- region total size
+        1, -- num_of_vtcm
+        NSP0_VTCM_BASE_ADDR, -- vtcm_base
+        NSP0_VTCM_SIZE_BYTES, -- vtcm_size
+        IS_SHARED_MEM -- is_vtcm_shared
         );
 
 assert((SA8540P_nsp0_config_table[11] << 16) == nsp0ss.l2vic.fastmem.address)
 -- So far, nothing depends on _csr, but a good sanity check:
 assert((SA8540P_nsp0_config_table[3] << 16) == TURING_SS_0TURING_QDSP6V68SS_CSR)
-local NSP0_VTCM_BASE_ADDR = (SA8540P_nsp0_config_table[15] << 16)
-local NSP0_VTCM_SIZE_BYTES = (SA8540P_nsp0_config_table[16] * 1024)
 
 -- NSP1 configuration --
 local SA8540P_nsp1_config_table= get_SA8540P_nsp1_config_table();
+local NSP1_VTCM_BASE_ADDR = (SA8540P_nsp1_config_table[15] << 16)
+local NSP1_VTCM_SIZE_BYTES = (SA8540P_nsp1_config_table[16] * 1024)
 local nsp1ss = get_dsp(
         "v68",
-        0x20000000, -- TURING_SS_1TURING
+        NSP1_BASE, -- TURING_SS_1TURING
         0x21300000, -- TURING_SS_1TURING_QDSP6V68SS
         SA8540P_nsp1_config_table,
         0x8C600000, -- entry point address from bootimage_makena.cdsp1.prodQ.pbn
         NSP1_AHB_SIZE,
         6, -- threads
-        "&platform.qemu_hex_inst_1"
+        "&qemu_hex_inst_1",
+        NSP1_REGION_SIZE, -- region total size
+        1, -- num_of_vtcm
+        NSP1_VTCM_BASE_ADDR, -- vtcm_base
+        NSP1_VTCM_SIZE_BYTES, -- vtcm_size
+        IS_SHARED_MEM -- is_vtcm_shared
         );
 assert((SA8540P_nsp1_config_table[11] << 16) == nsp1ss.l2vic.fastmem.address)
 assert((SA8540P_nsp1_config_table[3] << 16) == TURING_SS_1TURING_QDSP6V68SS_CSR)
-local NSP1_VTCM_BASE_ADDR = (SA8540P_nsp1_config_table[15] << 16)
-local NSP1_VTCM_SIZE_BYTES = (SA8540P_nsp1_config_table[16] * 1024)
+
 
 -- these values are helpful for local configuration, so make them global
  OFFSET_MIFS_DDR_SPACE  = 0x20000000
@@ -138,9 +161,62 @@ platform = {
 
     moduletype="Container";
 
+    hex_plugin = {
+        moduletype = "Container", -- can be replaced by 'RemotePass'
+        -- exec_path = "./build/tests/rplugins/vp-hex-remote";
+        -- remote_argv = {"--param=log_level=2"},
+        tlm_initiator_ports_num = 4,
+        tlm_target_ports_num = 2,
+        target_signals_num = 2,
+        initiator_signals_num = 0,
+        -- https://ipcatalog.qualcomm.com/memmap/chip/434/map/1356/version/11766/block/24917388
+        target_socket_0 = {address=NSP0_BASE , size= NSP0_REGION_SIZE, relative_addresses=false, bind = "&router.initiator_socket"}; --nsp0ss
+        target_socket_1 = {address=NSP1_BASE , size= NSP1_REGION_SIZE, relative_addresses=false, bind = "&router.initiator_socket"}; --nsp1ss
+        initiator_socket_0 = {bind = "&router.target_socket"}, --nsp0ss
+        initiator_socket_2 = {bind = "&router.target_socket"}, --nsp1ss
 
-    hexagon_cluster_0 = nsp0ss;
-    hexagon_cluster_1 = nsp1ss;
+        plugin_pass = {
+            moduletype = "LocalPass", -- -- can be replaced by 'RemotePass'
+            tlm_initiator_ports_num = 2,
+            tlm_target_ports_num = 4,
+            target_signals_num = 0,
+            initiator_signals_num = 2,
+
+            initiator_signal_socket_0 = {bind = "&hexagon_cluster_0.l2vic.irq_in_30"}, --nsp0ss
+            initiator_signal_socket_1 = {bind = "&hexagon_cluster_1.l2vic.irq_in_30"}, --nsp1ss
+            --nsp0ss
+            target_socket_0 = {address=0x0, size=NSP0_BASE, relative_addresses=false, bind = "&hexagon_cluster_0.router.initiator_socket"},
+            target_socket_1 = {address=NSP0_AHB_HIGH, size= 0xF00000000-NSP0_REGION_SIZE, relative_addresses=false, bind = "&hexagon_cluster_0.router.initiator_socket"},
+            --nsp1ss
+            target_socket_2 = {address=0x0, size=NSP1_BASE, relative_addresses=false, bind = "&hexagon_cluster_1.router.initiator_socket"},
+            target_socket_3 = {address=NSP1_AHB_HIGH, size= 0xF00000000-NSP1_REGION_SIZE, relative_addresses=false, bind = "&hexagon_cluster_1.router.initiator_socket"},
+
+            initiator_socket_0 = {bind = "&hexagon_cluster_0.router.target_socket"}, --nsp0ss
+            initiator_socket_1 = {bind = "&hexagon_cluster_1.router.target_socket"}, --nsp1ss
+        },
+
+        qemu_inst_mgr_h = {
+            moduletype = "QemuInstanceManager";
+        },
+        
+        qemu_hex_inst_0= {
+            moduletype="QemuInstance";
+            args = {"&qemu_inst_mgr_h", "HEXAGON"};
+            tcg_mode="SINGLE",
+            sync_policy = "multithread-unconstrained"
+        },
+
+        qemu_hex_inst_1= {
+            moduletype="QemuInstance";
+            args = {"&qemu_inst_mgr_h", "HEXAGON"};
+            tcg_mode="SINGLE",
+            sync_policy = "multithread-unconstrained"
+        },
+
+        hexagon_cluster_0 = nsp0ss;
+        hexagon_cluster_1 = nsp1ss;
+    },
+    
 
     router = {
         moduletype="Router";
@@ -149,7 +225,8 @@ platform = {
     },
 
     DDR_space = {moduletype="Memory";
-                target_socket = {bind = "&router.initiator_socket";}
+                target_socket = {bind = "&router.initiator_socket";},
+                shared_memory=IS_SHARED_MEM,
                 };
     
 --    ram_0 = {
@@ -158,7 +235,8 @@ platform = {
 --    },
 
     DDR_space_1 = {moduletype="Memory";
-                target_socket = {bind = "&router.initiator_socket";}
+                target_socket = {bind = "&router.initiator_socket";},
+                shared_memory=IS_SHARED_MEM,
                 };
 
 --    ram_1 = {
@@ -166,45 +244,15 @@ platform = {
 --        target_socket= {"&platform.DDR_space_1", bind = "&router.initiator_socket";}
 --    },
 
-    hexagon_ram_0 = {
-        moduletype="Memory";
-        target_socket= {size = NSP0_VTCM_SIZE_BYTES,
-                        address=NSP0_VTCM_BASE_ADDR;
-                        bind = "&router.initiator_socket";}
-    },
-    hexagon_ram_1 = {
-        moduletype="Memory";
-        target_socket= {size = NSP1_VTCM_SIZE_BYTES,
-                        address=NSP1_VTCM_BASE_ADDR;
-                        bind = "&router.initiator_socket";}
-    },
-
     qemu_inst_mgr = {
         moduletype = "QemuInstanceManager";
     },
 
-    qemu_inst_mgr_h = {
-        moduletype = "QemuInstanceManager";
-    },
 
     qemu_inst= {
         moduletype="QemuInstance";
         args = {"&platform.qemu_inst_mgr", "AARCH64"};
         tcg_mode="MULTI",
-        sync_policy = "multithread-unconstrained"
-    },
-
-    qemu_hex_inst_0= {
-        moduletype="QemuInstance";
-        args = {"&platform.qemu_inst_mgr_h", "HEXAGON"};
-        tcg_mode="SINGLE",
-        sync_policy = "multithread-unconstrained"
-    },
-
-    qemu_hex_inst_1= {
-        moduletype="QemuInstance";
-        args = {"&platform.qemu_inst_mgr_h", "HEXAGON"};
-        tcg_mode="SINGLE",
         sync_policy = "multithread-unconstrained"
     },
 
@@ -270,8 +318,8 @@ platform = {
             moduletype = "IPCC",
             target_socket = {bind = "&router.initiator_socket"},
             irq_8 = {bind = "&gic_0.spi_in_229"},
-            irq_18 = {bind = "&hexagon_cluster_1.l2vic.irq_in_30"},
-            irq_6 = {bind = "&hexagon_cluster_0.l2vic.irq_in_30"},
+            irq_18 = {bind = "&hex_plugin.target_signal_socket_1"},
+            irq_6 = {bind = "&hex_plugin.target_signal_socket_0"},
         };
 
     usb_0 = {
@@ -314,10 +362,11 @@ platform = {
               moduletype = "smmu500_tbu",
               args = {"&platform.smmu_0"},
               topology_id=0x31A0,
-              upstream_socket = { address=NSP0_AHB_HIGH,
-                                  size=0xF00000000-NSP0_AHB_HIGH,
-                                  relative_addresses=false,
-                                  bind = "&hexagon_cluster_0.router.initiator_socket"
+              upstream_socket = { 
+                                --   address=NSP0_AHB_HIGH,
+                                --   size=0xF00000000-NSP0_AHB_HIGH,
+                                --   relative_addresses=false,
+                                  bind = "&hex_plugin.initiator_socket_1",
              },
              downstream_socket = {bind = "&router.target_socket"};
             };
@@ -325,10 +374,11 @@ platform = {
              moduletype = "smmu500_tbu",
              args = {"&platform.smmu_0"},
              topology_id=0x39A0,
-             upstream_socket = { address=NSP1_AHB_HIGH,
-                                 size=0xF00000000-NSP1_AHB_HIGH,
-                                 relative_addresses=false,
-                                 bind = "&hexagon_cluster_1.router.initiator_socket"
+             upstream_socket = { 
+                                --  address=NSP1_AHB_HIGH,
+                                --  size=0xF00000000-NSP1_AHB_HIGH,
+                                --  relative_addresses=false,
+                                 bind = "&hex_plugin.initiator_socket_3",
              },
              downstream_socket = {bind = "&router.target_socket"};
             };
@@ -344,17 +394,6 @@ platform = {
     --     -- downtream_socket = {bind = "router.target_socket"};
     --     }
     --    };
-
-    -- remote_0 = {
-    --     moduletype = "PassRPC";
-    --     args = {"./vp-hex-remote"};
-    --     target_socket_0 = {address= 0xAC00000,
-    --                         size= 0x200000,
-    --                         relative_addresses=false;
-    --                         bind = "&router.initiator_socket"};
-    --     irq_0 = 465,
-    --     irq_1 = 469,
-    -- };
 
     memorydumper_0 = {
                 moduletype = "MemoryDumper",
@@ -539,5 +578,18 @@ if (platform.with_gpu) then
     });
 end
 
+
+local PLUGIN_DIR;
+if os.getenv("QQVP_PLUGIN_DIR") == nil then
+    PLUGIN_DIR = "./"
+else
+    PLUGIN_DIR = os.getenv("QQVP_PLUGIN_DIR").."/"
+end
+
+if (file_exists(PLUGIN_DIR.."conf.lua"))
+then
+    print ("Running local "..PLUGIN_DIR.."conf.lua");
+    dofile(PLUGIN_DIR.."conf.lua");
+end
 
 print ("Lua config Finished.");

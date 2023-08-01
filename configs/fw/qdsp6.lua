@@ -283,13 +283,13 @@ function get_SA8775P_adsp_config_table()
 end
 
 function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
-                 num_threads, cluster_inst)
+                 num_threads, cluster_inst, total_size, num_of_vtcm, vtcm_base, vtcm_size, is_vtcm_shared)
     local cfgtable_base_addr = base + 0x180000
     local sched_limit = true;
     assert(num_threads >= 1);
     local dsp = {
         moduletype = "hexagon_cluster";
-        args = {cluster_inst, "&platform.router"};
+        args = {cluster_inst};
         hexagon_num_threads = num_threads;
         isdben_secure  = true;
         isdben_trusted = true;
@@ -299,20 +299,24 @@ function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
             dsp_arch=arch,
         };
         hexagon_start_addr = start_addr;
+        vtcm_num = num_of_vtcm;
         l2vic={  mem           = {address=ahbs_base + 0x90000,  size=0x1000};
                  fastmem       = {address=base      + 0x1e0000, size=0x10000}};
         qtimer={ mem           = {address=ahbs_base + 0xA0000,  size=0x1000};
                  mem_view      = {address=ahbs_base + 0xA1000,  size=0x2000}};
-        pass = {target_socket  = {address=0x0 , size=base + ahb_size,
-            relative_addresses=false}};
         cfgtable_base = cfgtable_base_addr;
 
         wdog  = { socket        = {address=ahbs_base + 0x84000,    size=0x1000}};
         pll_0 = { socket        = {address=ahbs_base + 0x40000,    size=0x10000}};
         rom   = { target_socket = {address=cfgtable_base_addr, size=#cfgtable*4 },
             read_only=true, load={data=cfgtable, offset=0}};
-
+        vtcm_0 = {
+            target_socket = {address=vtcm_base, size=vtcm_size},
+            shared_memory=is_vtcm_shared,
+        };
         csr = { socket = {address=ahbs_base, size=0x1000}};
+        fallback_memory = { target_socket={address=base, size= total_size},
+            dmi_allow=false,log_level = 0, verbose=false};
     };
     for th=1,num_threads-1 do
       dsp["hexagon_thread_" .. th] = {

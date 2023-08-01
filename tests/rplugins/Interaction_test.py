@@ -12,6 +12,7 @@ from truth.truth import AssertThat
 import subprocess
 from subprocess import Popen, PIPE
 import psutil
+import signal
 
 
 def fastrpc_calc_test():
@@ -80,6 +81,11 @@ def fastrpc_calc_test():
         child.sendline('fastrpc_calc_test 0 100 {}'.format(cdsp_index))
         child.expect('- sum = 4950', timeout=300*timeout_scale)
         child.expect('- success')
+
+    # make sure to use SIGQUIT to terminate the child as this signal is handled in 
+    # include/greensocs/gsutils/uutils.h and it should be called for VP proper cleanup.
+    child.kill(signal.SIGQUIT)
+    child.wait()
 
     test = True
     return test
