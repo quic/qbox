@@ -113,7 +113,7 @@ public:
         , m_initiator("initiator")
         , m_initiator_dma("initiator_dma")
         , m_router("router")
-        , m_pass("pass", getexepath() + "-remote")
+        , m_pass("pass")
         , m_mem1("mem1")
         , m_log("local", true)
     {

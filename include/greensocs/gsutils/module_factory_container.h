@@ -30,11 +30,14 @@
 #include <greensocs/systemc-uarts/backends/char-bf/stdio.h>
 #include <greensocs/gsutils/ports/biflow-socket.h>
 #include <greensocs/gsutils/module_factory_registery.h>
+#include <greensocs/base-components/transaction_forwarder_if.h>
 
+#define ModuleFactory_CONTAINER_BUSWIDTH 32
 namespace gs {
 namespace ModuleFactory {
 
-SC_MODULE (Container) {
+class ContainerBase : public sc_core::sc_module, public transaction_forwarder_if<CONTAINER>
+{
     /**
      * @brief construct a module using the pre-register CCI functor, with typed arguments from a CCI
      * value list. The functor is expected to call new.
@@ -45,6 +48,7 @@ SC_MODULE (Container) {
      * @return sc_core::sc_module* The module constructed.
      */
 
+public:
     SCP_LOGGER(());
 
     sc_core::sc_module* construct_module(std::string moduletype, sc_core::sc_module_name name, cci::cci_value_list args)
@@ -79,13 +83,19 @@ SC_MODULE (Container) {
         for (int i = 0; cci::cci_get_broker().has_preset_value(modulename + ".args." + std::to_string(i)); i++) {
             SCP_TRACE(())("Looking for : {}.args.{}", modulename, std::to_string(i));
 
-            args.push_back(cci::cci_get_broker().get_preset_cci_value(modulename + ".args." + std::to_string(i)));
+            auto arg = cci::cci_get_broker().get_preset_cci_value(modulename + ".args." + std::to_string(i));
+            if (arg.is_string() && std::string(arg.get_string())[0] == '&') {
+                std::string parent = std::string(modulename).substr(0, modulename.find_last_of("."));
+                if (std::string(arg.get_string()).find(parent, 1) == std::string::npos)
+                    arg.set_string("&" + parent + "." + std::string(arg.get_string()).erase(0, 1));
+            }
+            args.push_back(arg);
         }
         return args;
     }
 
     template <typename I, typename T>
-    bool try_bind(sc_core::sc_object * i_obj, sc_core::sc_object * t_obj)
+    bool try_bind(sc_core::sc_object* i_obj, sc_core::sc_object* t_obj)
     {
         auto i = dynamic_cast<I*>(i_obj);
         auto t = dynamic_cast<T*>(t_obj);
@@ -116,9 +126,8 @@ SC_MODULE (Container) {
      * @param type The type of the module
      * @param m The module itself.
      */
-    void name_bind(sc_core::sc_module * m)
+    void name_bind(sc_core::sc_module* m)
     {
-
         for (auto param : sc_cci_children(m->name())) {
             /* We should have a param like
              *  foo = &a.baa
@@ -173,6 +182,15 @@ SC_MODULE (Container) {
                                                             1, sc_core::SC_ZERO_OR_MORE_BOUND>,
                              tlm::tlm_base_target_socket<>>(i_obj, t_obj))
                     break;
+                if (try_bind<
+                        tlm::tlm_initiator_socket<32, tlm::tlm_base_protocol_types, 1, sc_core::SC_ONE_OR_MORE_BOUND>,
+                        tlm::tlm_target_socket<32, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>>(
+                        i_obj, t_obj))
+                    break;
+                if (try_bind<tlm_utils::multi_init_base<>, tlm::tlm_target_socket<32, tlm::tlm_base_protocol_types, 1,
+                                                                                  sc_core::SC_ZERO_OR_MORE_BOUND>>(
+                        i_obj, t_obj))
+                    break;
                 if (try_bind<QemuInitiatorSocket<>, tlm::tlm_base_target_socket<>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, tlm_utils::multi_target_base<>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, QemuTargetSocket<>>(i_obj, t_obj)) break;
@@ -187,7 +205,6 @@ SC_MODULE (Container) {
 
     std::list<std::string> PriorityConstruct(void)
     {
-
         std::list<std::string> args;
         std::set<std::string> done;
         std::list<std::string> todo;
@@ -254,7 +271,7 @@ SC_MODULE (Container) {
                                                                  ".moduletype")
                                            .get_string();
 
-                    SCP_INFO(()) << "Adding a " << type << " with name " <<  std::string(sc_module::name()) + "." + name;
+                    SCP_INFO(()) << "Adding a " << type << " with name " << std::string(sc_module::name()) + "." + name;
 
                     cci::cci_value_list mod_args = get_module_args(std::string(sc_module::name()) + "." + name);
                     SCP_INFO(()) << mod_args.size() << " arguments found for " << type;
@@ -266,6 +283,9 @@ SC_MODULE (Container) {
                     }
 
                     allModules.push_back(m);
+                    if (!m_local_pass) {
+                        m_local_pass = dynamic_cast<transaction_forwarder_if<PASS>*>(m);
+                    }
                 }
             } // else it's some other config
         }
@@ -275,8 +295,27 @@ SC_MODULE (Container) {
         }
     }
 
+    using tlm_initiator_socket_type = tlm_utils::simple_initiator_socket_b<
+        ContainerBase, ModuleFactory_CONTAINER_BUSWIDTH, tlm::tlm_base_protocol_types, sc_core::SC_ZERO_OR_MORE_BOUND>;
+    using tlm_target_socket_type = tlm_utils::simple_target_socket_tagged_b<
+        ContainerBase, ModuleFactory_CONTAINER_BUSWIDTH, tlm::tlm_base_protocol_types, sc_core::SC_ZERO_OR_MORE_BOUND>;
+
+private:
+    bool m_defer_modules_construct;
+
+public:
     cci::cci_broker_handle m_broker;
     cci_param<std::string> moduletype; // for consistency
+    cci::cci_param<uint32_t> p_tlm_initiator_ports_num;
+    cci::cci_param<uint32_t> p_tlm_target_ports_num;
+    cci::cci_param<uint32_t> p_initiator_signals_num;
+    cci::cci_param<uint32_t> p_target_signals_num;
+    sc_core::sc_vector<tlm_initiator_socket_type> initiator_sockets;
+    sc_core::sc_vector<tlm_target_socket_type> target_sockets;
+    sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets;
+    sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
+    transaction_forwarder_if<PASS>* m_local_pass;
+
     /**
      * @brief construct a Container, and all modules within it, and perform binding
      *
@@ -284,11 +323,47 @@ SC_MODULE (Container) {
      */
     std::vector<cci::cci_param<gs::cci_constructor_vl>*> registered_mods;
 
-    Container(const sc_core::sc_module_name _n)
-        : m_broker(cci::cci_get_broker())
+    ContainerBase(const sc_core::sc_module_name _n, bool defer_modules_construct)
+        : m_defer_modules_construct(defer_modules_construct)
+        , m_broker(cci::cci_get_broker())
         , moduletype("moduletype", "", "Module type for the TLM container, must be \"Container\"")
+        , p_tlm_initiator_ports_num("tlm_initiator_ports_num", 0, "number of tlm initiator ports")
+        , p_tlm_target_ports_num("tlm_target_ports_num", 0, "number of tlm target ports")
+        , p_initiator_signals_num("initiator_signals_num", 0, "number of initiator signals")
+        , p_target_signals_num("target_signals_num", 0, "number of target signals")
+        , initiator_sockets("initiator_socket")
+        , target_sockets("target_socket")
+        , initiator_signal_sockets("initiator_signal_socket")
+        , target_signal_sockets("target_signal_socket")
+        , m_local_pass(nullptr)
     {
-        assert((std::string)moduletype == "Container");
+        SCP_DEBUG(()) << "ContainerBase Constructor";
+
+        initiator_sockets.init(p_tlm_initiator_ports_num.get_value(),
+                               [this](const char* n, int i) { return new tlm_initiator_socket_type(n); });
+        target_sockets.init(p_tlm_target_ports_num.get_value(),
+                            [this](const char* n, int i) { return new tlm_target_socket_type(n); });
+        initiator_signal_sockets.init(p_initiator_signals_num.get_value(),
+                                      [this](const char* n, int i) { return new InitiatorSignalSocket<bool>(n); });
+        target_signal_sockets.init(p_target_signals_num.get_value(),
+                                   [this](const char* n, int i) { return new TargetSignalSocket<bool>(n); });
+
+        for (int i = 0; i < p_tlm_target_ports_num.get_value(); i++) {
+            target_sockets[i].register_b_transport(this, &ContainerBase::b_transport, i);
+            target_sockets[i].register_transport_dbg(this, &ContainerBase::transport_dbg, i);
+            target_sockets[i].register_get_direct_mem_ptr(this, &ContainerBase::get_direct_mem_ptr, i);
+        }
+
+        for (int i = 0; i < p_tlm_initiator_ports_num.get_value(); i++) {
+            initiator_sockets[i].register_invalidate_direct_mem_ptr(this, &ContainerBase::invalidate_direct_mem_ptr);
+        }
+
+        for (int i = 0; i < p_target_signals_num.get_value(); i++) {
+            target_signal_sockets[i].register_value_changed_cb([&, i](bool value) {
+                if (m_local_pass) m_local_pass->fw_handle_signal(i, value);
+            });
+        }
+
         auto mods = gs::ModuleFactory::GetAvailableModuleList();
 
         while (mods->size()) {
@@ -296,12 +371,118 @@ SC_MODULE (Container) {
             mods->pop_back();
         }
 
-        ModulesConstruct();
+        if (!m_defer_modules_construct) ModulesConstruct();
+    }
+
+    void fw_b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) override
+    {
+        SCP_DEBUG(()) << "calling b_transport on initiator_socket_" << id << " " << scp::scp_txn_tostring(trans);
+        initiator_sockets[id]->b_transport(trans, delay);
+        SCP_DEBUG(()) << "return from b_transport on initiator_socket_" << id << " " << scp::scp_txn_tostring(trans);
+    }
+
+    unsigned int fw_transport_dbg(int id, tlm::tlm_generic_payload& trans) override
+    {
+        SCP_DEBUG(()) << "calling transport_dbg on initiator_socket_" << id << " " << scp::scp_txn_tostring(trans);
+        unsigned int ret = initiator_sockets[id]->transport_dbg(trans);
+        SCP_DEBUG(()) << "return from transport_dbg on initiator_socket_" << id << " " << scp::scp_txn_tostring(trans);
+        return ret;
+    }
+
+    bool fw_get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data) override
+    {
+        SCP_DEBUG(()) << "calling get_direct_mem_ptr on initiator_socket_" << id << " " << scp::scp_txn_tostring(trans);
+        bool ret = initiator_sockets[id]->get_direct_mem_ptr(trans, dmi_data);
+        SCP_DEBUG(()) << "return from get_direct_mem_ptr on initiator_socket_" << id << " "
+                      << " RET: " << std::boolalpha << ret << " " << scp::scp_txn_tostring(trans)
+                      << " IS_READ_ALLOWED: " << std::boolalpha << dmi_data.is_read_allowed() << " "
+                      << " IS_WRITE_ALLOWED: " << std::boolalpha << dmi_data.is_write_allowed();
+        return ret;
+    }
+
+    void fw_invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) override
+    {
+        SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
+                      << " start address 0x" << std::hex << start << " end address 0x" << std::hex << end;
+        for (int i = 0; i < target_sockets.size(); i++) {
+            target_sockets[i]->invalidate_direct_mem_ptr(start, end);
+        }
+    }
+
+    void fw_handle_signal(int id, bool value) override
+    {
+        SCP_DEBUG(()) << "calling handle_signal on initiator_signal_socket_" << id << " value: " << std::boolalpha
+                      << value;
+        initiator_signal_sockets[id]->write(value);
+    }
+
+private:
+    void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
+    {
+        if (m_local_pass) {
+            m_local_pass->fw_b_transport(id, trans, delay);
+        }
+    }
+
+    unsigned int transport_dbg(int id, tlm::tlm_generic_payload& trans)
+    {
+        if (m_local_pass) {
+            return m_local_pass->fw_transport_dbg(id, trans);
+        }
+    }
+
+    bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
+    {
+        if (m_local_pass) {
+            return m_local_pass->fw_get_direct_mem_ptr(id, trans, dmi_data);
+        }
+    }
+
+    void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
+    {
+        if (m_local_pass) {
+            m_local_pass->fw_invalidate_direct_mem_ptr(start, end);
+        }
     }
 };
-GSC_MODULE_REGISTER(Container);
+
+/**
+ * ModulesConstruct() function is called at Container constructor.
+ */
+class Container : public ContainerBase
+{
+public:
+    SCP_LOGGER(());
+    Container(const sc_core::sc_module_name& n): ContainerBase(n, false)
+    {
+        SCP_DEBUG(()) << "Container constructor";
+        assert(std::string(moduletype.get_value()) == "Container");
+    }
+
+    virtual ~Container() = default;
+};
+/**
+ * ModulesConstruct() function should be called explicitly by the user of the class.
+ * The function is not called at ContainerDeferModulesConstruct constructor.
+ */
+class ContainerDeferModulesConstruct : public ContainerBase
+{
+public:
+    SCP_LOGGER(());
+    ContainerDeferModulesConstruct(const sc_core::sc_module_name& n): ContainerBase(n, true)
+    {
+        SCP_DEBUG(()) << "ContainerDeferModulesConstruct constructor";
+        assert(std::string(moduletype.get_value()) == "ContainerDeferModulesConstruct");
+    }
+
+    virtual ~ContainerDeferModulesConstruct() = default;
+};
 
 } // namespace ModuleFactory
 } // namespace gs
 
+typedef gs::ModuleFactory::Container Container;
+typedef gs::ModuleFactory::ContainerDeferModulesConstruct ContainerDeferModulesConstruct;
+GSC_MODULE_REGISTER(Container);
+GSC_MODULE_REGISTER(ContainerDeferModulesConstruct);
 #endif

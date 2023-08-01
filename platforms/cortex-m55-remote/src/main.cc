@@ -25,8 +25,7 @@
 
 #include <greensocs/gsutils/cciutils.h>
 #include <greensocs/gsutils/luafile_tool.h>
-
-#include <libqbox/components/cpu/arm/cortex-m55.h>
+#include "remote_cpu.h"
 #include <libqbox/components/uart/pl011.h>
 
 #include <greensocs/base-components/memory.h>
@@ -77,7 +76,7 @@ int sc_main(int argc, char* argv[])
         std::cerr << argv[0] << " Error: '" << exc.what() << std::endl;
         exit(2);
     } catch (...) {
-        SCP_ERR() << "Unknown error (main.cc)!";
+        SCP_ERR() << "Local platform Unknown error (main.cc)!";
         exit(3);
     }
     auto end = std::chrono::system_clock::now();

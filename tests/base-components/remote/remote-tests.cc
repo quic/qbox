@@ -57,10 +57,6 @@ int sc_main(int argc, char* argv[])
     gs::ConfigurableBroker m_broker(
         argc, argv,
         {
-            { "test_bench.pass.remote_router.target_socket.address", cci::cci_value(0x20000) },
-            { "test_bench.pass.remote_router.target_socket.size", cci::cci_value(0x10000) },
-            { "test_bench.pass.remote_router.target_socket.relative_addresses", cci::cci_value(false) },
-
             { "test_bench.mem1.target_socket.address", cci::cci_value(0x11000) },
             { "test_bench.mem1.target_socket.size", cci::cci_value(0x1000) },
             { "test_bench.pass.mem2.target_socket.address", cci::cci_value(0x22000) },
@@ -78,6 +74,14 @@ int sc_main(int argc, char* argv[])
 
             { "test_bench.pass.tlm_initiator_ports_num", cci::cci_value(1) },
             { "test_bench.pass.tlm_target_ports_num", cci::cci_value(2) },
+            
+            { "test_bench.pass.remote_pass.tlm_initiator_ports_num", cci::cci_value(2) },
+            { "test_bench.pass.remote_pass.tlm_target_ports_num", cci::cci_value(1) },
+
+            { "test_bench.pass.target_socket_0.address", cci::cci_value(0x20000) },
+            { "test_bench.pass.target_socket_0.size", cci::cci_value(0x10000) },
+            { "test_bench.pass.target_socket_0.relative_addresses", cci::cci_value(false) },
+            { "test_bench.pass.exec_path", cci::cci_value(getexepath() + "-remote") },
         });
 
     ::testing::InitGoogleTest(&argc, argv);

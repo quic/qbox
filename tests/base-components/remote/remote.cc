@@ -80,13 +80,7 @@ int sc_main(int argc, char* argv[])
 {
     try {
         SCP_INFO("RemoteMain") << "Remote started";
-        gs::ConfigurableBroker m_broker(
-        argc, argv,
-        {
-            { "remote.remote_pass.tlm_initiator_ports_num", cci::cci_value(2) },
-            { "remote.remote_pass.tlm_target_ports_num", cci::cci_value(1) },
-            /*number of signals (initiators & targets) used = 0, they are initialized to 0 by default*/
-        });
+        gs::ConfigurableBroker m_broker(argc, argv);
         RemoteTest remote("remote");
         SCP_INFO("RemoteMain") << "END OF ELAB for remote";
         sc_core::sc_start();

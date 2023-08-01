@@ -22,6 +22,7 @@
 #include <string>
 
 #include <libqemu-cxx/target/aarch64.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 
 #include "libqbox/components/irq-ctrl/armv7m-nvic.h"
 #include "libqbox/components/cpu/cpu.h"
@@ -34,7 +35,10 @@ public:
     cci::cci_param<bool> p_start_powered_off;
     QemuNvicArmv7m m_nvic;
     cci::cci_param<uint64_t> p_init_nsvtor;
-
+    CpuArmCortexM55(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : CpuArmCortexM55(name, *(dynamic_cast<QemuInstance*>(o)))
+        {
+        }
     CpuArmCortexM55(sc_core::sc_module_name name, QemuInstance& inst)
         : QemuCpu(name, inst, "cortex-m55-arm")
         , m_nvic("nvic", inst)
@@ -61,3 +65,5 @@ public:
         nvic.set_prop_link("cpu", cpu);
     }
 };
+
+GSC_MODULE_REGISTER(CpuArmCortexM55, sc_core::sc_object*);

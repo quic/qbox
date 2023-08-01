@@ -11,6 +11,7 @@ import getpass
 from truth.truth import AssertThat
 import subprocess
 from subprocess import Popen, PIPE
+import signal
 
 
 def vp_test():
@@ -42,6 +43,11 @@ def vp_test():
     child = pexpect.spawn(vp_path.as_posix(), ["--gs_luafile", args.lua])
     child.logfile = stdout.buffer
     child.expect("Hello from cortex-m55!")
+
+    # make sure to use SIGQUIT to terminate the child as this signal is handled in 
+    # include/greensocs/gsutils/uutils.h and it should be called for VP proper cleanup.
+    child.kill(signal.SIGQUIT)
+    child.wait()
 
     test = True
     return test
