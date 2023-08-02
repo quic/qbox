@@ -8,7 +8,7 @@ include:
     - .general_build_job_template
   variables:
     REPO_CMAKE_ARGS: -DQQVP_RESULTS_DIR=${RESULTS_DIR} # From cmake-boilerplate
-    FIRMWARE_REPO_VAR_NAME: QQVP_FIRMWARE_REPO_SHA
+    FIRMWARE_REPO_VAR_NAME: QQVP_FIRMWARE_REPO_DIR
     FIRMWARE_REPO_SHA_FILE: ./tests/quic-vp/firmware-repo-sha.txt
 
 lua-check:
