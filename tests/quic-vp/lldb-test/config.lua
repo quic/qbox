@@ -19,6 +19,6 @@ for _, load in ipairs(platform.load) do
   end
 end
 
-platform.hexagon_cluster_0.hexagon_start_addr=0x0
-platform.hexagon_cluster_0.hexagon_thread_0.gdb_port=1234
+platform.hex_plugin.hexagon_cluster_0.hexagon_start_addr=0x0
+platform.hex_plugin.hexagon_cluster_0.hexagon_thread_0.gdb_port=1234
 platform.with_gpu=false

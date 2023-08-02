@@ -103,15 +103,6 @@ public:
         sc_core::sc_time global_quantum(p_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);
 
-        // UNCOMMENT
-        // if (p_with_gpu.get_value()) {
-        //     for (auto& gpex : m_gpex){
-        //         m_gpu = new QemuVirtioGpuGlPci("gpu", m_qemu_inst);
-        //         gpex.add_device(*m_gpu);
-        //     // m_display = new QemuDisplay("display", *m_gpu);
-        //     }
-        // }
-
     }
 
     SCP_LOGGER(());

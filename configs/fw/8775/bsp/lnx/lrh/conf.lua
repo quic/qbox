@@ -42,7 +42,7 @@ tableMerge(platform, {
    pl011 = {
        moduletype = "Pl011",
        args = {"&platform.charbackend_stdio_0"};
-       simple_target_socket_0 = {address= UART0,
+       target_socket = {address= UART0,
                                  size=0x1000, 
                                  bind = "&router.initiator_socket"},
        irq = {bind = "&gic_0.spi_in_379"},

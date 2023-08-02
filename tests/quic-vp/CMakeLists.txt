@@ -30,7 +30,7 @@ macro(gs_add_test test conf_lua image_dir extra)
     endif()
 endmacro()
 
-set(SYNC --param platform.ArmQemuInstance.sync_policy=\"multithread-quantum\")
+set(SYNC --param platform.qemu_inst.sync_policy=\"multithread-quantum\")
 
 gs_add_test(Makena_fastrpc_calc_test_quantum 8540/SA8540P_conf.lua "makena/default" "${SYNC}")
 gs_add_test(LeMans_fastrpc_calc_test_quantum 8775/SA8775P_conf.lua "lemans" "${SYNC}")
