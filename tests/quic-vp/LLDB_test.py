@@ -67,7 +67,7 @@ def LLDB_test():
         "-o", f"file {test_dir}/cdsp0_image",
         "--source", f"{test_dir}/script.lldb",
         "-o", "gdb-remote localhost:1234",
-        "-o", "continue"], timeout=timeout)
+        "-o", "continue"], timeout_sec=timeout)
 
     # Check that our breakpoints were reached
     lldb.expect(r"^PASS2$")
