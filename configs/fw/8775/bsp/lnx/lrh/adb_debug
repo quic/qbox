@@ -1,7 +1,8 @@
 #!/bin/sh
+set -e
 # TAP interface will be passed in $1
 bridge=br0
 guest_device=$1
-ip link show $bridge >/dev/null || ip link add name $bridge type bridge
+ip link show $bridge >/dev/null 2>&1 || ip link add name $bridge type bridge
 ifconfig $guest_device 0.0.0.0 up
 brctl addif $bridge $guest_device
