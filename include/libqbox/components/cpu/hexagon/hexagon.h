@@ -57,13 +57,14 @@ public:
 
     QemuCpuHexagon(const sc_core::sc_module_name& name, QemuInstance& inst, uint32_t cfgbase,
                    Rev_t rev, uint32_t l2vic_base_addr, uint32_t qtimer_base_addr,
-                   uint32_t exec_start_addr)
+                   uint32_t exec_start_addr, bool vp_mode = true)
         : QemuCpu(name, inst, "v67-hexagon")
         , irq_in("irq_in", 8, [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
         , m_cfgbase(cfgbase)
         , m_l2vic_base_addr(l2vic_base_addr)
         , m_qtimer_base_addr(qtimer_base_addr)
         , m_exec_start_addr(exec_start_addr)
+        , m_vp_mode(vp_mode)
         , p_dsp_arch("dsp_arch", "v68", "DSP arch")
         , p_start_powered_off("start_powered_off", false,
                               "Start and reset the CPU "
@@ -101,7 +102,7 @@ public:
         // in case of additional reset, this value will be loaded for PC
         cpu.set_prop_int("start-evb", m_exec_start_addr);
         cpu.set_prop_bool("sched-limit", p_sched_limit);
-        cpu.set_prop_bool("virtual-platform-mode", true);
+        cpu.set_prop_bool("virtual-platform-mode", m_vp_mode);
         cpu.set_prop_bool("paranoid-commit-state", p_paranoid);
 
         std::string parent = gs::get_parent_name(name());
@@ -123,6 +124,7 @@ protected:
     uint32_t m_l2vic_base_addr;
     uint32_t m_qtimer_base_addr;
     uint32_t m_exec_start_addr;
+    bool m_vp_mode;
 
 public:
     cci::cci_param<bool> p_start_powered_off;
