@@ -95,6 +95,7 @@ public:
     cci::cci_param<bool> p_isdben_secure;
     cci::cci_param<bool> p_isdben_trusted;
     cci::cci_param<uint32_t> p_cfgbase;
+    cci::cci_param<bool> p_vp_mode;
     // keep public so that smmu can be associated with hexagon
     QemuInstance& m_qemu_hex_inst;
 
@@ -125,6 +126,7 @@ public:
         , p_isdben_trusted("isdben_trusted", false, "Value of ISDBEN.TRUSTED reg field")
         , p_isdben_secure("isdben_secure", false, "Value of ISDBEN.SECURE reg field")
         , p_cfgbase("cfgtable_base", 0, "config table base address")
+        , p_vp_mode("vp_mode", true, "override the vp_mode for testing")
         , m_qemu_hex_inst(
               m_inst_mgr.new_instance("HexagonQemuInstance", QemuInstance::Target::HEXAGON))
         , m_l2vic("l2vic", m_qemu_hex_inst)
@@ -143,9 +145,9 @@ public:
                                                                             ".l2vic.mem.address");
                                 uint64_t qtmr_rg0 = gs::cci_get<uint64_t>(
                                     std::string(name()) + ".qtimer.mem_view.address");
-                                return new QemuCpuHexagon(n, m_qemu_hex_inst, p_cfgbase,
-                                                          QemuCpuHexagon::v68_rev, l2vic_base,
-                                                          qtmr_rg0, p_hexagon_start_addr);
+                                return new QemuCpuHexagon(
+                                    n, m_qemu_hex_inst, p_cfgbase, QemuCpuHexagon::v68_rev,
+                                    l2vic_base, qtmr_rg0, p_hexagon_start_addr, p_vp_mode);
                             })
         , m_router("router")
         , m_global_peripheral_initiator_hex("glob-per-init-hex", m_qemu_hex_inst,
