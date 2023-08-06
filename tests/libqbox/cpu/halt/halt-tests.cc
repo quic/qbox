@@ -89,8 +89,7 @@ public:
 
         for (int i = 0; i < m_cpus.size(); i++) {
             auto& cpu = m_cpus[i];
-            cpu.p_start_powered_off = false;
-            cpu.p_start_halted = true;
+            cpu.p_start_powered_off = true;
             im_halted[i] = true;
         }
 
@@ -108,6 +107,8 @@ public:
     void halt_ctrl() {
         // Mark this as unsuspendable, since QEMU may 'suspend' all activity if we mark all cores as halted.
         sc_core::sc_unsuspendable();
+        halt[0].write(1); // make sure we start halted
+
         while (finished < m_cpus.size()) {
             wait(100, SC_MS);
             for (int i = 0; i < m_cpus.size(); i++) {

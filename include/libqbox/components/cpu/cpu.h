@@ -310,7 +310,6 @@ protected:
 
 public:
     cci::cci_param<unsigned int> p_gdb_port;
-    cci::cci_param<bool> p_start_halted;
 
     /* The default memory socket. Mapped to the default CPU address space in QEMU */
     QemuInitiatorSocket<> socket;
@@ -323,7 +322,6 @@ public:
         , halt("halt")
         , m_qemu_kick_ev(false)
         , m_signaled(false)
-        , p_start_halted("start_halted", false, "Start halted by default is false")
         , p_gdb_port("gdb_port", 0, "Wait for gdb connection on TCP port <gdb_port>")
         , socket("mem", *this, inst) {
         using namespace std::placeholders;
@@ -446,18 +444,12 @@ public:
             ss << "tcp::" << p_gdb_port;
             m_inst.get().start_gdb_server(ss.str());
         }
-
-        for (auto p : gs::sc_cci_children(sc_module::name())) {
-            SCP_WARN(SCMOD) << "Unexpected parameter " + p + " to " + sc_module::name();
-        }
     }
 
     virtual void start_of_simulation() override {
         QemuDevice::start_of_simulation();
         m_inst.get().lock_iothread();
         m_cpu.reset();
-        /* By default, we set the halt to release */
-        m_cpu.halt(p_start_halted);
         m_inst.get().unlock_iothread();
         if (!m_coroutines) {
             /* Prepare the CPU for its first run and release it */
@@ -465,7 +457,7 @@ public:
             rearm_deadline_timer();
             m_cpu.kick();
         }
-        if (m_inst.can_run() && !p_start_halted) {
+        if (m_inst.can_run()) {
             m_qk->start();
         }
     }
