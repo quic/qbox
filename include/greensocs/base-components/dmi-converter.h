@@ -33,6 +33,7 @@
 #include <tlm_utils/simple_target_socket.h>
 #include <tlm_utils/multi_passthrough_initiator_socket.h>
 #include <tlm_utils/multi_passthrough_target_socket.h>
+#include <greensocs/gsutils/module_factory_registery.h>
 #include <map>
 #include <string>
 #include <memory>
@@ -40,13 +41,13 @@
 
 namespace gs {
 
-template <unsigned int TLMPORTS = 1, unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = 32>
 class DMIConverter : public sc_core::sc_module
 {
     SCP_LOGGER();
 
 public:
-    using MOD = DMIConverter<TLMPORTS, BUSWIDTH>;
+    using MOD = DMIConverter<BUSWIDTH>;
     using tlm_initiator_socket_t = tlm_utils::simple_initiator_socket_b<
         MOD, BUSWIDTH, tlm::tlm_base_protocol_types, sc_core::SC_ZERO_OR_MORE_BOUND>;
     using tlm_target_socket_t = tlm_utils::simple_target_socket_tagged_b<
@@ -54,17 +55,21 @@ public:
     // These sockets are kept public for binding.
     sc_core::sc_vector<tlm_initiator_socket_t> initiator_sockets;
     sc_core::sc_vector<tlm_target_socket_t> target_sockets;
+    cci::cci_param<uint32_t> p_tlm_ports_num;
 
 public:
     DMIConverter(const sc_core::sc_module_name& nm)
         : sc_core::sc_module(nm)
-        , initiator_sockets("initiator_socket", TLMPORTS,
-                            [this](const char* n, int i) { return new tlm_initiator_socket_t(n); })
-        , target_sockets("target_socket", TLMPORTS,
-                         [this](const char* n, int i) { return new tlm_target_socket_t(n); })
+        , initiator_sockets("initiator_socket")
+        , target_sockets("target_socket")
+        , p_tlm_ports_num("dmic_tlm_ports_num", 1, "number of tlm ports")
     {
         SCP_DEBUG(()) << "DMIConverter constructor";
-        for (int i = 0; i < TLMPORTS; i++) {
+        initiator_sockets.init(p_tlm_ports_num.get_value(),
+                                [this](const char* n, int i) { return new tlm_initiator_socket_t(n); });
+        target_sockets.init(p_tlm_ports_num.get_value(),
+                         [this](const char* n, int i) { return new tlm_target_socket_t(n); });
+        for (int i = 0; i < p_tlm_ports_num.get_value(); i++) {
             target_sockets[i].register_b_transport(this, &DMIConverter::b_transport, i);
             target_sockets[i].register_transport_dbg(this, &DMIConverter::transport_dbg, i);
             target_sockets[i].register_get_direct_mem_ptr(this, &DMIConverter::get_direct_mem_ptr,
@@ -335,5 +340,6 @@ private:
     std::map<uint64_t, tlm::tlm_dmi> m_dmi_cache;
 };
 } // namespace gs
-
+typedef gs::DMIConverter<> DMIConverter;
+GSC_MODULE_REGISTER(DMIConverter);
 #endif

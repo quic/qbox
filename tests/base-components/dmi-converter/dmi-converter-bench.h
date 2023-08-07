@@ -219,5 +219,5 @@ public:
 protected:
     InitiatorTester m_initiator;
     ::SimpleMemory<> m_simple_mem;
-    gs::DMIConverter<1> m_dmi_converter;
+    gs::DMIConverter<> m_dmi_converter;
 };
