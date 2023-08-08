@@ -28,7 +28,7 @@ while true do
   ram = "ram_"..id
   if platform[ram] == nil
   then
-    platform[ram] = { target_socket = {address=0x50000000, size=100*1024*1024}; }
+    platform[ram] = { target_socket = {address=0x50000000, size=4*1024*1024*1024}; }
     break
   end
   id = id + 1
