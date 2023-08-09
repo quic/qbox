@@ -59,7 +59,8 @@ def linux_boot():
 
         child.logfile = stdout.buffer
 
-        child.expect('buildroot login:')
+        child.expect('buildroot')
+        child.expect('login:')
         child.sendline('root')
         child.expect("#")
         child.sendline('/sbin/halt')
