@@ -129,6 +129,23 @@ if os.getenv("QQVP_PLUGIN_DIR") ~= nil then
     IS_SHARED_MEM = true
 end
 
+-- these values are helpful for local configuration, so make them global
+ OFFSET_MIFS_DDR_SPACE  = 0x60000000
+ OFFSET_SMEM_DDR_SPACE  = 0x10900000
+-- Provided for backwards compatibility with local configs that use this var:
+ INITIAL_DDR_SPACE_14GB = 0x80000000
+
+if ACCEL == "hvf" then
+    print("Loading arm64 bootloader")
+    _KERNEL64_LOAD_ADDR = INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE
+    local ARM64_BOOTLOADER = valid_file(top() .. "../arm64_bootloader.lua")
+    dofile(ARM64_BOOTLOADER)
+end
+
+if ACCEL == nil then
+    ACCEL = "tcg"
+end
+print("Virtual acceleration: " .. ACCEL)
 
 platform = {
     arm_num_cpus = 8;
@@ -141,9 +158,9 @@ platform = {
     hexagon_cluster_2 = adsp;
     quantum_ns = 10000000;
 
-    ArmQemuInstance = { tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
+    ArmQemuInstance = { accel=ACCEL, tcg_mode="MULTI", sync_policy = "multithread-unconstrained"};
 
-    ram_0=  {  target_socket = {address=0x80000000, size=14*GiB}, shared_memory=IS_SHARED_MEM};
+    ram_0=  {  target_socket = {address=INITIAL_DDR_SPACE_14GB, size=14*GiB}, shared_memory=IS_SHARED_MEM};
     ram_1=  {  target_socket = {address=0x800000000, size=32*GiB}};
     hexagon_ram_0={target_socket={address=NSP0_VTCM_BASE_ADDR, size=NSP0_VTCM_SIZE_BYTES}};
     hexagon_ram_1={target_socket={address=NSP1_VTCM_BASE_ADDR, size=NSP1_VTCM_SIZE_BYTES}};
@@ -273,7 +290,6 @@ platform = {
     };
 };
 
-
 -- PRNG values for HWKM_MASTER_CFG_KM_RNG_EE{2 to 15}
 local PRNG_table = {}
 for id = 3, #HEX_DIGITS do
@@ -324,7 +340,7 @@ if (platform.arm_num_cpus > 0) then
 
     for i=0,(platform.arm_num_cpus-1) do
         local cpu = {
-            has_el3 = true;
+            has_el3 = (ACCEL ~= "hvf");
             has_el2 = false;
             psci_conduit = "smc";
             mp_affinity = (math.floor(i / 8) << 8) | (i % 8);
@@ -338,11 +354,6 @@ if (platform.arm_num_cpus > 0) then
     end
 end
 
--- these values are helpful for local configuration, so make them global
- OFFSET_MIFS_DDR_SPACE  = 0x60000000
- OFFSET_SMEM_DDR_SPACE  = 0x10900000
--- Provided for backwards compatibility with local configs that use this var:
- INITIAL_DDR_SPACE_14GB = platform.ram_0.target_socket.address
 
 -- read in any local configuration (Before convenience switches)
 local IMAGE_DIR;
