@@ -77,8 +77,7 @@ class PassRPC : public sc_core::sc_module
     SCP_LOGGER();
     using MOD = PassRPC<TLMPORTS, SIGNALS, BUSWIDTH>;
 
-    static std::string txn_str(tlm::tlm_generic_payload& trans)
-    {
+    static std::string txn_str(tlm::tlm_generic_payload& trans) {
         std::stringstream info;
 
         const char* cmd = "unknown";
@@ -119,8 +118,7 @@ class PassRPC : public sc_core::sc_module
     /* Handle local DMI cache */
 
     std::map<uint64_t, tlm::tlm_dmi> m_dmi_cache;
-    tlm::tlm_dmi* in_cache(uint64_t address)
-    {
+    tlm::tlm_dmi* in_cache(uint64_t address) {
         if (m_dmi_cache.size() > 0) {
             auto it = m_dmi_cache.upper_bound(address);
             if (it != m_dmi_cache.begin()) {
@@ -133,8 +131,7 @@ class PassRPC : public sc_core::sc_module
         }
         return nullptr;
     }
-    void cache_clean(uint64_t start, uint64_t end)
-    {
+    void cache_clean(uint64_t start, uint64_t end) {
         auto it = m_dmi_cache.upper_bound(start);
 
         if (it != m_dmi_cache.begin()) {
@@ -178,11 +175,9 @@ class PassRPC : public sc_core::sc_module
                              m_dmi_end_address, m_dmi_access, m_dmi_read_latency,
                              m_dmi_write_latency);
 
-        void from_tlm(tlm::tlm_dmi& other, ShmemIDExtension* shm)
-        {
+        void from_tlm(tlm::tlm_dmi& other, ShmemIDExtension* shm) {
             m_shmem_fn = shm->m_memid;
             m_shmem_size = shm->m_size;
-            //            SCP_DEBUG(()) << "DMI from tlm Size "<<m_shmem_size;
 
             m_shmem_offset = (uint64_t)(other.get_dmi_ptr()) - shm->m_mapped_addr;
             m_dmi_start_address = other.get_start_address();
@@ -192,12 +187,9 @@ class PassRPC : public sc_core::sc_module
             m_dmi_write_latency = other.get_write_latency().to_seconds();
         }
 
-        void to_tlm(tlm::tlm_dmi& other)
-        {
+        void to_tlm(tlm::tlm_dmi& other) {
             if (m_shmem_size == 0)
                 return;
-
-            //            SCP_DEBUG(()) << "DMI to_tlm Size "<<m_shmem_size;
 
             other.set_dmi_ptr(m_shmem_offset +
                               MemoryServices::get().map_mem_join(m_shmem_fn.c_str(), m_shmem_size));
@@ -229,8 +221,7 @@ class PassRPC : public sc_core::sc_module
                              m_byte_enable_length, m_streaming_width, m_gp_option, m_sc_time,
                              m_quantum_time, m_data, m_byte_enable);
 
-        void from_tlm(tlm::tlm_generic_payload& other)
-        {
+        void from_tlm(tlm::tlm_generic_payload& other) {
             m_command = other.get_command();
             m_address = other.get_address();
             m_length = other.get_data_length();
@@ -244,8 +235,7 @@ class PassRPC : public sc_core::sc_module
             m_byte_enable.ptr = reinterpret_cast<const char*>(other.get_byte_enable_ptr());
             m_byte_enable.size = m_byte_enable_length;
         }
-        void deep_copy_to_tlm(tlm::tlm_generic_payload& other)
-        {
+        void deep_copy_to_tlm(tlm::tlm_generic_payload& other) {
             other.set_command((tlm::tlm_command)(m_command));
             other.set_address(m_address);
             other.set_data_length(m_length);
@@ -264,8 +254,7 @@ class PassRPC : public sc_core::sc_module
             }
         }
 
-        void update_to_tlm(tlm::tlm_generic_payload& other)
-        {
+        void update_to_tlm(tlm::tlm_generic_payload& other) {
             tlm::tlm_generic_payload tmp; // make use of TLM's built in update
             tmp.set_data_ptr(
                 const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(m_data.ptr)));
@@ -282,10 +271,6 @@ class PassRPC : public sc_core::sc_module
         }
     };
 
-    cci::cci_broker_handle m_broker;
-    str_pairs m_cci_db;
-    std::mutex m_cci_db_mut;
-
     class initiator_socket_spying
         : public tlm_utils::simple_initiator_socket_b<MOD, BUSWIDTH, tlm::tlm_base_protocol_types,
                                                       sc_core::SC_ZERO_OR_MORE_BOUND>
@@ -300,19 +285,15 @@ class PassRPC : public sc_core::sc_module
 
     public:
         initiator_socket_spying(const char* name, const std::function<void(std::string)>& f)
-            : socket_type::simple_initiator_socket_b(name), register_cb(f)
-        {
-        }
+            : socket_type::simple_initiator_socket_b(name), register_cb(f) {}
 
-        void bind(base_target_socket_type& socket)
-        {
+        void bind(base_target_socket_type& socket) {
             socket_type::bind(socket);
             register_cb(socket.get_base_export().name());
         }
 
         // hierarchial binding
-        void bind(tlm::tlm_initiator_socket<BUSWIDTH>& socket)
-        {
+        void bind(tlm::tlm_initiator_socket<BUSWIDTH>& socket) {
             socket_type::bind(socket);
             register_cb(socket.get_base_port().name());
         }
@@ -321,8 +302,7 @@ class PassRPC : public sc_core::sc_module
     /* NB use the EXPORT name, so as not to be hassled by the _port_0*/
     std::string nameFromSocket(std::string s) { return s; }
 
-    void remote_register_boundto(std::string s)
-    {
+    void remote_register_boundto(std::string s) {
         str_pairs vals;
         std::vector<std::string> todo = { "address", "size", "relative_addresses" };
         for (auto i : todo) {
@@ -345,7 +325,6 @@ class PassRPC : public sc_core::sc_module
         targets_bound++;
     }
 
-public:
     // NB there is a 'feature' in multi passthrough sockets, the 'name' is always returned as the
     // name of the socket itself, in our case "target_socket_0". This means that address lookup will
     // only work for the FIRST such socket, all others will require a 'pass' or should be driven
@@ -354,37 +333,6 @@ public:
     using tlm_target_socket = tlm_utils::simple_target_socket_tagged_b<
         MOD, BUSWIDTH, tlm::tlm_base_protocol_types, sc_core::SC_ZERO_OR_MORE_BOUND>;
 
-    sc_core::sc_vector<tlm_target_socket> target_sockets;
-    sc_core::sc_vector<initiator_socket_spying> initiator_sockets;
-
-    sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets;
-    sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
-
-    cci::cci_param<int> p_cport;
-    cci::cci_param<int> p_sport;
-    cci::cci_param<std::string> p_exec_path;
-    cci::cci_param<std::string> p_sync_policy;
-
-private:
-    rpc::client* client = nullptr;
-    rpc::server* server = nullptr;
-    int m_child_pid = 0;
-    ProcAliveHandler pahandler;
-    std::condition_variable is_client_connected;
-    std::condition_variable is_sc_status_set;
-    std::mutex client_conncted_mut;
-    std::mutex sc_status_mut;
-    std::atomic_bool cancel_waiting;
-    std::thread::id sc_tid;
-    std::queue<std::pair<int,bool>> sig_queue;
-    std::mutex sig_queue_mut;
-
-    sc_core::sc_status m_remote_status = static_cast<sc_core::sc_status>(0);
-
-    int targets_bound = 0;
-
-    // std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
-    gs::RunOnSysC m_sc;
     class trans_waiter
     {
     public:
@@ -399,15 +347,9 @@ private:
         std::thread notifier_thread;
         std::atomic_bool is_stopped;
         std::atomic_bool is_started;
-        /**
-         * FIXME: this is a temp solution for making the b_transport reentrant.
-         * This thread should wait for the future and notify the systemc waiting
-         * thread by executing the enqueued notifiers.
-         * This solution should be revisted in future.
-         */
+
     private:
-        void notifier_task()
-        {
+        void notifier_task() {
             while (!is_stopped) {
                 std::unique_lock<std::mutex> ul(rpc_execed_mut);
                 is_rpc_execed.wait_for(ul, std::chrono::milliseconds(RPC_TIMEOUT),
@@ -423,8 +365,7 @@ private:
     public:
         trans_waiter(): is_port_busy(TLMPORTS, false), is_stopped(false), is_started(false) {}
 
-        void start()
-        {
+        void start() {
             if (is_started)
                 return;
 
@@ -433,8 +374,7 @@ private:
             notifier_thread = std::thread(&trans_waiter::notifier_task, this);
         }
 
-        void stop()
-        {
+        void stop() {
             if (is_stopped)
                 return;
 
@@ -453,12 +393,9 @@ private:
         void enqueue_notifier(std::function<void()> notifier) { notifiers.push(notifier); }
     };
 
-    trans_waiter btspt_waiter;
-
     template <typename... Args>
     std::future<RPCLIB_MSGPACK::object_handle> do_rpc_async_call(std::string const& func_name,
-                                                                 Args... args)
-    {
+                                                                 Args... args) {
         if (!client) {
             stop_and_exit();
         }
@@ -478,8 +415,7 @@ private:
     }
 
     template <typename T>
-    T do_rpc_async_get(std::future<RPCLIB_MSGPACK::object_handle> fut)
-    {
+    T do_rpc_async_get(std::future<RPCLIB_MSGPACK::object_handle> fut) {
         T ret;
         try {
             ret = do_rpc_as<T>(fut.get());
@@ -495,8 +431,7 @@ private:
     }
 
     template <typename T>
-    T do_rpc_as(RPCLIB_MSGPACK::object_handle handle)
-    {
+    T do_rpc_as(RPCLIB_MSGPACK::object_handle handle) {
         T ret;
         try {
             ret = handle.template as<T>();
@@ -527,9 +462,8 @@ private:
     }
 
     /* b_transport interface */
-    void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
-    {
-        while(btspt_waiter.is_port_busy[id]){
+    void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
+        while (btspt_waiter.is_port_busy[id]) {
             sc_core::wait(btspt_waiter.port_available_events[id]);
         }
         btspt_waiter.is_port_busy[id] = true;
@@ -567,39 +501,27 @@ private:
         t.m_quantum_time = delay.to_seconds();
         t.m_sc_time = sc_core::sc_time_stamp().to_seconds();
 
-        //        SCP_DEBUG(()) << name() << " b_transport socket ID " << id << " From_tlm " <<
-        //        txn_str(trans); SCP_DEBUG(()) << getpid() <<" IS THE b_ RPC PID " <<
-        //        std::this_thread::get_id() <<" is the thread ID";
-        /*tlm_generic_payload_rpc r = client->call("b_tspt", id, t)
-                                        .template as<tlm_generic_payload_rpc>();*/
-        /**
-         * FIXME: this is a temp solution for making the b_transport reentrant.
-         * remove the quantumkeeper and make b_tspt RPC async call, wait for the future
-         * from the async_call in a separate thread, then notify the waiting systemc thread.
-         * This solution should be revisted in future.
-         */
         if (std::this_thread::get_id() == sc_tid &&
             sc_core::sc_get_status() >= sc_core::sc_status::SC_RUNNING &&
             sc_core::sc_get_curr_process_kind() != sc_core::sc_curr_proc_kind::SC_NO_PROC_) {
-            SCP_DEBUG(()) << name() << " B_TSPT handle reentrancy, sc_get_curr_simcontext " << sc_get_curr_simcontext()
-                          << " SC current process kind = "
-                          << sc_core::sc_get_curr_process_kind();
-        
-            
+            SCP_DEBUG(()) << name() << " B_TSPT handle reentrancy, sc_get_curr_simcontext "
+                          << sc_get_curr_simcontext()
+                          << " SC current process kind = " << sc_core::sc_get_curr_process_kind();
+
             btspt_waiter.start();
 
             std::unique_lock<std::mutex> ul(btspt_waiter.rpc_execed_mut);
 
-            btspt_waiter.enqueue_notifier([&](){
+            btspt_waiter.enqueue_notifier([&]() {
                 r = do_rpc_as<tlm_generic_payload_rpc>(do_rpc_call("b_tspt", id, t));
                 btspt_waiter.data_ready_events[id].async_notify();
             });
 
             btspt_waiter.is_rpc_execed.notify_one();
             ul.unlock();
-            SCP_DEBUG(()) << name() << " B_TSPT wait for event, sc_get_curr_simcontext " << sc_get_curr_simcontext()
-                          << " SC current process kind = "
-                          << sc_core::sc_get_curr_process_kind();
+            SCP_DEBUG(()) << name() << " B_TSPT wait for event, sc_get_curr_simcontext "
+                          << sc_get_curr_simcontext()
+                          << " SC current process kind = " << sc_core::sc_get_curr_process_kind();
             if (sc_core::sc_get_curr_process_kind() !=
                 sc_core::sc_curr_proc_kind::SC_METHOD_PROC_) {
                 sc_core::wait(btspt_waiter.data_ready_events[id]); // systemc wait
@@ -613,71 +535,42 @@ private:
         r.update_to_tlm(trans);
         delay = sc_core::sc_time(r.m_quantum_time, sc_core::SC_SEC);
         sc_core::sc_time other_time = sc_core::sc_time(r.m_sc_time, sc_core::SC_SEC);
-        //        m_qk->set(other_time+delay);
-        //        m_qk->sync();
-        //        SCP_DEBUG(()) << name() << " update_to_tlm " << txn_str(trans);
-        //        SCP_DEBUG(()) << name() << " b_transport socket ID " << id << " returned " <<
-        //        txn_str(trans);
+
         btspt_waiter.is_port_busy[id] = false;
         btspt_waiter.port_available_events[id].notify(sc_core::SC_ZERO_TIME);
     }
-    tlm_generic_payload_rpc b_transport_rpc(int id, tlm_generic_payload_rpc t)
-    {
+    tlm_generic_payload_rpc b_transport_rpc(int id, tlm_generic_payload_rpc t) {
         tlm::tlm_generic_payload trans;
         t.deep_copy_to_tlm(trans);
-        //       SCP_DEBUG(()) << name() << " deep copy to_tlm " << txn_str(trans);
         sc_core::sc_time delay = sc_core::sc_time(t.m_quantum_time, sc_core::SC_SEC);
         sc_core::sc_time other_time = sc_core::sc_time(t.m_sc_time, sc_core::SC_SEC);
 
-        //       SCP_DEBUG(()) << "Here"<<m_qk->time_to_sync();
-        //        m_qk->sync();
-        //        SCP_DEBUG(()) << "THere";
-        //        SCP_DEBUG(()) << getpid() <<" IS THE rpc RPC PID " <<
-        //        std::this_thread::get_id() <<" is the thread ID";
-        m_sc.run_on_sysc([&] {
-            //             SCP_DEBUG(()) <<"gere "<<id;
-            //        SCP_DEBUG(()) << getpid() <<" IS THE rpc RPC PID " <<
-            //        std::this_thread::get_id()
-            //        <<" is the thread ID";
-            //             m_qk->set(other_time+delay - sc_core::sc_time_stamp());
-            //             SCP_DEBUG(()) << "WHAT Sync";
-            //             m_qk->sync();
-            //             m_qk->reset();
-            initiator_sockets[id]->b_transport(trans, delay);
-            //             SCP_DEBUG(()) << "WHAT";
-            //             m_qk->sync();
-        });
+        m_sc.run_on_sysc([&] { initiator_sockets[id]->b_transport(trans, delay); });
         t.from_tlm(trans);
         t.m_quantum_time = delay.to_seconds();
-        //        SCP_DEBUG(()) << name() << " from_tlm " << txn_str(trans) ;
         return t;
     }
 
     /* Debug transport interface */
-    unsigned int transport_dbg(int id, tlm::tlm_generic_payload& trans)
-    {
+    unsigned int transport_dbg(int id, tlm::tlm_generic_payload& trans) {
         SCP_DEBUG(()) << name() << " ->remote debug tlm " << txn_str(trans);
         tlm_generic_payload_rpc t;
         tlm_generic_payload_rpc r;
 
         t.from_tlm(trans);
         r = do_rpc_as<tlm_generic_payload_rpc>(do_rpc_call("dbg_tspt", id, t));
-        
 
         r.update_to_tlm(trans);
         SCP_DEBUG(()) << name() << " <-remote debug tlm done " << txn_str(trans);
         // this is not entirely accurate, but see below
         return trans.get_response_status() == tlm::TLM_OK_RESPONSE ? trans.get_data_length() : 0;
     }
-    tlm_generic_payload_rpc transport_dbg_rpc(int id, tlm_generic_payload_rpc t)
-    {
+    tlm_generic_payload_rpc transport_dbg_rpc(int id, tlm_generic_payload_rpc t) {
         tlm::tlm_generic_payload trans;
         t.deep_copy_to_tlm(trans);
         int ret_len;
         SCP_DEBUG(()) << name() << " remote-> debug tlm " << txn_str(trans);
-        //        m_sc.run_on_sysc([&] {
         ret_len = initiator_sockets[id]->transport_dbg(trans);
-        //            });
         t.from_tlm(trans);
         SCP_DEBUG(()) << name() << " remote<- debug tlm done " << txn_str(trans);
 
@@ -689,8 +582,7 @@ private:
         return t;
     }
 
-    bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
-    {
+    bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data) {
         tlm::tlm_dmi* c;
         SCP_DEBUG(()) << " " << name() << " get_direct_mem_ptr to address "
                       << "0x" << std::hex << trans.get_address();
@@ -698,9 +590,6 @@ private:
 #ifdef DMICACHE
         c = in_cache(trans.get_address());
         if (c) {
-            //            SCP_DEBUG(()) << "In Cache " << std::hex << c->get_start_address() <<
-            //            "
-            //            - " << std::hex << c->get_end_address() ;
             dmi_data = *c;
             return !(dmi_data.is_none_allowed());
         }
@@ -708,39 +597,24 @@ private:
         tlm_generic_payload_rpc t;
         tlm_dmi_rpc r;
         t.from_tlm(trans);
-        //        SCP_DEBUG(()) << name() << " DMI socket ID " << id << " From_tlm " <<
-        //        txn_str(trans)
-        //        ;
 
         r = do_rpc_as<tlm_dmi_rpc>(do_rpc_call("dmi_req", id, t));
-        
+
         if (r.m_shmem_size == 0) {
             SCP_DEBUG(()) << name() << "DMI OK, but no shared memory available?"
                           << trans.get_address();
             return false;
         }
-        //        SCP_DEBUG(()) << "Got " << std::hex << r.m_dmi_start_address << " - " <<
-        //        std::hex << r.m_dmi_end_address ; c = in_cache(r.m_shmem_fn); if (c) {
-        //            dmi_data = *c;
-        //        } else {
+
         r.to_tlm(dmi_data);
-//            SCP_DEBUG(()) << "Adding " << r.m_shmem_fn << " " << dmi_data.get_start_address()
-//                      << " to cache";
 #ifdef DMICACHE
         assert(m_dmi_cache.count(dmi_data.get_start_address()) == 0);
         m_dmi_cache[dmi_data.get_start_address()] = dmi_data;
 #endif
-        //        }
-        //        SCP_DEBUG(()) << name() << "DMI to " <<trans.get_address()<<" status "
-        //        <<!(dmi_data.is_none_allowed()) <<" range " << std::hex <<
-        //        dmi_data.get_start_address() << " - " << std::hex <<
-        //        dmi_data.get_end_address() <<
-        //        "";
         return !(dmi_data.is_none_allowed());
     }
 
-    tlm_dmi_rpc get_direct_mem_ptr_rpc(int id, tlm_generic_payload_rpc t)
-    {
+    tlm_dmi_rpc get_direct_mem_ptr_rpc(int id, tlm_generic_payload_rpc t) {
         tlm::tlm_generic_payload trans;
         t.deep_copy_to_tlm(trans);
 
@@ -759,15 +633,13 @@ private:
     }
 
     /* Invalidate DMI Interface */
-    void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
-    {
+    void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) {
         SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
                       << " start address 0x" << std::hex << start << " end address 0x" << std::hex
                       << end;
         do_rpc_async_call("dmi_inv", start, end);
     }
-    void invalidate_direct_mem_ptr_rpc(sc_dt::uint64 start, sc_dt::uint64 end)
-    {
+    void invalidate_direct_mem_ptr_rpc(sc_dt::uint64 start, sc_dt::uint64 end) {
         SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
                       << " start address 0x" << std::hex << start << " end address 0x" << std::hex
                       << end;
@@ -779,8 +651,7 @@ private:
         }
     }
 
-    str_pairs get_cci_db()
-    {
+    str_pairs get_cci_db() {
         std::string n = std::string(name());
         std::string parent = std::string(n).substr(0, n.find_last_of("."));
 
@@ -803,8 +674,7 @@ private:
         return ret;
     }
 
-    void set_cci_db(str_pairs db)
-    {
+    void set_cci_db(str_pairs db) {
         std::string modname = std::string(name());
         std::string parent = std::string(modname).substr(0, modname.find_last_of("."));
 
@@ -828,6 +698,7 @@ public:
             const std::vector<std::string>& extra_args = std::vector<std::string>())
         : sc_core::sc_module(nm)
         , m_broker(cci::cci_get_broker())
+        , cancel_waiting(false)
         , initiator_sockets("initiator_socket", TLMPORTS,
                             [this](const char* n, int i) {
                                 return new initiator_socket_spying(
@@ -847,10 +718,7 @@ public:
         , p_sport("server_port", 0, "The port that should be used to server on")
         , p_exec_path("exec_path", exec_path,
                       "The path to the executable that should be started by "
-                      "the bridge")
-        , p_sync_policy("sync_policy", "multithread-unconstrained", "Sync policy for the remote")
-        , cancel_waiting(false)
-    {
+                      "the bridge") {
         SigHandler::get().add_sig_handler(SIGINT, SigHandler::Handler_CB::PASS);
         SigHandler::get().register_on_exit_cb([this]() { stop(); });
         sc_tid = std::this_thread::get_id();
@@ -945,7 +813,6 @@ public:
                 client = nullptr;
                 sc_core::sc_stop();
             });
-            // m_qk->stop();
             return;
         });
 
@@ -984,8 +851,6 @@ public:
                 [&, i](bool value) { do_rpc_async_call("signal", i, value); });
         }
 
-        // m_qk = tlm_quantumkeeper_factory(p_sync_policy);
-        // m_qk->reset();
         server->async_run(1);
 
         if (p_cport) {
@@ -1021,8 +886,6 @@ public:
 
                 execv(exec_path.c_str(), const_cast<char**>(&argp[0]));
 
-                // execlp("lldb", "lldb", "--", exec_path.c_str(), exec_path.c_str(), "-p",
-                // conf_arg, nullptr);
                 SCP_FATAL(()) << "Unable to exec the remote child process, '" << exec_path
                               << "', error: " << std::strerror(errno);
             } else {
@@ -1039,8 +902,7 @@ public:
     PassRPC(const sc_core::sc_module_name& nm, int port)
         : PassRPC(nm, "", port){}; // convenience constructor
 
-    void send_status()
-    {
+    void send_status() {
         SCP_DEBUG(()) << "SIMULATION STATE send " << name() << " to status "
                       << sc_core::sc_get_status();
         do_rpc_call("status", static_cast<int>(sc_core::sc_get_status()));
@@ -1052,17 +914,17 @@ public:
                       << sc_core::sc_get_status();
     }
 
-    void handle_before_sim_start_signals(){
+    void handle_before_sim_start_signals() {
         std::lock_guard<std::mutex> lg(sig_queue_mut);
-        while(!sig_queue.empty()){
-            std::pair<int,bool> sig = sig_queue.front();
+        while (!sig_queue.empty()) {
+            std::pair<int, bool> sig = sig_queue.front();
             sig_queue.pop();
-            m_sc.run_on_sysc([&] { initiator_signal_sockets[sig.first]->write(sig.second); }, false);
+            m_sc.run_on_sysc([&] { initiator_signal_sockets[sig.first]->write(sig.second); },
+                             false);
         }
     }
 
-    void stop()
-    {
+    void stop() {
         if (cancel_waiting)
             return;
         cancel_waiting = true;
@@ -1088,31 +950,25 @@ public:
         }
     }
 
-    void stop_and_exit()
-    {
+    void stop_and_exit() {
         stop();
         _Exit(EXIT_SUCCESS);
     }
 
-    void before_end_of_elaboration()
-    {
+    void before_end_of_elaboration() {
         send_status();
         std::lock_guard<std::mutex> lg(m_cci_db_mut);
         set_cci_db(m_cci_db);
     }
     void end_of_elaboration() { send_status(); }
-    void start_of_simulation()
-    {
+    void start_of_simulation() {
         send_status();
         handle_before_sim_start_signals();
-        // m_qk->start();
     }
 
     PassRPC() = delete;
     PassRPC(const PassRPC&) = delete;
-    ~PassRPC()
-    {
-        // m_qk->stop();
+    ~PassRPC() {
         SCP_DEBUG(()) << "EXIT " << name();
         stop();
 #ifdef DMICACHE
@@ -1120,12 +976,38 @@ public:
 #endif
     }
 
-    void end_of_simulation()
-    {
-        // m_qk->stop();
-        stop();
-    }
-}; // namespace gs
+    void end_of_simulation() { stop(); }
+
+private:
+    cci::cci_broker_handle m_broker;
+    str_pairs m_cci_db;
+    std::mutex m_cci_db_mut;
+    rpc::client* client = nullptr;
+    rpc::server* server = nullptr;
+    int m_child_pid = 0;
+    ProcAliveHandler pahandler;
+    std::condition_variable is_client_connected;
+    std::condition_variable is_sc_status_set;
+    std::mutex client_conncted_mut;
+    std::mutex sc_status_mut;
+    std::atomic_bool cancel_waiting;
+    std::thread::id sc_tid;
+    std::queue<std::pair<int, bool>> sig_queue;
+    std::mutex sig_queue_mut;
+    sc_core::sc_status m_remote_status = static_cast<sc_core::sc_status>(0);
+    int targets_bound = 0;
+    gs::RunOnSysC m_sc;
+    trans_waiter btspt_waiter;
+
+public:
+    sc_core::sc_vector<tlm_target_socket> target_sockets;
+    sc_core::sc_vector<initiator_socket_spying> initiator_sockets;
+    sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets;
+    sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
+    cci::cci_param<int> p_cport;
+    cci::cci_param<int> p_sport;
+    cci::cci_param<std::string> p_exec_path;
+};
 
 } // namespace gs
 #endif
