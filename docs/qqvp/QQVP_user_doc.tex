@@ -113,6 +113,62 @@ You can install the dependencies using Homebrew.
 	\end{lstlisting}
 	\normalsize
 
+
+\item Add the homebrew-quic repository and install virglrenderer:
+	\small
+	\begin{lstlisting}[language=bash]
+		brew tap quic/quic
+		brew install quic/quic/sdl2 quic/quic/virglrenderer
+	\end{lstlisting}
+	\normalsize
+
+Note that when installing ANGLE from source, the {\lstinline!depot_tools!}
+rely on {\lstinline!boto!} to fetch some content and those may encounter
+failures behind a corporate firewall that is designed to intercept TLS/SSL
+traffic.  To bypass that restriction you can add the certificates presented
+by your firewall as trusted, following the process listed below.  If you
+have questions about this process - where to get your company's certificates,
+for example: please consult your IT team for more detailed support.
+
+First, install your trusted certificates:
+
+	\small
+	\begin{lstlisting}[language=bash]
+		brew install -q openssl@1.1
+		openssl_dir=$(brew --prefix openssl@1.1)
+		openssl_certs_dir="$openssl_dir/certs"
+
+		mkdir -p $openssl_certs_dir
+		# download/copy your trusted certificate(s) into $openssl_certs_dir/
+
+		openssl_cert_path=$(brew --prefix)/etc/openssl@1.1/cert.pem
+		# Generate $openssl_cert_path
+		$openssl_dir/bin/c_rehash >/dev/null 2>&1
+	\end{lstlisting}
+	\normalsize
+
+Create a {\lstinline!boto!} config file like the one below in order to
+refer to this trust store:
+
+	\small
+	\begin{lstlisting}[language=bash]
+		[Boto]
+		ca_certificates_file=/opt/homebrew/etc/openssl@1.1/cert.pem
+	\end{lstlisting}
+	\normalsize
+
+When installing virglrenderer, refer homebrew to the {\lstinline!boto!}
+configuration that you created above with the
+{\lstinline!HOMEBREW_NO_AUTH_BOTO_CONFIG!} environment variable:
+
+	\small
+	\begin{lstlisting}[language=bash]
+		HOMEBREW_NO_AUTH_BOTO_CONFIG=path/to/boto_cfg_file \
+			brew install sdl2-gles quic/quic/virglrenderer
+	\end{lstlisting}
+	\normalsize
+
+
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
