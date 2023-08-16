@@ -106,11 +106,12 @@ def fastrpc_calc_test():
                            logfile=get_logfile("pcitool_ssh.log"),
                            timeout_sec=timeout_sec)
     pci.expect('B000:D00:F00 @ idx 0')
-    # Look for the rtl8139 PCI Ethernet Network Controller device:
-    pci.expect('vid/did: 10ec/8139')
     # Look for GPU device:
     if args.enable_gpu:
         pci.expect('vid/did: 1af4/1050')
+
+    # Look for the rtl8139 PCI Ethernet Network Controller device:
+    pci.expect('vid/did: 10ec/8139')
 
     return pci.success() and calc.success()
 

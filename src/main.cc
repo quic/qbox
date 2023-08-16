@@ -559,12 +559,6 @@ public:
         m_gpex = new QemuGPEX("gpex", m_qemu_inst, mmio_addr, mmio_size, mmio_iface_high_addr,
                               mmio_iface_high_size);
 
-        m_xhci = std::make_unique<QemuXhci>("usb", m_qemu_inst);
-        m_gpex->add_device(*m_xhci);
-        m_kbd = std::make_unique<QemuKbd>("kbd", m_qemu_inst);
-        m_xhci->add_device(*m_kbd);
-        m_tablet = std::make_unique<QemuTablet>("mouse", m_qemu_inst);
-        m_xhci->add_device(*m_tablet);
 
         if (p_with_gpu.get_value()) {
             if (m_gpus.size() == 0) {
@@ -585,6 +579,13 @@ public:
             SCP_WARN(SCMOD)
                 << "GPUs are disabled, you can enable them with `platform.with_gpu = true`";
         }
+
+        m_xhci = std::make_unique<QemuXhci>("usb", m_qemu_inst);
+        m_gpex->add_device(*m_xhci);
+        m_kbd = std::make_unique<QemuKbd>("kbd", m_qemu_inst);
+        m_xhci->add_device(*m_kbd);
+        m_tablet = std::make_unique<QemuTablet>("mouse", m_qemu_inst);
+        m_xhci->add_device(*m_tablet);
 
         m_rtl8139 = new QemuRtl8139Pci("rtl8139", m_qemu_inst, m_gpex);
         if (m_rams.size() <= 0) {
