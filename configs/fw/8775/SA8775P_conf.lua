@@ -140,7 +140,7 @@ local adsp = get_dsp(
         ADSP_AHB_SIZE,
         2, -- threads
         "&qemu_hex_inst_2",
-        0x5F0000, -- region total size
+        (0x03000000 - LPASS_BASE) + 0x100000, -- region total size
         0, -- num_of_vtcm
         0, -- vtcm_base
         0, -- vtcm_size
@@ -199,7 +199,7 @@ platform = {
         -- https://ipcatalog.qualcomm.com/memmap/chip/434/map/1356/version/11766/block/24917388
         target_socket_0 = {address=NSP0_BASE , size= NSP0_AHB_HIGH - NSP0_BASE, relative_addresses=false, bind = "&router.initiator_socket"}; --nsp0ss
         target_socket_1 = {address=NSP1_BASE , size= NSP1_AHB_HIGH - NSP1_BASE, relative_addresses=false, bind = "&router.initiator_socket"}; --nsp1ss
-        target_socket_2 = {address=LPASS_BASE , size= 0x5F0000, relative_addresses=false, bind = "&router.initiator_socket"}; --adsp
+        target_socket_2 = {address=LPASS_BASE , size= (0x03000000 - LPASS_BASE) + 0x100000, relative_addresses=false, bind = "&router.initiator_socket"}; --adsp
         initiator_socket_0 = {bind = "&router.target_socket"}, --nsp0ss
         initiator_socket_2 = {bind = "&router.target_socket"}, --nsp1ss
         initiator_socket_4 = {bind = "&router.target_socket"}, --adsp
