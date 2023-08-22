@@ -91,4 +91,15 @@ install (TARGETS vp DESTINATION ${CMAKE_INSTALL_BINDIR})
 file(GLOB REF_USER_CONF_FILES "${CMAKE_SOURCE_DIR}/configs/*.lua")
 install(FILES ${REF_USER_CONF_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/examples)
 
+if(APPLE)
+	# Workardound for <install_dir>/bin/vp getting 'Killed 9' on MacOS.
+	# This seems to happen because, on MacOS, cp will reuse the destination
+	# inode, making the codesign invalid on the installed vp. More info at:
+	# https://developer.apple.com/forums/thread/705117#711951022
+	#
+	# We work around this adding an extra install command to overwrite the
+	# installed vp with the 'install' command, which does what we want.
+	install(CODE "execute_process(COMMAND install \"${CMAKE_BINARY_DIR}/vp\" \"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/vp\")")
+endif()
+
 gs_enable_testing()
