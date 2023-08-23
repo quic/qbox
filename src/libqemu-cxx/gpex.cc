@@ -24,7 +24,8 @@
 
 namespace qemu {
 
-void GpexHost::set_irq_num(int idx, int gic_irq) {
+void GpexHost::set_irq_num(int idx, int gic_irq)
+{
     QemuSysBusDevice* qemu_sbd;
 
     qemu_sbd = reinterpret_cast<QemuSysBusDevice*>(m_obj);

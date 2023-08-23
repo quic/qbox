@@ -46,9 +46,12 @@ public:
         : QemuDevice(nm, inst, device_type)
         , virtio_mmio_device("virtio_mmio", inst, "virtio-mmio")
         , socket("mem", inst)
-        , irq_out("irq_out") {}
+        , irq_out("irq_out")
+    {
+    }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         virtio_mmio_device.instantiate();
         QemuDevice::before_end_of_elaboration();
 
@@ -58,7 +61,8 @@ public:
         virtio_mmio_device.get_qemu_dev().set_prop_bool("format_transport_address", false);
     }
 
-    void end_of_elaboration() override {
+    void end_of_elaboration() override
+    {
         /*
          * we realize virtio_mmio_device first because
          * it creates the "virtio-mmio-bus" we need below
@@ -82,7 +86,8 @@ public:
     }
 
 private:
-    qemu::Bus get_bus() {
+    qemu::Bus get_bus()
+    {
         qemu::Device virtio_mmio_dev(virtio_mmio_device.get_qemu_dev());
         return virtio_mmio_dev.get_prop_link("virtio-mmio-bus");
     }

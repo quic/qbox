@@ -53,7 +53,8 @@ private:
     qemu::DisplayGLCtxOps m_gl_ctx_ops;
     bool m_instantiated = false;
 
-    QemuDisplay(const sc_core::sc_module_name& name, QemuDevice& gpu): sc_module(name) {
+    QemuDisplay(const sc_core::sc_module_name& name, QemuDevice& gpu): sc_module(name)
+    {
         QemuInstance* gpu_qemu_inst = &gpu.get_qemu_inst();
         if (inst && inst != gpu_qemu_inst) {
             SCP_FATAL(SCMOD) << "Can not create another QemuDisplay on a different QemuInstance";
@@ -65,12 +66,9 @@ private:
     {
         if (dynamic_cast<QemuVirtioMMIOGpuGl*>(&o) != nullptr) {
             return reinterpret_cast<QemuDevice&>(*dynamic_cast<QemuVirtioMMIOGpuGl*>(&o));
-        }
-        else if (dynamic_cast<QemuVirtioGpu*>(&o) != nullptr) {
+        } else if (dynamic_cast<QemuVirtioGpu*>(&o) != nullptr) {
             return reinterpret_cast<QemuDevice&>(*dynamic_cast<QemuVirtioGpu*>(&o));
-        }
-        else {
-            // Gérer ici le cas où le type de l'objet n'est ni QemuVirtioMMIOGpuGl ni QemuVirtioGpu
+        } else {
             SCP_FATAL(SCMOD) << " the type of the object 'o' is not a QemuVirtioMMIOGpuGl or QemuVirtioGpu";
         }
     }
@@ -78,7 +76,8 @@ private:
 public:
     bool is_realized() { return m_realized; }
 
-    void instantiate() {
+    void instantiate()
+    {
         if (m_instantiated) {
             return;
         }
@@ -86,8 +85,7 @@ public:
         inst->get().enable_opengl();
 
         if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-            SCP_WARN(SCMOD) << "Skipping Display module: Failed to initialize SDL: "
-                            << SDL_GetError();
+            SCP_WARN(SCMOD) << "Skipping Display module: Failed to initialize SDL: " << SDL_GetError();
             return;
         }
 
@@ -97,7 +95,8 @@ public:
         m_instantiated = true;
     }
 
-    static void gl_switch(DisplayChangeListener* dcl, DisplaySurface* new_surface) {
+    static void gl_switch(DisplayChangeListener* dcl, DisplaySurface* new_surface)
+    {
         qemu::LibQemu& lib = inst->get();
         QemuDisplay* display = reinterpret_cast<QemuDisplay*>(lib.dcl_new(dcl).get_user_data());
 
@@ -108,22 +107,22 @@ public:
         // as QEMU is in turn waiting for its switch function to run on SystemC kernel thread.
         if (display->m_realized) {
             lib.unlock_iothread();
-            display->m_on_sysc.run_on_sysc(
-                [&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); }, true);
+            display->m_on_sysc.run_on_sysc([&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); }, true);
             lib.lock_iothread();
         } else {
-            display->m_on_sysc.run_on_sysc(
-                [&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); }, false);
+            display->m_on_sysc.run_on_sysc([&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); }, false);
         }
     }
 
-    static void gl_update(DisplayChangeListener* dcl, int x, int y, int w, int h) {
+    static void gl_update(DisplayChangeListener* dcl, int x, int y, int w, int h)
+    {
         // Luckily for us the GL update interacts only with the Graphics API without touching the
         // window hence no need to run it on main thread.
         inst->get().sdl2_gl_update(dcl, x, y, w, h);
     }
 
-    static void gl_refresh(DisplayChangeListener* dcl) {
+    static void gl_refresh(DisplayChangeListener* dcl)
+    {
         qemu::LibQemu& lib = inst->get();
         QemuDisplay* display = reinterpret_cast<QemuDisplay*>(lib.dcl_new(dcl).get_user_data());
         // SDL2 GL refresh should run on main kernel thread as it polls events
@@ -136,13 +135,14 @@ public:
         }
     }
 
-    static bool is_compatible_dcl(DisplayGLCtx* ctx, DisplayChangeListener* dcl) {
-        QemuDisplay* display = reinterpret_cast<QemuDisplay*>(
-            inst->get().dcl_new(dcl).get_user_data());
+    static bool is_compatible_dcl(DisplayGLCtx* ctx, DisplayChangeListener* dcl)
+    {
+        QemuDisplay* display = reinterpret_cast<QemuDisplay*>(inst->get().dcl_new(dcl).get_user_data());
         return display->m_ops.is_used_by(dcl);
     }
 
-    void realize() {
+    void realize()
+    {
         using namespace std::placeholders;
 
         if (!m_instantiated || m_realized) {
@@ -199,10 +199,7 @@ public:
         m_realized = true;
     }
 
-    QemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : QemuDisplay(name, selectGpu(*o))
-        {
-        }
+    QemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object* o): QemuDisplay(name, selectGpu(*o)) {}
 
     /**
      * @brief Construct a QEMUDisplay
@@ -211,7 +208,9 @@ public:
      * @param[in] gpu GPU module associated to this diplay.
      */
     QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu)
-        : QemuDisplay(name, reinterpret_cast<QemuDevice&>(gpu)) {}
+        : QemuDisplay(name, reinterpret_cast<QemuDevice&>(gpu))
+    {
+    }
 
     /**
      * @brief Construct a QEMUDisplay
@@ -220,9 +219,12 @@ public:
      * @param[in] gpu GPU module associated to this display
      */
     QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu)
-        : QemuDisplay(name, reinterpret_cast<QemuDevice&>(gpu)) {}
+        : QemuDisplay(name, reinterpret_cast<QemuDevice&>(gpu))
+    {
+    }
 
-    virtual ~QemuDisplay() {
+    virtual ~QemuDisplay()
+    {
         // TODO: need a better strategy for teardown
         m_ops.set_name("deleted");
         m_ops.set_gfx_switch(nullptr);

@@ -24,21 +24,22 @@
 
 namespace qemu {
 
-RcuReadLock::RcuReadLock(std::shared_ptr<LibQemuInternals> internals): m_int(internals) {
+RcuReadLock::RcuReadLock(std::shared_ptr<LibQemuInternals> internals): m_int(internals)
+{
     m_int->exports().rcu_read_lock();
 }
 
-RcuReadLock::~RcuReadLock() {
+RcuReadLock::~RcuReadLock()
+{
     if (m_int) {
         m_int->exports().rcu_read_unlock();
     }
 }
 
-RcuReadLock::RcuReadLock(RcuReadLock&& o): m_int(o.m_int) {
-    o.m_int.reset();
-}
+RcuReadLock::RcuReadLock(RcuReadLock&& o): m_int(o.m_int) { o.m_int.reset(); }
 
-RcuReadLock& RcuReadLock::operator=(RcuReadLock&& o) {
+RcuReadLock& RcuReadLock::operator=(RcuReadLock&& o)
+{
     std::swap(m_int, o.m_int);
     return *this;
 }

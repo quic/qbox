@@ -29,7 +29,8 @@
 namespace gs {
 class tlm_quantumkeeper_freerunning : public tlm_quantumkeeper_multithread
 {
-    virtual void sync() override {
+    virtual void sync() override
+    {
         if (is_sysc_thread()) {
             assert(m_local_time >= sc_core::sc_time_stamp());
             sc_core::sc_time t = m_local_time - sc_core::sc_time_stamp();

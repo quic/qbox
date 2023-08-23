@@ -71,28 +71,23 @@ public:
      * library loader provided by libqemu-cxx.
      */
     QemuInstanceManager(const sc_core::sc_module_name& n = "QemuInstanceManager")
-    : sc_core::sc_module(n)
-    , m_loader(qemu::get_default_lib_loader()) {}
+        : sc_core::sc_module(n), m_loader(qemu::get_default_lib_loader())
+    {
+    }
 
     /**
      * @brief Construct a QemuInstanceManager by providing a custom library loader
      *
      * @param[in] loader The custom loader
      */
-    QemuInstanceManager(const sc_core::sc_module_name& n, LibLoader* loader)
-    : sc_core::sc_module(n)
-    , m_loader(loader) {}
+    QemuInstanceManager(const sc_core::sc_module_name& n, LibLoader* loader): sc_core::sc_module(n), m_loader(loader) {}
 
-    LibLoader& get_loader(){
-        return *m_loader;
-    }
+    LibLoader& get_loader() { return *m_loader; }
 
     /* Destructor should only be called at the end of the program, if it is called before, then all
      * Qemu instances that it manages will, of course, be destroyed too
      */
-    virtual ~QemuInstanceManager() {
-        delete m_loader;
-    }
+    virtual ~QemuInstanceManager() { delete m_loader; }
 };
 
 GSC_MODULE_REGISTER(QemuInstanceManager);
@@ -120,17 +115,19 @@ public:
     std::condition_variable g_signaled_cond;
     bool g_signaled = false;
 
-    void add_dev(QemuDeviceBaseIF* d) {
+    void add_dev(QemuDeviceBaseIF* d)
+    {
         std::lock_guard<std::mutex> lock(m_lock);
         devices.push_back(d);
     }
-    void del_dev(QemuDeviceBaseIF* d) {
+    void del_dev(QemuDeviceBaseIF* d)
+    {
         std::lock_guard<std::mutex> lock(m_lock);
         devices.remove(d);
     }
-    bool can_run() {
-        if (!m_running)
-            return false;
+    bool can_run()
+    {
+        if (!m_running) return false;
         std::lock_guard<std::mutex> lock(m_lock);
         bool can_run = false;
         // In SINGLE mode, check if another CPU could run
@@ -151,13 +148,11 @@ public:
         TCG_COROUTINE,
         TCG_MULTI,
     };
-    TcgMode StringToTcgMode(std::string s) {
-        if (s == "SINGLE")
-            return TCG_SINGLE;
-        if (s == "COROUTINE")
-            return TCG_COROUTINE;
-        if (s == "MULTI")
-            return TCG_MULTI;
+    TcgMode StringToTcgMode(std::string s)
+    {
+        if (s == "SINGLE") return TCG_SINGLE;
+        if (s == "COROUTINE") return TCG_COROUTINE;
+        if (s == "MULTI") return TCG_MULTI;
         SCP_WARN(()) << "Unknown TCG mode " << s;
         return TCG_UNSPECIFIED;
     }
@@ -178,7 +173,8 @@ protected:
 
     cci::cci_param<std::string> p_accel;
 
-    void push_default_args() {
+    void push_default_args()
+    {
         const size_t l = strlen(name()) + 1;
 
         m_inst.push_qemu_arg("libqbox"); /* argv[0] */
@@ -190,10 +186,9 @@ protected:
         });
 
         const char* args = "qemu_args."; /* Update documentations because it's not anymore 'args.' it's 'qemu_args.' */
-        for (auto p : m_conf_broker.get_unconsumed_preset_values(
-                 [&](const std::pair<std::string, cci::cci_value>& iv) {
-                     return iv.first.find(std::string(name()) + "." + args) == 0;
-                 })) {
+        for (auto p : m_conf_broker.get_unconsumed_preset_values([&](const std::pair<std::string, cci::cci_value>& iv) {
+                 return iv.first.find(std::string(name()) + "." + args) == 0;
+             })) {
             if (p.second.get_string().is_string()) {
                 const std::string arg_name = p.first.substr(l + strlen(args));
                 const std::string arg_value = p.second.get_string();
@@ -211,15 +206,15 @@ protected:
         }
     }
 
-    void push_icount_mode_args() {
+    void push_icount_mode_args()
+    {
         std::ostringstream ss;
         if (p_icount_mips > 0) {
             p_icount = true;
         }
         p_icount.lock();
         p_icount_mips.lock();
-        if (!p_icount)
-            return;
+        if (!p_icount) return;
         if (m_tcg_mode == TCG_MULTI) {
             SCP_FATAL(()) << "MULTI threading can not be used with icount";
             assert(m_tcg_mode != TCG_MULTI);
@@ -230,7 +225,8 @@ protected:
         m_inst.push_qemu_arg(ss.str().c_str());
     }
 
-    void push_tcg_mode_args() {
+    void push_tcg_mode_args()
+    {
         switch (m_tcg_mode) {
         case TCG_SINGLE:
             m_inst.push_qemu_arg("tcg,thread=single");
@@ -253,7 +249,8 @@ protected:
         }
     }
 
-    void push_accelerator_args() {
+    void push_accelerator_args()
+    {
         m_inst.push_qemu_arg("-accel");
 
         if (p_accel.get_value() == "tcg") {
@@ -263,38 +260,35 @@ protected:
         }
     }
 
-    LibLoader& get_loader(sc_core::sc_object* o){
+    LibLoader& get_loader(sc_core::sc_object* o)
+    {
         QemuInstanceManager* inst_mgr = dynamic_cast<QemuInstanceManager*>(o);
-        if (!inst_mgr){
+        if (!inst_mgr) {
             SCP_FATAL(SCMOD) << "Object is not a QemuInstanceManager";
         }
         return inst_mgr->get_loader();
-
     }
 
     Target strtotarget(std::string s)
     {
         if (s == "AARCH64") {
             return QemuInstance::Target::AARCH64;
-        }
-        else if (s == "RISCV64") {
+        } else if (s == "RISCV64") {
             return QemuInstance::Target::RISCV64;
-        }
-        else if (s == "HEXAGON") {
+        } else if (s == "HEXAGON") {
             return QemuInstance::Target::HEXAGON;
-        }
-        else {
+        } else {
             SCP_FATAL(()) << "Unable to find QEMU target container";
         }
     }
 
 public:
     QemuInstance(const sc_core::sc_module_name& n, sc_core::sc_object* o, std::string arch)
-    : QemuInstance(n, get_loader(o), strtotarget(arch))
+        : QemuInstance(n, get_loader(o), strtotarget(arch))
     {
     }
-    QemuInstance(const sc_core::sc_module_name& n, sc_core::sc_object* o, Target t)
-    : QemuInstance(n, get_loader(o), t){
+    QemuInstance(const sc_core::sc_module_name& n, sc_core::sc_object* o, Target t): QemuInstance(n, get_loader(o), t)
+    {
     }
 
     QemuInstance(const sc_core::sc_module_name& n, LibLoader& loader, Target t)
@@ -307,10 +301,10 @@ public:
         , p_sync_policy("sync_policy", "multithread-quantum", "Synchronization Policy to use")
         , m_tcg_mode(StringToTcgMode(p_tcg_mode))
         , p_icount("icount", false, "Enable virtual instruction counter")
-        , p_icount_mips("icount_mips_shift", 0,
-                        "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
+        , p_icount_mips("icount_mips_shift", 0, "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
         , p_display_argument_set(false)
-        , p_accel("accel", "tcg", "Virtualization accelerator") {
+        , p_accel("accel", "tcg", "Virtualization accelerator")
+    {
         SCP_DEBUG(()) << "Libqbox QemuInstance constructor";
         m_running = true;
         p_tcg_mode.lock();
@@ -337,7 +331,8 @@ public:
      *
      * This method may only be called before the instance is initialized.
      */
-    void set_display_arg(const char* arg) {
+    void set_display_arg(const char* arg)
+    {
         p_display_argument_set = true;
         m_inst.push_qemu_arg("-display");
         m_inst.push_qemu_arg(arg);
@@ -357,7 +352,8 @@ public:
      * @details This method is called by CPU instances determin if to use
      * coroutines or not.
      */
-    std::shared_ptr<gs::tlm_quantumkeeper_extended> create_quantum_keeper() {
+    std::shared_ptr<gs::tlm_quantumkeeper_extended> create_quantum_keeper()
+    {
         std::shared_ptr<gs::tlm_quantumkeeper_extended> qk;
         /* only multi-mode sync should have separate QK's per CPU */
         if (m_first_qk && m_tcg_mode != TCG_MULTI) {
@@ -365,8 +361,7 @@ public:
         } else {
             qk = gs::tlm_quantumkeeper_factory(p_sync_policy);
         }
-        if (!m_first_qk)
-            m_first_qk = qk;
+        if (!m_first_qk) m_first_qk = qk;
         if (qk->get_thread_type() == gs::SyncPolicy::SYSTEMC_THREAD) {
             assert(m_tcg_mode == TCG_COROUTINE);
         }
@@ -384,7 +379,8 @@ public:
      *
      * The instance should not already be initialized when calling this method.
      */
-    void init() {
+    void init()
+    {
         assert(!is_inited());
 
         if (m_tcg_mode == TCG_UNSPECIFIED) {
@@ -400,7 +396,7 @@ public:
             } else {
                 if (m_tcg_mode == TCG_COROUTINE) {
                     SCP_FATAL(()) << "Please select a suitable threading mode for this quantum "
-                                        "keeper, it can't be used with COROUTINES";
+                                     "keeper, it can't be used with COROUTINES";
                 }
             }
         }
@@ -414,10 +410,10 @@ public:
             });
         }
 
-        bool trace=(SCP_LOGGER_NAME().level >= sc_core::SC_FULL);
+        bool trace = (SCP_LOGGER_NAME().level >= sc_core::SC_FULL);
         if (trace) {
             SCP_WARN(())("Enabling QEMU debug logging");
-            m_inst.push_qemu_arg({"-d", "in_asm,int,mmu,unimp,guest_errors"});
+            m_inst.push_qemu_arg({ "-d", "in_asm,int,mmu,unimp,guest_errors" });
         }
 
         SCP_INFO(()) << "Initializing QEMU instance with args:";
@@ -442,7 +438,8 @@ public:
      * hasn't been initialized, init is called just before returning the
      * instance.
      */
-    qemu::LibQemu& get() {
+    qemu::LibQemu& get()
+    {
         if (!is_inited()) {
             init();
         }

@@ -41,7 +41,8 @@ public:
         , p_serial("serial", basename(), "Serial name of the nvme disk")
         , p_blob_file("blob_file", "", "Blob file to load as data storage")
         , max_ioqpairs("max_ioqpairs", 64, "Passed through to QEMU max_ioqpairs")
-        , m_drive_id(basename()) {
+        , m_drive_id(basename())
+    {
         m_drive_id += "_drive";
         std::string file = p_blob_file;
 
@@ -51,7 +52,8 @@ public:
         m_inst.add_arg(opts.str().c_str());
     }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         QemuGPEX::Device::before_end_of_elaboration();
 
         std::string serial = p_serial;

@@ -51,12 +51,8 @@ using testing::Eq;
 
 class FactoryPlatform : public gs::ModuleFactory::Container
 {
-
 public:
-    FactoryPlatform(const sc_core::sc_module_name& n)
-        : gs::ModuleFactory::Container(n)
-    {
-    }
+    FactoryPlatform(const sc_core::sc_module_name& n): gs::ModuleFactory::Container(n) {}
 };
 
 int sc_main(int argc, char** argv)
@@ -68,12 +64,10 @@ int sc_main(int argc, char** argv)
 
     FactoryPlatform platform("platform");
 
-    auto mgb = cci::cci_get_global_broker(
-        cci::cci_originator("GreenSocs Module Factory test"));
+    auto mgb = cci::cci_get_global_broker(cci::cci_originator("GreenSocs Module Factory test"));
     auto uncon = mgb.get_unconsumed_preset_values();
     for (auto v : uncon) {
-        std::cout << "Unconsumed config value: " << v.first << " : " << v.second
-                  << "\n";
+        std::cout << "Unconsumed config value: " << v.first << " : " << v.second << "\n";
     }
 
     testing::InitGoogleTest(&argc, argv);

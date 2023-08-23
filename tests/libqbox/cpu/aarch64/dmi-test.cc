@@ -104,7 +104,8 @@ protected:
     std::vector<bool> m_dmi_enabled;
     std::vector<int> m_dmi_ok;
 
-    bool last_access_was_io(int cpuid) {
+    bool last_access_was_io(int cpuid)
+    {
         TEST_ASSERT(cpuid < p_num_cpu);
         return m_last_access_io[cpuid];
     }
@@ -116,14 +117,13 @@ protected:
 public:
     SC_HAS_PROCESS(CpuArmCortexA53DmiTest);
 
-    CpuArmCortexA53DmiTest(const sc_core::sc_module_name& n)
-        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>(n) {
+    CpuArmCortexA53DmiTest(const sc_core::sc_module_name& n): CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>(n)
+    {
         char buf[1024];
         SCP_DEBUG(SCMOD) << "CpuArmCortexA53DmiTest constructor";
         m_num_write_per_cpu = NUM_WRITES / p_num_cpu;
 
-        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterDmi::MMIO_ADDR, CpuTesterDmi::DMI_ADDR,
-                      m_num_write_per_cpu);
+        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterDmi::MMIO_ADDR, CpuTesterDmi::DMI_ADDR, m_num_write_per_cpu);
         set_firmware(buf);
 
         m_last_access_io.resize(p_num_cpu);
@@ -141,14 +141,17 @@ public:
 
     virtual ~CpuArmCortexA53DmiTest() {}
 
-    void ctrl_write(uint64_t addr, uint64_t data, size_t len) {
+    void ctrl_write(uint64_t addr, uint64_t data, size_t len)
+    {
         int cpuid = addr >> 3;
 
-        SCP_INFO(SCMOD) << "CPU " << (addr>>3) << " write at 0x" << std::hex << addr << ", data: " << std::hex << data
+        SCP_INFO(SCMOD) << "CPU " << (addr >> 3) << " write at 0x" << std::hex << addr << ", data: " << std::hex << data
                         << ", len: " << len;
 
         if (m_dmi_ok[cpuid]) {
-            if (m_dmi_ok[cpuid]>1) { TEST_ASSERT(!last_access_was_io(cpuid)); }
+            if (m_dmi_ok[cpuid] > 1) {
+                TEST_ASSERT(!last_access_was_io(cpuid));
+            }
             m_dmi_ok[cpuid]++;
         }
 
@@ -162,7 +165,7 @@ public:
 
         case ST_WRITE_DMI:
             m_tester.dmi_invalidate(addr, addr + len - 1);
-            m_dmi_ok[cpuid]=false;
+            m_dmi_ok[cpuid] = false;
             disable_dmi(cpuid);
             break;
 
@@ -181,16 +184,18 @@ public:
         m_last_access_io[cpuid] = false;
     }
 
-    void dmi_access(uint64_t addr) {
+    void dmi_access(uint64_t addr)
+    {
         int cpuid = addr >> 3;
 
-        SCP_INFO(SCMOD) << "CPU " << (addr>>3) << " DMI accessed at 0x" << std::hex << addr;
+        SCP_INFO(SCMOD) << "CPU " << (addr >> 3) << " DMI accessed at 0x" << std::hex << addr;
 
-        TEST_ASSERT(m_dmi_ok[cpuid]==false || m_last_access_io[cpuid] == false);
+        TEST_ASSERT(m_dmi_ok[cpuid] == false || m_last_access_io[cpuid] == false);
         m_last_access_io[cpuid] = true;
     }
 
-    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override {
+    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override
+    {
         switch (id) {
         case CpuTesterDmi::SOCKET_MMIO:
             ctrl_write(addr, data, len);
@@ -202,7 +207,8 @@ public:
         }
     }
 
-    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override {
+    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override
+    {
         /* No read on the control socket */
         TEST_ASSERT(id == CpuTesterDmi::SOCKET_DMI);
 
@@ -212,15 +218,17 @@ public:
         return 0;
     }
 
-    virtual void dmi_request_failed(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override {
-        SCP_INFO(SCMOD) << "CPU " << (addr>>3) << " DMI request failed 0x" << std::hex << addr << ", len: " << len;        
-        m_dmi_ok[addr >> 3]=0;
+    virtual void dmi_request_failed(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override
+    {
+        SCP_INFO(SCMOD) << "CPU " << (addr >> 3) << " DMI request failed 0x" << std::hex << addr << ", len: " << len;
+        m_dmi_ok[addr >> 3] = 0;
     }
 
-    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override {
+    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override
+    {
         int cpuid = addr >> 3;
 
-        SCP_INFO(SCMOD) << "CPU " << (addr>>3) << " DMI request at 0x" << std::hex << addr << ", len: " << len;
+        SCP_INFO(SCMOD) << "CPU " << (addr >> 3) << " DMI request at 0x" << std::hex << addr << ", len: " << len;
 
         /*
          * Restrict the DMI region to the 8 bytes this CPU writes. So when it
@@ -228,16 +236,16 @@ public:
          */
         ret.set_start_address(addr);
         ret.set_end_address(addr + len - 1);
-        m_dmi_ok[cpuid]= m_dmi_enabled[cpuid]?1:0;
+        m_dmi_ok[cpuid] = m_dmi_enabled[cpuid] ? 1 : 0;
         return m_dmi_enabled[cpuid];
     }
 
-    virtual void end_of_simulation() override {
+    virtual void end_of_simulation() override
+    {
         CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>::end_of_simulation();
 
         for (int i = 0; i < p_num_cpu; i++) {
-            SCP_INFO(SCMOD) << "CPU " << i << " " << m_tester.get_buf_value(i) << " expecting "
-                            << m_num_write_per_cpu;
+            SCP_INFO(SCMOD) << "CPU " << i << " " << m_tester.get_buf_value(i) << " expecting " << m_num_write_per_cpu;
             TEST_ASSERT(m_tester.get_buf_value(i) == m_num_write_per_cpu);
         }
     }
@@ -245,6 +253,4 @@ public:
 
 constexpr const char* CpuArmCortexA53DmiTest::FIRMWARE;
 
-int sc_main(int argc, char* argv[]) {
-    return run_testbench<CpuArmCortexA53DmiTest>(argc, argv);
-}
+int sc_main(int argc, char* argv[]) { return run_testbench<CpuArmCortexA53DmiTest>(argc, argv); }

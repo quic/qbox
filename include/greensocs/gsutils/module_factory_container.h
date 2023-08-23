@@ -191,9 +191,11 @@ public:
                                                                                   sc_core::SC_ZERO_OR_MORE_BOUND>>(
                         i_obj, t_obj))
                     break;
-                 if (try_bind<tlm::tlm_base_initiator_socket<32, tlm::tlm_fw_transport_if<>, tlm::tlm_bw_transport_if<>,
-                                                            1, sc_core::SC_ZERO_OR_MORE_BOUND>,
-                             tlm::tlm_target_socket<32, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>>(i_obj, t_obj))
+                if (try_bind<
+                        tlm::tlm_base_initiator_socket<32, tlm::tlm_fw_transport_if<>, tlm::tlm_bw_transport_if<>, 1,
+                                                       sc_core::SC_ZERO_OR_MORE_BOUND>,
+                        tlm::tlm_target_socket<32, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>>(
+                        i_obj, t_obj))
                     break;
                 if (try_bind<QemuInitiatorSocket<>, tlm::tlm_base_target_socket<>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, tlm_utils::multi_target_base<>>(i_obj, t_obj)) break;

@@ -46,8 +46,7 @@ public:
 
     ShmemIDExtension(): m_mapped_addr(0), m_size(0){};
     ShmemIDExtension(const ShmemIDExtension&) = default;
-    ShmemIDExtension(std::string& s, uint64_t addr, uint64_t size)
-        : m_memid(s), m_mapped_addr(addr), m_size(size)
+    ShmemIDExtension(std::string& s, uint64_t addr, uint64_t size): m_memid(s), m_mapped_addr(addr), m_size(size)
     {
         SCP_DEBUG("ShmemIDExtension") << "ShmemIDExtension constructor";
     }
@@ -59,10 +58,7 @@ public:
         return *this;
     }
 
-    virtual tlm_extension_base* clone() const override
-    {
-        return const_cast<ShmemIDExtension*>(this);
-    }
+    virtual tlm_extension_base* clone() const override { return const_cast<ShmemIDExtension*>(this); }
 
     virtual void copy_from(const tlm_extension_base& ext) override
     {

@@ -89,15 +89,16 @@ private:
 
     InvalidateDirectMemPtrFn m_dmi_inval_cb;
 
-    void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) {
+    void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
+    {
         if (m_dmi_inval_cb) {
             m_dmi_inval_cb(start, end);
         }
     }
 
 protected:
-    virtual void prepare_txn(TlmGenericPayload& txn, bool is_read, uint64_t addr, uint8_t* data,
-                             size_t len) {
+    virtual void prepare_txn(TlmGenericPayload& txn, bool is_read, uint64_t addr, uint8_t* data, size_t len)
+    {
         using namespace tlm;
 
         tlm_command cmd = is_read ? TLM_READ_COMMAND : TLM_WRITE_COMMAND;
@@ -114,12 +115,9 @@ protected:
 public:
     tlm_utils::simple_initiator_socket<InitiatorTester> socket;
 
-    InitiatorTester(const sc_core::sc_module_name& n)
-        : sc_core::sc_module(n)
-        , socket("initiator_socket") 
+    InitiatorTester(const sc_core::sc_module_name& n): sc_core::sc_module(n), socket("initiator_socket")
     {
-        socket.register_invalidate_direct_mem_ptr(this,
-                                                  &InitiatorTester::invalidate_direct_mem_ptr);
+        socket.register_invalidate_direct_mem_ptr(this, &InitiatorTester::invalidate_direct_mem_ptr);
     }
 
     virtual ~InitiatorTester() {}
@@ -140,7 +138,8 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_b_transport(TlmGenericPayload& txn) {
+    TlmResponseStatus do_b_transport(TlmGenericPayload& txn)
+    {
         socket->b_transport(txn, m_last_txn_delay);
         m_last_dmi_hint = txn.is_dmi_allowed();
 
@@ -158,7 +157,8 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_transport_dbg(TlmGenericPayload& txn) {
+    TlmResponseStatus do_transport_dbg(TlmGenericPayload& txn)
+    {
         m_last_transport_debug_ret = socket->transport_dbg(txn);
 
         return txn.get_response_status();
@@ -176,7 +176,8 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_transaction(TlmGenericPayload& txn, bool debug = false) {
+    TlmResponseStatus do_transaction(TlmGenericPayload& txn, bool debug = false)
+    {
         if (debug) {
             return do_transport_dbg(txn);
         } else {
@@ -202,8 +203,9 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_read_with_txn_and_ptr(TlmGenericPayload& txn, uint64_t addr, uint8_t* data,
-                                               size_t len, bool debug = false) {
+    TlmResponseStatus do_read_with_txn_and_ptr(TlmGenericPayload& txn, uint64_t addr, uint8_t* data, size_t len,
+                                               bool debug = false)
+    {
         prepare_txn(txn, true, addr, data, len);
         return do_transaction(txn, debug);
     }
@@ -227,9 +229,9 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_write_with_txn_and_ptr(TlmGenericPayload& txn, uint64_t addr,
-                                                const uint8_t* data, size_t len,
-                                                bool debug = false) {
+    TlmResponseStatus do_write_with_txn_and_ptr(TlmGenericPayload& txn, uint64_t addr, const uint8_t* data, size_t len,
+                                                bool debug = false)
+    {
         prepare_txn(txn, false, addr, const_cast<uint8_t*>(data), len);
         return do_transaction(txn, debug);
     }
@@ -244,8 +246,8 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_read_with_ptr(uint64_t addr, uint8_t* data, size_t len,
-                                       bool debug = false) {
+    TlmResponseStatus do_read_with_ptr(uint64_t addr, uint8_t* data, size_t len, bool debug = false)
+    {
         TlmGenericPayload txn;
 
         return do_read_with_txn_and_ptr(txn, addr, data, len, debug);
@@ -263,8 +265,8 @@ public:
      *
      * @return the tlm::tlm_response_status value of the transaction
      */
-    TlmResponseStatus do_write_with_ptr(uint64_t addr, const uint8_t* data, size_t len,
-                                        bool debug = false) {
+    TlmResponseStatus do_write_with_ptr(uint64_t addr, const uint8_t* data, size_t len, bool debug = false)
+    {
         TlmGenericPayload txn;
 
         return do_write_with_txn_and_ptr(txn, addr, data, len, debug);
@@ -286,8 +288,8 @@ public:
      * @return the tlm::tlm_response_status value of the transaction
      */
     template <class T>
-    TlmResponseStatus do_read_with_txn(TlmGenericPayload& txn, uint64_t addr, T& data,
-                                       bool debug = false) {
+    TlmResponseStatus do_read_with_txn(TlmGenericPayload& txn, uint64_t addr, T& data, bool debug = false)
+    {
         uint8_t* ptr = reinterpret_cast<uint8_t*>(&data);
 
         return do_read_with_txn_and_ptr(txn, addr, ptr, sizeof(data), debug);
@@ -311,8 +313,8 @@ public:
      * @return the tlm::tlm_response_status value of the transaction
      */
     template <class T>
-    TlmResponseStatus do_write_with_txn(TlmGenericPayload& txn, uint64_t addr, const T& data,
-                                        bool debug = false) {
+    TlmResponseStatus do_write_with_txn(TlmGenericPayload& txn, uint64_t addr, const T& data, bool debug = false)
+    {
         const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&data);
 
         return do_write_with_txn_and_ptr(txn, addr, ptr, sizeof(data), debug);
@@ -328,7 +330,8 @@ public:
      * @return the tlm::tlm_response_status value of the transaction
      */
     template <class T>
-    TlmResponseStatus do_read(uint64_t addr, T& data, bool debug = false) {
+    TlmResponseStatus do_read(uint64_t addr, T& data, bool debug = false)
+    {
         uint8_t* ptr = reinterpret_cast<uint8_t*>(&data);
 
         return do_read_with_ptr(addr, ptr, sizeof(data), debug);
@@ -346,7 +349,8 @@ public:
      * @return the tlm::tlm_response_status value of the transaction
      */
     template <class T>
-    TlmResponseStatus do_write(uint64_t addr, const T& data, bool debug = false) {
+    TlmResponseStatus do_write(uint64_t addr, const T& data, bool debug = false)
+    {
         const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&data);
 
         return do_write_with_ptr(addr, ptr, sizeof(data), debug);
@@ -394,7 +398,8 @@ public:
      *
      * @return the value returned by the get_direct_mem_ptr call
      */
-    bool do_dmi_request(uint64_t addr) {
+    bool do_dmi_request(uint64_t addr)
+    {
         TlmGenericPayload txn;
 
         prepare_txn(txn, true, addr, nullptr, 0);

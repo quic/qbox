@@ -46,14 +46,15 @@ public:
         , p_num_outputs(8)    /* this is hardcoded in qemu */
         , socket("mem", inst)
         , socket_fast("fastmem", inst)
-        , irq_in("irq_in", p_num_sources,
-                 [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
-        , irq_out("irq_out", p_num_outputs,
-                  [](const char* n, int i) { return new QemuInitiatorSignalSocket(n); }) {}
+        , irq_in("irq_in", p_num_sources, [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
+        , irq_out("irq_out", p_num_outputs, [](const char* n, int i) { return new QemuInitiatorSignalSocket(n); })
+    {
+    }
 
     void before_end_of_elaboration() override { QemuDevice::before_end_of_elaboration(); }
 
-    void end_of_elaboration() override {
+    void end_of_elaboration() override
+    {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 

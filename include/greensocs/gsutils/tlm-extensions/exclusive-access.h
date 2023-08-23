@@ -51,11 +51,7 @@
 class ExclusiveAccessTlmExtension : public tlm::tlm_extension<ExclusiveAccessTlmExtension>
 {
 public:
-    enum ExclusiveStoreStatus {
-        EXCLUSIVE_STORE_NA = 0,
-        EXCLUSIVE_STORE_SUCCESS,
-        EXCLUSIVE_STORE_FAILURE
-    };
+    enum ExclusiveStoreStatus { EXCLUSIVE_STORE_NA = 0, EXCLUSIVE_STORE_SUCCESS, EXCLUSIVE_STORE_FAILURE };
 
     class InitiatorId
     {
@@ -65,7 +61,8 @@ public:
     public:
         void add_hop(int id) { m_id.push_back(id); }
 
-        bool operator<(const InitiatorId& o) const {
+        bool operator<(const InitiatorId& o) const
+        {
             if (m_id.size() != o.m_id.size()) {
                 return m_id.size() < o.m_id.size();
             }
@@ -81,7 +78,8 @@ public:
             return false;
         }
 
-        bool operator==(const InitiatorId& o) const {
+        bool operator==(const InitiatorId& o) const
+        {
             if (m_id.size() != o.m_id.size()) {
                 return false;
             }
@@ -108,13 +106,11 @@ public:
     ExclusiveAccessTlmExtension() = default;
     ExclusiveAccessTlmExtension(const ExclusiveAccessTlmExtension&) = default;
 
-    virtual tlm_extension_base* clone() const override {
-        return new ExclusiveAccessTlmExtension(*this);
-    }
+    virtual tlm_extension_base* clone() const override { return new ExclusiveAccessTlmExtension(*this); }
 
-    virtual void copy_from(const tlm_extension_base& ext) override {
-        const ExclusiveAccessTlmExtension& other = static_cast<const ExclusiveAccessTlmExtension&>(
-            ext);
+    virtual void copy_from(const tlm_extension_base& ext) override
+    {
+        const ExclusiveAccessTlmExtension& other = static_cast<const ExclusiveAccessTlmExtension&>(ext);
 
         m_id = other.m_id;
         m_store_sta = other.m_store_sta;

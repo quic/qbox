@@ -120,22 +120,24 @@ public:
     SC_HAS_PROCESS(CpuArmCortexA53DmiAsyncInvalTest);
 
     CpuArmCortexA53DmiAsyncInvalTest(const sc_core::sc_module_name& n)
-        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmiSoak>(n) {
+        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmiSoak>(n)
+    {
         char buf[2048];
         SCP_DEBUG(SCMOD) << "CpuArmCortexA53DmiAsyncInvalTest constructor";
         m_num_write_per_cpu = NUM_WRITES / p_num_cpu;
 
-        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterDmiSoak::MMIO_ADDR,
-                      CpuTesterDmiSoak::DMI_ADDR, CpuTesterDmiSoak::DMI_SIZE - 1,
-                      (((uint64_t)std::rand() << 32) | rand()), m_num_write_per_cpu);
+        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterDmiSoak::MMIO_ADDR, CpuTesterDmiSoak::DMI_ADDR,
+                      CpuTesterDmiSoak::DMI_SIZE - 1, (((uint64_t)std::rand() << 32) | rand()), m_num_write_per_cpu);
         set_firmware(buf);
     }
 
-    virtual void start_of_simulation() override {
+    virtual void start_of_simulation() override
+    {
         running = true;
         m_thread = std::thread([&]() { inval(); });
     }
-    void inval() {
+    void inval()
+    {
         while (running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             uint64_t l = CpuTesterDmiSoak::DMI_SIZE;
@@ -152,7 +154,8 @@ public:
 
     virtual ~CpuArmCortexA53DmiAsyncInvalTest() {}
 
-    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override {
+    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override
+    {
         int cpuid = addr >> 3;
 
         if (id != CpuTesterDmiSoak::SOCKET_MMIO) {
@@ -161,17 +164,17 @@ public:
             return;
         }
 
-        SCP_INFO(SCMOD) << "cpu_" << cpuid << " write at 0x" << std::hex << addr << " data:0x"
-                        << data << ", len: 0x" << len;
+        SCP_INFO(SCMOD) << "cpu_" << cpuid << " write at 0x" << std::hex << addr << " data:0x" << data << ", len: 0x"
+                        << len;
         if (data == 0) {
             SCP_INFO(SCMOD) << "cpu_" << cpuid << " DONE";
         }
         TEST_ASSERT(data != -1);
         TEST_ASSERT(data != -2);
-
     }
 
-    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override {
+    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override
+    {
         int cpuid = addr >> 3;
 
         /* No read on the control socket */
@@ -182,12 +185,14 @@ public:
         return 0;
     }
 
-    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override {
+    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override
+    {
         SCP_INFO(SCMOD) << "DMI request at " << addr << ", len: " << len;
         return true;
     }
 
-    virtual void end_of_simulation() override {
+    virtual void end_of_simulation() override
+    {
         CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmiSoak>::end_of_simulation();
         running = false;
         m_thread.join();
@@ -196,6 +201,4 @@ public:
 
 constexpr const char* CpuArmCortexA53DmiAsyncInvalTest::FIRMWARE;
 
-int sc_main(int argc, char* argv[]) {
-    return run_testbench<CpuArmCortexA53DmiAsyncInvalTest>(argc, argv);
-}
+int sc_main(int argc, char* argv[]) { return run_testbench<CpuArmCortexA53DmiAsyncInvalTest>(argc, argv); }

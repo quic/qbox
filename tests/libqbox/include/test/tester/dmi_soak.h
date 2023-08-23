@@ -49,7 +49,8 @@ protected:
      */
     uint8_t m_buf[NUM_BUF][BANK_SIZE];
 
-    void dmi_b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void dmi_b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         uint64_t addr = txn.get_address() & (BANK_SIZE - 1);
         uint64_t bank = (txn.get_address() >> DMI_BITS) & (NUM_BUF - 1);
         uint64_t data = 0;
@@ -81,7 +82,8 @@ protected:
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
     }
 
-    bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi) {
+    bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi)
+    {
         if (!m_lock.try_lock()) {
             SCP_INFO(SCMOD) << "Can't handle concurrent DMI gets";
             return false;
@@ -104,8 +106,8 @@ protected:
 public:
     tlm_utils::simple_target_socket<CpuTesterDmiSoak> dmi_socket;
 
-    CpuTesterDmiSoak(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs)
-        : CpuTesterMmio(n, cbs) {
+    CpuTesterDmiSoak(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs): CpuTesterMmio(n, cbs)
+    {
         SCP_DEBUG(SCMOD) << "CpuTesterDmiSoak constructor";
 
         dmi_socket.register_b_transport(this, &CpuTesterDmiSoak::dmi_b_transport);
@@ -116,7 +118,8 @@ public:
         std::memset(m_buf, 0, sizeof(m_buf));
     }
 
-    void dmi_invalidate(uint64_t start = 0, uint64_t end = DMI_SIZE - 1) {
+    void dmi_invalidate(uint64_t start = 0, uint64_t end = DMI_SIZE - 1)
+    {
         std::lock_guard<std::mutex> lock(m_lock); // We use a lock to ensure things work if DMI is
                                                   // not handled on the SystemC thread
         SCP_INFO(SCMOD) << "Start invalidation";

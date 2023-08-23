@@ -37,32 +37,33 @@ protected:
     uint64_t m_hartid;
     gs::async_event m_irq_ev;
 
-    void mip_update_cb(uint32_t value) {
+    void mip_update_cb(uint32_t value)
+    {
         if (value) {
             m_irq_ev.notify();
         }
     }
 
 public:
-    QemuCpuRiscv64(const sc_core::sc_module_name& name, QemuInstance& inst, const char* model,
-                   uint64_t hartid)
+    QemuCpuRiscv64(const sc_core::sc_module_name& name, QemuInstance& inst, const char* model, uint64_t hartid)
         : QemuCpu(name, inst, std::string(model) + "-riscv")
         , m_hartid(hartid)
         /*
          * We have no choice but to attach-suspend here. This is fixable but
          * non-trivial. It means that the SystemC kernel will never starve...
          */
-        , m_irq_ev(true) {
+        , m_irq_ev(true)
+    {
         m_external_ev |= m_irq_ev;
     }
 
-    void before_end_of_elaboration() {
+    void before_end_of_elaboration()
+    {
         QemuCpu::before_end_of_elaboration();
 
         qemu::CpuRiscv64 cpu(get_qemu_dev());
         cpu.set_prop_int("hartid", m_hartid);
-        cpu.set_mip_update_callback(
-            std::bind(&QemuCpuRiscv64::mip_update_cb, this, std::placeholders::_1));
+        cpu.set_mip_update_callback(std::bind(&QemuCpuRiscv64::mip_update_cb, this, std::placeholders::_1));
     }
 };
 
@@ -71,10 +72,12 @@ class QemuCpuRiscv64Rv64 : public QemuCpuRiscv64
 public:
     QemuCpuRiscv64Rv64(const sc_core::sc_module_name& name, sc_core::sc_object* o, uint64_t hartid)
         : QemuCpuRiscv64Rv64(name, *(dynamic_cast<QemuInstance*>(o)), hartid)
-        {
-        }
+    {
+    }
     QemuCpuRiscv64Rv64(const sc_core::sc_module_name& n, QemuInstance& inst, uint64_t hartid)
-        : QemuCpuRiscv64(n, inst, "rv64", hartid) {}
+        : QemuCpuRiscv64(n, inst, "rv64", hartid)
+    {
+    }
 };
 
 GSC_MODULE_REGISTER(QemuCpuRiscv64Rv64, sc_core::sc_object*, uint64_t);

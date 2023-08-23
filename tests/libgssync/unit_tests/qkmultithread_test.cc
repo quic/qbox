@@ -30,7 +30,8 @@ using testing::Eq;
 
 gs::tlm_quantumkeeper_extended* qk = nullptr;
 bool done;
-void unfinished_quantum() {
+void unfinished_quantum()
+{
     // budget should be 2*quantum
     sc_core::sc_time quantum(1, sc_core::SC_MS);
     sc_core::sc_time budget = qk->time_to_sync();
@@ -54,7 +55,8 @@ void unfinished_quantum() {
     qk->stop();
 }
 
-void finished_quantum() {
+void finished_quantum()
+{
     // budget should be 2*quantum
     sc_core::sc_time quantum(1, sc_core::SC_MS);
     sc_core::sc_time budget = qk->time_to_sync();
@@ -75,7 +77,8 @@ void finished_quantum() {
     qk->stop();
 }
 
-int sc_main(int argc, char** argv) {
+int sc_main(int argc, char** argv)
+{
     qk = new gs::tlm_quantumkeeper_multithread;
     sc_core::sc_time quantum(1, sc_core::SC_MS);
     tlm_utils::tlm_quantumkeeper::set_global_quantum(quantum);
@@ -84,7 +87,8 @@ int sc_main(int argc, char** argv) {
     return status;
 }
 
-TEST(qkmultithread, unfinished_quantum) {
+TEST(qkmultithread, unfinished_quantum)
+{
     done = false;
     qk->start();
     qk->reset();
@@ -98,7 +102,8 @@ TEST(qkmultithread, unfinished_quantum) {
     t1.join();
 }
 
-TEST(qkmultithread, finished_quantum) {
+TEST(qkmultithread, finished_quantum)
+{
     done = false;
     qk->start();
     qk->reset();

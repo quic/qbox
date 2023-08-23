@@ -60,9 +60,9 @@ public:
  *          forwards them as standard TLM-2.0 transactions.
  */
 template <unsigned int BUSWIDTH = 32>
-class QemuInitiatorSocket : public tlm::tlm_initiator_socket<BUSWIDTH, tlm::tlm_base_protocol_types,
-                                                             1, sc_core::SC_ZERO_OR_MORE_BOUND>,
-                            public tlm::tlm_bw_transport_if<>
+class QemuInitiatorSocket
+    : public tlm::tlm_initiator_socket<BUSWIDTH, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>,
+      public tlm::tlm_bw_transport_if<>
 {
 public:
     using TlmInitiatorSocket = tlm::tlm_initiator_socket<BUSWIDTH, tlm::tlm_base_protocol_types, 1,
@@ -90,9 +90,7 @@ protected:
     {
     public:
         std::shared_ptr<qemu::MemoryRegion> m_root;
-        m_mem_obj(qemu::LibQemu& inst) {
-            m_root.reset(new qemu::MemoryRegion(inst.object_new<qemu::MemoryRegion>()));
-        }
+        m_mem_obj(qemu::LibQemu& inst) { m_root.reset(new qemu::MemoryRegion(inst.object_new<qemu::MemoryRegion>())); }
         m_mem_obj(std::shared_ptr<qemu::MemoryRegion> memory): m_root(std::move(memory)) {}
     };
     m_mem_obj* m_r = nullptr;
@@ -101,8 +99,8 @@ protected:
     std::map<DmiRegionAliasKey, DmiRegionAlias::Ptr> m_dmi_aliases;
     using AliasesIterator = std::map<DmiRegionAliasKey, DmiRegionAlias::Ptr>::iterator;
 
-    void init_payload(TlmPayload& trans, tlm::tlm_command command, uint64_t addr, uint64_t* val,
-                      unsigned int size) {
+    void init_payload(TlmPayload& trans, tlm::tlm_command command, uint64_t addr, uint64_t* val, unsigned int size)
+    {
         trans.set_command(command);
         trans.set_address(addr);
         trans.set_data_ptr(reinterpret_cast<unsigned char*>(val));
@@ -115,14 +113,16 @@ protected:
         m_initiator.initiator_customize_tlm_payload(trans);
     }
 
-    void add_dmi_mr_alias(DmiRegionAlias::Ptr alias) {
+    void add_dmi_mr_alias(DmiRegionAlias::Ptr alias)
+    {
         SCP_INFO(SCMOD) << "Adding " << *alias;
         qemu::MemoryRegion alias_mr = alias->get_alias_mr();
         m_r->m_root->add_subregion(alias_mr, alias->get_start());
         alias->set_installed();
     }
 
-    void del_dmi_mr_alias(const DmiRegionAlias::Ptr alias) {
+    void del_dmi_mr_alias(const DmiRegionAlias::Ptr alias)
+    {
         if (!alias->is_installed()) {
             return;
         }
@@ -170,7 +170,8 @@ protected:
      *
      * @returns The DMI descriptor for the corresponding DMI region
      */
-    tlm::tlm_dmi check_dmi_hint_locked(TlmPayload& trans) {
+    tlm::tlm_dmi check_dmi_hint_locked(TlmPayload& trans)
+    {
         assert(trans.is_dmi_allowed());
         tlm::tlm_dmi dmi_data;
 
@@ -223,8 +224,7 @@ protected:
                     return dmi_data;
                 }
                 uint64_t sz = dmi->get_size();
-                if (dmi->get_end() + 1 == start &&
-                    dmi->get_dmi_ptr() + sz == dmi_data.get_dmi_ptr()) {
+                if (dmi->get_end() + 1 == start && dmi->get_dmi_ptr() + sz == dmi_data.get_dmi_ptr()) {
                     SCP_INFO(SCMOD) << "Merge with previous";
                     start = dmi->get_start();
                     dmi_data.set_start_address(start);
@@ -242,8 +242,7 @@ protected:
                     SCP_INFO(SCMOD) << "Already have region(2)";
                     return dmi_data;
                 }
-                if (dmi->get_start() == end + 1 &&
-                    dmi_data.get_dmi_ptr() + sz == dmi->get_dmi_ptr()) {
+                if (dmi->get_start() == end + 1 && dmi_data.get_dmi_ptr() + sz == dmi->get_dmi_ptr()) {
                     SCP_INFO(SCMOD) << "Merge with next";
                     end = dmi->get_end();
                     dmi_data.set_end_address(end);
@@ -253,8 +252,8 @@ protected:
             }
         }
 
-        SCP_INFO(SCMOD) << "Adding DMI for range [0x" << std::hex << dmi_data.get_start_address()
-                        << "-0x" << std::hex << dmi_data.get_end_address() << "]";
+        SCP_INFO(SCMOD) << "Adding DMI for range [0x" << std::hex << dmi_data.get_start_address() << "-0x" << std::hex
+                        << dmi_data.get_end_address() << "]";
 
         DmiRegionAlias::Ptr alias = m_inst.get_dmi_manager().get_new_region_alias(dmi_data);
 
@@ -271,7 +270,8 @@ protected:
      *
      * @returns The DMI descriptor for the corresponding DMI region
      */
-    tlm::tlm_dmi check_dmi_hint(TlmPayload& trans) {
+    tlm::tlm_dmi check_dmi_hint(TlmPayload& trans)
+    {
         tlm::tlm_dmi ret;
         if (!trans.is_dmi_allowed()) {
             return ret;
@@ -282,7 +282,8 @@ protected:
         return ret;
     }
 
-    void check_qemu_mr_hint(TlmPayload& trans) {
+    void check_qemu_mr_hint(TlmPayload& trans)
+    {
         QemuMrHintTlmExtension* ext = nullptr;
         uint64_t mapping_addr;
 
@@ -306,7 +307,8 @@ protected:
         m_r->m_root->add_subregion(mr, mapping_addr);
     }
 
-    void do_regular_access(TlmPayload& trans) {
+    void do_regular_access(TlmPayload& trans)
+    {
         using sc_core::sc_time;
 
         uint64_t addr = trans.get_address();
@@ -326,15 +328,16 @@ protected:
         m_initiator.initiator_set_local_time(now);
     }
 
-    void do_debug_access(TlmPayload& trans) {
+    void do_debug_access(TlmPayload& trans)
+    {
         m_on_sysc.run_on_sysc([this, &trans] { (*this)->transport_dbg(trans); });
     }
 
-    MemTxResult qemu_io_access(tlm::tlm_command command, uint64_t addr, uint64_t* val,
-                               unsigned int size, MemTxAttrs attrs) {
+    MemTxResult qemu_io_access(tlm::tlm_command command, uint64_t addr, uint64_t* val, unsigned int size,
+                               MemTxAttrs attrs)
+    {
         TlmPayload trans;
-        if (m_finished)
-            return qemu::MemoryRegionOps::MemTxError;
+        if (m_finished) return qemu::MemoryRegionOps::MemTxError;
 
         m_inst.get().unlock_iothread();
 
@@ -362,11 +365,13 @@ protected:
         }
     }
 
-    MemTxResult qemu_io_read(uint64_t addr, uint64_t* val, unsigned int size, MemTxAttrs attrs) {
+    MemTxResult qemu_io_read(uint64_t addr, uint64_t* val, unsigned int size, MemTxAttrs attrs)
+    {
         return qemu_io_access(tlm::TLM_READ_COMMAND, addr, val, size, attrs);
     }
 
-    MemTxResult qemu_io_write(uint64_t addr, uint64_t val, unsigned int size, MemTxAttrs attrs) {
+    MemTxResult qemu_io_write(uint64_t addr, uint64_t val, unsigned int size, MemTxAttrs attrs)
+    {
         return qemu_io_access(tlm::TLM_WRITE_COMMAND, addr, &val, size, attrs);
     }
 
@@ -375,12 +380,14 @@ public:
         : TlmInitiatorSocket(name)
         , m_inst(inst)
         , m_on_sysc(sc_core::sc_gen_unique_name("initiator_run_on_sysc"))
-        , m_initiator(initiator) {
+        , m_initiator(initiator)
+    {
         SCP_DEBUG(SCMOD) << "QemuInitiatorSocket constructor";
         TlmInitiatorSocket::bind(*static_cast<tlm::tlm_bw_transport_if<>*>(this));
     }
 
-    void init(qemu::Device& dev, const char* prop) {
+    void init(qemu::Device& dev, const char* prop)
+    {
         using namespace std::placeholders;
 
         qemu::LibQemu& inst = m_inst.get();
@@ -390,38 +397,37 @@ public:
         ops = inst.memory_region_ops_new();
 
         ops->set_read_callback(std::bind(&QemuInitiatorSocket::qemu_io_read, this, _1, _2, _3, _4));
-        ops->set_write_callback(
-            std::bind(&QemuInitiatorSocket::qemu_io_write, this, _1, _2, _3, _4));
+        ops->set_write_callback(std::bind(&QemuInitiatorSocket::qemu_io_write, this, _1, _2, _3, _4));
         ops->set_max_access_size(8);
 
-        m_r->m_root->init_io(dev, TlmInitiatorSocket::name(), std::numeric_limits<uint64_t>::max(),
-                             ops);
+        m_r->m_root->init_io(dev, TlmInitiatorSocket::name(), std::numeric_limits<uint64_t>::max(), ops);
 
         dev.set_prop_link(prop, *m_r->m_root);
 
         m_dev = dev;
     }
 
-    void end_of_simulation() {
+    void end_of_simulation()
+    {
         m_finished = true;
         cancel_all();
     }
 
     // This could happen during void end_of_simulation() but there is a race with other units trying
     // to pull down their DMI's
-    ~QemuInitiatorSocket() {
+    ~QemuInitiatorSocket()
+    {
         cancel_all();
         delete m_r;
         m_r = nullptr;
         //        dmimgr_unlock();
     }
 
-    void qemu_map(qemu::MemoryListener& listener, uint64_t addr, uint64_t len) {
-        if (m_finished)
-            return;
+    void qemu_map(qemu::MemoryListener& listener, uint64_t addr, uint64_t len)
+    {
+        if (m_finished) return;
 
-        SCP_INFO(SCMOD) << "Mapping request for address [0x" << std::hex << addr << "-0x"
-                        << addr + len - 1 << "]";
+        SCP_INFO(SCMOD) << "Mapping request for address [0x" << std::hex << addr << "-0x" << addr + len - 1 << "]";
 
         TlmPayload trans;
         uint64_t current_addr = addr;
@@ -435,9 +441,8 @@ public:
             // Current addr is an absolute address while the dmi range might be relative
             // hence not necesseraly current_addr falls withing dmi_range address boundaries
             // TODO: is there a way to retrieve the dmi range block offset?
-            SCP_INFO(SCMOD) << "0x" << std::hex << current_addr << " mapped [0x"
-                            << dmi_data.get_start_address() << "-0x" << dmi_data.get_end_address()
-                            << "]";
+            SCP_INFO(SCMOD) << "0x" << std::hex << current_addr << " mapped [0x" << dmi_data.get_start_address()
+                            << "-0x" << dmi_data.get_end_address() << "]";
 
             // The allocated range may not span the whole length required for mapping
             current_addr += dmi_data.get_end_address() - dmi_data.get_start_address() + 1;
@@ -447,7 +452,8 @@ public:
         m_initiator.initiator_tidy_tlm_payload(trans);
     }
 
-    void init_global(qemu::Device& dev) {
+    void init_global(qemu::Device& dev)
+    {
         using namespace std::placeholders;
 
         qemu::LibQemu& inst = m_inst.get();
@@ -455,13 +461,11 @@ public:
         ops = inst.memory_region_ops_new();
 
         ops->set_read_callback(std::bind(&QemuInitiatorSocket::qemu_io_read, this, _1, _2, _3, _4));
-        ops->set_write_callback(
-            std::bind(&QemuInitiatorSocket::qemu_io_write, this, _1, _2, _3, _4));
+        ops->set_write_callback(std::bind(&QemuInitiatorSocket::qemu_io_write, this, _1, _2, _3, _4));
         ops->set_max_access_size(8);
 
         auto system_memory = inst.get_system_memory();
-        system_memory->init_io(dev, TlmInitiatorSocket::name(),
-                               std::numeric_limits<uint64_t>::max(), ops);
+        system_memory->init_io(dev, TlmInitiatorSocket::name(), std::numeric_limits<uint64_t>::max(), ops);
         m_r = new m_mem_obj(std::move(system_memory));
 
         m_as = inst.address_space_get_system_memory();
@@ -479,14 +483,16 @@ public:
     void cancel_all() { m_on_sysc.cancel_all(); }
 
     /* tlm::tlm_bw_transport_if<> */
-    virtual tlm::tlm_sync_enum nb_transport_bw(tlm::tlm_generic_payload& trans,
-                                               tlm::tlm_phase& phase, sc_core::sc_time& t) {
+    virtual tlm::tlm_sync_enum nb_transport_bw(tlm::tlm_generic_payload& trans, tlm::tlm_phase& phase,
+                                               sc_core::sc_time& t)
+    {
         /* Should not be reached */
         assert(false);
         return tlm::TLM_COMPLETED;
     }
 
-    virtual AliasesIterator remove_alias(AliasesIterator it) {
+    virtual AliasesIterator remove_alias(AliasesIterator it)
+    {
         DmiRegionAlias::Ptr r = it->second; /*
                                              * Invalidate this region. Do not bother with
                                              * partial invalidation as it's really not worth
@@ -531,7 +537,8 @@ public:
     }
 
 private:
-    void invalidate_single_range(sc_dt::uint64 start_range, sc_dt::uint64 end_range) {
+    void invalidate_single_range(sc_dt::uint64 start_range, sc_dt::uint64 end_range)
+    {
         auto it = m_dmi_aliases.upper_bound(start_range);
 
         if (it != m_dmi_aliases.begin()) {
@@ -557,15 +564,16 @@ private:
 
             it = remove_alias(it);
 
-            SCP_INFO(SCMOD) << "Invalidated region [0x" << std::hex << r->get_start() << ", 0x"
-                            << std::hex << r->get_end() << "]";
+            SCP_INFO(SCMOD) << "Invalidated region [0x" << std::hex << r->get_start() << ", 0x" << std::hex
+                            << r->get_end() << "]";
         }
     }
 
     std::mutex m_mutex;
     std::vector<std::pair<sc_dt::uint64, sc_dt::uint64>> m_ranges;
 
-    void invalidate_ranges_safe_cb() {
+    void invalidate_ranges_safe_cb()
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
 
         SCP_INFO(SCMOD) << "Invalidating " << m_ranges.size() << " ranges";
@@ -577,14 +585,14 @@ private:
     }
 
 public:
-    virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start_range, sc_dt::uint64 end_range) {
-        if (m_finished)
-            return;
+    virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start_range, sc_dt::uint64 end_range)
+    {
+        if (m_finished) return;
 
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            SCP_INFO(SCMOD) << "DMI invalidate [0x" << std::hex << start_range << ", 0x" << std::hex
-                            << end_range << "]";
+            SCP_INFO(SCMOD) << "DMI invalidate [0x" << std::hex << start_range << ", 0x" << std::hex << end_range
+                            << "]";
             m_ranges.push_back(std::make_pair(start_range, end_range));
         }
 

@@ -38,7 +38,6 @@
 #include "greensocs/base-components/pass.h"
 #include <greensocs/gsutils/module_factory_registery.h>
 
-
 class RemoteCPU : public sc_core::sc_module
 {
     SCP_LOGGER();

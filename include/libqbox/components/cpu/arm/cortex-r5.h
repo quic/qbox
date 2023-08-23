@@ -42,9 +42,12 @@ public:
         : QemuCpu(name, inst, "cortex-r5-arm")
         , p_start_powered_off("start_powered_off", false,
                               "Start and reset the CPU "
-                              "in powered-off state") {}
+                              "in powered-off state")
+    {
+    }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         QemuCpu::before_end_of_elaboration();
 
         qemu::CpuArm cpu(m_dev);

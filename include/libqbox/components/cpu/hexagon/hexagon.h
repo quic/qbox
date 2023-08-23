@@ -32,12 +32,13 @@
 
 #include "libqbox/components/cpu/cpu.h"
 
-#define DSP_REV(arch) \
-    { #arch, arch##_rev }
+#define DSP_REV(arch)     \
+    {                     \
+#arch, arch##_rev \
+    }
 
 class QemuCpuHexagon : public QemuCpu
 {
-
     cci::cci_broker_handle m_broker;
 
 public:
@@ -58,9 +59,8 @@ public:
     };
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
 
-    QemuCpuHexagon(const sc_core::sc_module_name& name, QemuInstance& inst, uint32_t cfgbase,
-                   Rev_t rev, uint32_t l2vic_base_addr, uint32_t qtimer_base_addr,
-                   uint32_t exec_start_addr, bool vp_mode = true)
+    QemuCpuHexagon(const sc_core::sc_module_name& name, QemuInstance& inst, uint32_t cfgbase, Rev_t rev,
+                   uint32_t l2vic_base_addr, uint32_t qtimer_base_addr, uint32_t exec_start_addr, bool vp_mode = true)
         : QemuCpu(name, inst, "v67-hexagon")
         , m_broker(cci::cci_get_broker())
         , irq_in("irq_in", 8, [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
@@ -86,7 +86,8 @@ public:
         }
     }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         // set the parameter config-table-addr 195 hexagon_testboard
         QemuCpu::before_end_of_elaboration();
         qemu::CpuHexagon cpu(get_qemu_dev());
@@ -115,7 +116,8 @@ public:
         cpu.set_prop_bool("isdben-secure", gs::cci_get<bool>(m_broker, parent + ".isdben_secure"));
     }
 
-    void end_of_elaboration() override {
+    void end_of_elaboration() override
+    {
         QemuCpu::end_of_elaboration();
 
         for (int i = 0; i < irq_in.size(); ++i) {

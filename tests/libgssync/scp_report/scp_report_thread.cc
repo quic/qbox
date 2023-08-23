@@ -37,7 +37,8 @@ private:
     gs::async_event m_event;
 
 public:
-    TestA(const sc_core::sc_module_name& n): sc_core::sc_module(n) {
+    TestA(const sc_core::sc_module_name& n): sc_core::sc_module(n)
+    {
         SCP_INFO(SCMOD) << "In the constructor of TestA";
 
         SC_METHOD(testA_method);
@@ -45,7 +46,8 @@ public:
         dont_initialize();
     }
 
-    ~TestA() {
+    ~TestA()
+    {
         m_thread2->join();
         m_thread->join();
     }
@@ -54,21 +56,22 @@ private:
     std::unique_ptr<std::thread> m_thread;
     std::unique_ptr<std::thread> m_thread2;
 
-    void testA_method() {
+    void testA_method()
+    {
         SCP_INFO(SCMOD) << "testA method";
         sc_core::sc_stop();
     }
 
-    void start_of_simulation() {
-        m_thread = std::make_unique<std::thread>(&TestA::funct_thread_1, this);
-    }
+    void start_of_simulation() { m_thread = std::make_unique<std::thread>(&TestA::funct_thread_1, this); }
 
-    void funct_thread_1() {
+    void funct_thread_1()
+    {
         SCP_INFO(SCMOD) << "Print in the thread1";
         m_thread2 = std::make_unique<std::thread>(&TestA::print_with_scp_report, this);
     }
 
-    void print_with_scp_report() {
+    void print_with_scp_report()
+    {
         SCP_INFO(SCMOD) << "Print in the thread2";
         m_event.notify(sc_core::sc_time(10, sc_core::SC_NS));
     }
@@ -79,13 +82,15 @@ class TestB : public sc_core::sc_module
 public:
     void testB_method() { SCP_INFO(SCMOD) << "testB method"; }
 
-    TestB(const sc_core::sc_module_name& n): sc_core::sc_module(n) {
+    TestB(const sc_core::sc_module_name& n): sc_core::sc_module(n)
+    {
         SCP_INFO(SCMOD) << "In the constructor of TestB";
         SC_METHOD(testB_method);
     }
 };
 
-int sc_main(int argc, char** argv) {
+int sc_main(int argc, char** argv)
+{
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)
                           .logAsync(false)
@@ -102,6 +107,4 @@ int sc_main(int argc, char** argv) {
     return status;
 }
 
-TEST(thread_test, all) {
-    sc_core::sc_start();
-}
+TEST(thread_test, all) { sc_core::sc_start(); }

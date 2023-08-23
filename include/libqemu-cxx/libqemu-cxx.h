@@ -57,8 +57,8 @@ typedef void (*LibQemuRefreshFn)(DisplayChangeListener*);
 typedef void (*LibQemuMouseSetFn)(DisplayChangeListener*, int, int, int);
 typedef void (*LibQemuCursorDefineFn)(DisplayChangeListener*, QEMUCursor*);
 typedef void (*LibQemuGLScanoutDisableFn)(DisplayChangeListener*);
-typedef void (*LibQemuGLScanoutTextureFn)(DisplayChangeListener*, uint32_t, bool, uint32_t,
-                                          uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+typedef void (*LibQemuGLScanoutTextureFn)(DisplayChangeListener*, uint32_t, bool, uint32_t, uint32_t, uint32_t,
+                                          uint32_t, uint32_t, uint32_t);
 typedef void (*LibQemuGLUpdateFn)(DisplayChangeListener*, uint32_t, uint32_t, uint32_t, uint32_t);
 
 typedef bool (*LibQemuIsCompatibleDclFn)(DisplayGLCtx*, DisplayChangeListener*);
@@ -134,7 +134,8 @@ public:
     void coroutine_yield();
 
     template <class T>
-    T object_new() {
+    T object_new()
+    {
         T o(Object(object_new_internal(T::TYPE), m_int));
         check_cast(o, T::TYPE);
 
@@ -142,7 +143,8 @@ public:
     }
 
     template <class T>
-    T object_new_unparented() {
+    T object_new_unparented()
+    {
         T o(Object(object_new_unparented(T::TYPE), m_int));
         check_cast(o, T::TYPE);
 
@@ -240,7 +242,8 @@ public:
     bool same_inst_as(const Object& o) const { return get_inst_id() == o.get_inst_id(); }
 
     template <class T>
-    bool check_cast() const {
+    bool check_cast() const
+    {
         return check_cast_by_type(T::TYPE);
     }
 
@@ -260,7 +263,8 @@ public:
         GpioEventFn m_cb;
 
     public:
-        void event(bool level) {
+        void event(bool level)
+        {
             if (!m_prev_valid || (level != m_prev)) {
                 m_cb(level);
             }
@@ -286,7 +290,8 @@ public:
 
     void set_proxy(std::shared_ptr<GpioProxy> proxy) { m_proxy = proxy; }
 
-    void set_event_callback(GpioEventFn cb) {
+    void set_event_callback(GpioEventFn cb)
+    {
         if (m_proxy) {
             m_proxy->set_callback(cb);
         }
@@ -367,8 +372,7 @@ public:
     void init(const Object& owner, const char* name, uint64_t size);
     void init_io(Object owner, const char* name, uint64_t size, MemoryRegionOpsPtr ops);
     void init_ram_ptr(Object owner, const char* name, uint64_t size, void* ptr);
-    void init_alias(Object owner, const char* name, const MemoryRegion& root, uint64_t offset,
-                    uint64_t size);
+    void init_alias(Object owner, const char* name, const MemoryRegion& root, uint64_t offset, uint64_t size);
 
     void add_subregion(MemoryRegion& mr, uint64_t offset);
     void add_subregion_overlap(MemoryRegion& mr, uint64_t offset);

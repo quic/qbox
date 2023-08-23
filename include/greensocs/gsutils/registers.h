@@ -53,10 +53,7 @@ private:
 
 public:
     tlm_fnct(tlm_fnct&) = delete;
-    tlm_fnct(TLMFUNC cb)
-        : m_fnct(cb)
-    {
-    }
+    tlm_fnct(TLMFUNC cb): m_fnct(cb) {}
     void operator()(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) { m_fnct(txn, delay); }
     virtual void dummy() {} // force polymorphism
 };
@@ -294,8 +291,7 @@ public:
 
     proxy_data(scp::scp_logger_cache& logger, std::string name, std::string path_name, uint64_t offset = 0,
                uint64_t start = 0, uint64_t length = sizeof(TYPE) * 8)
-        : proxy_data_array<TYPE>(logger, name, path_name, offset, 1)
-        , SCP_LOGGER_NAME()(logger)
+        : proxy_data_array<TYPE>(logger, name, path_name, offset, 1), SCP_LOGGER_NAME()(logger)
     {
         static_assert(std::is_unsigned<TYPE>::value, "Register types must be unsigned");
     }
@@ -319,8 +315,7 @@ class gs_register : public port_fnct, public proxy_data<TYPE>
 public:
     gs_register() = delete;
     gs_register(std::string _name, std::string path = "")
-        : port_fnct(_name, path)
-        , proxy_data<TYPE>(SCP_LOGGER_NAME(), _name, path)
+        : port_fnct(_name, path), proxy_data<TYPE>(SCP_LOGGER_NAME(), _name, path)
     {
         std::string n(name());
         n = n.substr(0, n.length() - strlen("_target_socket")); // get rid of last part of string
@@ -353,19 +348,9 @@ class gs_bitfield
     gs_register<TYPE>& m_reg;
 
 public:
-    gs_bitfield(gs_register<TYPE>& r, uint32_t s, uint32_t l)
-        : m_reg(r)
-        , start(s)
-        , length(l)
-    {
-    }
+    gs_bitfield(gs_register<TYPE>& r, uint32_t s, uint32_t l): m_reg(r), start(s), length(l) {}
 
-    gs_bitfield(gs_register<TYPE>& r, gs_bitfield& f)
-        : m_reg(r)
-        , start(f.start)
-        , length(f.length)
-    {
-    }
+    gs_bitfield(gs_register<TYPE>& r, gs_bitfield& f): m_reg(r), start(f.start), length(f.length) {}
 
     void operator=(TYPE value)
     {
@@ -406,7 +391,7 @@ public:
 
     operator TYPE() { return m_bitfield; }
 
-    operator gs::gs_bitfield<TYPE>&() { return m_bitfield; }
+    operator gs::gs_bitfield<TYPE> &() { return m_bitfield; }
 };
 
 } // namespace gs

@@ -35,14 +35,11 @@ private:
     std::unique_ptr<QemuDisplay> m_display;
 
 public:
-    DisplayTest(const sc_core::sc_module_name& n)
-    : TestBench(n)
-    , m_inst("inst", &m_inst_manager, qemu::Target::AARCH64)
+    DisplayTest(const sc_core::sc_module_name& n): TestBench(n), m_inst("inst", &m_inst_manager, qemu::Target::AARCH64)
     {
         if (SDL_Init(SDL_INIT_VIDEO) < 0) {
             // Skip this test on platforms with no video device available
-            SCP_WARN(SCMOD) << "Skipping Display test: Failed to initialize SDL: "
-                            << SDL_GetError();
+            SCP_WARN(SCMOD) << "Skipping Display test: Failed to initialize SDL: " << SDL_GetError();
             return;
         }
 
@@ -50,7 +47,8 @@ public:
         m_display = std::make_unique<QemuDisplay>("display", *m_gpu);
     }
 
-    virtual void end_of_simulation() override {
+    virtual void end_of_simulation() override
+    {
         TestBench::end_of_simulation();
 
         if (m_display) {
@@ -61,6 +59,4 @@ public:
     }
 };
 
-int sc_main(int argc, char* argv[]) {
-    return run_testbench<DisplayTest>(argc, argv);
-}
+int sc_main(int argc, char* argv[]) { return run_testbench<DisplayTest>(argc, argv); }

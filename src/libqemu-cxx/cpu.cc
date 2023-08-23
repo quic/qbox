@@ -24,47 +24,28 @@
 
 namespace qemu {
 
-int Cpu::get_index() const {
-    return m_int->exports().cpu_get_index(m_obj);
-}
+int Cpu::get_index() const { return m_int->exports().cpu_get_index(m_obj); }
 
-void Cpu::loop() {
-    m_int->exports().cpu_loop(m_obj);
-}
+void Cpu::loop() { m_int->exports().cpu_loop(m_obj); }
 
-bool Cpu::loop_is_busy() {
-    return m_int->exports().cpu_loop_is_busy(m_obj);
-}
+bool Cpu::loop_is_busy() { return m_int->exports().cpu_loop_is_busy(m_obj); }
 
-bool Cpu::can_run() {
-    return m_int->exports().cpu_can_run(m_obj);
-}
+bool Cpu::can_run() { return m_int->exports().cpu_can_run(m_obj); }
 
-void Cpu::set_soft_stopped(bool stopped) {
-    m_int->exports().cpu_set_soft_stopped(m_obj, stopped);
-}
+void Cpu::set_soft_stopped(bool stopped) { m_int->exports().cpu_set_soft_stopped(m_obj, stopped); }
 
-void Cpu::halt(bool halted) {
-    m_int->exports().cpu_halt(m_obj, halted);
-}
+void Cpu::halt(bool halted) { m_int->exports().cpu_halt(m_obj, halted); }
 
-void Cpu::reset() {
-    m_int->exports().cpu_reset(m_obj);
-}
+void Cpu::reset() { m_int->exports().cpu_reset(m_obj); }
 
-void Cpu::set_unplug(bool unplug) {
-    m_int->exports().cpu_set_unplug(m_obj, unplug);
-}
+void Cpu::set_unplug(bool unplug) { m_int->exports().cpu_set_unplug(m_obj, unplug); }
 
-void Cpu::remove_sync() {
-    m_int->exports().cpu_remove_sync(m_obj);
-}
+void Cpu::remove_sync() { m_int->exports().cpu_remove_sync(m_obj); }
 
-void Cpu::register_thread() {
-    m_int->exports().cpu_register_thread(m_obj);
-}
+void Cpu::register_thread() { m_int->exports().cpu_register_thread(m_obj); }
 
-Cpu Cpu::set_as_current() {
+Cpu Cpu::set_as_current()
+{
     Cpu ret(Object(m_int->exports().current_cpu_get(), m_int));
 
     m_int->exports().current_cpu_set(m_obj);
@@ -72,11 +53,10 @@ Cpu Cpu::set_as_current() {
     return ret;
 }
 
-void Cpu::kick() {
-    m_int->exports().cpu_kick(m_obj);
-}
+void Cpu::kick() { m_int->exports().cpu_kick(m_obj); }
 
-static void generic_async_run(void* opaque) {
+static void generic_async_run(void* opaque)
+{
     Cpu::AsyncJobFn* job = reinterpret_cast<Cpu::AsyncJobFn*>(opaque);
 
     (*job)();
@@ -84,17 +64,20 @@ static void generic_async_run(void* opaque) {
     delete job;
 }
 
-void Cpu::async_run(AsyncJobFn job) {
+void Cpu::async_run(AsyncJobFn job)
+{
     AsyncJobFn* dyn_job = new AsyncJobFn(job);
     m_int->exports().async_run_on_cpu(m_obj, &generic_async_run, dyn_job);
 }
 
-void Cpu::async_safe_run(AsyncJobFn job) {
+void Cpu::async_safe_run(AsyncJobFn job)
+{
     AsyncJobFn* dyn_job = new AsyncJobFn(job);
     m_int->exports().async_safe_run_on_cpu(m_obj, &generic_async_run, dyn_job);
 }
 
-[[noreturn]] void Cpu::exit_loop_from_io() {
+[[noreturn]] void Cpu::exit_loop_from_io()
+{
     uintptr_t pc = m_int->exports().cpu_get_mem_io_pc(m_obj);
 
     auto cpu_loop_exit_noexc = m_int->exports().cpu_loop_exit_noexc;
@@ -111,16 +94,13 @@ void Cpu::async_safe_run(AsyncJobFn job) {
     std::abort();
 }
 
-void Cpu::set_end_of_loop_callback(Cpu::EndOfLoopCallbackFn cb) {
+void Cpu::set_end_of_loop_callback(Cpu::EndOfLoopCallbackFn cb)
+{
     m_int->get_cpu_end_of_loop_cb().register_cb(*this, cb);
 }
 
-void Cpu::set_kick_callback(Cpu::CpuKickCallbackFn cb) {
-    m_int->get_cpu_kick_cb().register_cb(*this, cb);
-}
+void Cpu::set_kick_callback(Cpu::CpuKickCallbackFn cb) { m_int->get_cpu_kick_cb().register_cb(*this, cb); }
 
-bool Cpu::is_in_exclusive_context() const {
-    return m_int->exports().cpu_in_exclusive_context(m_obj);
-}
+bool Cpu::is_in_exclusive_context() const { return m_int->exports().cpu_in_exclusive_context(m_obj); }
 
 }; // namespace qemu

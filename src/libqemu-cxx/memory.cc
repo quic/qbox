@@ -27,7 +27,8 @@
 namespace qemu {
 
 /* ::MemTxtResult <-> MemoryRegionOps::MemTxResult mapping */
-static inline MemoryRegionOps::MemTxResult QEMU_TO_LIB_MEMTXRESULT_MAPPING(uint32_t value) {
+static inline MemoryRegionOps::MemTxResult QEMU_TO_LIB_MEMTXRESULT_MAPPING(uint32_t value)
+{
     switch (value) {
     case MEMTX_OK:
         return MemoryRegionOps::MemTxOK;
@@ -41,7 +42,8 @@ static inline MemoryRegionOps::MemTxResult QEMU_TO_LIB_MEMTXRESULT_MAPPING(uint3
     return MemoryRegionOps::MemTxError;
 }
 
-static inline uint32_t LIB_TO_QEMU_MEMTXRESULT_MAPPING(MemoryRegionOps::MemTxResult value) {
+static inline uint32_t LIB_TO_QEMU_MEMTXRESULT_MAPPING(MemoryRegionOps::MemTxResult value)
+{
     switch (value) {
     case MemoryRegionOps::MemTxOK:
         return MEMTX_OK;
@@ -62,20 +64,20 @@ static inline uint32_t LIB_TO_QEMU_MEMTXRESULT_MAPPING(MemoryRegionOps::MemTxRes
  */
 
 MemoryRegionOps::MemTxAttrs::MemTxAttrs(const ::MemTxAttrs& qemu_attrs)
-    : secure(qemu_attrs.secure), exclusive(qemu_attrs.exclusive), debug(qemu_attrs.debug) {
+    : secure(qemu_attrs.secure), exclusive(qemu_attrs.exclusive), debug(qemu_attrs.debug)
+{
 }
 
-MemoryRegionOps::MemoryRegionOps(QemuMemoryRegionOps* ops,
-                                 std::shared_ptr<LibQemuInternals> internals)
-    : m_ops(ops), m_int(internals) {
+MemoryRegionOps::MemoryRegionOps(QemuMemoryRegionOps* ops, std::shared_ptr<LibQemuInternals> internals)
+    : m_ops(ops), m_int(internals)
+{
 }
 
-MemoryRegionOps::~MemoryRegionOps() {
-    m_int->exports().mr_ops_free(m_ops);
-}
+MemoryRegionOps::~MemoryRegionOps() { m_int->exports().mr_ops_free(m_ops); }
 
 static ::MemTxResult generic_read_cb(void* opaque, hwaddr addr, uint64_t* data, unsigned int size,
-                                     MemTxAttrs qemu_attrs) {
+                                     MemTxAttrs qemu_attrs)
+{
     MemoryRegionOps* ops = reinterpret_cast<MemoryRegionOps*>(opaque);
     MemoryRegionOps::MemTxAttrs attrs(qemu_attrs);
     MemoryRegionOps::MemTxResult res;
@@ -84,13 +86,15 @@ static ::MemTxResult generic_read_cb(void* opaque, hwaddr addr, uint64_t* data, 
     return LIB_TO_QEMU_MEMTXRESULT_MAPPING(res);
 }
 
-void MemoryRegionOps::set_read_callback(ReadCallback cb) {
+void MemoryRegionOps::set_read_callback(ReadCallback cb)
+{
     m_read_cb = cb;
     m_int->exports().mr_ops_set_read_cb(m_ops, generic_read_cb);
 }
 
 static ::MemTxResult generic_write_cb(void* opaque, hwaddr addr, uint64_t data, unsigned int size,
-                                      MemTxAttrs qemu_attrs) {
+                                      MemTxAttrs qemu_attrs)
+{
     MemoryRegionOps* ops = reinterpret_cast<MemoryRegionOps*>(opaque);
     MemoryRegionOps::MemTxAttrs attrs(qemu_attrs);
     MemoryRegionOps::MemTxResult res;
@@ -99,14 +103,13 @@ static ::MemTxResult generic_write_cb(void* opaque, hwaddr addr, uint64_t data, 
     return LIB_TO_QEMU_MEMTXRESULT_MAPPING(res);
 }
 
-void MemoryRegionOps::set_write_callback(WriteCallback cb) {
+void MemoryRegionOps::set_write_callback(WriteCallback cb)
+{
     m_write_cb = cb;
     m_int->exports().mr_ops_set_write_cb(m_ops, generic_write_cb);
 }
 
-void MemoryRegionOps::set_max_access_size(unsigned size) {
-    m_int->exports().mr_ops_set_max_access_size(m_ops, size);
-}
+void MemoryRegionOps::set_max_access_size(unsigned size) { m_int->exports().mr_ops_set_max_access_size(m_ops, size); }
 
 /*
  * ============
@@ -114,10 +117,12 @@ void MemoryRegionOps::set_max_access_size(unsigned size) {
  * ============
  */
 MemoryRegion::MemoryRegion(QemuMemoryRegion* mr, std::shared_ptr<LibQemuInternals> internals)
-    : Object(reinterpret_cast<QemuObject*>(mr), internals) {
+    : Object(reinterpret_cast<QemuObject*>(mr), internals)
+{
 }
 
-MemoryRegion::~MemoryRegion() {
+MemoryRegion::~MemoryRegion()
+{
     for (auto& mr : m_subregions) {
         internal_del_subregion(mr);
     }
@@ -125,42 +130,45 @@ MemoryRegion::~MemoryRegion() {
     m_subregions.clear();
 }
 
-uint64_t MemoryRegion::get_size() {
+uint64_t MemoryRegion::get_size()
+{
     QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     return m_int->exports().memory_region_size(mr);
 }
 
-void MemoryRegion::init(const Object& owner, const char* name, uint64_t size) {
+void MemoryRegion::init(const Object& owner, const char* name, uint64_t size)
+{
     QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     m_int->exports().memory_region_init(mr, owner.get_qemu_obj(), name, size);
 }
 
-void MemoryRegion::init_io(Object owner, const char* name, uint64_t size, MemoryRegionOpsPtr ops) {
+void MemoryRegion::init_io(Object owner, const char* name, uint64_t size, MemoryRegionOpsPtr ops)
+{
     QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegionOps* qemu_ops = ops->get_qemu_mr_ops();
 
     m_ops = ops;
 
-    m_int->exports().memory_region_init_io(mr, owner.get_qemu_obj(), qemu_ops, m_ops.get(), name,
-                                           size);
+    m_int->exports().memory_region_init_io(mr, owner.get_qemu_obj(), qemu_ops, m_ops.get(), name, size);
 }
 
-void MemoryRegion::init_ram_ptr(Object owner, const char* name, uint64_t size, void* ptr) {
+void MemoryRegion::init_ram_ptr(Object owner, const char* name, uint64_t size, void* ptr)
+{
     QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
 
     m_int->exports().memory_region_init_ram_ptr(mr, owner.get_qemu_obj(), name, size, ptr);
 }
 
-void MemoryRegion::init_alias(Object owner, const char* name, const MemoryRegion& root,
-                              uint64_t offset, uint64_t size) {
+void MemoryRegion::init_alias(Object owner, const char* name, const MemoryRegion& root, uint64_t offset, uint64_t size)
+{
     QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegion* root_mr = reinterpret_cast<QemuMemoryRegion*>(root.m_obj);
 
-    m_int->exports().memory_region_init_alias(mr, owner.get_qemu_obj(), name, root_mr, offset,
-                                              size);
+    m_int->exports().memory_region_init_alias(mr, owner.get_qemu_obj(), name, root_mr, offset, size);
 }
 
-void MemoryRegion::add_subregion(MemoryRegion& mr, uint64_t offset) {
+void MemoryRegion::add_subregion(MemoryRegion& mr, uint64_t offset)
+{
     QemuMemoryRegion* this_mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegion* sub_mr = reinterpret_cast<QemuMemoryRegion*>(mr.m_obj);
 
@@ -170,7 +178,8 @@ void MemoryRegion::add_subregion(MemoryRegion& mr, uint64_t offset) {
     mr.container = this;
 }
 
-void MemoryRegion::add_subregion_overlap(MemoryRegion& mr, uint64_t offset) {
+void MemoryRegion::add_subregion_overlap(MemoryRegion& mr, uint64_t offset)
+{
     QemuMemoryRegion* this_mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegion* sub_mr = reinterpret_cast<QemuMemoryRegion*>(mr.m_obj);
 
@@ -179,20 +188,22 @@ void MemoryRegion::add_subregion_overlap(MemoryRegion& mr, uint64_t offset) {
     mr.container = this;
 }
 
-void MemoryRegion::internal_del_subregion(const MemoryRegion& mr) {
+void MemoryRegion::internal_del_subregion(const MemoryRegion& mr)
+{
     QemuMemoryRegion* this_mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegion* sub_mr = reinterpret_cast<QemuMemoryRegion*>(mr.m_obj);
 
     m_int->exports().memory_region_del_subregion(this_mr, sub_mr);
 }
 
-void MemoryRegion::del_subregion(const MemoryRegion& mr) {
+void MemoryRegion::del_subregion(const MemoryRegion& mr)
+{
     internal_del_subregion(mr);
     m_subregions.erase(mr);
 }
 
-MemoryRegion::MemTxResult MemoryRegion::dispatch_read(uint64_t addr, uint64_t* data, uint64_t size,
-                                                      MemTxAttrs attrs) {
+MemoryRegion::MemTxResult MemoryRegion::dispatch_read(uint64_t addr, uint64_t* data, uint64_t size, MemTxAttrs attrs)
+{
     ::MemTxAttrs qemu_attrs = {};
     ::MemTxResult qemu_res;
     QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
@@ -204,8 +215,8 @@ MemoryRegion::MemTxResult MemoryRegion::dispatch_read(uint64_t addr, uint64_t* d
     return QEMU_TO_LIB_MEMTXRESULT_MAPPING(qemu_res);
 }
 
-MemoryRegion::MemTxResult MemoryRegion::dispatch_write(uint64_t addr, uint64_t data, uint64_t size,
-                                                       MemTxAttrs attrs) {
+MemoryRegion::MemTxResult MemoryRegion::dispatch_write(uint64_t addr, uint64_t data, uint64_t size, MemTxAttrs attrs)
+{
     ::MemTxAttrs qemu_attrs = {};
     ::MemTxResult qemu_res;
     QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
@@ -217,7 +228,8 @@ MemoryRegion::MemTxResult MemoryRegion::dispatch_write(uint64_t addr, uint64_t d
     return QEMU_TO_LIB_MEMTXRESULT_MAPPING(qemu_res);
 }
 
-void MemoryRegion::set_ops(const MemoryRegionOpsPtr ops) {
+void MemoryRegion::set_ops(const MemoryRegionOpsPtr ops)
+{
     m_ops = ops;
     QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
     QemuMemoryRegionOps* qemu_ops = ops->get_qemu_mr_ops();
@@ -225,10 +237,12 @@ void MemoryRegion::set_ops(const MemoryRegionOpsPtr ops) {
 }
 
 AddressSpace::AddressSpace(QemuAddressSpace* as, std::shared_ptr<LibQemuInternals> internals)
-    : m_as(as), m_int(internals) {
+    : m_as(as), m_int(internals)
+{
 }
 
-AddressSpace::~AddressSpace() {
+AddressSpace::~AddressSpace()
+{
     if (m_global) {
         return;
     }
@@ -239,7 +253,8 @@ AddressSpace::~AddressSpace() {
     m_int->exports().address_space_free(m_as);
 }
 
-void AddressSpace::init(MemoryRegion mr, const char* name, bool global) {
+void AddressSpace::init(MemoryRegion mr, const char* name, bool global)
+{
     QemuMemoryRegion* mr_obj = reinterpret_cast<QemuMemoryRegion*>(mr.get_qemu_obj());
     m_int->exports().address_space_init(m_as, mr_obj, name);
 
@@ -249,8 +264,8 @@ void AddressSpace::init(MemoryRegion mr, const char* name, bool global) {
     m_inited = true;
 }
 
-AddressSpace::MemTxResult AddressSpace::read(uint64_t addr, void* data, size_t size,
-                                             AddressSpace::MemTxAttrs attrs) {
+AddressSpace::MemTxResult AddressSpace::read(uint64_t addr, void* data, size_t size, AddressSpace::MemTxAttrs attrs)
+{
     ::MemTxAttrs qemu_attrs = {};
     ::MemTxResult qemu_res;
 
@@ -262,7 +277,8 @@ AddressSpace::MemTxResult AddressSpace::read(uint64_t addr, void* data, size_t s
 }
 
 AddressSpace::MemTxResult AddressSpace::write(uint64_t addr, const void* data, size_t size,
-                                              AddressSpace::MemTxAttrs attrs) {
+                                              AddressSpace::MemTxAttrs attrs)
+{
     ::MemTxAttrs qemu_attrs = {};
     ::MemTxResult qemu_res;
 
@@ -273,36 +289,37 @@ AddressSpace::MemTxResult AddressSpace::write(uint64_t addr, const void* data, s
     return QEMU_TO_LIB_MEMTXRESULT_MAPPING(qemu_res);
 }
 
-void AddressSpace::update_topology() {
-    m_int->exports().address_space_update_topology(m_as);
-}
+void AddressSpace::update_topology() { m_int->exports().address_space_update_topology(m_as); }
 
-MemoryListener::MemoryListener(std::shared_ptr<LibQemuInternals> internals)
-    : m_ml{ nullptr }, m_int(internals) {
-}
+MemoryListener::MemoryListener(std::shared_ptr<LibQemuInternals> internals): m_ml{ nullptr }, m_int(internals) {}
 
-MemoryListener::~MemoryListener() {
+MemoryListener::~MemoryListener()
+{
     if (m_ml) {
         m_int->exports().memory_listener_free(m_ml);
     }
 }
 
-void MemoryListener::set_ml(QemuMemoryListener* ml) {
+void MemoryListener::set_ml(QemuMemoryListener* ml)
+{
     assert(!m_ml && "Qemu memory listener already set");
     m_ml = ml;
 }
 
-static void generic_map_cb(void* opaque, hwaddr addr, hwaddr len) {
+static void generic_map_cb(void* opaque, hwaddr addr, hwaddr len)
+{
     auto* ml = reinterpret_cast<MemoryListener*>(opaque);
     ml->get_map_callback()(*ml, addr, len);
 }
 
-void MemoryListener::set_map_callback(MapCallback cb) {
+void MemoryListener::set_map_callback(MapCallback cb)
+{
     m_map_cb = cb;
     m_int->exports().memory_listener_set_map_cb(m_ml, generic_map_cb);
 }
 
-void MemoryListener::register_as(std::shared_ptr<AddressSpace> as) {
+void MemoryListener::register_as(std::shared_ptr<AddressSpace> as)
+{
     assert(m_ml && as->get_ptr());
     m_as = as;
     m_int->exports().memory_listener_register(m_ml, as->get_ptr());

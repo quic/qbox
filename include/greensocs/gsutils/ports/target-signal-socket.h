@@ -48,8 +48,7 @@ protected:
     sc_core::sc_event m_ev;
 
 public:
-    TargetSignalSocketProxy(TargetSignalSocket<T>& parent)
-        : m_parent{ parent }, m_val{}, m_cb{ nullptr }, m_ev{} {}
+    TargetSignalSocketProxy(TargetSignalSocket<T>& parent): m_parent{ parent }, m_val{}, m_cb{ nullptr }, m_ev{} {}
 
     void register_value_changed_cb(const ValueChangedCallback& cb) { m_cb = cb; }
 
@@ -68,14 +67,16 @@ public:
 
     virtual const T& get_data_ref() const { return m_val; }
 
-    virtual bool event() const {
+    virtual bool event() const
+    {
         /* Not implemented */
         assert(false);
         return false;
     }
 
     /* sc_core::sc_signal_write_if<T> */
-    virtual void write(const T& val) {
+    virtual void write(const T& val)
+    {
         bool changed = (val != m_val);
 
         m_val = val;
@@ -108,7 +109,9 @@ protected:
 
 public:
     TargetSignalSocketProxy<bool>(TargetSignalSocket<bool>& parent)
-        : m_parent{ parent }, m_val{ false }, m_cb{ nullptr }, m_ev{} {}
+        : m_parent{ parent }, m_val{ false }, m_cb{ nullptr }, m_ev{}
+    {
+    }
 
     void register_value_changed_cb(const ValueChangedCallback& cb) { m_cb = cb; }
 
@@ -131,26 +134,30 @@ public:
 
     virtual const bool& get_data_ref() const { return m_val; }
 
-    virtual bool event() const {
+    virtual bool event() const
+    {
         /* Not implemented */
         assert(false);
         return false;
     }
 
-    virtual bool posedge() const {
+    virtual bool posedge() const
+    {
         /* Not implemented */
         assert(false);
         return false;
     }
 
-    virtual bool negedge() const {
+    virtual bool negedge() const
+    {
         /* Not implemented */
         assert(false);
         return false;
     }
 
     /* sc_core::sc_signal_write_if<bool> */
-    virtual void write(const bool& val) {
+    virtual void write(const bool& val)
+    {
         bool changed = (val != m_val);
         m_val = val;
 
@@ -181,9 +188,7 @@ protected:
 public:
     TargetSignalSocket(const char* name): Parent(name), m_proxy(*this) { Parent::bind(m_proxy); }
 
-    void register_value_changed_cb(const ValueChangedCallback& cb) {
-        m_proxy.register_value_changed_cb(cb);
-    }
+    void register_value_changed_cb(const ValueChangedCallback& cb) { m_proxy.register_value_changed_cb(cb); }
 
     const T& read() const { return m_proxy.read(); }
 };

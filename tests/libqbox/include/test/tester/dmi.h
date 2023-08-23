@@ -53,7 +53,8 @@ protected:
 
     bool m_dmi_enabled = true;
 
-    void dmi_b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void dmi_b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         std::lock_guard<std::mutex> lock(m_lock);
 
         uint64_t addr = txn.get_address();
@@ -61,8 +62,8 @@ protected:
         uint64_t* ptr = reinterpret_cast<uint64_t*>(txn.get_data_ptr());
         size_t len = txn.get_data_length();
 
-        SCP_INFO(SCMOD) << "cpu_" << (addr >> 3) << " access on DMI socket at 0x" << std::hex
-                        << addr << ", data: " << std::hex << data << ", len: " << len;
+        SCP_INFO(SCMOD) << "cpu_" << (addr >> 3) << " access on DMI socket at 0x" << std::hex << addr
+                        << ", data: " << std::hex << data << ", len: " << len;
 
         if (len > 8) {
             TEST_FAIL("Unsupported b_transport data length");
@@ -89,7 +90,8 @@ protected:
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
     }
 
-    bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi) {
+    bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi)
+    {
         if (!m_lock.try_lock()) {
             SCP_INFO(SCMOD) << "Can't handle concurrent DMI gets";
             m_cbs.dmi_request_failed(SOCKET_DMI, txn.get_address(), txn.get_data_length(), dmi);
@@ -122,8 +124,8 @@ protected:
 public:
     tlm_utils::simple_target_socket<CpuTesterDmi> dmi_socket;
 
-    CpuTesterDmi(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs)
-        : CpuTesterMmio(n, cbs) {
+    CpuTesterDmi(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs): CpuTesterMmio(n, cbs)
+    {
         SCP_DEBUG(SCMOD) << "CpuTesterDmi constructor";
 
         dmi_socket.register_b_transport(this, &CpuTesterDmi::dmi_b_transport);
@@ -134,7 +136,8 @@ public:
         std::memset(m_buf, 0, sizeof(m_buf));
     }
 
-    void dmi_invalidate(uint64_t start = 0, uint64_t end = DMI_SIZE - 1) {
+    void dmi_invalidate(uint64_t start = 0, uint64_t end = DMI_SIZE - 1)
+    {
         std::lock_guard<std::mutex> lock(m_lock); // We use a lock to ensure things work if DMI is
                                                   // not handled on the SystemC thread
         SCP_INFO(SCMOD) << "DMI invalidating";
@@ -142,7 +145,8 @@ public:
         dmi_socket->invalidate_direct_mem_ptr(start, end);
     }
 
-    void dmi_invalidate_switch() {
+    void dmi_invalidate_switch()
+    {
         size_t next_buf = (m_cur_buf + 1) % NUM_BUF;
 
         std::memcpy(m_buf[next_buf], m_buf[m_cur_buf], sizeof(m_buf[0]));
@@ -154,7 +158,8 @@ public:
     void enable_dmi_hint() { m_dmi_enabled = true; }
     void disable_dmi_hint() { m_dmi_enabled = false; }
 
-    uint64_t get_buf_value(int cpuid) {
+    uint64_t get_buf_value(int cpuid)
+    {
         // we dont need the lock here, as it would have been called from inside the dmi_b_transport
         uint64_t* buf = reinterpret_cast<uint64_t*>(m_buf[m_cur_buf]);
 

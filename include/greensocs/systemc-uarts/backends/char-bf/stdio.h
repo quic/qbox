@@ -69,8 +69,7 @@ public:
     }
 
     CharBFBackendStdio(sc_core::sc_module_name name, bool read_write = true)
-        : sc_core::sc_module(name)
-        , socket("biflow_socket")
+        : sc_core::sc_module(name), socket("biflow_socket")
     {
         SCP_TRACE(()) << "constructor";
 

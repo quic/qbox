@@ -43,7 +43,8 @@ protected:
 
     void value_changed_cb(const bool& val) { m_gpio_in.set(val); }
 
-    void init_with_gpio(qemu::Gpio gpio) {
+    void init_with_gpio(qemu::Gpio gpio)
+    {
         using namespace std::placeholders;
 
         m_gpio_in = gpio;
@@ -65,7 +66,8 @@ public:
      * @param[in] dev The QEMU device
      * @param[in] gpio_idx The GPIO index within the device
      */
-    void init(qemu::Device dev, int gpio_idx) {
+    void init(qemu::Device dev, int gpio_idx)
+    {
         qemu::Gpio gpio(dev.get_gpio_in(gpio_idx));
         init_with_gpio(gpio);
     }
@@ -82,7 +84,8 @@ public:
      * @param[in] gpio_name The GPIO namespace within the device
      * @param[in] gpio_idx The GPIO index within the device
      */
-    void init_named(qemu::Device dev, const char* gpio_name, int gpio_idx) {
+    void init_named(qemu::Device dev, const char* gpio_name, int gpio_idx)
+    {
         qemu::Gpio gpio(dev.get_gpio_in_named(gpio_name, gpio_idx));
         init_with_gpio(gpio);
     }

@@ -44,14 +44,16 @@ public:
     TargetSocket socket;
 
     CpuTesterExclusive(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs)
-        : CpuTester(n, cbs), m_monitor("exclusive-monitor") {
+        : CpuTester(n, cbs), m_monitor("exclusive-monitor")
+    {
         register_b_transport(socket, SOCKET_MMIO);
 
         m_cbs.map_target(m_monitor.front_socket, MMIO_ADDR, MMIO_SIZE);
         socket.bind(m_monitor.back_socket);
     }
 
-    void lock_region_64(uint64_t start) {
+    void lock_region_64(uint64_t start)
+    {
         using namespace tlm;
 
         tlm_generic_payload txn;

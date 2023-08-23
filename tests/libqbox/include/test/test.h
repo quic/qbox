@@ -35,7 +35,8 @@ class TestFailureException : public std::runtime_error
 protected:
     std::string* m_what;
 
-    const char* make_what(const char* what, const char* func, const char* file, int line) {
+    const char* make_what(const char* what, const char* func, const char* file, int line)
+    {
         std::stringstream ss;
         ss << what << " (in " << func << ", at " << file << ":" << line << ")";
 
@@ -46,7 +47,9 @@ protected:
 
 public:
     TestFailureException(const char* what, const char* func, const char* file, int line)
-        : std::runtime_error(make_what(what, func, file, line)) {}
+        : std::runtime_error(make_what(what, func, file, line))
+    {
+    }
     virtual ~TestFailureException() noexcept { delete m_what; }
 };
 
@@ -56,13 +59,12 @@ private:
     bool m_test_success = true;
 
 public:
-    TestBench(const sc_core::sc_module_name& n): sc_core::sc_module(n) {
-        SCP_INFO(SCMOD)<<"Test Bench Constructor";
-    }
+    TestBench(const sc_core::sc_module_name& n): sc_core::sc_module(n) { SCP_INFO(SCMOD) << "Test Bench Constructor"; }
 
     virtual ~TestBench() {}
 
-    void run() {
+    void run()
+    {
         try {
             sc_core::sc_start();
 
@@ -79,7 +81,8 @@ public:
 };
 
 template <class TESTBENCH>
-int run_testbench(int argc, char* argv[]) {
+int run_testbench(int argc, char* argv[])
+{
     auto m_broker = new gs::ConfigurableBroker(argc, argv);
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)

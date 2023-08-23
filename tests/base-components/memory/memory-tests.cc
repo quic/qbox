@@ -37,15 +37,13 @@ TEST_BENCH(MemoryTestBench, SimpleWriteRead)
 // Transaction outside of the target address space
 TEST_BENCH(MemoryTestBench, SimpleOverlapWrite)
 {
-    ASSERT_EQ(m_initiator.do_write<uint8_t>(MEMORY_SIZE + 1, 0x04),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint8_t>(MEMORY_SIZE + 1, 0x04), tlm::TLM_ADDRESS_ERROR_RESPONSE);
 }
 
 // Transaction that crosses the boundary
 TEST_BENCH(MemoryTestBench, SimpleCrossesBoundary)
 {
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(MEMORY_SIZE - 1, 0xFFFF),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(MEMORY_SIZE - 1, 0xFFFF), tlm::TLM_ADDRESS_ERROR_RESPONSE);
 }
 
 // Simple write and read into the memory with the Debug Transport Interface
@@ -84,16 +82,14 @@ TEST_BENCH(MemoryTestBench, SimpleWriteReadDebug)
 // Debug Transport Interface transaction outside of the target address space
 TEST_BENCH(MemoryTestBench, SimpleOverlapWriteDebug)
 {
-    ASSERT_EQ(m_initiator.do_write<uint8_t>(MEMORY_SIZE + 1, 0x04, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint8_t>(MEMORY_SIZE + 1, 0x04, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 }
 
 // Debug Transport Interface transaction that crosses the boundary
 TEST_BENCH(MemoryTestBench, SimpleCrossesBoundaryDebug)
 {
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(MEMORY_SIZE - 1, 0xFFFF, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(MEMORY_SIZE - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 }
 

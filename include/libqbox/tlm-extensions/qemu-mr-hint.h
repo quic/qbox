@@ -38,7 +38,8 @@ public:
 
     virtual tlm_extension_base* clone() const override { return new QemuMrHintTlmExtension(*this); }
 
-    virtual void copy_from(tlm_extension_base const& ext) override {
+    virtual void copy_from(tlm_extension_base const& ext) override
+    {
         m_mr = static_cast<const QemuMrHintTlmExtension&>(ext).m_mr;
         m_offset = static_cast<const QemuMrHintTlmExtension&>(ext).m_offset;
     }

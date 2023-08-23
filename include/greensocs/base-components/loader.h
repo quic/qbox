@@ -106,10 +106,7 @@ class Loader : public sc_core::sc_module
         typedef tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES, sc_core::SC_ZERO_OR_MORE_BOUND> socket_b;
 
     public:
-        simple_initiator_socket_zero(const char* name)
-            : socket_b(name)
-        {
-        }
+        simple_initiator_socket_zero(const char* name): socket_b(name) {}
     };
 
 public:
@@ -192,7 +189,7 @@ public:
     Loader(sc_core::sc_module_name name)
         : initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
         , m_broker(cci::cci_get_broker())
-        
+
     {
         SCP_TRACE(())("default constructor");
     }
@@ -406,7 +403,6 @@ private:
     class elf_reader
     {
     private:
-
         std::vector<struct elf_segment> m_segments;
 
         std::function<void(uint64_t, uint8_t*, uint64_t)> m_send;
@@ -511,7 +507,6 @@ private:
 
                     char* name = elf_strptr(elf, shdr->sh_link, syms[i].st_name);
                     if (name == nullptr || strlen(name) == 0) continue;
-
                 }
             }
         }
@@ -526,12 +521,7 @@ private:
         }
 
         elf_reader(const std::string& path, std::function<void(uint64_t, uint8_t*, uint64_t)> _send)
-            : m_send(_send)
-            , m_filename(path)
-            , m_fd(-1)
-            , m_entry(0)
-            , m_machine(0)
-            , m_endian(ENDIAN_UNKNOWN)
+            : m_send(_send), m_filename(path), m_fd(-1), m_entry(0), m_machine(0), m_endian(ENDIAN_UNKNOWN)
         {
             if (elf_version(EV_CURRENT) == EV_NONE) SCP_FATAL("elf_reader") << "failed to read libelf version";
 

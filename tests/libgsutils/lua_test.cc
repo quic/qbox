@@ -34,7 +34,8 @@ SC_MODULE (testA) {
     cci::cci_param<int> cmdvalue;
     cci::cci_param<int> luavalue;
     cci::cci_param<int> allvalue;
-    void testA_method() {
+    void testA_method()
+    {
         SCP_INFO(SCMOD) << "test def value = " << defvalue;
         SCP_INFO(SCMOD) << "test cmd value = " << cmdvalue;
         SCP_INFO(SCMOD) << "test lua value = " << luavalue;
@@ -49,12 +50,14 @@ SC_MODULE (testA) {
       : defvalue("defvalue", 1234)
       , cmdvalue("cmdvalue", 1234)
       , luavalue("luavalue", 1234)
-      , allvalue("allvalue", 1234) {
+      , allvalue("allvalue", 1234)
+      {
           SC_METHOD(testA_method);
       }
 };
 
-int sc_main(int argc, char** argv) {
+int sc_main(int argc, char** argv)
+{
     scp::init_logging(scp::LogConfig()
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(10));      // make the msg type column a bit tighter
@@ -68,6 +71,4 @@ int sc_main(int argc, char** argv) {
     return status;
 }
 
-TEST(luatest, all) {
-    sc_start(1, sc_core::SC_NS);
-}
+TEST(luatest, all) { sc_start(1, sc_core::SC_NS); }

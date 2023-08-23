@@ -62,9 +62,9 @@ private:
         SigHandler::get().add_sig_handler(SIGINT, SigHandler::Handler_CB::PASS);
     }
 
-    void die_sys_api(int error, const char* memname, const std::string& die_msg){
-        if(shm_unlink(memname) == -1)
-            perror("shm_unlink");
+    void die_sys_api(int error, const char* memname, const std::string& die_msg)
+    {
+        if (shm_unlink(memname) == -1) perror("shm_unlink");
         SCP_FATAL(()) << die_msg << " " << memname << " [Error: " << strerror(error) << "]";
     }
 
@@ -91,8 +91,8 @@ public:
         cleanup();
         if (cl_info) {
             if (munmap(cl_info, sizeof(shm_cleaner_info)) == -1) {
-                SCP_FATAL(()) << "failed to munmap shm_cleaner_info struct at: 0x" << std::hex
-                              << cl_info << " with size: 0x" << std::hex << sizeof(shm_cleaner_info)
+                SCP_FATAL(()) << "failed to munmap shm_cleaner_info struct at: 0x" << std::hex << cl_info
+                              << " with size: 0x" << std::hex << sizeof(shm_cleaner_info)
                               << " error: " << std::strerror(errno);
             }
             cl_info = nullptr;
@@ -103,15 +103,13 @@ public:
 
     void cleanup()
     {
-        if (finished || !child_cleaner_forked)
-            return;
+        if (finished || !child_cleaner_forked) return;
         for (auto n : m_shmem_info_map) {
             SCP_INFO(()) << "Deleting " << n.first; // can't use SCP_ in global destructor
                                                     // as it's probably already destroyed
             shm_unlink(n.first.c_str());
         };
-        if (cl_info)
-            cl_info->count = 0;
+        if (cl_info) cl_info->count = 0;
         finished = true;
     }
 
@@ -138,8 +136,7 @@ public:
      */
     void start_shm_cleaner_proc()
     {
-        if (child_cleaner_forked)
-            return;
+        if (child_cleaner_forked) return;
         cl_info = (shm_cleaner_info*)mmap(NULL, sizeof(shm_cleaner_info), PROT_READ | PROT_WRITE,
                                           MAP_SHARED | MAP_ANONYMOUS, -1, 0);
         pahandler.init_peer_conn_checker();
@@ -157,11 +154,10 @@ public:
              */
             SigHandler::get().block_curr_handled_signals();
             pahandler.check_parent_conn_sth([&]() {
-                std::cerr << "shm_cleaner (" << getpid()
-                          << ") count of cl_info shm_names: " << cl_info->count << std::endl;
+                std::cerr << "shm_cleaner (" << getpid() << ") count of cl_info shm_names: " << cl_info->count
+                          << std::endl;
                 for (int i = 0; i < cl_info->count; i++) {
-                    std::cerr << "shm_cleaner (" << getpid() << ")  Deleting : " << cl_info->name[i]
-                              << std::endl;
+                    std::cerr << "shm_cleaner (" << getpid() << ")  Deleting : " << cl_info->name[i] << std::endl;
                     shm_unlink(cl_info->name[i]);
                 }
                 if (munmap(cl_info, sizeof(shm_cleaner_info)) == -1) {
@@ -172,8 +168,7 @@ public:
 
         } // else child process
         else {
-            SCP_FATAL(()) << "failed to fork (shm_cleaner) child process, error: "
-                          << std::strerror(errno);
+            SCP_FATAL(()) << "failed to fork (shm_cleaner) child process, error: " << std::strerror(errno);
         }
     } // start_shm_cleaner_proc()
 
@@ -195,8 +190,7 @@ public:
     uint8_t* map_mem_create(const char* memname, uint64_t size)
     {
         if (cl_info && cl_info->count == MAX_SHM_SEGS_NUM)
-            SCP_FATAL(()) << "can't shm_open create " << memname
-                          << ", exceeded: " << MAX_SHM_SEGS_NUM << std::endl;
+            SCP_FATAL(()) << "can't shm_open create " << memname << ", exceeded: " << MAX_SHM_SEGS_NUM << std::endl;
         assert(m_shmem_info_map.count(memname) == 0);
         int fd = shm_open(memname, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1) {
@@ -204,7 +198,7 @@ public:
         }
 #if defined(__APPLE__)
         if (ftruncate(fd, size) == -1) {
-           die_sys_api(errno, memname, "can't truncate");
+            die_sys_api(errno, memname, "can't truncate");
         }
 #elif defined(__linux__)
         if (fallocate64(fd, 0, 0, size) == -1) {
@@ -217,7 +211,7 @@ public:
 #endif
         SCP_DEBUG(()) << "Create Length " << size;
         uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-        int mmap_error = errno; //even if no error happens here, we need to capture errno directly after mmap()
+        int mmap_error = errno; // even if no error happens here, we need to capture errno directly after mmap()
         close(fd);
         if (ptr == MAP_FAILED) {
             die_sys_api(mmap_error, memname, "can't mmap(shared memory create)");
@@ -225,8 +219,7 @@ public:
         SCP_DEBUG(()) << "Shared memory created: " << memname << " length " << size;
         m_shmem_info_map.insert({ std::string(memname), { ptr, size } });
         if ((strlen(memname) + 1) > MAX_SHM_STR_LENGTH)
-            SCP_FATAL(()) << "shm name length exceeded max allowed length: " << MAX_SHM_STR_LENGTH
-                          << std::endl;
+            SCP_FATAL(()) << "shm name length exceeded max allowed length: " << MAX_SHM_STR_LENGTH << std::endl;
         start_shm_cleaner_proc();
         strncpy(cl_info->name[cl_info->count++], memname,
                 strlen(memname) + 1); // must be called after start_shm_cleaner_proc() to make sure

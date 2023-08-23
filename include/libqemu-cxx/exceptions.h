@@ -38,8 +38,9 @@ class TargetNotSupportedException : public LibQemuException
 {
 public:
     TargetNotSupportedException(Target t)
-        : LibQemuException(std::string("target `") + get_target_name(t) +
-                           "` disabled at compile time.") {}
+        : LibQemuException(std::string("target `") + get_target_name(t) + "` disabled at compile time.")
+    {
+    }
 
     virtual ~TargetNotSupportedException() throw() {}
 };
@@ -48,8 +49,9 @@ class LibraryLoadErrorException : public LibQemuException
 {
 public:
     LibraryLoadErrorException(const char* lib_name, const char* error)
-        : LibQemuException(std::string("error while loading libqemu library `") + lib_name +
-                           "`: " + error) {}
+        : LibQemuException(std::string("error while loading libqemu library `") + lib_name + "`: " + error)
+    {
+    }
 
     virtual ~LibraryLoadErrorException() throw() {}
 };
@@ -58,8 +60,10 @@ class InvalidLibraryException : public LibQemuException
 {
 public:
     InvalidLibraryException(const char* lib_name, const char* symbol)
-        : LibQemuException(std::string("Invalid libqemu library `") + lib_name + "` " +
-                           "(Symbol `" + symbol + "` not found).") {}
+        : LibQemuException(std::string("Invalid libqemu library `") + lib_name + "` " + "(Symbol `" + symbol +
+                           "` not found).")
+    {
+    }
 
     virtual ~InvalidLibraryException() throw() {}
 };
@@ -68,8 +72,9 @@ class SetPropertyException : public LibQemuException
 {
 public:
     SetPropertyException(const char* type, const char* name, const char* err)
-        : LibQemuException(std::string("Error while setting ") + type + " property `" + name +
-                           "` on object: " + err) {}
+        : LibQemuException(std::string("Error while setting ") + type + " property `" + name + "` on object: " + err)
+    {
+    }
 
     virtual ~SetPropertyException() throw() {}
 };
@@ -78,8 +83,9 @@ class GetPropertyException : public LibQemuException
 {
 public:
     GetPropertyException(const char* type, const char* name, const char* err)
-        : LibQemuException(std::string("Error while getting ") + type + " property `" + name +
-                           "` on object: " + err) {}
+        : LibQemuException(std::string("Error while getting ") + type + " property `" + name + "` on object: " + err)
+    {
+    }
 
     virtual ~GetPropertyException() throw() {}
 };

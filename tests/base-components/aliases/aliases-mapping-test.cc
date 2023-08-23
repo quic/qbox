@@ -204,38 +204,31 @@ TEST_BENCH(AliasesMappingTest, SimpleOverlapWriteDebug)
 TEST_BENCH(AliasesMappingTest, SimpleCrossesBoundaryDebug)
 {
     /* Target 1 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x00FF - 1, 0xFFFF, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x00FF - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x01FF - 1, 0xFFFF, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x01FF - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x02FF - 1, 0xFFFF, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x02FF - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x03FF - 1, 0xFFFF, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x03FF - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x04FF - 1, 0xFFFF, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x04FF - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x05FF - 1, 0xFFFF, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x05FF - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x06FF - 1, 0xFFFF, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(0x06FF - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 }
 

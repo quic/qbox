@@ -52,8 +52,8 @@ public:
 
     QemuRiscvSifivePlic(const sc_core::sc_module_name& name, sc_core::sc_object* o)
         : QemuRiscvSifivePlic(name, *(dynamic_cast<QemuInstance*>(o)))
-        {
-        }
+    {
+    }
     QemuRiscvSifivePlic(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuDevice(nm, inst, "riscv.sifive.plic")
         , p_num_sources("num_sources", 0, "Number of input IRQ lines")
@@ -71,10 +71,12 @@ public:
                         "separarted by a comma) (example: \"MS,MS\" -> "
                         "two HARTs with M and S mode)")
         , socket("mem", inst)
-        , irq_in("irq_in", p_num_sources,
-                 [](const char* n, int i) { return new QemuTargetSignalSocket(n); }) {}
+        , irq_in("irq_in", p_num_sources, [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
+    {
+    }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         QemuDevice::before_end_of_elaboration();
 
         m_dev.set_prop_str("hart-config", p_hart_config.get_value().c_str());
@@ -89,7 +91,8 @@ public:
         m_dev.set_prop_int("context-stride", p_context_stride);
     }
 
-    void end_of_elaboration() override {
+    void end_of_elaboration() override
+    {
         int i;
 
         QemuDevice::set_sysbus_as_parent_bus();

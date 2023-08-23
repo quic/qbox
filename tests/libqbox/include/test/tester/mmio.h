@@ -35,8 +35,8 @@ public:
 public:
     TargetSocket socket;
 
-    CpuTesterMmio(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs)
-        : CpuTester(n, cbs) {
+    CpuTesterMmio(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs): CpuTester(n, cbs)
+    {
         register_b_transport(socket, SOCKET_MMIO);
 
         m_cbs.map_target(socket, MMIO_ADDR, MMIO_SIZE);

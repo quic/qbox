@@ -214,8 +214,7 @@ public:
     void test_rw()
     {
         T seed = 0x11;
-        for (int i = 0; i < sizeof(T); i++)
-            seed += seed << 8;
+        for (int i = 0; i < sizeof(T); i++) seed += seed << 8;
         for (int i = 1; i < 30; i++) {
             for (int a = 0; a < 16; a++) {
                 uint64_t addr = ((i * 0x1000) - (8 * sizeof(T))) + (a * sizeof(T));
@@ -238,8 +237,7 @@ public:
         T seed = 0x11;
         uint8_t* old_ptr;
         int boundry = 0;
-        for (int i = 0; i < sizeof(T); i++)
-            seed += seed << 8; // make a fairly random data thats different in each byte
+        for (int i = 0; i < sizeof(T); i++) seed += seed << 8; // make a fairly random data thats different in each byte
         for (int i = 1; i < 30; i++) {
             old_ptr = 0;
             for (int a = 0; a < 16; a++) {

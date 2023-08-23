@@ -119,7 +119,7 @@ private:
      * so that the test does not last forever.
      */
 
-     // would be nice to check how many accesses we perform (skid) after an invalidate hits a CPU.... should be<=1
+    // would be nice to check how many accesses we perform (skid) after an invalidate hits a CPU.... should be<=1
     int m_num_write_per_cpu;
 
     std::vector<bool> invalidated;
@@ -129,25 +129,25 @@ public:
     SC_HAS_PROCESS(CpuArmCortexA53DmiConcurrentInvalTest);
 
     CpuArmCortexA53DmiConcurrentInvalTest(const sc_core::sc_module_name& n)
-        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>(n), invalidated(p_num_cpu, false) {
+        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>(n), invalidated(p_num_cpu, false)
+    {
         char buf[2048];
         SCP_DEBUG(SCMOD) << "CpuArmCortexA53DmiConcurrentInvalTest constructor";
         m_num_write_per_cpu = NUM_WRITES / p_num_cpu;
 
-        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterDmi::MMIO_ADDR, CpuTesterDmi::DMI_ADDR,
-                      m_num_write_per_cpu);
+        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterDmi::MMIO_ADDR, CpuTesterDmi::DMI_ADDR, m_num_write_per_cpu);
         set_firmware(buf);
     }
 
     virtual ~CpuArmCortexA53DmiConcurrentInvalTest() {}
 
-    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override {
+    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override
+    {
         int cpuid = addr >> 3;
 
         if (id != CpuTesterDmi::SOCKET_MMIO) {
-            SCP_INFO(SCMOD) << "cpu_" << cpuid << " DMI write data: " << std::hex << data
-                            << ", len: " << len << " (old value " << m_tester.get_buf_value(cpuid)
-                            << ")";
+            SCP_INFO(SCMOD) << "cpu_" << cpuid << " DMI write data: " << std::hex << data << ", len: " << len
+                            << " (old value " << m_tester.get_buf_value(cpuid) << ")";
 
             /*
              * The tester is about to write the new value to memory. Check the
@@ -158,8 +158,8 @@ public:
             return;
         }
 
-        SCP_INFO(SCMOD) << "cpu_" << cpuid << " b_transport write at 0x" << std::hex << addr
-                        << ", data: " << std::hex << data << ", len: " << len;
+        SCP_INFO(SCMOD) << "cpu_" << cpuid << " b_transport write at 0x" << std::hex << addr << ", data: " << std::hex
+                        << data << ", len: " << len;
 
         TEST_ASSERT(data != -1); // -1 indicated a fail from the ASM
         int count = 0;
@@ -173,36 +173,36 @@ public:
                 SCP_INFO(SCMOD) << "Already invalidated count " << count << " out of " << p_num_cpu;
             }
         }
-        if (count == 0)
-            m_tester.dmi_invalidate();
+        if (count == 0) m_tester.dmi_invalidate();
     }
 
-    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override {
+    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override
+    {
         int cpuid = addr >> 3;
 
         /* No read on the control socket */
         TEST_ASSERT(id == CpuTesterDmi::SOCKET_DMI);
 
-        SCP_INFO(SCMOD) << "cpu_" << cpuid << "DMI read data: " << std::hex
-                        << m_tester.get_buf_value(cpuid) << ", len: " << len;
+        SCP_INFO(SCMOD) << "cpu_" << cpuid << "DMI read data: " << std::hex << m_tester.get_buf_value(cpuid)
+                        << ", len: " << len;
 
         /* The return value is ignored by the tester */
         return 0;
     }
 
-    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override {
-        SCP_INFO(SCMOD) << "cpu_" << (addr >> 3) << " DMI request at 0x" << std::hex << addr
-                        << ", len: " << len;
+    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) override
+    {
+        SCP_INFO(SCMOD) << "cpu_" << (addr >> 3) << " DMI request at 0x" << std::hex << addr << ", len: " << len;
         std::lock_guard<std::mutex> lock(mutex);
         int last = invalidated[addr >> 3];
         invalidated[addr >> 3] = false;
         int c = std::count(invalidated.begin(), invalidated.end(), true);
-        if (last && c == 0)
-            m_tester.dmi_invalidate_switch();
+        if (last && c == 0) m_tester.dmi_invalidate_switch();
         return c == 0;
     }
 
-    virtual void end_of_simulation() override {
+    virtual void end_of_simulation() override
+    {
         CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>::end_of_simulation();
 
         for (int i = 0; i < p_num_cpu; i++) {
@@ -213,6 +213,4 @@ public:
 
 constexpr const char* CpuArmCortexA53DmiConcurrentInvalTest::FIRMWARE;
 
-int sc_main(int argc, char* argv[]) {
-    return run_testbench<CpuArmCortexA53DmiConcurrentInvalTest>(argc, argv);
-}
+int sc_main(int argc, char* argv[]) { return run_testbench<CpuArmCortexA53DmiConcurrentInvalTest>(argc, argv); }

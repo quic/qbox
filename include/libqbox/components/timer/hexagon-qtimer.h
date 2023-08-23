@@ -55,8 +55,8 @@ public:
 public:
     QemuHexagonQtimer(const sc_core::sc_module_name& name, sc_core::sc_object* o)
         : QemuHexagonQtimer(name, *(dynamic_cast<QemuInstance*>(o)))
-        {
-        }
+    {
+    }
     QemuHexagonQtimer(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuDevice(nm, inst, "qct-qtimer")
         , p_nr_frames("nr_frames", 2, "Number of frames")
@@ -64,10 +64,12 @@ public:
         , p_cnttid("cnttid", 0x11, "Value of cnttid")
         , socket("mem", inst)
         , view_socket("mem_view", inst)
-        , irq("irq", p_nr_frames.get_value(),
-              [](const char* n, size_t i) { return new QemuInitiatorSignalSocket(n); }) {}
+        , irq("irq", p_nr_frames.get_value(), [](const char* n, size_t i) { return new QemuInitiatorSignalSocket(n); })
+    {
+    }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         QemuDevice::before_end_of_elaboration();
 
         m_dev.set_prop_int("nr_frames", p_nr_frames);
@@ -75,7 +77,8 @@ public:
         m_dev.set_prop_int("cnttid", p_cnttid);
     }
 
-    void end_of_elaboration() override {
+    void end_of_elaboration() override
+    {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 

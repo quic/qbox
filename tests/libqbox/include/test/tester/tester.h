@@ -60,7 +60,8 @@ protected:
     uint64_t cpu_read(uint64_t addr, size_t len);
     void cpu_write(uint64_t addr, uint64_t data, size_t len);
 
-    void b_transport(int id, tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void b_transport(int id, tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         uint64_t addr = txn.get_address();
         uint64_t data = 0;
         uint64_t* ptr = reinterpret_cast<uint64_t*>(txn.get_data_ptr());
@@ -88,13 +89,13 @@ protected:
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
     }
 
-    void register_b_transport(TargetSocket& socket, int id) {
+    void register_b_transport(TargetSocket& socket, int id)
+    {
         socket.register_b_transport(this, &CpuTester::b_transport, id);
     }
 
 public:
-    CpuTester(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs)
-        : sc_core::sc_module(n), m_cbs(cbs) {}
+    CpuTester(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs): sc_core::sc_module(n), m_cbs(cbs) {}
 };
 
 #endif

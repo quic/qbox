@@ -44,10 +44,7 @@ class AddrtrTestBench : public TestBench
         using TargetTester::TargetTester;
 
     public:
-        void do_dmi_invalidate(uint64_t addr)
-        {
-            socket->invalidate_direct_mem_ptr(addr, addr + TARGET_MMIO_SIZE);
-        }
+        void do_dmi_invalidate(uint64_t addr) { socket->invalidate_direct_mem_ptr(addr, addr + TARGET_MMIO_SIZE); }
     };
 
 public:
@@ -122,10 +119,8 @@ public:
             std::bind(&AddrtrTestBench::invalidate_direct_mem_ptr, this, _1, _2));
         m_target.register_read_cb(std::bind(&AddrtrTestBench::target_access, this, _1, _2, _3));
         m_target.register_write_cb(std::bind(&AddrtrTestBench::target_access, this, _1, _2, _3));
-        m_target.register_debug_write_cb(
-            std::bind(&AddrtrTestBench::target_access, this, _1, _2, _3));
-        m_target.register_get_direct_mem_ptr_cb(
-            std::bind(&AddrtrTestBench::get_direct_mem_ptr, this, _1, _2));
+        m_target.register_debug_write_cb(std::bind(&AddrtrTestBench::target_access, this, _1, _2, _3));
+        m_target.register_get_direct_mem_ptr_cb(std::bind(&AddrtrTestBench::get_direct_mem_ptr, this, _1, _2));
 
         m_addrtr.front_socket.bind(m_initiator.socket);
         m_addrtr.back_socket.bind(m_target.socket);

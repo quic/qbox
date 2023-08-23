@@ -35,7 +35,8 @@ protected:
 
 public:
     RemotePlatform(const sc_core::sc_module_name& n)
-        : gs::ModuleFactory::ContainerDeferModulesConstruct(n), p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
+        : gs::ModuleFactory::ContainerDeferModulesConstruct(n)
+        , p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
     {
         using tlm_utils::tlm_quantumkeeper;
 

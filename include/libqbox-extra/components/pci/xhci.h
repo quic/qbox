@@ -34,14 +34,17 @@ public:
 
     public:
         Device(const sc_core::sc_module_name& name, QemuInstance& inst, const char* qom_type)
-            : QemuDevice(name, inst, qom_type) {}
+            : QemuDevice(name, inst, qom_type)
+        {
+        }
 
         /// @brief We cannot do the end_of_elaboration at this point because we
         /// need the USB bus (created only during the USB host realize step)
         void end_of_elaboration() override {}
 
     protected:
-        virtual void usb_realize(qemu::Bus& usb_bus) {
+        virtual void usb_realize(qemu::Bus& usb_bus)
+        {
             m_dev.set_parent_bus(usb_bus);
             QemuDevice::end_of_elaboration();
         }
@@ -52,23 +55,25 @@ protected:
 
 public:
     QemuXhci(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
-    : QemuXhci(name, *(dynamic_cast<QemuInstance*>(o)), (dynamic_cast<QemuGPEX*>(t)))
+        : QemuXhci(name, *(dynamic_cast<QemuInstance*>(o)), (dynamic_cast<QemuGPEX*>(t)))
     {
     }
     QemuXhci(const sc_core::sc_module_name& n, QemuInstance& inst, QemuGPEX* gpex)
-        : QemuGPEX::Device(n, inst, "qemu-xhci") 
-        {
-            gpex->add_device(*this);
-        }
+        : QemuGPEX::Device(n, inst, "qemu-xhci")
+    {
+        gpex->add_device(*this);
+    }
 
-    void add_device(Device& dev) {
+    void add_device(Device& dev)
+    {
         if (m_inst != dev.get_qemu_inst()) {
             SCP_FATAL(SCMOD) << "USB device and host have to be in same qemu instance";
         }
         m_devices.push_back(&dev);
     }
 
-    void end_of_elaboration() override {
+    void end_of_elaboration() override
+    {
         QemuGPEX::Device::end_of_elaboration();
 
         qemu::Bus root_bus = m_dev.get_child_bus("usb-bus.0");

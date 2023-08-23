@@ -39,12 +39,13 @@ private:
 public:
     QemuVirtioMMIOBlk(const sc_core::sc_module_name& name, sc_core::sc_object* o)
         : QemuVirtioMMIOBlk(name, *(dynamic_cast<QemuInstance*>(o)))
-        {
-        }
+    {
+    }
     QemuVirtioMMIOBlk(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuVirtioMMIO(nm, inst, "virtio-blk-device")
         , blkdev_id(std::string(name()) + "-id")
-        , blkdev_str("blkdev_str", "", "blkdev string for QEMU (do not specify ID)") {
+        , blkdev_str("blkdev_str", "", "blkdev string for QEMU (do not specify ID)")
+    {
         std::stringstream opts;
         opts << blkdev_str.get_value();
         opts << ",id=" << blkdev_id;
@@ -53,7 +54,8 @@ public:
         m_inst.add_arg(opts.str().c_str());
     }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         QemuVirtioMMIO::before_end_of_elaboration();
 
         m_dev.set_prop_parse("drive", blkdev_id.c_str());

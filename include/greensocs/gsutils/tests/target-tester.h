@@ -67,8 +67,7 @@ public:
     using TlmResponseStatus = tlm::tlm_response_status;
     using TlmDmi = tlm::tlm_dmi;
 
-    using AccessCallbackFn = std::function<TlmResponseStatus(uint64_t addr, uint8_t* data,
-                                                             size_t len)>;
+    using AccessCallbackFn = std::function<TlmResponseStatus(uint64_t addr, uint8_t* data, size_t len)>;
     using DebugAccessCallbackFn = std::function<int(uint64_t addr, uint8_t* data, size_t len)>;
     using GetDirectMemPtrCallbackFn = std::function<bool(uint64_t addr, TlmDmi&)>;
 
@@ -95,7 +94,8 @@ private:
 
     /* Factorized version of b_transport and transport_dbg */
     template <class RET, RET DEFAULT_RET, RET ADDRESS_ERROR_RET, RET DEFAULT_CB_RET, class CB_FN>
-    RET generic_access(TlmGenericPayload& txn, const CB_FN& read_cb, const CB_FN& write_cb) {
+    RET generic_access(TlmGenericPayload& txn, const CB_FN& read_cb, const CB_FN& write_cb)
+    {
         using namespace tlm;
 
         uint64_t addr;
@@ -151,14 +151,15 @@ private:
     }
 
 protected:
-    virtual void b_transport(TlmGenericPayload& txn, sc_core::sc_time& delay) {
+    virtual void b_transport(TlmGenericPayload& txn, sc_core::sc_time& delay)
+    {
         using namespace tlm;
 
         TlmResponseStatus ret;
 
         m_cur_txn_delay = &delay;
-        ret = generic_access<TlmResponseStatus, TLM_OK_RESPONSE, TLM_ADDRESS_ERROR_RESPONSE,
-                             TLM_OK_RESPONSE, AccessCallbackFn>(txn, m_read_cb, m_write_cb);
+        ret = generic_access<TlmResponseStatus, TLM_OK_RESPONSE, TLM_ADDRESS_ERROR_RESPONSE, TLM_OK_RESPONSE,
+                             AccessCallbackFn>(txn, m_read_cb, m_write_cb);
         m_cur_txn_delay = nullptr;
 
         txn.set_response_status(ret);
@@ -167,11 +168,11 @@ protected:
         m_last_txn_delay_valid = true;
     }
 
-    virtual unsigned int transport_dbg(TlmGenericPayload& txn) {
+    virtual unsigned int transport_dbg(TlmGenericPayload& txn)
+    {
         int ret = 0;
 
-        ret = generic_access<int, 0, 0, -1, DebugAccessCallbackFn>(txn, m_debug_read_cb,
-                                                                   m_debug_write_cb);
+        ret = generic_access<int, 0, 0, -1, DebugAccessCallbackFn>(txn, m_debug_read_cb, m_debug_write_cb);
 
         if (ret == -1) {
             ret = txn.get_data_length();
@@ -180,7 +181,8 @@ protected:
         return ret;
     }
 
-    virtual bool get_direct_mem_ptr(TlmGenericPayload& txn, TlmDmi& dmi_data) {
+    virtual bool get_direct_mem_ptr(TlmGenericPayload& txn, TlmDmi& dmi_data)
+    {
         uint64_t addr;
 
         m_last_txn.deep_copy_from(m_last_txn);
@@ -203,8 +205,8 @@ public:
      * @param[in] n The name of the SystemC module
      * @param[in] mmio_size The size of the memory mapped I/O region of this component
      */
-    TargetTester(const sc_core::sc_module_name& n, size_t mmio_size)
-        : sc_core::sc_module(n), m_mmio_size(mmio_size) {
+    TargetTester(const sc_core::sc_module_name& n, size_t mmio_size): sc_core::sc_module(n), m_mmio_size(mmio_size)
+    {
         socket.register_b_transport(this, &TargetTester::b_transport);
         socket.register_transport_dbg(this, &TargetTester::transport_dbg);
         socket.register_get_direct_mem_ptr(this, &TargetTester::get_direct_mem_ptr);
@@ -258,7 +260,8 @@ public:
      * row will trigger a test failure. This ensures that you actually got the
      * transaction you expected to get.
      */
-    const TlmGenericPayload& get_last_txn() {
+    const TlmGenericPayload& get_last_txn()
+    {
         EXPECT_TRUE(m_last_txn_valid);
         m_last_txn_valid = false;
 
@@ -274,7 +277,8 @@ public:
      * in a row will trigger a test failure. This ensures that you actually got
      * the transaction you expected to get.
      */
-    const sc_core::sc_time& get_last_txn_delay() {
+    const sc_core::sc_time& get_last_txn_delay()
+    {
         EXPECT_TRUE(m_last_txn_delay_valid);
         m_last_txn_delay_valid = false;
 
@@ -290,7 +294,8 @@ public:
      *
      * @return the current transaction payload
      */
-    TlmGenericPayload& get_cur_txn() {
+    TlmGenericPayload& get_cur_txn()
+    {
         EXPECT_TRUE(m_cur_txn != nullptr);
         return *m_cur_txn;
     }
@@ -304,7 +309,8 @@ public:
      *
      * @return the current transaction delay
      */
-    sc_core::sc_time& get_cur_txn_delay() {
+    sc_core::sc_time& get_cur_txn_delay()
+    {
         EXPECT_TRUE(m_cur_txn_delay != nullptr);
         return *m_cur_txn_delay;
     }

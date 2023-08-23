@@ -53,27 +53,24 @@ class ModuleFactoryOrig
 {
     template <class... Args>
     struct MapHolder {
-        static std::map<std::string,
-                        std::function<sc_core::sc_module*(sc_core::sc_module_name, Args...)>>&
-        get() {
-            static std::map<std::string,
-                            std::function<sc_core::sc_module*(sc_core::sc_module_name, Args...)>>
-                m_map;
+        static std::map<std::string, std::function<sc_core::sc_module*(sc_core::sc_module_name, Args...)>>& get()
+        {
+            static std::map<std::string, std::function<sc_core::sc_module*(sc_core::sc_module_name, Args...)>> m_map;
             return m_map;
         }
     };
 
 public:
     template <class... Args>
-    static bool Reg(std::string name,
-                    std::function<sc_core::sc_module*(sc_core::sc_module_name, Args...)> Callback) {
+    static bool Reg(std::string name, std::function<sc_core::sc_module*(sc_core::sc_module_name, Args...)> Callback)
+    {
         MapHolder<Args...>::get()[name] = Callback;
         return true;
     }
 
     template <class... Args>
-    static sc_core::sc_module* Create(const std::string& moduletype, sc_core::sc_module_name name,
-                                      Args&&... args) {
+    static sc_core::sc_module* Create(const std::string& moduletype, sc_core::sc_module_name name, Args&&... args)
+    {
         auto map = MapHolder<Args...>::get();
         if (map.find(moduletype) != map.end()) {
             return MapHolder<Args...>::get()[moduletype](name, std::forward<Args>(args)...);
@@ -115,15 +112,16 @@ public:
         , moduletype("moduletype", "none", "Lua module type name") // this is unused, but
                                                                    // makes sure the param
                                                                    // is used.
-    {}
+    {
+    }
 };
 
 class Initiator : public Model
 {
 public:
     tlm_utils::simple_initiator_socket<Initiator> initiator_socket;
-    Initiator(sc_module_name _name, Checker& _checker)
-        : Model(_name, _checker), initiator_socket("initiatorSocket") {
+    Initiator(sc_module_name _name, Checker& _checker): Model(_name, _checker), initiator_socket("initiatorSocket")
+    {
         SCP_DEBUG(SCMOD) << "In the constructor Initiator";
     }
 };
@@ -136,10 +134,8 @@ public:
     tlm_utils::simple_target_socket<Target> target_socket;
     virtual bool requires_systemc() = 0;
     Target(sc_module_name _name, Checker& _checker)
-        : Model(_name, _checker)
-        , add_base("add_base", 0)
-        , add_size("add_size", 1)
-        , target_socket("targetSocket") {
+        : Model(_name, _checker), add_base("add_base", 0), add_size("add_size", 1), target_socket("targetSocket")
+    {
         target_socket.register_b_transport(this, &Target::b_transport);
         SCP_DEBUG(SCMOD) << "In the constructor Target";
     }
@@ -170,7 +166,8 @@ private:
 
     bool run_via_qk;
 
-    void run() {
+    void run()
+    {
         active = true;
         qk->reset();
 
@@ -185,8 +182,7 @@ private:
             // this loop intentionally not efficient, represents QEMU running
             // some instructions
             for (uint64_t starti = icount;
-                 running && icount < run_count &&
-                 (icount - starti) < (budget.to_seconds() * (float)MIPS * 1000000.0);
+                 running && icount < run_count && (icount - starti) < (budget.to_seconds() * (float)MIPS * 1000000.0);
                  icount++) {
                 qk->inc(sc_time(1.0 / (float)MIPS, SC_US));
                 // we will not check for sync on each instruction!
@@ -200,8 +196,7 @@ private:
                     }
                     if (qk->need_sync()) {
                         qk->sync();
-                        if (!running)
-                            break;
+                        if (!running) break;
                     }
                     /* send transaction */
                     tlm::tlm_generic_payload trans;
@@ -249,8 +244,7 @@ private:
                         }
                     });
 
-                    if (running && qk->need_sync())
-                        qk->sync();
+                    if (running && qk->need_sync()) qk->sync();
 
 #if 0
                                          
@@ -298,7 +292,8 @@ public:
         , ms_sleep("ms_sleep", 0)
         , running(false)
         , active(false)
-        , m_worker_thread_active(false) {
+        , m_worker_thread_active(false)
+    {
         SCP_DEBUG(SCMOD) << "In the constructor QemuLikeMaster";
         SC_HAS_PROCESS(QemuLikeMaster);
         SC_METHOD(stop);
@@ -316,7 +311,8 @@ public:
         else
             std::abort(); // Disabled libssync tests
     }
-    void entry() {
+    void entry()
+    {
         running = true;
         qk->reset();
         wait(SC_ZERO_TIME); // Allow slaves to initilize
@@ -341,18 +337,19 @@ public:
             qk->start(std::bind(&QemuLikeMaster::run, this));
         }
     }
-    void stop() {
+    void stop()
+    {
         running = false;
         qk->stop();
     }
-    void exit() {
+    void exit()
+    {
         while (active) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             qk->stop(); // some QK's dont stop cleanly
         }
 
-        if (m_worker_thread_active)
-            m_worker_thread.join();
+        if (m_worker_thread_active) m_worker_thread.join();
         m_worker_thread_active = false;
     }
 };
@@ -378,19 +375,20 @@ public:
         , ns_wait("ns_wait", 0)
         , ms_sleep("ms_sleep", 0)
         , ns_per_cycle("ns_per_cycle", 10)
-        , running(false) {
+        , running(false)
+    {
         SCP_DEBUG(SCMOD) << "In the constructor MasterSimple";
         SC_HAS_PROCESS(MasterSimple);
         SC_METHOD(stop);
         dont_initialize();
         sensitive << checker.stopEvent;
     }
-    void entry() {
+    void entry()
+    {
         running = true;
         for (int i = 0; running && (run_count == -1 || i < run_count); i++) {
             wait(sc_time(ns_wait, SC_NS), checker.stopEvent);
-            if (!running)
-                break;
+            if (!running) break;
             if (ms_sleep) {
                 checker.sleep_for(std::chrono::milliseconds(ms_sleep));
             }
@@ -421,7 +419,8 @@ public:
     cci::cci_param<int> ms_sleep;
 
 private:
-    virtual void b_transport(tlm::tlm_generic_payload& trans, sc_time& delay) {
+    virtual void b_transport(tlm::tlm_generic_payload& trans, sc_time& delay)
+    {
         checker.record(this, Checker::TxnRec, delay);
 
         if (ns_wait) {
@@ -435,7 +434,8 @@ private:
 
 public:
     Slave(sc_module_name _name, Checker& _checker)
-        : Target(_name, _checker), ns_wait("ns_wait", 0), ms_sleep("ms_sleep", 0) {
+        : Target(_name, _checker), ns_wait("ns_wait", 0), ms_sleep("ms_sleep", 0)
+    {
         SCP_DEBUG(SCMOD) << "In the constructor Slave";
     }
     bool requires_systemc() { return (ns_wait); }
@@ -453,21 +453,19 @@ public:
 private:
     bool running;
     sc_event triggure;
-    virtual void b_transport(tlm::tlm_generic_payload& trans, sc_time& delay) {
+    virtual void b_transport(tlm::tlm_generic_payload& trans, sc_time& delay)
+    {
         checker.record(this, Checker::TxnRec, delay);
-        if (!running)
-            return;
+        if (!running) return;
         if (ns_wait) {
             if (tlm_mode) {
                 wait(delay, checker.stopEvent);
                 delay = SC_ZERO_TIME;
             }
-            if (running)
-                wait(triggure | checker.stopEvent);
+            if (running) wait(triggure | checker.stopEvent);
             checker.record(this, Checker::ClockTick);
         }
-        if (ns_delay)
-            delay += sc_time(ns_delay, SC_NS);
+        if (ns_delay) delay += sc_time(ns_delay, SC_NS);
 
         if (ms_sleep && running) {
             checker.sleep_for(std::chrono::milliseconds(ms_sleep));
@@ -481,7 +479,8 @@ public:
         , ns_wait("ns_wait", 0)
         , ns_delay("ns_delay", 0)
         , ms_sleep("ms_sleep", 0)
-        , running(false) {
+        , running(false)
+    {
         SCP_DEBUG(SCMOD) << "In the constructor TLMClockedSlave";
         SC_HAS_PROCESS(TLMClockedSlave);
         SC_METHOD(stop);
@@ -489,7 +488,8 @@ public:
         sensitive << checker.stopEvent;
     }
 
-    void entry() {
+    void entry()
+    {
         if (ns_wait) {
             running = true;
             while (running) {
@@ -517,12 +517,12 @@ private:
     bool running;
 
 public:
-    void entry() {
+    void entry()
+    {
         running = true;
         while (running) {
             wait(sc_core::sc_time(ns_wait, SC_NS), checker.stopEvent);
-            if (record)
-                checker.record(this, Checker::ClockTick);
+            if (record) checker.record(this, Checker::ClockTick);
 
             if (ms_sleep && running) {
                 checker.sleep_for(std::chrono::milliseconds(ms_sleep));
@@ -535,7 +535,8 @@ public:
         , ns_wait("ns_wait", 10)
         , ms_sleep("ms_sleep", 0)
         , record("record", false)
-        , running(false) {
+        , running(false)
+    {
         SCP_DEBUG(SCMOD) << "In the constructor Clock";
         SC_HAS_PROCESS(Clock);
         SC_METHOD(stop);
@@ -553,16 +554,16 @@ class RealTimeClockLimiter : public Model
     gs::realtimeLimiter rtl;
 
 public:
-    void entry() {
-        if (use)
-            rtl.enable();
+    void entry()
+    {
+        if (use) rtl.enable();
     }
     void exit() {}
     void stop() { rtl.disable(); }
 
     cci::cci_param<bool> use;
-    RealTimeClockLimiter(sc_module_name _name, Checker& _checker)
-        : Model(_name, _checker), use("use", true) {
+    RealTimeClockLimiter(sc_module_name _name, Checker& _checker): Model(_name, _checker), use("use", true)
+    {
         SCP_DEBUG(SCMOD) << "In the constructor RealTimeClockLimiter";
     }
 };
@@ -594,15 +595,15 @@ SC_MODULE (tests) {
             , ns_quantum("ns_quantum", 10000)
             , rerun("rerun", 1)
             , seed("seed", 1)
-            , description("description", "") {
+            , description("description", "")
+        {
             SCP_DEBUG(SCMOD) << "In the constructor atest";
             for (auto name : gs::sc_cci_children(name())) {
                 cci::cci_broker_handle m_broker = cci::cci_get_broker();
-                if (m_broker.has_preset_value(std::string(sc_module::name()) + "." + name +
-                                              ".moduletype")) {
+                if (m_broker.has_preset_value(std::string(sc_module::name()) + "." + name + ".moduletype")) {
                     std::string type = m_broker
-                                           .get_preset_cci_value(std::string(sc_module::name()) +
-                                                                 "." + name + ".moduletype")
+                                           .get_preset_cci_value(std::string(sc_module::name()) + "." + name +
+                                                                 ".moduletype")
                                            .get_string();
                     Model* m = (Model*)gs::ModuleFactoryOrig::Create(type, name.c_str(), checker);
                     if (m) {
@@ -625,8 +626,7 @@ SC_MODULE (tests) {
             for (auto m : allModels) {
                 if (Target* s = dynamic_cast<Target*>(m)) {
                     if (s->requires_systemc()) {
-                        gs::InLineSync* i = new gs::InLineSync(
-                            (gs::sc_cci_leaf_name(s->name()) + "_ils").c_str());
+                        gs::InLineSync* i = new gs::InLineSync((gs::sc_cci_leaf_name(s->name()) + "_ils").c_str());
                         inlinesyncs.push_back(i);
                         i->initiator_socket(s->target_socket);
                         r.add_target(i->target_socket, s->add_base, s->add_size);
@@ -637,7 +637,8 @@ SC_MODULE (tests) {
             }
         }
 
-        void entry() {
+        void entry()
+        {
             checker.record(this, Checker::StartTest);
             if (seed == 0)
                 std::srand(std::time(nullptr));
@@ -651,20 +652,21 @@ SC_MODULE (tests) {
                 handles.push_back(sc_spawn(sc_bind(&Model::entry, m)));
             }
         }
-        void stop() {
+        void stop()
+        {
             checker.record(this, Checker::StopTest);
             for (auto m : allModels) {
                 m->stop();
             }
         }
 
-        void exit() {
+        void exit()
+        {
             for (auto m : allModels) {
                 m->exit();
             }
             for (auto h : handles) {
-                if (!h.terminated())
-                    h.disable(SC_INCLUDE_DESCENDANTS);
+                if (!h.terminated()) h.disable(SC_INCLUDE_DESCENDANTS);
             }
         }
     };
@@ -672,7 +674,8 @@ SC_MODULE (tests) {
     std::vector<atest*> allTests;
 
 public:
-    tests(sc_module_name _name, Checker & _checker): sc_module(_name), checker(_checker) {
+    tests(sc_module_name _name, Checker & _checker): sc_module(_name), checker(_checker)
+    {
         SCP_DEBUG(SCMOD) << "In the constructor tests";
         for (auto name : gs::sc_cci_children(name())) {
             allTests.push_back(new atest(name.c_str(), checker));
@@ -681,7 +684,8 @@ public:
         //        *b)->bool{return strcmp(a->name() , b->name());});
     }
 
-    void runAll() {
+    void runAll()
+    {
         sc_start(10, SC_MS); // Dont want to start at time zero !
         for (auto t : allTests) {
             for (int i = 0; i < t->rerun; i++) {
@@ -710,7 +714,8 @@ public:
     }
 };
 
-int sc_main(int argc, char** argv) {
+int sc_main(int argc, char** argv)
+{
     scp::init_logging(scp::LogConfig()
                           .logAsync(false)
                           .printSimTime(false)

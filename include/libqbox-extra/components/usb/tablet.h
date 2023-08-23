@@ -29,14 +29,14 @@ class QemuTablet : public QemuXhci::Device
 {
 public:
     QemuTablet(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
-    : QemuTablet(name, *(dynamic_cast<QemuInstance*>(o)), (dynamic_cast<QemuXhci*>(t)))
+        : QemuTablet(name, *(dynamic_cast<QemuInstance*>(o)), (dynamic_cast<QemuXhci*>(t)))
     {
     }
     QemuTablet(const sc_core::sc_module_name& n, QemuInstance& inst, QemuXhci* xhci)
         : QemuXhci::Device(n, inst, "usb-tablet")
-        {
-            xhci->add_device(*this);
-        }
+    {
+        xhci->add_device(*this);
+    }
 };
 GSC_MODULE_REGISTER(QemuTablet, sc_core::sc_object*, sc_core::sc_object*);
 #endif

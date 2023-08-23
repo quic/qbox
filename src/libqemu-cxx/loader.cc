@@ -25,7 +25,8 @@
 
 #include "libqemu-cxx/loader.h"
 
-static void copy_file(const char* src_file, const char* dest_file) {
+static void copy_file(const char* src_file, const char* dest_file)
+{
     std::ifstream src(src_file, std::ios::binary);
     std::ofstream dest(dest_file, std::ios::binary);
     dest << src.rdbuf();
@@ -55,7 +56,8 @@ public:
 
     bool symbol_exists(const char* name) { return get_symbol(name) != NULL; }
 
-    void* get_symbol(const char* name) {
+    void* get_symbol(const char* name)
+    {
         FARPROC symbol = GetProcAddress(m_lib, name);
         return *(void**)(&symbol);
     }
@@ -67,18 +69,16 @@ private:
     const char* m_base;
     std::string m_last_error;
 
-    std::string get_last_error_as_str() {
+    std::string get_last_error_as_str()
+    {
         // Get the error message, if any.
         DWORD errorMessageID = ::GetLastError();
-        if (errorMessageID == 0)
-            return std::string(); // No error message has been recorded
+        if (errorMessageID == 0) return std::string(); // No error message has been recorded
 
         LPSTR messageBuffer = nullptr;
-        size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-                                         FORMAT_MESSAGE_IGNORE_INSERTS,
-                                     NULL, errorMessageID,
-                                     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                                     (LPSTR)&messageBuffer, 0, NULL);
+        size_t size = FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+            errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
 
         std::string message(messageBuffer, size);
 
@@ -89,7 +89,8 @@ private:
     }
 
 public:
-    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name) {
+    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name)
+    {
         if (!m_base) {
             HMODULE handle = LoadLibraryExA(lib_name, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
             if (handle == nullptr) {
@@ -151,7 +152,8 @@ public:
 #include <sys/stat.h>
 #include <unistd.h>
 
-const char* dlpath(void* handle) {
+const char* dlpath(void* handle)
+{
     const char* path = NULL;
 #ifdef __APPLE__
     for (int32_t i = _dyld_image_count(); i >= 0; i--) {
@@ -166,15 +168,13 @@ const char* dlpath(void* handle) {
 
         dlclose(probe_handle);
 
-        if (found)
-            break;
+        if (found) break;
     }
 #else // Linux
     struct link_map* map;
     dlinfo(handle, RTLD_DI_LINKMAP, &map);
 
-    if (map)
-        path = map->l_name;
+    if (map) path = map->l_name;
 #endif
     return path;
 }
@@ -199,9 +199,10 @@ private:
     std::string m_last_error;
 
 public:
-    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name) {
+    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name)
+    {
         if (!m_base) {
-            std::cout << "Loading " << lib_name <<"\n";
+            std::cout << "Loading " << lib_name << "\n";
             void* handle = dlopen(lib_name, RTLD_LOCAL | RTLD_NOW);
             if (handle == nullptr) {
                 m_last_error = dlerror();
@@ -210,7 +211,7 @@ public:
             m_base = dlpath(handle);
             return std::make_shared<Library>(handle);
         }
-        std::cout << "RE Loading " << m_base <<"\n";
+        std::cout << "RE Loading " << m_base << "\n";
         char tmp[] = "/tmp/qbox_lib.XXXXXX";
         if (mkstemp(tmp) < 0) {
             m_last_error = "Unable to create temp file";
@@ -232,7 +233,8 @@ public:
         return std::make_shared<Library>(handle);
     }
 
-    const char* get_lib_ext() {
+    const char* get_lib_ext()
+    {
 #if defined(__APPLE__)
         return "dylib";
 #else
@@ -244,6 +246,4 @@ public:
 };
 #endif
 
-qemu::LibraryLoaderIface* qemu::get_default_lib_loader() {
-    return new DefaultLibraryLoader;
-}
+qemu::LibraryLoaderIface* qemu::get_default_lib_loader() { return new DefaultLibraryLoader; }

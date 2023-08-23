@@ -43,16 +43,14 @@ public:
 
     SC_HAS_PROCESS(InLineSync);
     InLineSync(const sc_core::sc_module_name& name)
-        : sc_module(name)
-        , onSystemC()
-        , target_socket("targetSocket")
-        , initiator_socket("initiatorSocket") {
+        : sc_module(name), onSystemC(), target_socket("targetSocket"), initiator_socket("initiatorSocket")
+    {
         target_socket.register_b_transport(this, &InLineSync::b_transport);
-        initiator_socket.register_invalidate_direct_mem_ptr(this,
-                                                            &InLineSync::invalidate_direct_mem_ptr);
+        initiator_socket.register_invalidate_direct_mem_ptr(this, &InLineSync::invalidate_direct_mem_ptr);
     }
 
-    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
+    {
         run_on_sysc([this, &trans, &delay]() {
             sc_core::sc_unsuspendable();
             initiator_socket->b_transport(trans, delay);
@@ -60,14 +58,16 @@ public:
         });
     }
 
-    void get_direct_mem_ptr(tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data) {
-        run_on_sysc(
-            [this, &trans, &dmi_data]() { initiator_socket->get_direct_mem_ptr(trans, dmi_data); });
+    void get_direct_mem_ptr(tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
+    {
+        run_on_sysc([this, &trans, &dmi_data]() { initiator_socket->get_direct_mem_ptr(trans, dmi_data); });
     }
-    void transport_dgb(tlm::tlm_generic_payload& trans) {
+    void transport_dgb(tlm::tlm_generic_payload& trans)
+    {
         run_on_sysc([this, &trans]() { initiator_socket->transport_dbg(trans); });
     }
-    void invalidate_direct_mem_ptr(sc_dt::uint64 start_range, sc_dt::uint64 end_range) {
+    void invalidate_direct_mem_ptr(sc_dt::uint64 start_range, sc_dt::uint64 end_range)
+    {
         // This would be better as run_on_initiator
         target_socket->invalidate_direct_mem_ptr(start_range, end_range);
     }

@@ -64,8 +64,8 @@ public:
     sc_core::sc_vector<QemuInitiatorSignalSocket> vfiq_out;
     QemuArmGicv3(const sc_core::sc_module_name& name, sc_core::sc_object* o)
         : QemuArmGicv3(name, *(dynamic_cast<QemuInstance*>(o)))
-        {
-        }
+    {
+    }
     QemuArmGicv3(const sc_core::sc_module_name& name, QemuInstance& inst, unsigned num_cpus = 0)
         : QemuDevice(name, inst, "arm-gicv3")
         , p_num_cpu("num_cpus", num_cpus, "Number of CPU interfaces")
@@ -73,23 +73,26 @@ public:
         , p_revision("revision", 3, "Revision of the GIC (3 -> v3, the only supported revision)")
         // , p_redist_region("redist_region", std::vector<unsigned int>({}),
         //                   "Redistributor regions configuration")
-        , p_redist_region("redist_region", std::vector<unsigned int>(gs::cci_get_vector<unsigned int>(cci::cci_get_broker(), std::string(sc_module::name())+".redist_region")),
-                                                            "Redistributor regions configuration")
+        , p_redist_region("redist_region",
+                          std::vector<unsigned int>(gs::cci_get_vector<unsigned int>(
+                              cci::cci_get_broker(), std::string(sc_module::name()) + ".redist_region")),
+                          "Redistributor regions configuration")
         , p_has_security_extensions("has_security_extensions", false, "Enable security extensions")
         , dist_iface("dist_iface", inst)
         , redist_iface("redist_iface", p_redist_region.get_value().size(),
                        [&inst](const char* n, int i) { return new QemuTargetSocket<>(n, inst); })
         , spi_in("spi_in", p_num_spi)
         , ppi_in("ppi_in_cpu", p_num_cpu,
-                 [](const char* n, size_t i) {
-                     return new sc_core::sc_vector<QemuTargetSignalSocket>(n, NUM_PPI);
-                 })
+                 [](const char* n, size_t i) { return new sc_core::sc_vector<QemuTargetSignalSocket>(n, NUM_PPI); })
         , irq_out("irq_out", p_num_cpu)
         , fiq_out("fiq_out", p_num_cpu)
         , virq_out("virq_out", p_num_cpu)
-        , vfiq_out("vfiq_out", p_num_cpu) {}
+        , vfiq_out("vfiq_out", p_num_cpu)
+    {
+    }
 
-    void before_end_of_elaboration() {
+    void before_end_of_elaboration()
+    {
         QemuDevice::before_end_of_elaboration();
         int i;
 
@@ -107,7 +110,8 @@ public:
         }
     }
 
-    void end_of_elaboration() {
+    void end_of_elaboration()
+    {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 

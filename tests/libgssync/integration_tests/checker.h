@@ -49,7 +49,8 @@ public:
         SetQuantum,
         FinishedInstructions,
     };
-    const char* evTypeString(eventTypes t) {
+    const char* evTypeString(eventTypes t)
+    {
         switch (t) {
         case TimeStamp:
             return "Time Stamp";
@@ -112,7 +113,8 @@ private:
     public:
         EventQueue(): size(0) {}
 
-        std::chrono::high_resolution_clock::duration push(Event& e) {
+        std::chrono::high_resolution_clock::duration push(Event& e)
+        {
             auto delay = std::chrono::high_resolution_clock::duration::zero();
             if (size >= max - 1) {
                 // only calculate times if we wait
@@ -129,16 +131,17 @@ private:
             return delay;
         }
         /* NB only one reading thread */
-        bool try_pop(Event& e) {
-            if (size == 0)
-                return false;
+        bool try_pop(Event& e)
+        {
+            if (size == 0) return false;
             e = array[out];
             out = (out + 1) % max;
             size--;
             cond.notify_all();
             return true;
         }
-        void wait_pop(Event& e) {
+        void wait_pop(Event& e)
+        {
             if (size == 0) { // we might accidently think there is nothing in the list.
                 // significant performance improvement if we normally dont hit
                 // the cond.wait
@@ -176,7 +179,8 @@ private:
 public:
     gs::async_event stopEvent;
 
-    void printevent(Event e, bool rec) {
+    void printevent(Event e, bool rec)
+    {
         sc_core::sc_time time = e.time;
         const char* timename;
         switch (e.event) {
@@ -200,18 +204,15 @@ public:
             timename = "         n/a :";
         }
 
-        SCP_INFO("checker.h") << std::chrono::duration_cast<std::chrono::microseconds>(
-                                     e.realtime - realtimeStart)
-                                     .count()
-                              << " sc_time:" << e.simtime - startTime << timename << time << " "
-                              << ((e.model) ? e.model->name() : "n/a")
-                              << " event: " << evTypeString(e.event) << ((!rec) ? "(!R)" : " ");
+        SCP_INFO("checker.h")
+            << std::chrono::duration_cast<std::chrono::microseconds>(e.realtime - realtimeStart).count()
+            << " sc_time:" << e.simtime - startTime << timename << time << " " << ((e.model) ? e.model->name() : "n/a")
+            << " event: " << evTypeString(e.event) << ((!rec) ? "(!R)" : " ");
     }
 
-    void record(sc_core::sc_module* model, enum eventTypes eventType,
-                sc_core::sc_time time = sc_core::SC_ZERO_TIME) {
-        std::chrono::high_resolution_clock::time_point
-            realtime = std::chrono::high_resolution_clock::now();
+    void record(sc_core::sc_module* model, enum eventTypes eventType, sc_core::sc_time time = sc_core::SC_ZERO_TIME)
+    {
+        std::chrono::high_resolution_clock::time_point realtime = std::chrono::high_resolution_clock::now();
         realtime -= realtimeOffset;
         sc_core::sc_time simtime = sc_core::sc_time_stamp();
 
@@ -235,7 +236,8 @@ public:
             sleep_cond.notify_all();
         }
     }
-    void processevents() {
+    void processevents()
+    {
         std::chrono::high_resolution_clock::time_point stoptime;
 
         for (;;) {
@@ -262,7 +264,8 @@ public:
         wd_ok = true;
     }
 
-    void startRecording(std::string name) {
+    void startRecording(std::string name)
+    {
         const std::lock_guard<std::mutex> lock(mutex);
 
         for (Event e; eventQueue.try_pop(e);) {
@@ -289,7 +292,8 @@ public:
 
         m_process_thread = std::thread(&Checker::processevents, this);
     }
-    void stopRecording() {
+    void stopRecording()
+    {
         recording = false;
 
         wd_ok = true;
@@ -308,12 +312,14 @@ public:
         allevents.back().second.push_back(tmp);
     }
 
-    void finishedTest() {
+    void finishedTest()
+    {
         const std::lock_guard<std::mutex> lock(mutex);
         testsDone++;
         analysiscond.notify_all();
     }
-    void allDone() {
+    void allDone()
+    {
         const std::lock_guard<std::mutex> lock(mutex);
         finished = true;
         wd_on = false;
@@ -322,9 +328,9 @@ public:
 
     float to_us(sc_core::sc_time t) { return t.to_seconds() * 1000000; }
 
-    void analyse() {
-        if (verbose == 0)
-            return;
+    void analyse()
+    {
+        if (verbose == 0) return;
         std::unique_lock<std::mutex> lock(mutex);
 
         std::stringstream csv;
@@ -337,8 +343,7 @@ public:
 
         for (;;) {
             analysiscond.wait(lock, [this] { return (finished || testsDone > 0); });
-            if (finished && testsDone == 0)
-                break;
+            if (finished && testsDone == 0) break;
             assert(!allevents.empty());
             auto test_p = allevents.front();
             allevents.pop();
@@ -374,26 +379,22 @@ public:
                             stop = evt.simtime;
                         }
 
-                        if (evt.event == FinishedInstructions)
-                            iboundfound = true;
+                        if (evt.event == FinishedInstructions) iboundfound = true;
                     }
                     if ((start != sc_core::SC_ZERO_TIME) && (stop != sc_core::SC_ZERO_TIME)) {
                         runtime += stop - start;
                         i++;
                     }
-                    if (iboundfound)
-                        ibound++;
+                    if (iboundfound) ibound++;
                     iboundi++;
                 }
-                SCP_INFO("checker.h")
-                    << "  Average Simulation (sc_)time " << to_us(runtime) / (float)i << "us";
+                SCP_INFO("checker.h") << "  Average Simulation (sc_)time " << to_us(runtime) / (float)i << "us";
                 if (!ibound) {
                     SCP_INFO("checker.h") << " Time bound";
                 } else if (ibound == iboundi) {
                     SCP_INFO("checker.h") << "  Instruction bound";
                 } else {
-                    SCP_INFO("checker.h")
-                        << "  " << ibound * 100 / iboundi << "% runs instruction bound";
+                    SCP_INFO("checker.h") << "  " << ibound * 100 / iboundi << "% runs instruction bound";
                 }
                 csv << to_us(runtime) / (float)i << ",";
                 csv << ibound * 100 / iboundi << ",";
@@ -410,29 +411,25 @@ public:
                         eventList run = *run_it;
 
                         if (!std::equal(one.begin(), one.end(), run.begin())) {
-                            std::equal(one.begin(), one.end(), run.begin(),
-                                       [this, i](auto a, auto b) -> bool {
-                                           if (!(a == b)) {
-                                               SCP_INFO("checker.h")
-                                                   << "  Non determinitic Difference in run " << i
-                                                   << " between " << a.model->name() << " (at time "
-                                                   << std::chrono::duration_cast<
-                                                          std::chrono::microseconds>(a.realtime -
-                                                                                     realtimeStart)
-                                                          .count()
-                                                   << ")"
-                                                   << " and " << b.model->name() << " (at time "
-                                                   << std::chrono::duration_cast<
-                                                          std::chrono::microseconds>(b.realtime -
-                                                                                     realtimeStart)
-                                                          .count()
-                                                   << ")"
+                            std::equal(one.begin(), one.end(), run.begin(), [this, i](auto a, auto b) -> bool {
+                                if (!(a == b)) {
+                                    SCP_INFO("checker.h") << "  Non determinitic Difference in run " << i << " between "
+                                                          << a.model->name() << " (at time "
+                                                          << std::chrono::duration_cast<std::chrono::microseconds>(
+                                                                 a.realtime - realtimeStart)
+                                                                 .count()
+                                                          << ")"
+                                                          << " and " << b.model->name() << " (at time "
+                                                          << std::chrono::duration_cast<std::chrono::microseconds>(
+                                                                 b.realtime - realtimeStart)
+                                                                 .count()
+                                                          << ")"
 
-                                                   << " " << to_string(a) << " != " << to_string(b);
-                                               return false;
-                                           }
-                                           return true;
-                                       });
+                                                          << " " << to_string(a) << " != " << to_string(b);
+                                    return false;
+                                }
+                                return true;
+                            });
                             result = false;
                             break;
                         }
@@ -441,8 +438,7 @@ public:
                         SCP_INFO("checker.h") << "  Non determanistic";
                     } else {
                         if (test_p.second.size() > 5) {
-                            if (result)
-                                SCP_INFO("checker.h") << "  Determanistic\n";
+                            if (result) SCP_INFO("checker.h") << "  Determanistic\n";
                         } else {
                             SCP_INFO("checker.h") << "  Not enough data to determin determanism";
                         }
@@ -471,8 +467,7 @@ public:
                     }
                 }
                 if (time_backwards) {
-                    SCP_INFO("checker.h")
-                        << "Time went backwards for a target " << time_backwards << " times";
+                    SCP_INFO("checker.h") << "Time went backwards for a target " << time_backwards << " times";
                 }
                 csv << time_backwards << ",";
             }
@@ -483,8 +478,7 @@ public:
                 for (auto run : test_p.second) {
                     for (auto evt : run) {
                         if (evt.event == TimeStamp) {
-                            if (evt.simtime > evt.time)
-                                ahead++;
+                            if (evt.simtime > evt.time) ahead++;
                         }
                     }
                 }
@@ -503,9 +497,7 @@ public:
                     std::chrono::high_resolution_clock::time_point start, end;
                     start = run.front().realtime;
                     end = run.back().realtime;
-                    duration_total += std::chrono::duration_cast<std::chrono::milliseconds>(end -
-                                                                                            start)
-                                          .count();
+                    duration_total += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
                 }
                 duration_total /= (float)n;
                 SCP_INFO("checker.h") << "  Average execution time: " << duration_total << "ms";
@@ -525,8 +517,7 @@ public:
                     }
                 }
                 if (n) {
-                    SCP_INFO("checker.h")
-                        << "  Average run budget " << to_us(total_Budget / (float)n) << "us";
+                    SCP_INFO("checker.h") << "  Average run budget " << to_us(total_Budget / (float)n) << "us";
                 }
                 csv << (n ? to_us(total_Budget / (float)n) : 0) << ",";
             }
@@ -543,23 +534,19 @@ public:
                             quantum = evt.time;
                         }
                         if (evt.event == TimeStamp) {
-                            sc_core::sc_time err = (evt.simtime > evt.time)
-                                                       ? evt.simtime - evt.time
-                                                       : evt.time - evt.simtime;
+                            sc_core::sc_time err = (evt.simtime > evt.time) ? evt.simtime - evt.time
+                                                                            : evt.time - evt.simtime;
                             total_error += err;
-                            if (err > worst)
-                                worst = err;
+                            if (err > worst) worst = err;
                             n++;
                         }
                     }
                 }
                 if (n) {
                     SCP_INFO("checker.h") << "  Quantum " << to_us(quantum) << "us";
-                    SCP_INFO("checker.h")
-                        << "  Average error " << to_us(total_error / (float)n) << "us";
+                    SCP_INFO("checker.h") << "  Average error " << to_us(total_error / (float)n) << "us";
                     SCP_INFO("checker.h") << "  worst error " << to_us(worst) << "us";
-                    csv << to_us(quantum) << "," << to_us(total_error / (float)n) << ","
-                        << to_us(worst) << ",";
+                    csv << to_us(quantum) << "," << to_us(total_error / (float)n) << "," << to_us(worst) << ",";
                 } else {
                     csv << "0,0,0,";
                 }
@@ -634,30 +621,25 @@ public:
         m_analyse_thread = std::thread(&Checker::analyse, this);
     }
 
-    ~Checker() {
+    ~Checker()
+    {
         m_wd_thread.join();
         m_analyse_thread.join();
 
-
-        auto uncon = m_broker.get_unconsumed_preset_values(
-            [](const std::pair<std::string, cci::cci_value>& iv) {
-                return (iv.first.find("tests.") != std::string::npos &&
-                        iv.first.find(".verbose") == std::string::npos);
-            });
+        auto uncon = m_broker.get_unconsumed_preset_values([](const std::pair<std::string, cci::cci_value>& iv) {
+            return (iv.first.find("tests.") != std::string::npos && iv.first.find(".verbose") == std::string::npos);
+        });
         for (auto v : uncon) {
             SCP_INFO("checker.h") << "Unconsumed config value: " << v.first;
         }
-
-
-
     }
 
-    void watchdog() {
+    void watchdog()
+    {
         while (wd_on) {
             wd_ok = false;
             std::this_thread::sleep_for(std::chrono::milliseconds(4000));
-            if (!wd_on)
-                break;
+            if (!wd_on) break;
             assert(wd_ok == true);
         }
     }
@@ -668,7 +650,8 @@ private:
 
 public:
     template <class Rep, class Period>
-    void sleep_for(const std::chrono::duration<Rep, Period>& rel_time) {
+    void sleep_for(const std::chrono::duration<Rep, Period>& rel_time)
+    {
         std::unique_lock<std::mutex> lock(sleep_mutex);
         sleep_cond.wait_for(lock, rel_time, [this] { return !recording; });
     }

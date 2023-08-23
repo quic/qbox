@@ -48,7 +48,9 @@ public:
 
     public:
         Device(const sc_core::sc_module_name& name, QemuInstance& inst, const char* qom_type)
-            : QemuDevice(name, inst, qom_type) {}
+            : QemuDevice(name, inst, qom_type)
+        {
+        }
 
         /*
          * We cannot do the end_of_elaboration at this point because
@@ -58,7 +60,8 @@ public:
         void end_of_elaboration() override {}
 
     protected:
-        virtual void gpex_realize(qemu::Bus& pcie_bus) {
+        virtual void gpex_realize(qemu::Bus& pcie_bus)
+        {
             m_dev.set_parent_bus(pcie_bus);
             QemuDevice::end_of_elaboration();
         }
@@ -93,10 +96,10 @@ protected:
      * those aliases we give to the two sockets, so that the relative addresses
      * are correct in the end.
      */
-    cci::cci_param <uint64_t> p_mmio_addr;
-    cci::cci_param <uint64_t> p_mmio_size;
-    cci::cci_param <uint64_t> p_mmio_high_addr;
-    cci::cci_param <uint64_t> p_mmio_high_size;
+    cci::cci_param<uint64_t> p_mmio_addr;
+    cci::cci_param<uint64_t> p_mmio_size;
+    cci::cci_param<uint64_t> p_mmio_high_addr;
+    cci::cci_param<uint64_t> p_mmio_high_size;
 
     qemu::MemoryRegion m_mmio_alias;
     qemu::MemoryRegion m_mmio_high_alias;
@@ -106,10 +109,10 @@ protected:
 public:
     QemuGPEX(const sc_core::sc_module_name& name, sc_core::sc_object* o)
         : QemuGPEX(name, *(dynamic_cast<QemuInstance*>(o)))
-        {
-        }
-    QemuGPEX(const sc_core::sc_module_name& name, QemuInstance& inst, uint64_t mmio_addr=0x00,
-             uint64_t mmio_size=0x00, uint64_t mmio_high_addr=0x00, uint64_t mmio_high_size=0x00)
+    {
+    }
+    QemuGPEX(const sc_core::sc_module_name& name, QemuInstance& inst, uint64_t mmio_addr = 0x00,
+             uint64_t mmio_size = 0x00, uint64_t mmio_high_addr = 0x00, uint64_t mmio_high_size = 0x00)
         : QemuDevice(name, inst, "gpex-pcihost")
         , bus_master("bus_master", *this, inst)
         , ecam_iface("ecam_iface", inst)
@@ -122,24 +125,28 @@ public:
         , p_mmio_size("mmio_iface.size", mmio_size, "Interface MMIO size")
         , p_mmio_high_addr("mmio_iface_high.address", mmio_high_addr, "High Interface MMIO address")
         , p_mmio_high_size("mmio_iface_high.size", mmio_high_size, "High Interface MMIO size")
-        , devices() {
-            sc_assert(p_mmio_addr != 0);
-        }
+        , devices()
+    {
+        sc_assert(p_mmio_addr != 0);
+    }
 
-    void add_device(Device& dev) {
+    void add_device(Device& dev)
+    {
         if (m_inst != dev.get_qemu_inst()) {
             SCP_FATAL(SCMOD) << "PCIE device and host have to be in same qemu instance";
         }
         devices.push_back(&dev);
     }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         QemuDevice::before_end_of_elaboration();
 
         bus_master.init(m_dev, "bus-master");
     }
 
-    void end_of_elaboration() override {
+    void end_of_elaboration() override
+    {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 
@@ -151,8 +158,7 @@ public:
 
         m_mmio_alias.init_alias(m_dev, "mmio-alias", mmio_mr, p_mmio_addr, p_mmio_size);
 
-        m_mmio_high_alias.init_alias(m_dev, "mmio-high-alias", mmio_mr, p_mmio_high_addr,
-                                     p_mmio_high_size);
+        m_mmio_high_alias.init_alias(m_dev, "mmio-high-alias", mmio_mr, p_mmio_high_addr, p_mmio_high_size);
 
         ecam_iface.init(gpex, 0);
         mmio_iface.init_with_mr(m_mmio_alias);
@@ -177,9 +183,7 @@ public:
      * QemuInitiatorIface
      * Called by the initiator socket just before a memory transaction.
      */
-    virtual sc_core::sc_time initiator_get_local_time() override {
-        return sc_core::sc_time_stamp();
-    }
+    virtual sc_core::sc_time initiator_get_local_time() override { return sc_core::sc_time_stamp(); }
 
     /*
      * QemuInitiatorIface

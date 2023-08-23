@@ -37,7 +37,8 @@ class IrqCtrl : public sc_core::sc_module
 private:
 public:
     cci::cci_param<int, cci::CCI_IMMUTABLE_PARAM> m_irqs;
-    IrqCtrl(const sc_core::sc_module_name& n, int n_irq = 0): m_irqs("irqs", n_irq) {
+    IrqCtrl(const sc_core::sc_module_name& n, int n_irq = 0): m_irqs("irqs", n_irq)
+    {
         set_value = m_irqs;
         SCP_INFO(SCMOD) << "Number of IRQs " << m_irqs;
         if (::scp::get_log_verbosity(SCMOD) >= sc_core::SC_LOW) {
@@ -60,7 +61,9 @@ protected:
 
 public:
     TopLevel(const sc_core::sc_module_name& n)
-        : m_priv_broker({ { "MyCtrl.irqs", cci::cci_value() } }), m_ctrl("MyCtrl", 64) {}
+        : m_priv_broker({ { "MyCtrl.irqs", cci::cci_value() } }), m_ctrl("MyCtrl", 64)
+    {
+    }
     // Add irqs to the list so it is not exported, but take it's value from the passed value
 };
 
@@ -90,12 +93,15 @@ protected:
 
 public:
     TopLevelThree(const sc_core::sc_module_name& n)
-        : m_priv_broker({ { "MyCtrl.irqs", cci::cci_value(42) } }), m_ctrl("MyCtrl") {}
+        : m_priv_broker({ { "MyCtrl.irqs", cci::cci_value(42) } }), m_ctrl("MyCtrl")
+    {
+    }
 };
 TopLevel* top_level1;
 TopLevelTwo* top_level2;
 TopLevelThree* top_level3;
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char* argv[])
+{
     std::cout << "Test Start\nstd::cout print\n";
     SCP_INFO("main") << "SCP_INFO(\"main\") prior to init_logging";
     scp::init_logging(scp::LogConfig()
@@ -109,12 +115,11 @@ int sc_main(int argc, char* argv[]) {
     SCP_INFO("main") << "SCP_INFO(\"main\") after broker construction";
 
     cci::cci_originator m_originator("MyConfigTool");
-    m_broker->set_preset_cci_value("MyTop.MyCtrl.irqs",
-                                   cci::cci_value(cci::cci_value::from_json("100")), m_originator);
-    m_broker->set_preset_cci_value("MyTopTwo.MyCtrl.irqs",
-                                   cci::cci_value(cci::cci_value::from_json("200")), m_originator);
-    m_broker->set_preset_cci_value("MyTopThree.MyCtrl.irqs",
-                                   cci::cci_value(cci::cci_value::from_json("300")), m_originator);
+    m_broker->set_preset_cci_value("MyTop.MyCtrl.irqs", cci::cci_value(cci::cci_value::from_json("100")), m_originator);
+    m_broker->set_preset_cci_value("MyTopTwo.MyCtrl.irqs", cci::cci_value(cci::cci_value::from_json("200")),
+                                   m_originator);
+    m_broker->set_preset_cci_value("MyTopThree.MyCtrl.irqs", cci::cci_value(cci::cci_value::from_json("300")),
+                                   m_originator);
 
     testing::InitGoogleTest(&argc, argv);
     int status = RUN_ALL_TESTS();
@@ -134,15 +139,18 @@ int sc_main(int argc, char* argv[]) {
     return status;
 }
 
-TEST(ccitest, one) {
+TEST(ccitest, one)
+{
     top_level1 = new TopLevel("MyTop");
     EXPECT_EQ(set_value, 64);
 }
-TEST(ccitest, two) {
+TEST(ccitest, two)
+{
     top_level2 = new TopLevelTwo("MyTopTwo");
     EXPECT_EQ(set_value, 200);
 }
-TEST(ccitest, three) {
+TEST(ccitest, three)
+{
     top_level3 = new TopLevelThree("MyTopThree");
     EXPECT_EQ(set_value, 99);
 }

@@ -21,7 +21,8 @@
 
 namespace qemu {
 
-const char* get_target_name(Target t) {
+const char* get_target_name(Target t)
+{
     switch (t) {
     case AARCH64:
         return "AArch64";
@@ -70,7 +71,8 @@ const char* get_target_name(Target t) {
 #define LIBQEMU_TARGET_hexagon_LIBRARY nullptr
 #endif
 
-const char* get_target_lib(Target t) {
+const char* get_target_lib(Target t)
+{
     switch (t) {
     case AARCH64:
         return LIBQEMU_TARGET_aarch64_LIBRARY;

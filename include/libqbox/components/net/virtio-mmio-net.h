@@ -39,13 +39,13 @@ private:
 public:
     QemuVirtioMMIONet(const sc_core::sc_module_name& name, sc_core::sc_object* o)
         : QemuVirtioMMIONet(name, *(dynamic_cast<QemuInstance*>(o)))
-        {
-        }
+    {
+    }
     QemuVirtioMMIONet(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuVirtioMMIO(nm, inst, "virtio-net-device")
         , netdev_id(std::string(name()) + "-id")
-        , netdev_str("netdev_str", "user,hostfwd=tcp::2222-:22",
-                     "netdev string for QEMU (do not specify ID)") {
+        , netdev_str("netdev_str", "user,hostfwd=tcp::2222-:22", "netdev string for QEMU (do not specify ID)")
+    {
         std::stringstream opts;
         opts << netdev_str.get_value();
         opts << ",id=" << netdev_id;
@@ -54,7 +54,8 @@ public:
         m_inst.add_arg(opts.str().c_str());
     }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         QemuVirtioMMIO::before_end_of_elaboration();
 
         m_dev.set_prop_str("netdev", netdev_id.c_str());

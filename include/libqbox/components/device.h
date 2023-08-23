@@ -56,7 +56,8 @@ protected:
     bool m_realized = false;
 
 public:
-    void instantiate() {
+    void instantiate()
+    {
         if (m_instanciated) {
             return;
         }
@@ -65,7 +66,8 @@ public:
         m_instanciated = true;
     }
 
-    void realize() {
+    void realize()
+    {
         if (m_realized) {
             return;
         }
@@ -82,9 +84,10 @@ public:
      * @param[in] qom_type Device QOM type name
      */
     QemuDevice(const sc_core::sc_module_name& name, QemuInstance& inst, const char* qom_type)
-        : sc_module(name), m_qom_type(qom_type), m_inst(inst) {
-            SCP_WARN(())("QOM Device creation {}", qom_type);
-        }
+        : sc_module(name), m_qom_type(qom_type), m_inst(inst)
+    {
+        SCP_WARN(())("QOM Device creation {}", qom_type);
+    }
 
     virtual ~QemuDevice() {}
 

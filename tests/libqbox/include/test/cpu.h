@@ -50,7 +50,8 @@ public:
     static constexpr size_t BULKMEM_SIZE = 1024 * 1024 * 1024;
 
 private:
-    ks_arch qemu_to_ks_arch(qemu::Target arch) {
+    ks_arch qemu_to_ks_arch(qemu::Target arch)
+    {
         switch (arch) {
         case qemu::Target::AARCH64:
             return KS_ARCH_ARM64;
@@ -80,7 +81,8 @@ protected:
             b end
     )";
 
-    void set_firmware(const char* assembly, uint64_t addr = 0) {
+    void set_firmware(const char* assembly, uint64_t addr = 0)
+    {
         ks_engine* ks;
         ks_err err;
         size_t size, count;
@@ -112,7 +114,8 @@ public:
         , p_quantum_ns("quantum_ns", 1000000, "Value of the global TLM-2.0 quantum in ns")
         , m_router("router")
         , m_mem("mem", MEM_SIZE)
-        , m_bulkmem("bulkmem", BULKMEM_SIZE) {
+        , m_bulkmem("bulkmem", BULKMEM_SIZE)
+    {
         using tlm_utils::tlm_quantumkeeper;
 
         m_router.add_target(m_mem.socket, MEM_ADDR, MEM_SIZE);
@@ -126,19 +129,14 @@ public:
 
     unsigned int get_num_cpus() { return p_num_cpu; }
 
-    void map_target(tlm::tlm_target_socket<>& s, uint64_t addr, uint64_t size) {
-        m_router.add_target(s, addr, size);
-    }
+    void map_target(tlm::tlm_target_socket<>& s, uint64_t addr, uint64_t size) { m_router.add_target(s, addr, size); }
 
-    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) {
-        TEST_FAIL("Unexpected CPU read");
-    }
+    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) { TEST_FAIL("Unexpected CPU read"); }
 
-    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) {
-        TEST_FAIL("Unexpected CPU write");
-    }
+    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) { TEST_FAIL("Unexpected CPU write"); }
 
-    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret) {
+    virtual bool dmi_request(int id, uint64_t addr, size_t len, tlm::tlm_dmi& ret)
+    {
         TEST_FAIL("Unexpected DMI request");
         return false;
     }
@@ -166,7 +164,8 @@ public:
                      ab = !ab;
                      return new CPU(n, ab ? m_inst_a : m_inst_b);
                  })
-        , m_tester("tester", *this) {
+        , m_tester("tester", *this)
+    {
         int i = 0;
         for (CPU& cpu : m_cpus) {
             cpu.p_mp_affinity = i++;
@@ -174,7 +173,8 @@ public:
         }
     }
 
-    void map_irqs_to_cpus(sc_core::sc_vector<InitiatorSignalSocket<bool>>& irqs) {
+    void map_irqs_to_cpus(sc_core::sc_vector<InitiatorSignalSocket<bool>>& irqs)
+    {
         int i = 0;
 
         for (auto& cpu : m_cpus) {
@@ -188,7 +188,8 @@ public:
         }
     }
 
-    void map_halt_to_cpus(sc_core::sc_vector<sc_core::sc_out<bool>>& halt) {
+    void map_halt_to_cpus(sc_core::sc_vector<sc_core::sc_out<bool>>& halt)
+    {
         int i = 0;
 
         for (auto& cpu : m_cpus) {

@@ -38,7 +38,8 @@ global_pause gp;
 unsigned int gp_ref_count = 0;
 bool log_enabled = false;
 
-void global_pause::sleeper() {
+void global_pause::sleeper()
+{
     if (m_has_suspending_channels == 0 && m_suspend == 0) {
         SCP_INFO("suspend") << "no suspending";
         return;
@@ -65,8 +66,8 @@ void global_pause::sleeper() {
         SCP_INFO("suspend") << sc_core::sc_time_stamp().to_string() << " Suspended";
         std::unique_lock<std::mutex> lock(mutex);
         cond.wait(lock, [this] {
-            return wakeups > 0 || sc_core::sc_time_to_pending_activity() == sc_core::SC_ZERO_TIME ||
-                   m_suspend == 0 || m_unsuspendable > 0;
+            return wakeups > 0 || sc_core::sc_time_to_pending_activity() == sc_core::SC_ZERO_TIME || m_suspend == 0 ||
+                   m_unsuspendable > 0;
         });
         if (wakeups) {
             wakeups--;
@@ -81,9 +82,9 @@ void global_pause::sleeper() {
     }
 }
 
-void global_pause::suspendable() {
-    sc_core::sc_process_b* process_p = (sc_core::sc_process_b*)
-        sc_core::sc_get_current_process_handle();
+void global_pause::suspendable()
+{
+    sc_core::sc_process_b* process_p = (sc_core::sc_process_b*)sc_core::sc_get_current_process_handle();
     assert(process_p);
 
     if (m_unsuspendable_map[process_p]) {
@@ -94,8 +95,7 @@ void global_pause::suspendable() {
 
         if (log_enabled) {
             if (process_p && process_p->get_parent_object()) {
-                SCP_INFO("suspend") << "suspendable() " << m_unsuspendable
-                                    << process_p->get_parent_object()->name();
+                SCP_INFO("suspend") << "suspendable() " << m_unsuspendable << process_p->get_parent_object()->name();
             } else {
                 SCP_INFO("suspend") << "suspendable() " << m_unsuspendable << " none";
             }
@@ -104,9 +104,9 @@ void global_pause::suspendable() {
     sleeper_event.notify(sc_core::SC_ZERO_TIME);
 }
 
-void global_pause::unsuspendable() {
-    sc_core::sc_process_b* process_p = (sc_core::sc_process_b*)
-        sc_core::sc_get_current_process_handle();
+void global_pause::unsuspendable()
+{
+    sc_core::sc_process_b* process_p = (sc_core::sc_process_b*)sc_core::sc_get_current_process_handle();
     assert(process_p);
 
     if (!m_unsuspendable_map[process_p]) {
@@ -116,8 +116,7 @@ void global_pause::unsuspendable() {
 
         if (log_enabled) {
             if (process_p && process_p->get_parent_object()) {
-                SCP_INFO("suspend") << "unsuspendable() " << m_unsuspendable
-                                    << process_p->get_parent_object()->name();
+                SCP_INFO("suspend") << "unsuspendable() " << m_unsuspendable << process_p->get_parent_object()->name();
             } else {
                 SCP_INFO("suspend") << "unsuspendable() " << m_unsuspendable << " none";
             }
@@ -125,9 +124,9 @@ void global_pause::unsuspendable() {
     }
 }
 
-void global_pause::unsuspend_all() {
-    sc_core::sc_process_b* process_p = (sc_core::sc_process_b*)
-        sc_core::sc_get_current_process_handle();
+void global_pause::unsuspend_all()
+{
+    sc_core::sc_process_b* process_p = (sc_core::sc_process_b*)sc_core::sc_get_current_process_handle();
     if (process_p) {
         if (m_suspend_all_req_map[process_p]) {
             m_suspend_all_req_map[process_p] = false;
@@ -141,17 +140,16 @@ void global_pause::unsuspend_all() {
 
     if (log_enabled) {
         if (process_p && process_p->get_parent_object()) {
-            SCP_INFO("suspend") << "unsuspend_all() " << m_suspend
-                                << process_p->get_parent_object()->name();
+            SCP_INFO("suspend") << "unsuspend_all() " << m_suspend << process_p->get_parent_object()->name();
         } else {
             SCP_INFO("suspend") << "unsuspend_all() " << m_suspend << " none";
         }
     }
 }
 
-void global_pause::suspend_all() {
-    sc_core::sc_process_b* process_p = (sc_core::sc_process_b*)
-        sc_core::sc_get_current_process_handle();
+void global_pause::suspend_all()
+{
+    sc_core::sc_process_b* process_p = (sc_core::sc_process_b*)sc_core::sc_get_current_process_handle();
     if (process_p) {
         if (!m_suspend_all_req_map[process_p]) {
             m_suspend_all_req_map[process_p] = true;
@@ -165,19 +163,19 @@ void global_pause::suspend_all() {
 
     if (log_enabled) {
         if (process_p && process_p->get_parent_object()) {
-            SCP_INFO("suspend") << "suspend_all() " << m_suspend
-                                << process_p->get_parent_object()->name();
+            SCP_INFO("suspend") << "suspend_all() " << m_suspend << process_p->get_parent_object()->name();
         } else {
             SCP_INFO("suspend") << "suspend_all() " << m_suspend << " none";
         }
     }
 }
 
-bool global_pause::attach_suspending(sc_core::sc_prim_channel* p) {
+bool global_pause::attach_suspending(sc_core::sc_prim_channel* p)
+{
     SCP_INFO("suspend")("attach_suspending {}", m_suspending_channels.size());
     assert(p);
-    std::vector<const sc_core::sc_prim_channel*>::iterator it = std::find(
-        m_suspending_channels.begin(), m_suspending_channels.end(), p);
+    std::vector<const sc_core::sc_prim_channel*>::iterator it = std::find(m_suspending_channels.begin(),
+                                                                          m_suspending_channels.end(), p);
     if (it == m_suspending_channels.end()) {
         m_suspending_channels.push_back(p);
         m_has_suspending_channels = true;
@@ -186,11 +184,12 @@ bool global_pause::attach_suspending(sc_core::sc_prim_channel* p) {
     return false;
 }
 
-bool global_pause::detach_suspending(sc_core::sc_prim_channel* p) {
+bool global_pause::detach_suspending(sc_core::sc_prim_channel* p)
+{
     SCP_INFO("suspend") << "detach_suspending() " << m_suspending_channels.size();
     assert(p);
-    std::vector<const sc_core::sc_prim_channel*>::iterator it = std::find(
-        m_suspending_channels.begin(), m_suspending_channels.end(), p);
+    std::vector<const sc_core::sc_prim_channel*>::iterator it = std::find(m_suspending_channels.begin(),
+                                                                          m_suspending_channels.end(), p);
     if (it != m_suspending_channels.end()) {
         *it = m_suspending_channels.back();
         m_suspending_channels.pop_back();
@@ -200,18 +199,18 @@ bool global_pause::detach_suspending(sc_core::sc_prim_channel* p) {
     return false;
 }
 
-void global_pause::async_wakeup() {
+void global_pause::async_wakeup()
+{
     std::lock_guard<std::mutex> lock(mutex);
     SCP_INFO("suspend") << "async_wakeup()";
     wakeups++;
     cond.notify_all();
 }
 
-global_pause& global_pause::get() {
-    return gp;
-}
+global_pause& global_pause::get() { return gp; }
 
-global_pause::global_pause() {
+global_pause::global_pause()
+{
     {
         std::lock_guard<std::mutex> lock(mutex);
         if (gp_ref_count > 0) {
@@ -230,34 +229,20 @@ global_pause::global_pause() {
 } // namespace gs
 
 namespace sc_core {
-void sc_suspend_all() {
-    gs::global_pause::get().suspend_all();
-}
+void sc_suspend_all() { gs::global_pause::get().suspend_all(); }
 
-void sc_unsuspend_all() {
-    gs::global_pause::get().unsuspend_all();
-}
+void sc_unsuspend_all() { gs::global_pause::get().unsuspend_all(); }
 
-void sc_suspendable() {
-    gs::global_pause::get().suspendable();
-}
+void sc_suspendable() { gs::global_pause::get().suspendable(); }
 
-void sc_unsuspendable() {
-    gs::global_pause::get().unsuspendable();
-}
+void sc_unsuspendable() { gs::global_pause::get().unsuspendable(); }
 
-void sc_internal_async_wakeup() {
-    gs::global_pause::get().async_wakeup();
-}
+void sc_internal_async_wakeup() { gs::global_pause::get().async_wakeup(); }
 
 #ifndef SC_HAS_ASYNC_ATTACH_SUSPENDING
 /* Provide a 'global' attach/detach mechanism */
-bool async_attach_suspending(sc_core::sc_prim_channel* p) {
-    gs::global_pause::get().attach_suspending(p);
-}
-bool async_detach_suspending(sc_core::sc_prim_channel* p) {
-    gs::global_pause::get().detach_suspending(p);
-}
+bool async_attach_suspending(sc_core::sc_prim_channel* p) { gs::global_pause::get().attach_suspending(p); }
+bool async_detach_suspending(sc_core::sc_prim_channel* p) { gs::global_pause::get().detach_suspending(p); }
 #endif
 } // namespace sc_core
 

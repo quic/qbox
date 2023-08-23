@@ -51,20 +51,24 @@ public:
         , p_base_spi("base_spi", 0, "Start index of gic's spis")
         , p_num_spis("num_spis", 0, "Number of gic's spis")
         , spi_out("spi_out", p_num_spis)
-        , iface("iface", inst) {}
+        , iface("iface", inst)
+    {
+    }
 
     unsigned int get_base_spi() { return p_base_spi; }
 
     unsigned int get_num_spis() { return p_num_spis; }
 
-    void before_end_of_elaboration() {
+    void before_end_of_elaboration()
+    {
         QemuDevice::before_end_of_elaboration();
 
         m_dev.set_prop_int("base-spi", p_base_spi);
         m_dev.set_prop_int("num-spi", p_num_spis);
     }
 
-    void end_of_elaboration() {
+    void end_of_elaboration()
+    {
         QemuDevice::end_of_elaboration();
 
         qemu::SysBusDevice sbd(m_dev);
@@ -138,14 +142,13 @@ public:
         , v2m_iface("v2m_iface")
         , spi_in("spi_in", p_num_spi)
         , ppi_in("ppi_in_cpu", p_num_cpu,
-                 [](const char* n, size_t i) {
-                     return new sc_core::sc_vector<QemuTargetSignalSocket>(n, NUM_PPI);
-                 })
+                 [](const char* n, size_t i) { return new sc_core::sc_vector<QemuTargetSignalSocket>(n, NUM_PPI); })
         , irq_out("irq_out", p_num_cpu)
         , fiq_out("fiq_out", p_num_cpu)
         , virq_out("virq_out", p_num_cpu)
         , vfiq_out("vfiq_out", p_num_cpu)
-        , maintenance_out("maintenance_out", p_num_cpu) {
+        , maintenance_out("maintenance_out", p_num_cpu)
+    {
         if (p_has_msi_support) {
             m_gicv2m = new QemuArmGicv2m("v2m", inst);
 
@@ -164,13 +167,15 @@ public:
         }
     }
 
-    ~QemuArmGicv2() {
+    ~QemuArmGicv2()
+    {
         if (m_gicv2m) {
             delete m_gicv2m;
         }
     }
 
-    void before_end_of_elaboration() {
+    void before_end_of_elaboration()
+    {
         QemuDevice::before_end_of_elaboration();
 
         m_dev.set_prop_int("num-cpu", p_num_cpu);
@@ -181,7 +186,8 @@ public:
         m_dev.set_prop_int("num-priority-bits", p_num_prio_bits);
     }
 
-    void end_of_elaboration() {
+    void end_of_elaboration()
+    {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 

@@ -35,6 +35,8 @@ public:
 
 protected:
     QemuVirtioGpu(const sc_core::sc_module_name& name, QemuInstance& inst, const char* gpu_type)
-        : QemuGPEX::Device(name, inst, (std::string("virtio-gpu-") + gpu_type).c_str()) {}
+        : QemuGPEX::Device(name, inst, (std::string("virtio-gpu-") + gpu_type).c_str())
+    {
+    }
 };
 #endif

@@ -42,8 +42,8 @@ public:
 
     QemuUart16550(const sc_core::sc_module_name& name, sc_core::sc_object* o)
         : QemuUart16550(name, *(dynamic_cast<QemuInstance*>(o)))
-        {
-        }
+    {
+    }
     QemuUart16550(const sc_core::sc_module_name& n, QemuInstance& inst)
         : QemuDevice(n, inst, "serial-mm")
         , p_baudbase("baudbase", 38400000,
@@ -53,9 +53,12 @@ public:
                      "Shift to apply to the MMIO register map "
                      "(2 means one reg = 32 bits)")
         , socket("mem", inst)
-        , irq_out("irq_out") {}
+        , irq_out("irq_out")
+    {
+    }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         QemuDevice::before_end_of_elaboration();
 
         m_dev.set_prop_int("baudbase", p_baudbase);
@@ -66,7 +69,8 @@ public:
         m_dev.set_prop_chardev("chardev", m_chardev);
     }
 
-    void end_of_elaboration() override {
+    void end_of_elaboration() override
+    {
         QemuDevice::set_sysbus_as_parent_bus();
         QemuDevice::end_of_elaboration();
 

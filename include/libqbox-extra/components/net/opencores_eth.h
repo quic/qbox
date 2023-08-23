@@ -40,17 +40,17 @@ public:
 
     QemuOpencoresEth(const sc_core::sc_module_name& name, sc_core::sc_object* o)
         : QemuOpencoresEth(name, *(dynamic_cast<QemuInstance*>(o)))
-        {
-        }
+    {
+    }
     QemuOpencoresEth(const sc_core::sc_module_name& n, QemuInstance& inst)
         : QemuDevice(n, inst, "open_eth")
         , p_mac("mac", "00:11:22:33:44:55", "MAC address of NIC")
         , m_netdev_id(std::string(name()) + "-id")
-        , p_netdev_str("netdev_str", "user,hostfwd=tcp::2222-:22",
-                       "netdev string for QEMU (do not specify ID)")
+        , p_netdev_str("netdev_str", "user,hostfwd=tcp::2222-:22", "netdev string for QEMU (do not specify ID)")
         , regs_socket("regs", inst)
         , desc_socket("desc", inst)
-        , irq_out("irq_out") {
+        , irq_out("irq_out")
+    {
         std::stringstream opts;
         opts << p_netdev_str.get_value();
         opts << ",id=" << m_netdev_id;
@@ -59,14 +59,16 @@ public:
         m_inst.add_arg(opts.str().c_str());
     }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         QemuDevice::before_end_of_elaboration();
 
         m_dev.set_prop_str("mac", p_mac.get_value().c_str());
         m_dev.set_prop_str("netdev", m_netdev_id.c_str());
     }
 
-    void end_of_elaboration() override {
+    void end_of_elaboration() override
+    {
         QemuDevice::end_of_elaboration();
 
         qemu::SysBusDevice sbd(m_dev);

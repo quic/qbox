@@ -32,7 +32,8 @@ protected:
     int (*m_can_receive)(void* opaque);
 
 public:
-    CharBackend() {
+    CharBackend()
+    {
         SCP_DEBUG("CharBackend") << "Charbackend constructor";
         m_opaque = NULL;
         m_receive = NULL;
@@ -44,7 +45,8 @@ public:
     static int can_receive(void* opaque) { return 0; }
 
     void register_receive(void* opaque, void (*receive)(void* opaque, const uint8_t* buf, int size),
-                          int (*can_receive)(void* opaque)) {
+                          int (*can_receive)(void* opaque))
+    {
         m_opaque = opaque;
         m_receive = receive;
         m_can_receive = can_receive;

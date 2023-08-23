@@ -43,13 +43,15 @@ public:
     InitiatorTester m_initiator;
 
     TestUart(const sc_core::sc_module_name& n)
-        : TestBench(n), m_uart("uart"), u_backend_stdio("backend"), m_initiator("initiator") {
+        : TestBench(n), m_uart("uart"), u_backend_stdio("backend"), m_initiator("initiator")
+    {
         m_initiator.socket.bind(m_uart.socket);
         m_uart.set_backend(&u_backend_stdio);
     }
 };
 
-TEST_BENCH(TestUart, UartWrite) {
+TEST_BENCH(TestUart, UartWrite)
+{
     m_initiator.do_write(0x0, 'h');
     m_initiator.do_write(0x0, 'i');
 
@@ -58,7 +60,8 @@ TEST_BENCH(TestUart, UartWrite) {
     //    ASSERT_TRUE(m_mock_module.expected_result());
 }
 
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char* argv[])
+{
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

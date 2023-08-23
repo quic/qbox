@@ -99,7 +99,8 @@ public:
 
         bool m_retiring = false;
 
-        static uint64_t size_from_tlm_dmi(const tlm::tlm_dmi& info) {
+        static uint64_t size_from_tlm_dmi(const tlm::tlm_dmi& info)
+        {
             uint64_t start = info.get_start_address();
             uint64_t end = info.get_end_address();
             assert(start < end);
@@ -114,7 +115,8 @@ public:
             : m_ptr(info.get_dmi_ptr())
             , m_container(inst.object_new_unparented<QemuContainer>())
             , m_mr(inst.object_new_unparented<qemu::MemoryRegion>())
-            , m_size(size_from_tlm_dmi(info)) {
+            , m_size(size_from_tlm_dmi(info))
+        {
             //          This will parent the objects
             m_mr.init_ram_ptr(m_container, "dmi", m_size, m_ptr);
             m_mr.set_priority(priority);
@@ -132,9 +134,7 @@ public:
         Key get_end() const { return get_key() + (m_size - 1); }
         unsigned char* get_ptr() const { return m_ptr; }
 
-        static Key key_from_tlm_dmi(const tlm::tlm_dmi& info) {
-            return reinterpret_cast<Key>(info.get_dmi_ptr());
-        }
+        static Key key_from_tlm_dmi(const tlm::tlm_dmi& info) { return reinterpret_cast<Key>(info.get_dmi_ptr()); }
 
         friend std::ostream& operator<<(std::ostream& os, const DmiRegion& region);
     };
@@ -172,7 +172,8 @@ public:
             , m_end(info.get_end_address())
             , m_ptr(info.get_dmi_ptr())
             , m_container(inst.object_new_unparented<QemuContainer>())
-            , m_alias(inst.object_new_unparented<qemu::MemoryRegion>()) {
+            , m_alias(inst.object_new_unparented<qemu::MemoryRegion>())
+        {
             SCP_INFO("DMI.Libqbox") << "Creating " << *this;
             /* Offset is just the host pointer. That is the same value used as offset
              * when "overlap-adding" the RAM regions to the DMI-manager root container. */
@@ -243,15 +244,15 @@ protected:
      * @return This function updates the out parameter `dmi_out` and returns the priority of the new
      * region to create.
      */
-    int merge_left(const DmiRegionMap::iterator& it, tlm::tlm_dmi& dmi_out) {
+    int merge_left(const DmiRegionMap::iterator& it, tlm::tlm_dmi& dmi_out)
+    {
         const DmiRegion& prev_region = it->second;
         int priority = prev_region.get_mr().get_priority();
 
         // We need to make sure we can actually update tlm_dmi address by
         // avoiding any underflow
         if (dmi_out.get_start_address() >= prev_region.get_size()) {
-            SCP_INFO("DMI.Libqbox")
-                << std::hex << "Merge " << dmi_out << " with previous " << prev_region;
+            SCP_INFO("DMI.Libqbox") << std::hex << "Merge " << dmi_out << " with previous " << prev_region;
 
             dmi_out.set_start_address(dmi_out.get_start_address() - prev_region.get_size());
             dmi_out.set_dmi_ptr(prev_region.get_ptr());
@@ -277,16 +278,15 @@ protected:
      * @return This function updates the out parameter `dmi_out` and returns the priority of the
      * new region to create.
      */
-    int merge_right(const DmiRegionMap::iterator& it, tlm::tlm_dmi& dmi_out) {
+    int merge_right(const DmiRegionMap::iterator& it, tlm::tlm_dmi& dmi_out)
+    {
         const DmiRegion& next_region = it->second;
         int priority = next_region.get_mr().get_priority();
 
         // We need to make sure we can actually update tlm_dmi address by
         // avoiding any overflow
-        if (dmi_out.get_end_address() <=
-            std::numeric_limits<uint64_t>::max() - next_region.get_size()) {
-            SCP_INFO("DMI.Libqbox")
-                << std::hex << "Merge " << dmi_out << " with next " << next_region;
+        if (dmi_out.get_end_address() <= std::numeric_limits<uint64_t>::max() - next_region.get_size()) {
+            SCP_INFO("DMI.Libqbox") << std::hex << "Merge " << dmi_out << " with next " << next_region;
 
             dmi_out.set_end_address(dmi_out.get_end_address() + next_region.get_size());
             // The new region is going to overlap this one that got retired, so its
@@ -307,7 +307,8 @@ public:
      * region container. They can overlap, hence we use the priority mechanism
      * provided by QEMU.
      */
-    void get_region(const tlm::tlm_dmi& info) {
+    void get_region(const tlm::tlm_dmi& info)
+    {
         DmiRegion::Key start = DmiRegion::key_from_tlm_dmi(info);
         uint64_t size = (info.get_end_address() - info.get_start_address()) + 1;
         uint64_t end = start + size - 1;
@@ -335,8 +336,7 @@ public:
 
                 // Check whether previos region spans the requested boundaries
                 if (prev_end >= end) {
-                    SCP_INFO("DMI.Libqbox")
-                        << "Already have " << prev_region << " covering " << info;
+                    SCP_INFO("DMI.Libqbox") << "Already have " << prev_region << " covering " << info;
                     return;
                 }
 
@@ -377,20 +377,18 @@ public:
         auto res = m_regions.emplace(region.get_key(), std::move(region));
         if (!res.second) {
             DmiRegion& existing_region = res.first->second;
-            SCP_FATAL("DMI.Libqbox")
-                << "Failed to add " << info << " for already existing " << existing_region;
+            SCP_FATAL("DMI.Libqbox") << "Failed to add " << info << " for already existing " << existing_region;
         }
     }
 
 public:
-    QemuInstanceDmiManager(qemu::LibQemu& inst): m_inst(inst) {
-        SCP_DEBUG("DMI.Libqbox") << "DmiManager Constructor";
-    }
+    QemuInstanceDmiManager(qemu::LibQemu& inst): m_inst(inst) { SCP_DEBUG("DMI.Libqbox") << "DmiManager Constructor"; }
 
     QemuInstanceDmiManager(const QemuInstanceDmiManager&) = delete;
     QemuInstanceDmiManager(QemuInstanceDmiManager&& a) = delete;
 
-    void init() {
+    void init()
+    {
         m_root_container = m_inst.object_new_unparented<QemuContainer>();
         m_root = m_inst.object_new_unparented<qemu::MemoryRegion>();
         m_root.init(m_root_container, "dmi-manager", std::numeric_limits<uint64_t>::max());
@@ -399,7 +397,8 @@ public:
     /**
      * @brief Create a new alias for the DMI region designated by `info`
      */
-    DmiRegionAlias::Ptr get_new_region_alias(const tlm::tlm_dmi& info) {
+    DmiRegionAlias::Ptr get_new_region_alias(const tlm::tlm_dmi& info)
+    {
         get_region(info);
         return std::make_shared<DmiRegionAlias>(m_root, info, m_inst);
     }

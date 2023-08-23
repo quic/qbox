@@ -129,10 +129,7 @@ private:
         return nullptr;
     }
 
-    void dmi_invalidate(RegionPtr region)
-    {
-        front_socket->invalidate_direct_mem_ptr(region->start, region->end);
-    }
+    void dmi_invalidate(RegionPtr region) { front_socket->invalidate_direct_mem_ptr(region->start, region->end); }
 
     void lock_region(const tlm::tlm_generic_payload& txn, const InitiatorId& id)
     {
@@ -166,8 +163,7 @@ private:
         unlock_region(region);
     }
 
-    void handle_exclusive_load(const tlm::tlm_generic_payload& txn,
-                               const ExclusiveAccessTlmExtension& ext)
+    void handle_exclusive_load(const tlm::tlm_generic_payload& txn, const ExclusiveAccessTlmExtension& ext)
     {
         const InitiatorId& id = get_initiator_id(txn);
         RegionPtr region = find_region(txn);
@@ -186,8 +182,7 @@ private:
         lock_region(txn, id);
     }
 
-    bool handle_exclusive_store(const tlm::tlm_generic_payload& txn,
-                                ExclusiveAccessTlmExtension& ext)
+    bool handle_exclusive_store(const tlm::tlm_generic_payload& txn, ExclusiveAccessTlmExtension& ext)
     {
         RegionPtr region = find_region(txn);
 
@@ -320,10 +315,7 @@ private:
         }
     }
 
-    unsigned int transport_dbg(tlm::tlm_generic_payload& txn)
-    {
-        return back_socket->transport_dbg(txn);
-    }
+    unsigned int transport_dbg(tlm::tlm_generic_payload& txn) { return back_socket->transport_dbg(txn); }
 
     bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
     {
@@ -401,8 +393,7 @@ public:
         front_socket.register_b_transport(this, &ExclusiveMonitor::b_transport);
         front_socket.register_transport_dbg(this, &ExclusiveMonitor::transport_dbg);
         front_socket.register_get_direct_mem_ptr(this, &ExclusiveMonitor::get_direct_mem_ptr);
-        back_socket.register_invalidate_direct_mem_ptr(
-            this, &ExclusiveMonitor::invalidate_direct_mem_ptr);
+        back_socket.register_invalidate_direct_mem_ptr(this, &ExclusiveMonitor::invalidate_direct_mem_ptr);
     }
 
     ExclusiveMonitor() = delete;

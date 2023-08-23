@@ -40,9 +40,12 @@ public:
         , before_end_of_elaboration_done(false)
         , p_num_irq("num_irq", 64, "Number of external interrupts")
         , socket("mem", inst)
-        , irq_in("irq_in", p_num_irq) {}
+        , irq_in("irq_in", p_num_irq)
+    {
+    }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         if (before_end_of_elaboration_done) {
             return;
         }
@@ -57,7 +60,8 @@ public:
         m_dev.set_prop_int("num-irq", p_num_irq);
     }
 
-    void end_of_elaboration() override {
+    void end_of_elaboration() override
+    {
         /*
          * At this point, the cpu link must have been set. Otherwise
          * realize will fail.

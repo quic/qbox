@@ -37,20 +37,23 @@ private:
     unsigned long count_ = 0; // Initialized as locked.
 
 public:
-    void notify() {
+    void notify()
+    {
         std::lock_guard<decltype(mutex_)> lock(mutex_);
         ++count_;
         condition_.notify_one();
     }
 
-    void wait() {
+    void wait()
+    {
         std::unique_lock<decltype(mutex_)> lock(mutex_);
         while (!count_) // Handle spurious wake-ups.
             condition_.wait(lock);
         --count_;
     }
 
-    bool try_wait() {
+    bool try_wait()
+    {
         std::lock_guard<decltype(mutex_)> lock(mutex_);
         if (count_) {
             --count_;
@@ -60,7 +63,8 @@ public:
     }
 
     semaphore() = default;
-    ~semaphore() {
+    ~semaphore()
+    {
         // don't block on destruction
         notify();
     }

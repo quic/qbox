@@ -24,7 +24,8 @@
 
 namespace qemu {
 
-void Gpio::set(bool lvl) {
+void Gpio::set(bool lvl)
+{
     QemuGpio* gpio = reinterpret_cast<QemuGpio*>(m_obj);
 
     m_int->exports().gpio_set(gpio, lvl);

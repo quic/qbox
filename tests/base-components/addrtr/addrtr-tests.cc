@@ -28,18 +28,9 @@
  * Regular load and stores. Check that the monitor does not introduce bugs when
  * no exclusive transaction are in use.
  */
-TEST_BENCH(AddrtrTestBench, simlpletxn)
-{
-    do_txn(0, 100, 0);
-}
-TEST_BENCH(AddrtrTestBench, dbgtxn)
-{
-    do_txn(1, 100, 1);
-}
-TEST_BENCH(AddrtrTestBench, dmiinv)
-{
-    do_dmi(2, 100);
-}
+TEST_BENCH(AddrtrTestBench, simlpletxn) { do_txn(0, 100, 0); }
+TEST_BENCH(AddrtrTestBench, dbgtxn) { do_txn(1, 100, 1); }
+TEST_BENCH(AddrtrTestBench, dmiinv) { do_dmi(2, 100); }
 int sc_main(int argc, char* argv[])
 {
     auto m_broker = new gs::ConfigurableBroker(argc, argv);

@@ -78,8 +78,7 @@ private:
             // Loop to avoid testing the target on itself
             if (id != i) {
                 m_overlap_address = address[id] >= address[i] && address[id] < address[i] + size[i];
-                m_overlap_size = address[id] + size[id] > address[i] &&
-                                 address[id] + size[id] < address[i] + size[i];
+                m_overlap_size = address[id] + size[id] > address[i] && address[id] + size[id] < address[i] + size[i];
             }
         }
     }
@@ -161,8 +160,7 @@ private:
         overlap(id);
 
         if (m_overlap_address || m_overlap_size) {
-            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test"
-                            << std::endl;
+            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test" << std::endl;
         } else {
             if (is_load) {
                 ret = m_initiator.do_read_with_ptr(addr, emptydata, len, debug);
@@ -179,8 +177,7 @@ private:
         overlap(id);
 
         if (m_overlap_address || m_overlap_size) {
-            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test"
-                            << std::endl;
+            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test" << std::endl;
         } else {
             if (is_load) {
                 ret = m_initiator.do_read_with_ptr(addr, emptydata, len, debug);
@@ -230,8 +227,7 @@ protected:
         overlap(id);
 
         if (m_overlap_address || m_overlap_size) {
-            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test"
-                            << std::endl;
+            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test" << std::endl;
         } else {
             using namespace tlm;
 
@@ -249,8 +245,7 @@ protected:
         overlap(id);
 
         if (m_overlap_address || m_overlap_size) {
-            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test"
-                            << std::endl;
+            SCP_INFO(SCMOD) << "An overlap of address or size was detected during the test" << std::endl;
         } else {
             using namespace tlm;
 
@@ -262,11 +257,7 @@ protected:
 
 public:
     RouterTestBenchSimple(const sc_core::sc_module_name& n)
-        : TestBench(n)
-        , m_initiator("initiator")
-        , m_router("router")
-        , m_pass("pass", true)
-        , m_target()
+        : TestBench(n), m_initiator("initiator"), m_router("router"), m_pass("pass", true), m_target()
     {
         int id = 0;
 
@@ -280,29 +271,24 @@ public:
         m_initiator.register_invalidate_direct_mem_ptr(
             [this](uint64_t start, uint64_t end) { invalidate_direct_mem_ptr(start, end); });
         for (auto& t : m_target) {
-            t->register_write_cb(
-                [id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
-                    return target_access(id, addr, data, size);
-                });
-
-            t->register_read_cb(
-                [id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
-                    return target_access(id, addr, data, size);
-                });
-
-            t->register_debug_read_cb(
-                [id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
-                    return target_access(id, addr, data, size);
-                });
-
-            t->register_debug_write_cb(
-                [id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
-                    return target_access(id, addr, data, size);
-                });
-
-            t->register_get_direct_mem_ptr_cb([id, this](uint64_t addr, TlmDmi& dmi_data) -> bool {
-                return get_direct_mem_ptr(id, addr, dmi_data);
+            t->register_write_cb([id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
+                return target_access(id, addr, data, size);
             });
+
+            t->register_read_cb([id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
+                return target_access(id, addr, data, size);
+            });
+
+            t->register_debug_read_cb([id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
+                return target_access(id, addr, data, size);
+            });
+
+            t->register_debug_write_cb([id, this](uint64_t addr, uint8_t* data, size_t size) -> TlmResponseStatus {
+                return target_access(id, addr, data, size);
+            });
+
+            t->register_get_direct_mem_ptr_cb(
+                [id, this](uint64_t addr, TlmDmi& dmi_data) -> bool { return get_direct_mem_ptr(id, addr, dmi_data); });
             id++;
         }
 

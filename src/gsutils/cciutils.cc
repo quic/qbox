@@ -36,7 +36,6 @@
 
 #include "greensocs/gsutils/cciutils.h"
 
-
 using namespace cci;
 
 /**
@@ -82,7 +81,7 @@ sc_core::sc_object* gs::find_sc_obj(sc_core::sc_object* m, std::string name, boo
  * @param name
  * @return std::string
  */
-std::string gs::sc_cci_leaf_name(std::string name) { return name.substr(name.find_last_of(".") + 1);}
+std::string gs::sc_cci_leaf_name(std::string name) { return name.substr(name.find_last_of(".") + 1); }
 
 /**
  * @brief return a list of 'unconsumed' children from the given module name, can be used inside

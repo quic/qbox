@@ -119,8 +119,7 @@ private:
         ASSERT_EQ(target_txn.get_command(), cmd);
     }
 
-    void do_excl_txn_and_check(int id, bool is_load, uint64_t addr, size_t len,
-                               bool expect_inval_or_success)
+    void do_excl_txn_and_check(int id, bool is_load, uint64_t addr, size_t len, bool expect_inval_or_success)
     {
         using namespace tlm;
 
@@ -162,9 +161,8 @@ private:
              */
             ExclusiveAccessTlmExtension::ExclusiveStoreStatus expected_sta;
 
-            expected_sta = expect_inval_or_success
-                               ? ExclusiveAccessTlmExtension::EXCLUSIVE_STORE_SUCCESS
-                               : ExclusiveAccessTlmExtension::EXCLUSIVE_STORE_FAILURE;
+            expected_sta = expect_inval_or_success ? ExclusiveAccessTlmExtension::EXCLUSIVE_STORE_SUCCESS
+                                                   : ExclusiveAccessTlmExtension::EXCLUSIVE_STORE_FAILURE;
 
             ASSERT_EQ(ext.get_exclusive_store_status(), expected_sta);
         }
@@ -249,10 +247,8 @@ public:
         }
         m_initiator.register_invalidate_direct_mem_ptr(
             std::bind(&ExclusiveMonitorTestBench::invalidate_direct_mem_ptr, this, _1, _2));
-        m_target.register_read_cb(
-            std::bind(&ExclusiveMonitorTestBench::target_access, this, _1, _2, _3));
-        m_target.register_write_cb(
-            std::bind(&ExclusiveMonitorTestBench::target_access, this, _1, _2, _3));
+        m_target.register_read_cb(std::bind(&ExclusiveMonitorTestBench::target_access, this, _1, _2, _3));
+        m_target.register_write_cb(std::bind(&ExclusiveMonitorTestBench::target_access, this, _1, _2, _3));
         m_target.register_get_direct_mem_ptr_cb(
             std::bind(&ExclusiveMonitorTestBench::get_direct_mem_ptr, this, _1, _2));
 

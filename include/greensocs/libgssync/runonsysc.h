@@ -65,12 +65,14 @@ protected:
          * @details Cancel a job by setting m_cancelled to true and by
          * resetting the task. Any waiter will then be unblocked immediately.
          */
-        void cancel() {
+        void cancel()
+        {
             m_cancelled = true;
             m_task.reset();
         }
 
-        void wait() {
+        void wait()
+        {
             auto future = m_task.get_future();
 
             future.wait();
@@ -93,7 +95,8 @@ protected:
     async_event m_jobs_handler_event;
 
     // Process inside a thread incase the job calls wait
-    void jobs_handler() {
+    void jobs_handler()
+    {
         std::unique_lock<std::mutex> lock(m_async_jobs_mutex);
         for (;;) {
             while (!m_async_jobs.empty()) {
@@ -115,7 +118,8 @@ protected:
         }
     }
 
-    void cancel_pendings_locked() {
+    void cancel_pendings_locked()
+    {
         while (!m_async_jobs.empty()) {
             m_async_jobs.front()->cancel();
             m_async_jobs.pop();
@@ -130,7 +134,7 @@ public:
     {
         SC_HAS_PROCESS(RunOnSysC);
         SC_THREAD(jobs_handler);
-        SigHandler::get().register_on_exit_cb([this](){cancel_all();});
+        SigHandler::get().register_on_exit_cb([this]() { cancel_all(); });
     }
 
     /**
@@ -139,7 +143,8 @@ public:
      * @detail Cancel all the pending jobs. The callers will be unblocked
      *         if they are waiting for the job.
      */
-    void cancel_pendings() {
+    void cancel_pendings()
+    {
         std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
 
         cancel_pendings_locked();
@@ -154,7 +159,8 @@ public:
      *         behaviour is undefined. This method is meant to be called
      *         after simulation has ended.
      */
-    void cancel_all() {
+    void cancel_all()
+    {
         std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
 
         cancel_pendings_locked();
@@ -179,7 +185,8 @@ public:
      *         was false, false if it has been cancelled (see
      *         `RunOnSysC::cancel_all`).
      */
-    bool run_on_sysc(std::function<void()> job_entry, bool wait = true) {
+    bool run_on_sysc(std::function<void()> job_entry, bool wait = true)
+    {
         if (std::this_thread::get_id() == m_thread_id) {
             job_entry();
             return true;

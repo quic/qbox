@@ -22,12 +22,13 @@
 #include <libqemu/config-host.h>
 
 QemuVirtioGpuGlPci::QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : QemuVirtioGpuGlPci(name, *(dynamic_cast<QemuInstance*>(o)))
-        {
-        }
+    : QemuVirtioGpuGlPci(name, *(dynamic_cast<QemuInstance*>(o)))
+{
+}
 QemuVirtioGpuGlPci::QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, QemuInstance& inst)
     : QemuVirtioGpu(name, inst, "gl-pci")
-    , p_hostmem_mb("hostmem_mb", 2048, "MB to allocate for host visible shared memory") {
+    , p_hostmem_mb("hostmem_mb", 2048, "MB to allocate for host visible shared memory")
+{
 #ifndef __APPLE__
     // Use QEMU's integrated display only if we are NOT on MacOS.
     // On MacOS use libqbox's QemuDisplay SystemC module.
@@ -38,8 +39,7 @@ QemuVirtioGpuGlPci::QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, Qemu
     // resources are available in virgl otherwise it is not needed.
     // Also we can NOT enable it on MacOS as it does not have memfd support.
     m_inst.add_arg("-object");
-    auto memory_object = "memory-backend-memfd,id=mem1,size=" +
-                         std::to_string(p_hostmem_mb.get_value()) + "M";
+    auto memory_object = "memory-backend-memfd,id=mem1,size=" + std::to_string(p_hostmem_mb.get_value()) + "M";
     m_inst.add_arg(memory_object.c_str());
     m_inst.add_arg("-machine");
     m_inst.add_arg("memory-backend=mem1");
@@ -47,7 +47,8 @@ QemuVirtioGpuGlPci::QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, Qemu
 #endif // NOT __APPLE__
 }
 
-void QemuVirtioGpuGlPci::before_end_of_elaboration() {
+void QemuVirtioGpuGlPci::before_end_of_elaboration()
+{
     QemuVirtioGpu::before_end_of_elaboration();
 
 #ifndef __APPLE__

@@ -55,7 +55,8 @@ public:
      */
 
     // based on standard tlm2 QK.
-    virtual sc_core::sc_time time_to_sync() {
+    virtual sc_core::sc_time time_to_sync()
+    {
         if (m_next_sync_point > (m_local_time + sc_core::sc_time_stamp()))
             return m_next_sync_point - (m_local_time + sc_core::sc_time_stamp());
         else
@@ -66,9 +67,9 @@ public:
     virtual void stop() {}
 
     // start trying to syncronise, (and start job for convenience)
-    virtual void start(std::function<void()> job = nullptr) {
-        if (job)
-            sc_core::sc_spawn(job);
+    virtual void start(std::function<void()> job = nullptr)
+    {
+        if (job) sc_core::sc_spawn(job);
     }
 
     virtual SyncPolicy::Type get_thread_type() const { return SyncPolicy::SYSTEMC_THREAD; }
@@ -76,9 +77,9 @@ public:
     // non-const need_sync as some sync policies need a non-const version
     virtual bool need_sync() { return tlm_utils::tlm_quantumkeeper::need_sync(); }
 
-    virtual bool need_sync() const override {
-        SCP_INFO("Libgssync")
-            << "const need_sync called, probably wanted to call non-const version";
+    virtual bool need_sync() const override
+    {
+        SCP_INFO("Libgssync") << "const need_sync called, probably wanted to call non-const version";
         return tlm_utils::tlm_quantumkeeper::need_sync();
     }
 

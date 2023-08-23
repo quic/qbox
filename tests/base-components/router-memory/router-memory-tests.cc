@@ -58,12 +58,10 @@ TEST_BENCH(RouterMemoryTestBench, SimpleOverlapWrite)
 TEST_BENCH(RouterMemoryTestBench, SimpleCrossesBoundary)
 {
     /* Target 1 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[0] - 1, 0xFFFF),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[0] - 1, 0xFFFF), tlm::TLM_ADDRESS_ERROR_RESPONSE);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[1] - 1, 0xFFFF),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[1] - 1, 0xFFFF), tlm::TLM_ADDRESS_ERROR_RESPONSE);
 }
 
 // Simple write and read into the memory with the Debug Transport Interface
@@ -134,13 +132,11 @@ TEST_BENCH(RouterMemoryTestBench, SimpleWriteReadDebug)
 TEST_BENCH(RouterMemoryTestBench, SimpleOverlapWriteDebug)
 {
     /* Target 1 */
-    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[0], 0x04, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[0], 0x04, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[1], 0x04, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[1], 0x04, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 }
 
@@ -148,13 +144,11 @@ TEST_BENCH(RouterMemoryTestBench, SimpleOverlapWriteDebug)
 TEST_BENCH(RouterMemoryTestBench, SimpleCrossesBoundaryDebug)
 {
     /* Target 1 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[0] - 1, 0xFFFF, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[0] - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[1] - 1, 0xFFFF, true),
-              tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint16_t>(memory_size[1] - 1, 0xFFFF, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
     ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
 }
 

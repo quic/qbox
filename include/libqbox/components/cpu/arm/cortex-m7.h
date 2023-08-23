@@ -41,9 +41,12 @@ public:
         , p_start_powered_off("start_powered_off", false,
                               "Start and reset the CPU "
                               "in powered-off state")
-        , p_init_nsvtor("init_nsvtor", 0ull, "Reset vector base address") {}
+        , p_init_nsvtor("init_nsvtor", 0ull, "Reset vector base address")
+    {
+    }
 
-    void before_end_of_elaboration() override {
+    void before_end_of_elaboration() override
+    {
         QemuCpu::before_end_of_elaboration();
 
         qemu::CpuArm cpu(m_dev);

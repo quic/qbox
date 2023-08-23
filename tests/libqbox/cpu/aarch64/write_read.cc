@@ -43,7 +43,7 @@
 class CpuArmCortexA53WriteReadTest : public CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>
 {
 public:
-    static constexpr uint64_t NUM_WRITES = 10*1024;
+    static constexpr uint64_t NUM_WRITES = 10 * 1024;
 
     static constexpr const char* FIRMWARE = R"(
         _start:
@@ -97,19 +97,20 @@ public:
     )";
 
 protected:
-
 public:
-    CpuArmCortexA53WriteReadTest(const sc_core::sc_module_name& n)
-        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>(n) {
+    CpuArmCortexA53WriteReadTest(const sc_core::sc_module_name& n): CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>(n)
+    {
         char buf[1024];
 
-        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterMmio::MMIO_ADDR, CpuTestBench::BULKMEM_ADDR, NUM_WRITES / p_num_cpu);
+        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterMmio::MMIO_ADDR, CpuTestBench::BULKMEM_ADDR,
+                      NUM_WRITES / p_num_cpu);
         set_firmware(buf);
     }
 
     virtual ~CpuArmCortexA53WriteReadTest() {}
 
-    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override {
+    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override
+    {
         int cpuid = addr >> 3;
 
         if (data == -1) {
@@ -118,17 +119,11 @@ public:
         }
 
         SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data;
-
     }
 
-    virtual void end_of_simulation() override {
-        CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>::end_of_simulation();
-
-    }
+    virtual void end_of_simulation() override { CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>::end_of_simulation(); }
 };
 
 constexpr const char* CpuArmCortexA53WriteReadTest::FIRMWARE;
 
-int sc_main(int argc, char* argv[]) {
-    return run_testbench<CpuArmCortexA53WriteReadTest>(argc, argv);
-}
+int sc_main(int argc, char* argv[]) { return run_testbench<CpuArmCortexA53WriteReadTest>(argc, argv); }

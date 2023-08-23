@@ -68,12 +68,7 @@ protected:
 
 public:
     AliasesMappingTest(const sc_core::sc_module_name& n)
-        : TestBench(n)
-        , m_initiator("initiator")
-        , m_router("router")
-        , m_memory("target")
-        , m_ram("ram")
-        , m_rom("rom")
+        : TestBench(n), m_initiator("initiator"), m_router("router"), m_memory("target"), m_ram("ram"), m_rom("rom")
     {
         do_bus_binding();
     }

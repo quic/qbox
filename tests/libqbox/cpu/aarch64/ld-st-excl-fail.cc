@@ -35,7 +35,8 @@
  */
 class CpuArmCortexA53LdStExclTest : public CpuTestBench<QemuCpuArmCortexA53, CpuTesterExclusive>
 {
-    bool passed=true;
+    bool passed = true;
+
 public:
     static constexpr const char* FIRMWARE = R"(
         _start:
@@ -61,37 +62,28 @@ public:
 public:
     SC_HAS_PROCESS(CpuArmCortexA53LdStExclTest);
 
-    CpuArmCortexA53LdStExclTest(const sc_core::sc_module_name &n)
+    CpuArmCortexA53LdStExclTest(const sc_core::sc_module_name& n)
         : CpuTestBench<QemuCpuArmCortexA53, CpuTesterExclusive>(n)
     {
         char buf[2048];
 
-        std::snprintf(buf, sizeof(buf), FIRMWARE,
-                      CpuTesterExclusive::MMIO_ADDR);
+        std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterExclusive::MMIO_ADDR);
         set_firmware(buf);
     }
 
-    virtual ~CpuArmCortexA53LdStExclTest()
-    {
-    }
+    virtual ~CpuArmCortexA53LdStExclTest() {}
 
-    virtual void end_of_elaboration() override
-    {
-        m_tester.lock_region_64(0);
-    }
+    virtual void end_of_elaboration() override { m_tester.lock_region_64(0); }
 
     virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override
     {
         int cpuid = addr >> 3;
 
-        SCP_INFO(SCMOD) << "FAILED : CPU " << cpuid << " write, data: "<<std::hex<<data<<", len: "<<len;
-        passed=false;
+        SCP_INFO(SCMOD) << "FAILED : CPU " << cpuid << " write, data: " << std::hex << data << ", len: " << len;
+        passed = false;
     }
 
-    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override
-    {
-        return 0;
-    }
+    virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override { return 0; }
 
     virtual void end_of_simulation() override
     {
@@ -100,10 +92,6 @@ public:
     }
 };
 
-constexpr const char * CpuArmCortexA53LdStExclTest::FIRMWARE;
+constexpr const char* CpuArmCortexA53LdStExclTest::FIRMWARE;
 
-int sc_main(int argc, char *argv[])
-{
-    return run_testbench<CpuArmCortexA53LdStExclTest>(argc, argv);
-}
-
+int sc_main(int argc, char* argv[]) { return run_testbench<CpuArmCortexA53LdStExclTest>(argc, argv); }

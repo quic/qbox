@@ -28,24 +28,25 @@
 class test_base : public sc_core::sc_module
 {
 public:
-    test_base(const sc_core::sc_module_name& nm): sc_core::sc_module(nm) {
+    test_base(const sc_core::sc_module_name& nm): sc_core::sc_module(nm)
+    {
         SC_HAS_PROCESS(test_base);
         SC_THREAD(run);
     }
 
     ~test_base() { finalize_test(); }
 
-    void run() {
+    void run()
+    {
         sc_core::wait(sc_core::SC_ZERO_TIME);
         run_test();
         sc_core::sc_stop();
     }
 
-    void finalize_test() {
-        ASSERT_EQ(sc_core::sc_get_status(), sc_core::SC_STOPPED) << "simulation incomplete";
-    }
+    void finalize_test() { ASSERT_EQ(sc_core::sc_get_status(), sc_core::SC_STOPPED) << "simulation incomplete"; }
 
-    void run_test() {
+    void run_test()
+    {
         gs::tlm_quantumkeeper_extended qk;
         EXPECT_EQ(gs::SyncPolicy::SYSTEMC_THREAD, qk.get_thread_type());
         qk.reset();
@@ -68,17 +69,20 @@ public:
     }
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
 
-int sc_main(int argc, char** argv) {
+int sc_main(int argc, char** argv)
+{
     EXPECT_TRUE(false) << "sc_main called";
     return EXIT_FAILURE;
 }
 
-TEST(tlm_quantumkeeper_extended, basic_test) {
+TEST(tlm_quantumkeeper_extended, basic_test)
+{
     test_base tb("test_base");
     sc_core::sc_start(1, sc_core::SC_SEC);
 }

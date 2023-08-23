@@ -35,7 +35,7 @@ class QemuRtl8139Pci : public QemuGPEX::Device
 
 public:
     QemuRtl8139Pci(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
-    : QemuRtl8139Pci(name, *(dynamic_cast<QemuInstance*>(o)), (dynamic_cast<QemuGPEX*>(t)))
+        : QemuRtl8139Pci(name, *(dynamic_cast<QemuInstance*>(o)), (dynamic_cast<QemuGPEX*>(t)))
     {
     }
     QemuRtl8139Pci(const sc_core::sc_module_name& name, QemuInstance& inst, QemuGPEX* gpex)
@@ -57,9 +57,8 @@ public:
     void before_end_of_elaboration() override
     {
         QemuGPEX::Device::before_end_of_elaboration();
-        // if p_mac is empty, a MAC address will be generated for us 
-        if(!p_mac.get_value().empty())
-            m_dev.set_prop_str("mac", p_mac.get_value().c_str());
+        // if p_mac is empty, a MAC address will be generated for us
+        if (!p_mac.get_value().empty()) m_dev.set_prop_str("mac", p_mac.get_value().c_str());
         m_dev.set_prop_str("netdev", m_netdev_id.c_str());
 
         m_dev.set_prop_str("romfile", "");

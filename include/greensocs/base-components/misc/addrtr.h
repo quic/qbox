@@ -60,14 +60,8 @@ class Addrtr : public sc_core::sc_module
 private:
     sc_dt::uint64 addr_fw(sc_dt::uint64 addr) { return addr + offset; }
     sc_dt::uint64 addr_bw(sc_dt::uint64 addr) { return addr - offset; }
-    void translate_fw(tlm::tlm_generic_payload& trans)
-    {
-        trans.set_address(addr_fw(trans.get_address()));
-    }
-    void translate_bw(tlm::tlm_generic_payload& trans)
-    {
-        trans.set_address(addr_bw(trans.get_address()));
-    }
+    void translate_fw(tlm::tlm_generic_payload& trans) { trans.set_address(addr_fw(trans.get_address())); }
+    void translate_bw(tlm::tlm_generic_payload& trans) { trans.set_address(addr_bw(trans.get_address())); }
 
     void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
     {
@@ -107,10 +101,7 @@ public:
     cci::cci_param<uint64_t> offset;
 
     explicit Addrtr(const sc_core::sc_module_name& nm)
-        : sc_core::sc_module(nm)
-        , back_socket("initiator")
-        , front_socket("target")
-        , offset("offset", 0)
+        : sc_core::sc_module(nm), back_socket("initiator"), front_socket("target"), offset("offset", 0)
     {
         front_socket.register_b_transport(this, &Addrtr::b_transport);
         front_socket.register_transport_dbg(this, &Addrtr::transport_dbg);

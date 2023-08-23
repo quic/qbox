@@ -44,7 +44,8 @@ SC_MODULE (realtimeLimiter) {
 
     async_event tick;
 
-    void SCticker() {
+    void SCticker()
+    {
         if (!running) {
             tick.async_detach_suspending();
             sc_core::sc_unsuspend_all();
@@ -57,14 +58,14 @@ SC_MODULE (realtimeLimiter) {
                                        // for realtime.
         } else {
             // lets go with +=1/2 a RTquantum
-            tick.notify((runto + sc_core::sc_time(RTquantum_ms, sc_core::SC_MS) / 2) -
-                        sc_core::sc_time_stamp());
+            tick.notify((runto + sc_core::sc_time(RTquantum_ms, sc_core::SC_MS) / 2) - sc_core::sc_time_stamp());
             tick.async_detach_suspending(); // We could even starve !
             sc_core::sc_unsuspend_all();
         }
     }
 
-    void RTticker() {
+    void RTticker()
+    {
         while (running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(RTquantum_ms));
 
@@ -79,7 +80,8 @@ SC_MODULE (realtimeLimiter) {
 
 public:
     /* NB all these functions should be called from the SystemC thread of course*/
-    void enable() {
+    void enable()
+    {
         assert(running == false);
 
         running = true;
@@ -92,16 +94,15 @@ public:
         m_tick_thread = std::thread(&realtimeLimiter::RTticker, this);
     }
 
-    void disable() {
+    void disable()
+    {
         if (running) {
             running = false;
             m_tick_thread.join();
         }
     }
 
-    realtimeLimiter()
-        : sc_module(sc_core::sc_module_name("realtimeLimiter"))
-        , tick(false) // handle attach manually
+    realtimeLimiter(): sc_module(sc_core::sc_module_name("realtimeLimiter")), tick(false) // handle attach manually
     {
         SC_HAS_PROCESS(realtimeLimiter);
         SC_METHOD(SCticker);

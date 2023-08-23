@@ -24,7 +24,8 @@
 
 namespace qemu {
 
-MemoryRegion SysBusDevice::mmio_get_region(int id) {
+MemoryRegion SysBusDevice::mmio_get_region(int id)
+{
     QemuSysBusDevice* qemu_sbd;
     QemuMemoryRegion* qemu_mr;
 
@@ -40,7 +41,8 @@ MemoryRegion SysBusDevice::mmio_get_region(int id) {
     return MemoryRegion(o);
 }
 
-void SysBusDevice::connect_gpio_out(int idx, Gpio gpio) {
+void SysBusDevice::connect_gpio_out(int idx, Gpio gpio)
+{
     QemuSysBusDevice* qemu_sbd;
     QemuGpio* qemu_gpio;
 

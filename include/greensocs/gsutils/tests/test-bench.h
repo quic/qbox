@@ -119,7 +119,8 @@ public:
 #include <unistd.h>
 
 template <class T>
-static inline void run_test_bench(T* instance) {
+static inline void run_test_bench(T* instance)
+{
     sc_spawn(sc_bind(&T::test_bench_body, instance));
     sc_core::sc_start();
 }
@@ -127,7 +128,8 @@ static inline void run_test_bench(T* instance) {
 #else /* _WIN32 */
 #include <iostream>
 
-static inline void run_test_bench() {
+static inline void run_test_bench()
+{
     SCP_ERR("test_bench") << "Running tests on Windows is not supported.";
     ASSERT_TRUE(false);
 }
@@ -146,7 +148,8 @@ static inline void run_test_bench() {
     };                                                                                       \
     testing::Environment* const test_bench_env##name = testing::AddGlobalTestEnvironment(    \
         new TestBenchEnv<TEST_BENCH_NAME(name)>());                                          \
-    TEST(TEST_BENCH_NAME(name), name) {                                                      \
+    TEST(TEST_BENCH_NAME(name), name)                                                        \
+    {                                                                                        \
         run_test_bench<TEST_BENCH_NAME(name)>(                                               \
             static_cast<TestBenchEnv<TEST_BENCH_NAME(name)>*>(test_bench_env##name)->get()); \
     }                                                                                        \

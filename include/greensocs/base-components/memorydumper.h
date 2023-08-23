@@ -88,8 +88,7 @@ protected:
             uint64_t size = gs::cci_get<uint64_t>(m_broker, m + ".target_socket.size");
             tlm::tlm_generic_payload trans;
             std::stringstream fnamestr;
-            fnamestr << m << ".0x" << std::hex << addr << "-0x" << (addr + size) << "."
-                     << p_outfile.get_value();
+            fnamestr << m << ".0x" << std::hex << addr << "-0x" << (addr + size) << "." << p_outfile.get_value();
             std::string fname = fnamestr.str();
 
             FILE* out = fopen(fname.c_str(), "wb");

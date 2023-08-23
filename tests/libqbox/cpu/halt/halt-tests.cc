@@ -80,7 +80,8 @@ protected:
 public:
     SC_HAS_PROCESS(CpuArmCortexA53SimpleHalt);
     CpuArmCortexA53SimpleHalt(const sc_core::sc_module_name& n)
-        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>(n), halt("halt", p_num_cpu) {
+        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>(n), halt("halt", p_num_cpu)
+    {
         char buf[1024];
 
         map_halt_to_cpus(halt);
@@ -104,7 +105,8 @@ public:
         SC_THREAD(halt_ctrl);
     }
 
-    void halt_ctrl() {
+    void halt_ctrl()
+    {
         // Mark this as unsuspendable, since QEMU may 'suspend' all activity if we mark all cores as halted.
         sc_core::sc_unsuspendable();
         halt[0].write(1); // make sure we start halted
@@ -112,7 +114,7 @@ public:
         while (finished < m_cpus.size()) {
             wait(100, SC_MS);
             for (int i = 0; i < m_cpus.size(); i++) {
-                if ((im_halted[i] || m_writes[i]==5) && m_writes[i] < NUM_WRITES) {
+                if ((im_halted[i] || m_writes[i] == 5) && m_writes[i] < NUM_WRITES) {
                     SCP_INFO(SCMOD) << "release CPU " << i;
                     halt[i].write(0);
                     im_halted[i] = false;
@@ -122,18 +124,20 @@ public:
         wait(100, SC_MS);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         // the halt below will kick the CPU, causing there to be an async run on cpu (kick) to
-        // be pending when we effectively shut down the simulation. This gives a little time to be sure the kick is processed.
+        // be pending when we effectively shut down the simulation. This gives a little time to be sure the kick is
+        // processed.
 
         sc_core::sc_suspendable();
     }
 
     virtual ~CpuArmCortexA53SimpleHalt() {}
 
-    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override {
+    virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override
+    {
         int cpuid = addr >> 3;
 
-        SCP_INFO(SCMOD) << "CPU " << cpuid << " write " << m_writes[cpuid] + 1 << " at 0x"
-                        << std::hex << addr << ", data: " << std::hex << data;
+        SCP_INFO(SCMOD) << "CPU " << cpuid << " write " << m_writes[cpuid] + 1 << " at 0x" << std::hex << addr
+                        << ", data: " << std::hex << data;
 
         TEST_ASSERT(im_halted[cpuid] == false);
         TEST_ASSERT(cpuid < p_num_cpu);
@@ -150,19 +154,18 @@ public:
         }
 
         if (m_writes[cpuid] == NUM_WRITES) {
-            SCP_INFO(SCMOD) << "CPU " << cpuid << " finished (waiting for "
-                            << m_cpus.size() - finished << ")";
+            SCP_INFO(SCMOD) << "CPU " << cpuid << " finished (waiting for " << m_cpus.size() - finished << ")";
             finished++;
             halt[cpuid].write(1);
             im_halted[cpuid] = true;
         }
     }
 
-    virtual void end_of_simulation() override {
+    virtual void end_of_simulation() override
+    {
         CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>::end_of_simulation();
         for (int i = 0; i < p_num_cpu; i++) {
-            SCP_INFO(SCMOD) << "m_writes (end_of_simulation) = " << m_writes[i] << " expected "
-                            << NUM_WRITES;
+            SCP_INFO(SCMOD) << "m_writes (end_of_simulation) = " << m_writes[i] << " expected " << NUM_WRITES;
             TEST_ASSERT(m_writes[i] == NUM_WRITES);
         }
     }
@@ -170,6 +173,4 @@ public:
 
 constexpr const char* CpuArmCortexA53SimpleHalt::FIRMWARE;
 
-int sc_main(int argc, char* argv[]) {
-    return run_testbench<CpuArmCortexA53SimpleHalt>(argc, argv);
-}
+int sc_main(int argc, char* argv[]) { return run_testbench<CpuArmCortexA53SimpleHalt>(argc, argv); }

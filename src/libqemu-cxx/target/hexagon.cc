@@ -21,4 +21,5 @@
 
 #include "libqemu-cxx/target/hexagon.h"
 
-namespace qemu {}
+namespace qemu {
+}

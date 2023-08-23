@@ -31,9 +31,9 @@ class tlm_quantumkeeper_multi_adaptive : public tlm_quantumkeeper_multithread
 {
     // Only allow up to one quantum from the current sc_time
     // In accordance with TLM-2
-    virtual sc_core::sc_time time_to_sync() override {
-        if (status != RUNNING)
-            return sc_core::SC_ZERO_TIME;
+    virtual sc_core::sc_time time_to_sync() override
+    {
+        if (status != RUNNING) return sc_core::SC_ZERO_TIME;
 
         sc_core::sc_time m_quantum = tlm_utils::tlm_quantumkeeper::get_global_quantum();
         sc_core::sc_time sct = sc_core::sc_time_stamp();

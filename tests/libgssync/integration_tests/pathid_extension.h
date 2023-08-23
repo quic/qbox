@@ -47,7 +47,8 @@ public:
 public:
     virtual tlm_extension_base* clone() const override { return new PathIDExtension(*this); }
 
-    virtual void copy_from(const tlm_extension_base& ext) override {
+    virtual void copy_from(const tlm_extension_base& ext) override
+    {
         const PathIDExtension& other = static_cast<const PathIDExtension&>(ext);
         *this = other;
     }

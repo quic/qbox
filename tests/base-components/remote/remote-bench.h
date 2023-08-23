@@ -83,8 +83,7 @@ public:
 
         ASSERT_EQ(m_initiator.do_write_with_ptr(addr, (uint8_t*)&a1, sizeof(uint64_t) * 3, false),
                   tlm::TLM_OK_RESPONSE);
-        ASSERT_EQ(m_initiator.do_read_with_ptr(addr, (uint8_t*)&a2, sizeof(uint64_t) * 3, false),
-                  tlm::TLM_OK_RESPONSE);
+        ASSERT_EQ(m_initiator.do_read_with_ptr(addr, (uint8_t*)&a2, sizeof(uint64_t) * 3, false), tlm::TLM_OK_RESPONSE);
         for (int i = 0; i < 3; i++) {
             ASSERT_EQ(a1[i], a2[i]);
         }

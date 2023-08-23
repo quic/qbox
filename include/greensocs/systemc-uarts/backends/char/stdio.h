@@ -55,7 +55,8 @@ public:
 #endif
     static void catch_fn(int signo) {}
 
-    static void tty_reset() {
+    static void tty_reset()
+    {
 #ifndef WIN32
         struct termios tty;
 
@@ -69,7 +70,8 @@ public:
 #endif
     }
 
-    CharBackendStdio(sc_core::sc_module_name name, bool read_write = true) : m_running(true) {
+    CharBackendStdio(sc_core::sc_module_name name, bool read_write = true): m_running(true)
+    {
         SCP_DEBUG(SCMOD) << "CharBackendStdio constructor";
         SC_METHOD(rcv);
         sensitive << m_event;
@@ -95,16 +97,15 @@ public:
             if (signo == SIGINT) {
                 char ch = '\x03';
                 m_queue.push(ch);
-                if (!m_queue.empty())
-                    m_event.async_notify();
+                if (!m_queue.empty()) m_event.async_notify();
             }
         });
 #endif
-        if (read_write)
-            rcv_thread_id = std::make_unique<std::thread>(&CharBackendStdio::rcv_thread, this);
+        if (read_write) rcv_thread_id = std::make_unique<std::thread>(&CharBackendStdio::rcv_thread, this);
     }
 
-    void* rcv_thread() {
+    void* rcv_thread()
+    {
         struct sigaction act = { 0 };
         act.sa_handler = &catch_fn;
         sigaction(SIGURG, &act, NULL);
@@ -138,7 +139,8 @@ public:
         return NULL;
     }
 
-    void rcv(void) {
+    void rcv(void)
+    {
         unsigned char c;
 
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -156,17 +158,17 @@ public:
         }
     }
 
-    void write(unsigned char c) {
+    void write(unsigned char c)
+    {
         putchar(c);
         fflush(stdout);
     }
 
-    ~CharBackendStdio() {
+    ~CharBackendStdio()
+    {
         m_running = false;
-        if(rcv_pthread_id)
-            pthread_kill(rcv_pthread_id, SIGURG);
-        if(rcv_thread_id->joinable())
-            rcv_thread_id->join();
+        if (rcv_pthread_id) pthread_kill(rcv_pthread_id, SIGURG);
+        if (rcv_thread_id->joinable()) rcv_thread_id->join();
     }
 };
 GSC_MODULE_REGISTER(CharBackendStdio, bool);

@@ -108,12 +108,12 @@ public:
     sc_core::sc_event update_event;
 
     SC_HAS_PROCESS(Pl011);
-    Pl011(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : Pl011(name)
-        {
-            set_backend(dynamic_cast<CharBackend*>(o));
-        }
-    Pl011(sc_core::sc_module_name name): socket("target_socket"), irq("irq"), s(nullptr) {
+    Pl011(const sc_core::sc_module_name& name, sc_core::sc_object* o): Pl011(name)
+    {
+        set_backend(dynamic_cast<CharBackend*>(o));
+    }
+    Pl011(sc_core::sc_module_name name): socket("target_socket"), irq("irq"), s(nullptr)
+    {
         SCP_DEBUG(SCMOD) << "Pl011 constructor";
         chr = NULL;
 
@@ -126,8 +126,7 @@ public:
         s->cr = 0x300;
         s->flags = 0x90;
 
-        static const unsigned char pl011_id_arm[8] = { 0x11, 0x10, 0x14, 0x00,
-                                                       0x0d, 0xf0, 0x05, 0xb1 };
+        static const unsigned char pl011_id_arm[8] = { 0x11, 0x10, 0x14, 0x00, 0x0d, 0xf0, 0x05, 0xb1 };
 
         s->id = pl011_id_arm;
 
@@ -135,12 +134,14 @@ public:
         sensitive << update_event;
     }
 
-    void set_backend(CharBackend* backend) {
+    void set_backend(CharBackend* backend)
+    {
         chr = backend;
         chr->register_receive(this, pl011_receive, pl011_can_receive);
     }
 
-    void write(uint64_t offset, uint32_t value) {
+    void write(uint64_t offset, uint32_t value)
+    {
         switch (offset >> 2) {
         case 0:
             putchar(value);
@@ -154,7 +155,8 @@ public:
         }
     }
 
-    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
+    {
         unsigned char* ptr = trans.get_data_ptr();
         uint64_t addr = trans.get_address();
         unsigned int len = trans.get_data_length();
@@ -202,7 +204,8 @@ public:
 
     void pl011_update() { update_event.notify(); }
 
-    void pl011_update_sysc() {
+    void pl011_update_sysc()
+    {
         uint32_t flags;
         size_t i;
 
@@ -212,7 +215,8 @@ public:
         }
     }
 
-    uint32_t pl011_read(uint64_t offset) {
+    uint32_t pl011_read(uint64_t offset)
+    {
         uint32_t c;
         uint64_t r;
 
@@ -222,14 +226,12 @@ public:
             c = s->read_fifo[s->read_pos];
             if (s->read_count > 0) {
                 s->read_count--;
-                if (++s->read_pos == 16)
-                    s->read_pos = 0;
+                if (++s->read_pos == 16) s->read_pos = 0;
             }
             if (s->read_count == 0) {
                 s->flags |= PL011_FLAG_RXFE;
             }
-            if (s->read_count == s->read_trigger - 1)
-                s->int_level &= ~PL011_INT_RX;
+            if (s->read_count == s->read_trigger - 1) s->int_level &= ~PL011_INT_RX;
             s->rsr = c >> 8;
             pl011_update();
             r = c;
@@ -282,7 +284,8 @@ public:
         return r;
     }
 
-    void pl011_set_read_trigger() {
+    void pl011_set_read_trigger()
+    {
 #if 0
         /* The docs say the RX interrupt is triggered when the FIFO exceeds
            the threshold.  However linux only reads the FIFO in response to an
@@ -298,7 +301,8 @@ public:
         s->read_count = 0;
     }
 
-    void pl011_write(uint64_t offset, uint32_t value) {
+    void pl011_write(uint64_t offset, uint32_t value)
+    {
         unsigned char ch;
 
         switch (offset >> 2) {
@@ -361,7 +365,8 @@ public:
         }
     }
 
-    static int pl011_can_receive(void* opaque) {
+    static int pl011_can_receive(void* opaque)
+    {
         PL011State* s = ((Pl011*)opaque)->s;
 
         int r;
@@ -374,12 +379,12 @@ public:
         return r;
     }
 
-    void pl011_put_fifo(uint32_t value) {
+    void pl011_put_fifo(uint32_t value)
+    {
         int slot;
 
         slot = s->read_pos + s->read_count;
-        if (slot >= 16)
-            slot -= 16;
+        if (slot >= 16) slot -= 16;
         s->read_fifo[slot] = value;
         s->read_count++;
         s->flags &= ~PL011_FLAG_RXFE;
@@ -392,7 +397,8 @@ public:
         }
     }
 
-    static void pl011_receive(void* opaque, const uint8_t* buf, int size) {
+    static void pl011_receive(void* opaque, const uint8_t* buf, int size)
+    {
         Pl011* uart = (Pl011*)opaque;
         uart->pl011_put_fifo(*buf);
     }

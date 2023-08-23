@@ -91,10 +91,7 @@ public:
     {
     public:
         const char* type;
-        FactoryMaker<T, U...>(const char* _t)
-            : type(_t)
-        {
-        }
+        FactoryMaker<T, U...>(const char* _t): type(_t) {}
     };
 
     const char* type; // maintain a string representation of the type.
@@ -187,7 +184,8 @@ T cci_get(cci::cci_broker_handle broker, std::string name)
     return ret;
 }
 
-static std::string get_parent_name(sc_core::sc_module_name n) {
+static std::string get_parent_name(sc_core::sc_module_name n)
+{
     std::string name(n);
     auto pos = name.find_last_of('.');
     if (pos != std::string::npos) {
@@ -408,7 +406,7 @@ protected:
         }
 
         void start_of_simulation()
-        {   
+        {
             cci::cci_broker_handle m_broker = cci::cci_get_broker();
             if (!help_cb) return;
             // remove lua builtins
@@ -806,8 +804,7 @@ class PrivateConfigurableBroker : public gs::ConfigurableBroker
     }
 
 public:
-    PrivateConfigurableBroker(std::string name)
-        : gs::ConfigurableBroker(name)
+    PrivateConfigurableBroker(std::string name): gs::ConfigurableBroker(name)
     {
         m_name = hierarchical_name();
         m_name_length = m_name.length();

@@ -44,9 +44,7 @@ class pass : public sc_core::sc_module
             m_broker.set_preset_cci_value(b, m_broker.get_preset_cci_value(a));
             m_broker.lock_preset_value(a);
             m_broker.ignore_unconsumed_preset_values(
-                [a](const std::pair<std::string, cci::cci_value>& iv) -> bool {
-                    return iv.first == a;
-                });
+                [a](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == a; });
         } else {
             if (required) {
                 SCP_FATAL(SCMOD) << " Can't find " << a;
@@ -63,8 +61,7 @@ class pass : public sc_core::sc_module
 
     public:
         initiator_socket_spying(const char* name, const std::function<void(std::string)>& f)
-            : tlm_utils::simple_initiator_socket<MOD, BUSWIDTH>::simple_initiator_socket(name)
-            , register_cb(f)
+            : tlm_utils::simple_initiator_socket<MOD, BUSWIDTH>::simple_initiator_socket(name), register_cb(f)
         {
         }
 
@@ -89,8 +86,7 @@ class pass : public sc_core::sc_module
         s = nameFromSocket(s);
         alias_preset_param(s + ".address", std::string(name()) + ".target_socket.address");
         alias_preset_param(s + ".size", std::string(name()) + ".target_socket.size");
-        alias_preset_param(s + ".relative_addresses",
-                           std::string(name()) + ".target_socket.relative_addresses");
+        alias_preset_param(s + ".relative_addresses", std::string(name()) + ".target_socket.relative_addresses");
     }
 
 public:
@@ -101,32 +97,27 @@ public:
 private:
     void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
     {
-        if (p_verbose)
-            SCP_WARN(SCMOD) << "calling b_transport: " << scp::scp_txn_tostring(trans);
+        if (p_verbose) SCP_WARN(SCMOD) << "calling b_transport: " << scp::scp_txn_tostring(trans);
         initiator_socket->b_transport(trans, delay);
-        if (p_verbose)
-            SCP_WARN(SCMOD) << "returning from b_transport: " << scp::scp_txn_tostring(trans);
+        if (p_verbose) SCP_WARN(SCMOD) << "returning from b_transport: " << scp::scp_txn_tostring(trans);
     }
 
     unsigned int transport_dbg(tlm::tlm_generic_payload& trans)
     {
-        if (p_verbose)
-            SCP_WARN(SCMOD) << "calling dbg_transport: " << scp::scp_txn_tostring(trans);
+        if (p_verbose) SCP_WARN(SCMOD) << "calling dbg_transport: " << scp::scp_txn_tostring(trans);
         return initiator_socket->transport_dbg(trans);
     }
 
     bool get_direct_mem_ptr(tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
-        if (p_verbose)
-            SCP_WARN(SCMOD) << "calling get_direct_mem_ptr: " << scp::scp_txn_tostring(trans);
+        if (p_verbose) SCP_WARN(SCMOD) << "calling get_direct_mem_ptr: " << scp::scp_txn_tostring(trans);
         return initiator_socket->get_direct_mem_ptr(trans, dmi_data);
     }
 
     void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
     {
         if (p_verbose)
-            SCP_WARN(SCMOD) << std::hex << "calling invalidate_direct_mem_ptr: 0x" << start
-                            << " - 0x" << end;
+            SCP_WARN(SCMOD) << std::hex << "calling invalidate_direct_mem_ptr: 0x" << start << " - 0x" << end;
         target_socket->invalidate_direct_mem_ptr(start, end);
     }
 
@@ -146,9 +137,8 @@ public:
             if (!m_broker.get_preset_cci_value(std::string(name()) + "." + SCP_LOG_LEVEL_PARAM_NAME)
                      .template try_get<int>(level) ||
                 level < (int)(scp::log::WARNING)) {
-                m_broker.set_preset_cci_value(
-                    (std::string(name()) + "." + SCP_LOG_LEVEL_PARAM_NAME).c_str(),
-                    cci::cci_value(static_cast<int>(scp::log::WARNING)));
+                m_broker.set_preset_cci_value((std::string(name()) + "." + SCP_LOG_LEVEL_PARAM_NAME).c_str(),
+                                              cci::cci_value(static_cast<int>(scp::log::WARNING)));
             }
         }
         target_socket.register_b_transport(this, &pass::b_transport);

@@ -43,19 +43,19 @@
 #include "greensocs/systemc-uarts/uart-pl011.h"
 #include <greensocs/systemc-uarts/backends/char/stdio.h>
 
-#define ARCH_TIMER_VIRT_IRQ   (16+11)
-#define ARCH_TIMER_S_EL1_IRQ  (16+13)
-#define ARCH_TIMER_NS_EL1_IRQ (16+14)
-#define ARCH_TIMER_NS_EL2_IRQ (16+10)
+#define ARCH_TIMER_VIRT_IRQ   (16 + 11)
+#define ARCH_TIMER_S_EL1_IRQ  (16 + 13)
+#define ARCH_TIMER_NS_EL1_IRQ (16 + 14)
+#define ARCH_TIMER_NS_EL2_IRQ (16 + 10)
 
-class GreenSocsPlatform : public gs::ModuleFactory::Container {
+class GreenSocsPlatform : public gs::ModuleFactory::Container
+{
 protected:
-
     cci::cci_param<int> m_quantum_ns;
     cci::cci_param<int> m_gdb_port;
 
 public:
-    GreenSocsPlatform(const sc_core::sc_module_name &n)
+    GreenSocsPlatform(const sc_core::sc_module_name& n)
         : gs::ModuleFactory::Container(n)
         , m_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
         , m_gdb_port("gdb_port", 0, "GDB port")
@@ -65,11 +65,10 @@ public:
 
         sc_core::sc_time global_quantum(m_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);
-
     };
 };
 
-int sc_main(int argc, char *argv[])
+int sc_main(int argc, char* argv[])
 {
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)
@@ -101,8 +100,7 @@ int sc_main(int argc, char *argv[])
     auto end = std::chrono::system_clock::now();
 
     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-    std::cout << "Simulation Time: " << sc_core::sc_time_stamp().to_seconds() << "SC_SEC"
-              << std::endl;
+    std::cout << "Simulation Time: " << sc_core::sc_time_stamp().to_seconds() << "SC_SEC" << std::endl;
     std::cout << "Simulation Duration: " << elapsed.count() << "s (Wall Clock)" << std::endl;
 
     return 0;

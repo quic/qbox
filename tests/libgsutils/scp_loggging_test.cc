@@ -34,49 +34,50 @@ using testing::AnyOf;
 using testing::Eq;
 
 SC_MODULE (testA) {
-    void testA_method() {
-        SCP_WARN(SCMOD) << "SCP_WARN(SCMOD)"; // displayed if SCMOD (testA.log_level>= SC_LOW which
-                                              // means CCI_value>=1, Verbosity >= 100) or
-                                              // log_level>=1 if SCMOD.log_level not defined
-        SCP_WARN() << "SCP_WARN()";           // always printed unless we set
-                                              // scp::LogConfig().logLevel(scp::log::NONE)
-        SCP_WARN("bar.me")
-            << "SCP_WARN(bar.me)"; // displayed if the value of bar.me.log_level >=1 or log_level>=1
+    void testA_method()
+    {
+        SCP_WARN(SCMOD) << "SCP_WARN(SCMOD)";     // displayed if SCMOD (testA.log_level>= SC_LOW which
+                                                  // means CCI_value>=1, Verbosity >= 100) or
+                                                  // log_level>=1 if SCMOD.log_level not defined
+        SCP_WARN() << "SCP_WARN()";               // always printed unless we set
+                                                  // scp::LogConfig().logLevel(scp::log::NONE)
+        SCP_WARN("bar.me") << "SCP_WARN(bar.me)"; // displayed if the value of bar.me.log_level >=1 or log_level>=1
 
         SCP_INFO(SCMOD) << "SCP_INFO(SCMOD)"; // displayed if SCMOD (testA.log_level>= SC_MEDIUM
                                               // which means CCI_value>=4, Verbosity >= 200) or or
                                               // log_level>=4 if SCMOD.log_level not defined
         SCP_INFO() << "SCP_INFO()";           // always printed unless we set
-                                    // scp::LogConfig().logLevel(scp::log::WARNING) or LOWER value
-                                    // (NONE, FATAL,ERORR, WARNING)
-        SCP_INFO("") << "SCP_INFO(empty)"; //  displayed if log_level>=4
-        SCP_INFO("foo.me.toto")
-            << "SCP_INFO(foo.me.toto)"; // displayed if foo.me.toto.log_level>=4 or
-                                        // foo.me.log_level>=4 or foo.log_level>=4 or log_level>=4
-        SCP_INFO("bar.me") << "SCP_INFO(bar.me)"; // displayed if  bar.me.log_level>=4 or
-                                                  // bar.log_level>=4 or log_level>=4
-        SCP_INFO("bar") << "SCP_INFO(bar)"; // displayed if bar.log_level>=4  or log_level>=4
+                                              // scp::LogConfig().logLevel(scp::log::WARNING) or LOWER value
+                                              // (NONE, FATAL,ERORR, WARNING)
+        SCP_INFO("") << "SCP_INFO(empty)";    //  displayed if log_level>=4
+        SCP_INFO("foo.me.toto") << "SCP_INFO(foo.me.toto)"; // displayed if foo.me.toto.log_level>=4 or
+                                                            // foo.me.log_level>=4 or foo.log_level>=4 or log_level>=4
+        SCP_INFO("bar.me") << "SCP_INFO(bar.me)";           // displayed if  bar.me.log_level>=4 or
+                                                            // bar.log_level>=4 or log_level>=4
+        SCP_INFO("bar") << "SCP_INFO(bar)";                 // displayed if bar.log_level>=4  or log_level>=4
 
         SCP_DEBUG(SCMOD) << "SCP_DEBUG(SCMOD)"; // displayed if SCMOD (testA.log_level>= SC_HIGH
                                                 // which means CCI_value>=5, Verbosity >= 300) or or
                                                 // log_level>=5 if SCMOD.log_level not defined
         SCP_DEBUG() << "SCP_DEBUG()";           // always printed unless we set
-                                      // scp::LogConfig().logLevel(scp::log::INFO) or LOWER value
-                                      // (NONE, FATAL,ERORR, WARNING, INFO)
-        SCP_DEBUG("") << "SCP_DEBUG(empty)"; //  displayed if log_level>= 5
-        SCP_DEBUG("DEBUG.foo.me")
-            << "SCP_DEBUG(DEBUG.foo.me)"; // displayed if DEBUG.foo.me.log_level>=5 or
-                                          // DEBUG.foo.log_level>=5 or DEBUG.log_level>=4 or
-                                          // log_level>=5
-        SCP_DEBUG("DEBUG.bar") << "SCP_DEBUG(DEBUG.bar)"; // displayed if  DEBUG.bar.log_level>=5 or
-                                                          // DEBUG.log_level>=5 or log_level>=5
+                                                // scp::LogConfig().logLevel(scp::log::INFO) or LOWER value
+                                                // (NONE, FATAL,ERORR, WARNING, INFO)
+        SCP_DEBUG("") << "SCP_DEBUG(empty)";    //  displayed if log_level>= 5
+        SCP_DEBUG("DEBUG.foo.me") << "SCP_DEBUG(DEBUG.foo.me)"; // displayed if DEBUG.foo.me.log_level>=5 or
+                                                                // DEBUG.foo.log_level>=5 or DEBUG.log_level>=4 or
+                                                                // log_level>=5
+        SCP_DEBUG("DEBUG.bar") << "SCP_DEBUG(DEBUG.bar)";       // displayed if  DEBUG.bar.log_level>=5 or
+                                                                // DEBUG.log_level>=5 or log_level>=5
     }
 
-    SC_CTOR (testA) { SC_METHOD(testA_method); }
+    SC_CTOR (testA) {
+        SC_METHOD(testA_method);
+    }
 };
 
 SC_MODULE (testB) {
-    void testB_method() {
+    void testB_method()
+    {
         int data;
         tlm::tlm_command cmd = static_cast<tlm::tlm_command>(tlm::TLM_READ_COMMAND);
         tlm::tlm_generic_payload txn;
@@ -121,10 +122,13 @@ SC_MODULE (testB) {
         txn.clear_extension(&ext);
     }
 
-    SC_CTOR (testB) { SC_METHOD(testB_method); }
+    SC_CTOR (testB) {
+        SC_METHOD(testB_method);
+    }
 };
 
-int sc_main(int argc, char** argv) {
+int sc_main(int argc, char** argv)
+{
     scp::init_logging(scp::LogConfig()
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(10));      // make the msg type column a bit tighter
@@ -139,6 +143,4 @@ int sc_main(int argc, char** argv) {
     return status;
 }
 
-TEST(luatest, all) {
-    sc_start(1, sc_core::SC_NS);
-}
+TEST(luatest, all) { sc_start(1, sc_core::SC_NS); }
