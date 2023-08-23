@@ -23,7 +23,7 @@ local UART0 = PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO
 platform["uart_qup_17"].input = false
 
 -- Number of gpus
-local NUM_GPUS = 1,
+local NUM_GPUS = 0,
 
 tableMerge(platform, {
     virtioblk_0 = {
@@ -76,6 +76,7 @@ tableMerge(platform, {
 
 });
 
+
 tableJoin(platform["load"], {
   { bin_file = valid_file(LRH_IMAGES_DIR .. "bl31_rh.bin"), address = INITIAL_DDR_SPACE_14GB };
   { bin_file = valid_file(LRH_IMAGES_DIR .. "vmlinux"), address = _KERNEL64_LOAD_ADDR };
@@ -109,7 +110,7 @@ tableJoin(platform["load"], {
 
 print (_KERNEL64_LOAD_ADDR);
 print (_DTB_LOAD_ADDR);
-platform["with_gpu"] = true;
+platform["with_gpu"] = false;
 
 if (platform.with_gpu == true) then
     if (NUM_GPUS > 0) then

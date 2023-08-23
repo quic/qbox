@@ -531,20 +531,20 @@ local num_cb = 128
 
 local smmu_index = 0;
 
+local smmu = {
+    moduletype = "smmu500",
+    dma = {bind = "&router.target_socket"},
+    target_socket = {address=0x15000000, size=0x100000, bind= "&router.initiator_socket"},
+    num_tbu = 2,
+    num_pages = 128,
+    num_cb = 128;
+    num_smr = 224,
+    irq_global = {bind = "&gic_0.spi_in_"..irq_global},
+}
 for i = 0, num_cb - 1 do
-    local smmu = {
-        moduletype = "smmu500",
-        dma = {bind = "&router.target_socket"},
-        target_socket = {address=0x15000000, size=0x100000, bind= "&router.initiator_socket"},
-        num_tbu = 2,
-        num_pages = 128,
-        num_cb = 128;
-        num_smr = 224,
-        irq_global = {bind = "&gic_0.spi_in_"..irq_global},
-    }
     smmu["irq_context_" .. i] = {bind = "&gic_0.spi_in_" .. irq_context + i}
-    platform["smmu_"..tostring(smmu_index)] = smmu;
 end
+platform["smmu_"..tostring(smmu_index)] = smmu;
 
 if (ARM_NUM_CPUS > 0) then
     local QUP_PITCH = 0x4000;
