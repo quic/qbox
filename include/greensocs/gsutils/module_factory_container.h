@@ -435,6 +435,7 @@ private:
         if (m_local_pass) {
             return m_local_pass->fw_transport_dbg(id, trans);
         }
+        return 0;
     }
 
     bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
@@ -442,6 +443,7 @@ private:
         if (m_local_pass) {
             return m_local_pass->fw_get_direct_mem_ptr(id, trans, dmi_data);
         }
+        return false;
     }
 
     void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
