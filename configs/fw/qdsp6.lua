@@ -294,7 +294,6 @@ function get_dsp(arch, base, ahbs_base, cfgtable, start_addr, ahb_size,
         isdben_secure  = true;
         isdben_trusted = true;
         hexagon_thread_0={ start_powered_off = false,
-            start_halted=true,
             sched_limit=sched_limit,
             dsp_arch=arch,
         };
