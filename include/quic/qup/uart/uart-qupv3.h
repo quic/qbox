@@ -94,18 +94,14 @@ public:
         { UART_MANUAL_RFR, 0x0 },
     };
     SC_HAS_PROCESS(QUPv3);
-    QUPv3(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : QUPv3(name)
-        {
-            set_backend(dynamic_cast<CharBackend*>(o));
-        }
+    QUPv3(const sc_core::sc_module_name& name, sc_core::sc_object* o): QUPv3(name)
+    {
+        set_backend(dynamic_cast<CharBackend*>(o));
+    }
 #ifdef QUP_UART_TEST
-    QUPv3(sc_core::sc_module_name name)
-        : irq("irq")
-        , dummy_target("dummy_target")
+    QUPv3(sc_core::sc_module_name name): irq("irq"), dummy_target("dummy_target")
 #else
-    QUPv3(sc_core::sc_module_name name)
-        : irq("irq")
+    QUPv3(sc_core::sc_module_name name): irq("irq")
 #endif
     {
         SCP_DEBUG(())("Constructor");
@@ -117,15 +113,17 @@ public:
         sensitive << update_event;
     }
 
-    void set_backend(CharBackend* backend) {
+    void set_backend(CharBackend* backend)
+    {
         chr = backend;
         chr->register_receive(this, qupv3_receive, qupv3_can_receive);
     }
 
-    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
+    {
         unsigned char* ptr = trans.get_data_ptr();
-        uint64_t addr      = trans.get_address();
-        uint32_t ptr_data  = 0;
+        uint64_t addr = trans.get_address();
+        uint32_t ptr_data = 0;
         /* call function to dump all the registers */
         trans.set_dmi_allowed(false);
         trans.set_response_status(tlm::TLM_OK_RESPONSE);
@@ -147,11 +145,12 @@ public:
 
     void qupv3_update() { update_event.notify(); }
 
-    int irq_level() {
-        return (qupv3_handle[GENI_M_IRQ_STATUS] & M_CMD_DONE) ||
-               (qupv3_handle[GENI_S_IRQ_STATUS] & (RX_FIFO_LAST));
+    int irq_level()
+    {
+        return (qupv3_handle[GENI_M_IRQ_STATUS] & M_CMD_DONE) || (qupv3_handle[GENI_S_IRQ_STATUS] & (RX_FIFO_LAST));
     }
-    void qupv3_update_sysc() {
+    void qupv3_update_sysc()
+    {
         SCP_DEBUG(())("Writing IRQ = 0x{:x}", irq_level());
         irq->write(irq_level());
 
@@ -164,7 +163,8 @@ public:
         }
     }
 
-    uint32_t qupv3_read(uint64_t offset) {
+    uint32_t qupv3_read(uint64_t offset)
+    {
         uint32_t c;
         uint32_t r;
 
@@ -187,8 +187,7 @@ public:
             qupv3_handle[GENI_S_IRQ_STATUS] &= ~RX_FIFO_LAST;
             {
                 int n = (qupv3_handle[GENI_RX_FIFO_STATUS] >> 28) & (GENI_RX_FIFO_MAX - 1);
-                if (n)
-                    n--;
+                if (n) n--;
                 if (n) {
                     qupv3_handle[GENI_RX_FIFO_STATUS] = (RX_LAST) | (n << 28);
                     for (int i = 0; i < n; i++) {
@@ -220,8 +219,7 @@ public:
             SCP_DEBUG(())("Manual RFR read");
             break;
         default:
-            SCP_WARN(()) << "Error: qupv3_read() Unhandled read(" << hex << offset
-                         << ") :  " << SE_HW_PARAM_0;
+            SCP_WARN(()) << "Error: qupv3_read() Unhandled read(" << hex << offset << ") :  " << SE_HW_PARAM_0;
             break;
             r = 0;
             break;
@@ -230,7 +228,8 @@ public:
         return r;
     }
 
-    void qupv3_write(uint64_t offset, uint32_t value) {
+    void qupv3_write(uint64_t offset, uint32_t value)
+    {
         unsigned char ch;
         SCP_DEBUG(()) << "in qupv3_write()";
         switch (offset) {
@@ -258,8 +257,7 @@ public:
              * line
              */
             ch = value;
-            if ((qupv3_handle[GENI_M_CMD_0] == 0x08000000) &&
-                (qupv3_handle[UART_TX_TRANS_LEN] >= 0x1)) {
+            if ((qupv3_handle[GENI_M_CMD_0] == 0x08000000) && (qupv3_handle[UART_TX_TRANS_LEN] >= 0x1)) {
                 int count = 0;
 
                 /* Write up to 4 bytes from single FIFO on every request from software */
@@ -271,8 +269,7 @@ public:
                 }
 
                 /* If no more data is left to write then set CMD_DONE irq bit */
-                if ((qupv3_handle[GENI_M_CMD_0] == 0x08000000) &&
-                    (qupv3_handle[UART_TX_TRANS_LEN] == 0)) {
+                if ((qupv3_handle[GENI_M_CMD_0] == 0x08000000) && (qupv3_handle[UART_TX_TRANS_LEN] == 0)) {
                     qupv3_handle[GENI_M_CMD_0] = 0x0;
                     qupv3_handle[GENI_M_IRQ_STATUS] |= M_CMD_DONE;
                     qupv3_update();
@@ -317,20 +314,22 @@ public:
             SCP_DEBUG(()) << hex << "Unhandled WRITE at offset :" << offset;
             break;
         default:
-            SCP_WARN(()) << hex << "Error: qupv3_write() Unhandled write(" << offset
-                         << "): " << value;
+            SCP_WARN(()) << hex << "Error: qupv3_write() Unhandled write(" << offset << "): " << value;
         }
     }
-    int get_fifo_has_space() {
+    int get_fifo_has_space()
+    {
         return ((qupv3_handle[GENI_RX_FIFO_STATUS] >> 28) < (GENI_RX_FIFO_MAX - 1)) &&
                (qupv3_handle[UART_MANUAL_RFR] != 0x80000002);
     }
-    static int qupv3_can_receive(void* opaque) {
+    static int qupv3_can_receive(void* opaque)
+    {
         QUPv3* uart = (QUPv3*)opaque;
         return uart->get_fifo_has_space();
     }
 
-    void qupv3_put_fifo(uint32_t value) {
+    void qupv3_put_fifo(uint32_t value)
+    {
         int n = (qupv3_handle[GENI_RX_FIFO_STATUS] >> 28) & (GENI_RX_FIFO_MAX - 1);
         assert(n < GENI_RX_FIFO_MAX);
         qupv3_handle[GENI_RX_FIFO_0 + n] = value;
@@ -340,7 +339,8 @@ public:
         qupv3_update();
     }
 
-    static void qupv3_receive(void* opaque, const uint8_t* buf, int size) {
+    static void qupv3_receive(void* opaque, const uint8_t* buf, int size)
+    {
         QUPv3* uart = (QUPv3*)opaque;
         uart->qupv3_put_fifo(*buf);
     }

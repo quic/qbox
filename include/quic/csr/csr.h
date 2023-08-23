@@ -83,7 +83,8 @@ public:
     tlm_utils::simple_target_socket<csr> socket;
 
 private:
-    void csr_update() {
+    void csr_update()
+    {
         if (nmi_gen) {
             nmi_triggered_csr = true;
             nmi->write(1);
@@ -96,7 +97,8 @@ private:
         hex_halt->write(!boot_status);
     }
 
-    void csr_write(uint64_t offset, uint64_t val, unsigned size) {
+    void csr_write(uint64_t offset, uint64_t val, unsigned size)
+    {
         switch (offset) {
         case QDSP6SS_NMI:
             nmi_clear_status = (val & NMI_CLEAR_STATUS_MASK);
@@ -119,7 +121,8 @@ private:
         update_ev.notify();
     }
 
-    uint64_t csr_read(uint64_t offset, unsigned size) {
+    uint64_t csr_read(uint64_t offset, unsigned size)
+    {
         switch (offset) {
             /* RO registers: */
         case QDSP6SS_VERSION:
@@ -185,7 +188,8 @@ private:
         return 0;
     }
 
-    void csr_reset() {
+    void csr_reset()
+    {
         nmi_gen = false;
         nmi_clear_status = false;
         nmi_triggered_csr = false;
@@ -195,7 +199,8 @@ private:
         csr_update();
     }
 
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
@@ -225,7 +230,8 @@ private:
 
 public:
     SC_HAS_PROCESS(csr);
-    csr(sc_core::sc_module_name name): socket("socket") {
+    csr(sc_core::sc_module_name name): socket("socket")
+    {
         socket.register_b_transport(this, &csr::b_transport);
         SC_THREAD(csr_reset);
 

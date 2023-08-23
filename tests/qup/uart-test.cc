@@ -55,10 +55,8 @@ public:
     InitiatorTester m_initiator;
 
     TestUart(const sc_core::sc_module_name& n)
-        : TestBench(n)
-        , m_uart("uart")
-        , u_backend_stdio("backend")
-        , m_initiator("initiator") {
+        : TestBench(n), m_uart("uart"), u_backend_stdio("backend"), m_initiator("initiator")
+    {
         m_initiator.socket.bind(m_uart.socket);
         m_uart.irq.bind(m_uart.dummy_target);
         m_uart.set_backend(&u_backend_stdio);
@@ -66,7 +64,8 @@ public:
 };
 
 /* Test QUP UART Tx */
-TEST_BENCH(TestUart, UartWrite) {
+TEST_BENCH(TestUart, UartWrite)
+{
     m_initiator.do_write(GENI_M_CMD_0, 0x08000000);
     m_initiator.do_write(UART_TX_TRANS_LEN, 0x1);
 
@@ -77,7 +76,8 @@ TEST_BENCH(TestUart, UartWrite) {
     sc_core::sc_stop();
 }
 
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char* argv[])
+{
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

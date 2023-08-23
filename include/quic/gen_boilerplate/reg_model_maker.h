@@ -43,8 +43,7 @@ class json_zip_archive
     zip_t* m_archive;
 
 public:
-    json_zip_archive(zip_t* archive)
-        : m_archive(archive)
+    json_zip_archive(zip_t* archive): m_archive(archive)
     {
         if (m_archive == nullptr) {
             SCP_FATAL()("Can't open zip archive");
@@ -531,10 +530,7 @@ public:
 
     json_module(sc_core::sc_module_name _name, json_zip_archive& jza, rapidjson::Value* _node = nullptr,
                 std::string _path = "", bool top = true)
-        : sc_core::sc_module(_name)
-        , m_broker(cci::cci_get_broker())
-        , target_socket("target_socket")
-        , m_router("router")
+        : sc_core::sc_module(_name), m_broker(cci::cci_get_broker()), target_socket("target_socket"), m_router("router")
     {
         //        json_read_cci(std::string(name()), zip_archive, _node, _path);
 

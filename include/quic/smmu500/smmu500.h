@@ -1131,7 +1131,8 @@ private:
     /* Compute the base offset (index into regs) for a given CB.  */
     unsigned int smmu_cb_offset(unsigned int cb) { return ((p_num_pages + cb) * PAGESIZE) / 4; }
 
-    void smmu_update_ctx_irq(unsigned int cb) {
+    void smmu_update_ctx_irq(unsigned int cb)
+    {
         unsigned int cb_offset = smmu_cb_offset(cb);
         uint32_t sctlr;
         uint32_t fsr;
@@ -1148,7 +1149,8 @@ private:
         //        qemu_set_irq(irq.context[cb], pending);
     }
 
-    void smmu_fault(unsigned int cb, TransReq* req, uint64_t syn) {
+    void smmu_fault(unsigned int cb, TransReq* req, uint64_t syn)
+    {
         unsigned int cb_offset = smmu_cb_offset(cb);
 
         regs[R_SMMU_CB0_FSR + cb_offset] |= 1 << 1;
@@ -1163,7 +1165,8 @@ private:
         smmu_update_ctx_irq(cb);
     }
 
-    int smmu_stream_id_match(uint32_t stream_id) {
+    int smmu_stream_id_match(uint32_t stream_id)
+    {
         unsigned int nr_smr = ARRAY_FIELD_EX32(regs, SMMU_SIDR0, NUMSMRG);
         unsigned int i;
         uint32_t s2cr;
@@ -1186,8 +1189,8 @@ private:
         return cbndx;
     }
 
-    bool check_s2_startlevel(bool is_aa64, unsigned int pamax, int level, int inputsize,
-                             int stride) {
+    bool check_s2_startlevel(bool is_aa64, unsigned int pamax, int level, int inputsize, int stride)
+    {
         /* Negative levels are never allowed.  */
         if (level < 0) {
             return false;
@@ -1232,14 +1235,16 @@ private:
         return true;
     }
 
-    bool check_out_addr(uint64_t addr, unsigned int outputsize) {
+    bool check_out_addr(uint64_t addr, unsigned int outputsize)
+    {
         if (outputsize != 48 && extract64(addr, outputsize, 48 - outputsize)) {
             return false;
         }
         return true;
     }
 
-    void dump_trans_req(TransReq const& tr) {
+    void dump_trans_req(TransReq const& tr)
+    {
         SCP_DEBUG(SCMOD) << "Translation Req\n"
                          << "VA: 0x" << tr.va << "\n"
                          << "TCR[0]: 0x" << tr.tcr[0] << "\n"
@@ -1255,7 +1260,8 @@ private:
                          << "Error: " << (tr.err ? "true" : "false") << "\n";
     }
 
-    void dump_cb_state(unsigned int cb) {
+    void dump_cb_state(unsigned int cb)
+    {
         unsigned int cb_offset = smmu_cb_offset(cb);
 
         SCP_DEBUG(SCMOD) << "CB" << cb << ":\n"
@@ -1266,12 +1272,10 @@ private:
                          << "IPAFAR.high=0x" << regs[R_SMMU_CB0_IPAFAR_HIGH + cb_offset] << "\n"
                          << "SCR0=0x" << regs[R_SMMU_SCR0 + cb_offset] << "\n"
                          << "NSCR0=0x" << regs[R_SMMU_NSCR0 + cb_offset] << "\n"
-                         << "CBFRSYNRA" << std::dec << cb << std::hex << "=0x"
-                         << regs[R_SMMU_CBFRSYNRA0 + cb_offset] << "\n"
-                         << "CBAR" << std::dec << cb << std::hex << "=0x" << regs[R_SMMU_CBAR0 + cb]
+                         << "CBFRSYNRA" << std::dec << cb << std::hex << "=0x" << regs[R_SMMU_CBFRSYNRA0 + cb_offset]
                          << "\n"
-                         << "CBA2R" << std::dec << cb << std::hex << "=0x"
-                         << regs[R_SMMU_CBA2R0 + cb] << "\n"
+                         << "CBAR" << std::dec << cb << std::hex << "=0x" << regs[R_SMMU_CBAR0 + cb] << "\n"
+                         << "CBA2R" << std::dec << cb << std::hex << "=0x" << regs[R_SMMU_CBA2R0 + cb] << "\n"
                          << "SCTLR=0x" << regs[R_SMMU_CB0_SCTLR + cb_offset] << "\n"
                          << "TTBR0.low=0x" << regs[R_SMMU_CB0_TTBR0_LOW + cb_offset] << "\n"
                          << "TTBR0.high=0x" << regs[R_SMMU_CB0_TTBR0_HIGH + cb_offset] << "\n";
@@ -1279,7 +1283,8 @@ private:
 
     void dump_state() { SCP_DEBUG(SCMOD) << "smmu regs:"; }
 
-    void smmu_ptw64(unsigned int cb, TransReq* req) {
+    void smmu_ptw64(unsigned int cb, TransReq* req)
+    {
         const unsigned int outsize_map[] = {
             [0] = 32, [1] = 36, [2] = 40, [3] = 42, [4] = 44, [5] = 48, [6] = 48, [7] = 48,
         };
@@ -1481,9 +1486,9 @@ private:
             type = desc & 3;
 
             SCP_INFO(SCMOD) << "S" << req->stage << " L" << level << " va=0x" << std::hex << req->va
-                            << " gz=" << grainsize << " descaddr=0x" << std::hex << descaddr
-                            << " desc=0x" << std::hex << desc << " asb=" << addrselectbottom
-                            << " index=0x" << std::hex << index << " osize=" << outputsize;
+                            << " gz=" << grainsize << " descaddr=0x" << std::hex << descaddr << " desc=0x" << std::hex
+                            << desc << " asb=" << addrselectbottom << " index=0x" << std::hex << index
+                            << " osize=" << outputsize;
             ttbr = extract64(desc, 0, 48);
             ttbr &= ~descmask;
 
@@ -1604,8 +1609,8 @@ private:
         smmu_fault(cb, req, level);
     }
 
-    bool smmu500_at64(unsigned int cb, uint64_t va, bool wr, bool s2, uint64_t* pa, int* prot,
-                      uint64_t* page_size) {
+    bool smmu500_at64(unsigned int cb, uint64_t va, bool wr, bool s2, uint64_t* pa, int* prot, uint64_t* page_size)
+    {
         unsigned int cb_offset = smmu_cb_offset(cb);
         unsigned int cb2_offset = 0;
         TransReq req;
@@ -1681,31 +1686,31 @@ private:
         return req.err;
     }
 
-    bool smmu500_at(unsigned int cb, uint64_t va, bool wr, bool s2, uint64_t* pa, int* prot,
-                    uint64_t* page_size) {
+    bool smmu500_at(unsigned int cb, uint64_t va, bool wr, bool s2, uint64_t* pa, int* prot, uint64_t* page_size)
+    {
         return smmu500_at64(cb, va, wr, s2, pa, prot, page_size);
     }
 
 #define ADDRMASK ((1ULL << 12) - 1)
 
-    void smmu500_gat(uint64_t v, bool wr, bool s2) {
-        uint64_t va = (v & ~ADDRMASK) & ((1llu << MAX_CB_SIZE) -
-                                         1); // the VA is limited tothe max size of a CB region
+    void smmu500_gat(uint64_t v, bool wr, bool s2)
+    {
+        uint64_t va = (v & ~ADDRMASK) & ((1llu << MAX_CB_SIZE) - 1); // the VA is limited tothe max size of a CB region
         unsigned int cb = v & ADDRMASK;
         uint64_t pa;
         int prot;
         bool err;
         uint64_t page_size;
 
-        SCP_INFO(SCMOD) << "ATS: va=0x" << std::hex << va << " cb=" << cb << " wr=" << wr
-                        << " s2=" << s2;
+        SCP_INFO(SCMOD) << "ATS: va=0x" << std::hex << va << " cb=" << cb << " wr=" << wr << " s2=" << s2;
         err = smmu500_at(cb, va, wr, s2, &pa, &prot, &page_size);
 
         regs[R_SMMU_GPAR] = pa | err;
         regs[R_SMMU_GPAR_H] = pa >> 32;
     }
 
-    void smmu_gats1pr_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void smmu_gats1pr_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         assert(txn.get_data_length() == 4);
         sc_dt::uint64 addr = txn.get_address();
         unsigned char* ptr = txn.get_data_ptr();
@@ -1718,7 +1723,8 @@ private:
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> smmu_gats1pr =
         [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) { smmu_gats1pr_f(txn, delay); };
 
-    void smmu_gats1pw_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void smmu_gats1pw_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         assert(txn.get_data_length() == 4);
         sc_dt::uint64 addr = txn.get_address();
         unsigned char* ptr = txn.get_data_ptr();
@@ -1731,7 +1737,8 @@ private:
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> smmu_gats1pw =
         [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) { smmu_gats1pw_f(txn, delay); };
 
-    void smmu_gats12pr_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void smmu_gats12pr_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         assert(txn.get_data_length() == 4);
         sc_dt::uint64 addr = txn.get_address();
         unsigned char* ptr = txn.get_data_ptr();
@@ -1742,11 +1749,10 @@ private:
         smmu500_gat(val, false, true);
     }
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> smmu_gats12pr =
-        [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
-            smmu_gats12pr_f(txn, delay);
-        };
+        [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) { smmu_gats12pr_f(txn, delay); };
 
-    void smmu_gats12pw_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void smmu_gats12pw_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         assert(txn.get_data_length() == 4);
         sc_dt::uint64 addr = txn.get_address();
         unsigned char* ptr = txn.get_data_ptr();
@@ -1757,11 +1763,10 @@ private:
         smmu500_gat(val, true, true);
     }
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> smmu_gats12pw =
-        [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
-            smmu_gats12pw_f(txn, delay);
-        };
+        [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) { smmu_gats12pw_f(txn, delay); };
 
-    void smmu_nscr0_pw_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void smmu_nscr0_pw_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         assert(txn.get_data_length() == 4);
         sc_dt::uint64 addr = txn.get_address();
         unsigned char* ptr = txn.get_data_ptr();
@@ -1772,11 +1777,10 @@ private:
         regs[R_SMMU_NSCR0] = val;
     }
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> smmu_nscr0_pw =
-        [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
-            smmu_nscr0_pw_f(txn, delay);
-        };
+        [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) { smmu_nscr0_pw_f(txn, delay); };
 
-    void smmu_fsr_pw_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void smmu_fsr_pw_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         unsigned int i;
 
         for (i = 0; i < 16; i++) {
@@ -1786,7 +1790,8 @@ private:
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> smmu_fsr_pw =
         [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) { smmu_fsr_pw_f(txn, delay); };
 
-    void smmu_tlbflush_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void smmu_tlbflush_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         sc_dt::uint64 addr = txn.get_address();
         unsigned char* ptr = txn.get_data_ptr();
         uint64_t val = (*(uint64_t*)ptr);
@@ -1802,11 +1807,10 @@ private:
         }
     }
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> smmu_tlbflush =
-        [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
-            smmu_tlbflush_f(txn, delay);
-        };
+        [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) { smmu_tlbflush_f(txn, delay); };
 
-    void smmu_tlbflush_all_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void smmu_tlbflush_all_f(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         for (auto tbu : tbus) {
             tbu->start_invalidates();
         }
@@ -1820,12 +1824,11 @@ private:
         }
     }
     std::function<void(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)> smmu_tlbflush_all =
-        [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
-            smmu_tlbflush_all_f(txn, delay);
-        };
+        [&](tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) { smmu_tlbflush_all_f(txn, delay); };
 
 public:
-    IOMMUTLBEntry smmu_translate(tlm::tlm_generic_payload& txn, uint64_t sid) {
+    IOMMUTLBEntry smmu_translate(tlm::tlm_generic_payload& txn, uint64_t sid)
+    {
         //                                 uint64_t offset, uint64_t size) {
         //
         //        IOMMUMemoryRegion* mr, uint64_t addr,
@@ -1873,7 +1876,8 @@ public:
     }
 
 protected:
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
@@ -1895,12 +1899,10 @@ protected:
             if (len == 4) {
                 *(uint32_t*)ptr = regs[(addr / 4)];
             } else {
-                *(uint64_t*)ptr = (uint64_t)(regs[addr / 4]) |
-                                  ((uint64_t)(regs[(addr / 4) + 1]) << 32);
+                *(uint64_t*)ptr = (uint64_t)(regs[addr / 4]) | ((uint64_t)(regs[(addr / 4) + 1]) << 32);
             }
             info << " read from";
-            for (int i = 0; i < len / 4;
-                 i++) { // need to do it like this to pick up the AC for each register...
+            for (int i = 0; i < len / 4; i++) { // need to do it like this to pick up the AC for each register...
                 RegisterAccessInfo* ac = &regs_access_info[(addr / 4) + i];
                 assert(ac->name);
                 if (ac->post_read) {
@@ -1924,8 +1926,7 @@ protected:
                 vals[1] = (uint32_t)((*(uint64_t*)ptr) >> 32);
             }
             info << " write to ";
-            for (int i = 0; i < len / 4;
-                 i++) { // need to do it like this to pick up the AC for each register...
+            for (int i = 0; i < len / 4; i++) { // need to do it like this to pick up the AC for each register...
                 RegisterAccessInfo* ac = &regs_access_info[(addr / 4) + i];
                 assert(ac->name);
 
@@ -2626,240 +2627,238 @@ protected:
                                                               .addr = A_SMMU_CBA2R0,
                                                           } };
 
-    std::vector<RegisterAccessInfo> smmu_cb_page_regs_info = {
-        {
-            .name = "SCTLR",
-            .addr = A_SMMU_CB0_SCTLR,
-            .reset = 0x100,
-            .ro = 0x1000,
-        },
-        {
-            .name = "ACTLR",
-            .addr = A_SMMU_CB0_ACTLR,
-            .reset = 0x3,
-        },
-        {
-            .name = "RESUME",
-            .addr = A_SMMU_CB0_RESUME,
-        },
-        {
-            .name = "TCR2",
-            .addr = A_SMMU_CB0_TCR2,
-            .reset = 0x60,
-            .ro = 0x60,
-        },
-        {
-            .name = "TTBR0_LOW",
-            .addr = A_SMMU_CB0_TTBR0_LOW,
-            .ro = 0x4,
-        },
-        {
-            .name = "TTBR0_HIGH",
-            .addr = A_SMMU_CB0_TTBR0_HIGH,
-        },
-        {
-            .name = "TTBR1_LOW",
-            .addr = A_SMMU_CB0_TTBR1_LOW,
-        },
-        {
-            .name = "TTBR1_HIGH",
-            .addr = A_SMMU_CB0_TTBR1_HIGH,
-        },
-        {
-            .name = "TCR_LPAE",
-            .addr = A_SMMU_CB0_TCR_LPAE,
-        },
-        {
-            .name = "CONTEXTIDR",
-            .addr = A_SMMU_CB0_CONTEXTIDR,
-        },
-        {
-            .name = "PRRR_MAIR0",
-            .addr = A_SMMU_CB0_PRRR_MAIR0,
-        },
-        {
-            .name = "NMRR_MAIR1",
-            .addr = A_SMMU_CB0_NMRR_MAIR1,
-        },
-        {
-            .name = "FSR",
-            .addr = A_SMMU_CB0_FSR,
-            .w1c = 0xffffffff,
-            .post_write = smmu_fsr_pw,
-        },
-        {
-            .name = "FSRRESTORE",
-            .addr = A_SMMU_CB0_FSRRESTORE,
-        },
-        {
-            .name = "FAR_LOW",
-            .addr = A_SMMU_CB0_FAR_LOW,
-        },
-        {
-            .name = "FAR_HIGH",
-            .addr = A_SMMU_CB0_FAR_HIGH,
-        },
-        {
-            .name = "FSYNR0",
-            .addr = A_SMMU_CB0_FSYNR0,
-            .ro = 0x200,
-        },
-        {
-            .name = "IPAFAR_LOW",
-            .addr = A_SMMU_CB0_IPAFAR_LOW,
-            .ro = 0xfff,
-        },
-        {
-            .name = "IPAFAR_HIGH",
-            .addr = A_SMMU_CB0_IPAFAR_HIGH,
-        },
-        {
-            .name = "TLBIVA_LOW",
-            .addr = A_SMMU_CB0_TLBIVA_LOW,
-        },
-        {
-            .name = "TLBIVA_HIGH",
-            .addr = A_SMMU_CB0_TLBIVA_HIGH,
-        },
-        {
-            .name = "TLBIVAA_LOW",
-            .addr = A_SMMU_CB0_TLBIVAA_LOW,
-        },
-        {
-            .name = "TLBIVAA_HIGH",
-            .addr = A_SMMU_CB0_TLBIVAA_HIGH,
-        },
-        {
-            .name = "TLBIASID",
-            .addr = A_SMMU_CB0_TLBIASID,
-            .post_write = smmu_tlbflush,
-        },
-        {
-            .name = "TLBIALL",
-            .addr = A_SMMU_CB0_TLBIALL,
-            .post_write = smmu_tlbflush_all,
-        },
-        {
-            .name = "TLBIVAL_LOW",
-            .addr = A_SMMU_CB0_TLBIVAL_LOW,
-        },
-        {
-            .name = "TLBIVAL_HIGH",
-            .addr = A_SMMU_CB0_TLBIVAL_HIGH,
-        },
-        {
-            .name = "TLBIVAAL_LOW",
-            .addr = A_SMMU_CB0_TLBIVAAL_LOW,
-        },
-        {
-            .name = "TLBIVAAL_HIGH",
-            .addr = A_SMMU_CB0_TLBIVAAL_HIGH,
-        },
-        {
-            .name = "TLBIIPAS2_LOW",
-            .addr = A_SMMU_CB0_TLBIIPAS2_LOW,
-        },
-        {
-            .name = "TLBIIPAS2_HIGH",
-            .addr = A_SMMU_CB0_TLBIIPAS2_HIGH,
-        },
-        {
-            .name = "TLBIIPAS2L_LOW",
-            .addr = A_SMMU_CB0_TLBIIPAS2L_LOW,
-        },
-        {
-            .name = "TLBIIPAS2L_HIGH",
-            .addr = A_SMMU_CB0_TLBIIPAS2L_HIGH,
-        },
-        {
-            .name = "TLBSYNC",
-            .addr = A_SMMU_CB0_TLBSYNC,
-        },
-        {
-            .name = "TLBSTATUS",
-            .addr = A_SMMU_CB0_TLBSTATUS,
-            .ro = 0x1,
-        },
-        {
-            .name = "PMEVCNTR0",
-            .addr = A_SMMU_CB0_PMEVCNTR0,
-        },
-        {
-            .name = "PMEVCNTR1",
-            .addr = A_SMMU_CB0_PMEVCNTR1,
-        },
-        {
-            .name = "PMEVCNTR2",
-            .addr = A_SMMU_CB0_PMEVCNTR2,
-        },
-        {
-            .name = "PMEVCNTR3",
-            .addr = A_SMMU_CB0_PMEVCNTR3,
-        },
-        {
-            .name = "PMEVTYPER0",
-            .addr = A_SMMU_CB0_PMEVTYPER0,
-        },
-        {
-            .name = "PMEVTYPER1",
-            .addr = A_SMMU_CB0_PMEVTYPER1,
-        },
-        {
-            .name = "PMEVTYPER2",
-            .addr = A_SMMU_CB0_PMEVTYPER2,
-        },
-        {
-            .name = "PMEVTYPER3",
-            .addr = A_SMMU_CB0_PMEVTYPER3,
-        },
-        {
-            .name = "PMCFGR",
-            .addr = A_SMMU_CB0_PMCFGR,
-            .reset = 0x11f03,
-            .ro = 0xff09ffff,
-        },
-        {
-            .name = "PMCR",
-            .addr = A_SMMU_CB0_PMCR,
-            .ro = 0xff000002,
-        },
-        {
-            .name = "PMCEID",
-            .addr = A_SMMU_CB0_PMCEID,
-            .reset = 0x30303,
-            .ro = 0x38383,
-        },
-        {
-            .name = "PMCNTENSE",
-            .addr = A_SMMU_CB0_PMCNTENSE,
-        },
-        {
-            .name = "PMCNTENCLR",
-            .addr = A_SMMU_CB0_PMCNTENCLR,
-        },
-        {
-            .name = "PMCNTENSET",
-            .addr = A_SMMU_CB0_PMCNTENSET,
-        },
-        {
-            .name = "PMINTENCLR",
-            .addr = A_SMMU_CB0_PMINTENCLR,
-        },
-        {
-            .name = "PMOVSCLR",
-            .addr = A_SMMU_CB0_PMOVSCLR,
-        },
-        {
-            .name = "PMOVSSET",
-            .addr = A_SMMU_CB0_PMOVSSET,
-        },
-        {
-            .name = "PMAUTHSTATUS",
-            .addr = A_SMMU_CB0_PMAUTHSTATUS,
-            .reset = 0x80,
-            .ro = 0xff,
-        }
-    };
+    std::vector<RegisterAccessInfo> smmu_cb_page_regs_info = { {
+                                                                   .name = "SCTLR",
+                                                                   .addr = A_SMMU_CB0_SCTLR,
+                                                                   .reset = 0x100,
+                                                                   .ro = 0x1000,
+                                                               },
+                                                               {
+                                                                   .name = "ACTLR",
+                                                                   .addr = A_SMMU_CB0_ACTLR,
+                                                                   .reset = 0x3,
+                                                               },
+                                                               {
+                                                                   .name = "RESUME",
+                                                                   .addr = A_SMMU_CB0_RESUME,
+                                                               },
+                                                               {
+                                                                   .name = "TCR2",
+                                                                   .addr = A_SMMU_CB0_TCR2,
+                                                                   .reset = 0x60,
+                                                                   .ro = 0x60,
+                                                               },
+                                                               {
+                                                                   .name = "TTBR0_LOW",
+                                                                   .addr = A_SMMU_CB0_TTBR0_LOW,
+                                                                   .ro = 0x4,
+                                                               },
+                                                               {
+                                                                   .name = "TTBR0_HIGH",
+                                                                   .addr = A_SMMU_CB0_TTBR0_HIGH,
+                                                               },
+                                                               {
+                                                                   .name = "TTBR1_LOW",
+                                                                   .addr = A_SMMU_CB0_TTBR1_LOW,
+                                                               },
+                                                               {
+                                                                   .name = "TTBR1_HIGH",
+                                                                   .addr = A_SMMU_CB0_TTBR1_HIGH,
+                                                               },
+                                                               {
+                                                                   .name = "TCR_LPAE",
+                                                                   .addr = A_SMMU_CB0_TCR_LPAE,
+                                                               },
+                                                               {
+                                                                   .name = "CONTEXTIDR",
+                                                                   .addr = A_SMMU_CB0_CONTEXTIDR,
+                                                               },
+                                                               {
+                                                                   .name = "PRRR_MAIR0",
+                                                                   .addr = A_SMMU_CB0_PRRR_MAIR0,
+                                                               },
+                                                               {
+                                                                   .name = "NMRR_MAIR1",
+                                                                   .addr = A_SMMU_CB0_NMRR_MAIR1,
+                                                               },
+                                                               {
+                                                                   .name = "FSR",
+                                                                   .addr = A_SMMU_CB0_FSR,
+                                                                   .w1c = 0xffffffff,
+                                                                   .post_write = smmu_fsr_pw,
+                                                               },
+                                                               {
+                                                                   .name = "FSRRESTORE",
+                                                                   .addr = A_SMMU_CB0_FSRRESTORE,
+                                                               },
+                                                               {
+                                                                   .name = "FAR_LOW",
+                                                                   .addr = A_SMMU_CB0_FAR_LOW,
+                                                               },
+                                                               {
+                                                                   .name = "FAR_HIGH",
+                                                                   .addr = A_SMMU_CB0_FAR_HIGH,
+                                                               },
+                                                               {
+                                                                   .name = "FSYNR0",
+                                                                   .addr = A_SMMU_CB0_FSYNR0,
+                                                                   .ro = 0x200,
+                                                               },
+                                                               {
+                                                                   .name = "IPAFAR_LOW",
+                                                                   .addr = A_SMMU_CB0_IPAFAR_LOW,
+                                                                   .ro = 0xfff,
+                                                               },
+                                                               {
+                                                                   .name = "IPAFAR_HIGH",
+                                                                   .addr = A_SMMU_CB0_IPAFAR_HIGH,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIVA_LOW",
+                                                                   .addr = A_SMMU_CB0_TLBIVA_LOW,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIVA_HIGH",
+                                                                   .addr = A_SMMU_CB0_TLBIVA_HIGH,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIVAA_LOW",
+                                                                   .addr = A_SMMU_CB0_TLBIVAA_LOW,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIVAA_HIGH",
+                                                                   .addr = A_SMMU_CB0_TLBIVAA_HIGH,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIASID",
+                                                                   .addr = A_SMMU_CB0_TLBIASID,
+                                                                   .post_write = smmu_tlbflush,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIALL",
+                                                                   .addr = A_SMMU_CB0_TLBIALL,
+                                                                   .post_write = smmu_tlbflush_all,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIVAL_LOW",
+                                                                   .addr = A_SMMU_CB0_TLBIVAL_LOW,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIVAL_HIGH",
+                                                                   .addr = A_SMMU_CB0_TLBIVAL_HIGH,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIVAAL_LOW",
+                                                                   .addr = A_SMMU_CB0_TLBIVAAL_LOW,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIVAAL_HIGH",
+                                                                   .addr = A_SMMU_CB0_TLBIVAAL_HIGH,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIIPAS2_LOW",
+                                                                   .addr = A_SMMU_CB0_TLBIIPAS2_LOW,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIIPAS2_HIGH",
+                                                                   .addr = A_SMMU_CB0_TLBIIPAS2_HIGH,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIIPAS2L_LOW",
+                                                                   .addr = A_SMMU_CB0_TLBIIPAS2L_LOW,
+                                                               },
+                                                               {
+                                                                   .name = "TLBIIPAS2L_HIGH",
+                                                                   .addr = A_SMMU_CB0_TLBIIPAS2L_HIGH,
+                                                               },
+                                                               {
+                                                                   .name = "TLBSYNC",
+                                                                   .addr = A_SMMU_CB0_TLBSYNC,
+                                                               },
+                                                               {
+                                                                   .name = "TLBSTATUS",
+                                                                   .addr = A_SMMU_CB0_TLBSTATUS,
+                                                                   .ro = 0x1,
+                                                               },
+                                                               {
+                                                                   .name = "PMEVCNTR0",
+                                                                   .addr = A_SMMU_CB0_PMEVCNTR0,
+                                                               },
+                                                               {
+                                                                   .name = "PMEVCNTR1",
+                                                                   .addr = A_SMMU_CB0_PMEVCNTR1,
+                                                               },
+                                                               {
+                                                                   .name = "PMEVCNTR2",
+                                                                   .addr = A_SMMU_CB0_PMEVCNTR2,
+                                                               },
+                                                               {
+                                                                   .name = "PMEVCNTR3",
+                                                                   .addr = A_SMMU_CB0_PMEVCNTR3,
+                                                               },
+                                                               {
+                                                                   .name = "PMEVTYPER0",
+                                                                   .addr = A_SMMU_CB0_PMEVTYPER0,
+                                                               },
+                                                               {
+                                                                   .name = "PMEVTYPER1",
+                                                                   .addr = A_SMMU_CB0_PMEVTYPER1,
+                                                               },
+                                                               {
+                                                                   .name = "PMEVTYPER2",
+                                                                   .addr = A_SMMU_CB0_PMEVTYPER2,
+                                                               },
+                                                               {
+                                                                   .name = "PMEVTYPER3",
+                                                                   .addr = A_SMMU_CB0_PMEVTYPER3,
+                                                               },
+                                                               {
+                                                                   .name = "PMCFGR",
+                                                                   .addr = A_SMMU_CB0_PMCFGR,
+                                                                   .reset = 0x11f03,
+                                                                   .ro = 0xff09ffff,
+                                                               },
+                                                               {
+                                                                   .name = "PMCR",
+                                                                   .addr = A_SMMU_CB0_PMCR,
+                                                                   .ro = 0xff000002,
+                                                               },
+                                                               {
+                                                                   .name = "PMCEID",
+                                                                   .addr = A_SMMU_CB0_PMCEID,
+                                                                   .reset = 0x30303,
+                                                                   .ro = 0x38383,
+                                                               },
+                                                               {
+                                                                   .name = "PMCNTENSE",
+                                                                   .addr = A_SMMU_CB0_PMCNTENSE,
+                                                               },
+                                                               {
+                                                                   .name = "PMCNTENCLR",
+                                                                   .addr = A_SMMU_CB0_PMCNTENCLR,
+                                                               },
+                                                               {
+                                                                   .name = "PMCNTENSET",
+                                                                   .addr = A_SMMU_CB0_PMCNTENSET,
+                                                               },
+                                                               {
+                                                                   .name = "PMINTENCLR",
+                                                                   .addr = A_SMMU_CB0_PMINTENCLR,
+                                                               },
+                                                               {
+                                                                   .name = "PMOVSCLR",
+                                                                   .addr = A_SMMU_CB0_PMOVSCLR,
+                                                               },
+                                                               {
+                                                                   .name = "PMOVSSET",
+                                                                   .addr = A_SMMU_CB0_PMOVSSET,
+                                                               },
+                                                               {
+                                                                   .name = "PMAUTHSTATUS",
+                                                                   .addr = A_SMMU_CB0_PMAUTHSTATUS,
+                                                                   .reset = 0x80,
+                                                                   .ro = 0xff,
+                                                               } };
 
 public:
     smmu500(sc_core::sc_module_name name)
@@ -2872,10 +2871,10 @@ public:
         , p_version("version", 0x21, "")
         , p_num_tbu("num_tbu", 1, "")
         , irq_global("irq_global")
-        , irq_context(
-              "irq_context", p_num_cb,
-              [this](const char* n, size_t i) { return new InitiatorSignalSocket<bool>(n); })
-        , dma_socket("dma") {
+        , irq_context("irq_context", p_num_cb,
+                      [this](const char* n, size_t i) { return new InitiatorSignalSocket<bool>(n); })
+        , dma_socket("dma")
+    {
         socket.register_b_transport(this, &smmu500<BUSWIDTH>::b_transport);
 
         regs_access_info = (RegisterAccessInfo*)malloc(R_MAX * sizeof(RegisterAccessInfo));
@@ -2894,8 +2893,7 @@ public:
         for (int cb = 0; cb < p_num_cb; cb++) {
             for (int i = 0; i < smmu_cb_page_regs_info.size(); i++) {
                 unsigned int cb_base = smmu_cb_offset(cb);
-                regs_access_info[cb_base + ((smmu_cb_page_regs_info[i].addr) /
-                                            4)] = smmu_cb_page_regs_info[i];
+                regs_access_info[cb_base + ((smmu_cb_page_regs_info[i].addr) / 4)] = smmu_cb_page_regs_info[i];
             }
             for (int i = 0; i < smmu_cb_regs_info.size(); i++) {
                 regs_access_info[cb + (smmu_cb_regs_info[i].addr / 4)] = smmu_cb_regs_info[i];
@@ -2929,7 +2927,8 @@ class smmu500_tbu : public sc_core::sc_module
     bool dmi_range_valid[MAX_CB] = { false };
 
 protected:
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         unsigned int len = txn.get_data_length();
         sc_dt::uint64 addr = txn.get_address();
         tlm::tlm_command cmd = txn.get_command();
@@ -2942,16 +2941,16 @@ protected:
             txn.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
         } else {
             //            uint64_t page_size = (te.addr_mask + 1);
-            txn.set_address(te.translated_addr |
-                            (addr & te.addr_mask)); // FIX better handled in smmu_translate?
-            SCP_INFO(SCMOD) << "smmu TBU b_transport: translate 0x" << std::hex << addr << " to 0x"
-                            << std::hex << te.translated_addr;
+            txn.set_address(te.translated_addr | (addr & te.addr_mask)); // FIX better handled in smmu_translate?
+            SCP_INFO(SCMOD) << "smmu TBU b_transport: translate 0x" << std::hex << addr << " to 0x" << std::hex
+                            << te.translated_addr;
             downstream_socket->b_transport(txn, delay);
             txn.set_address(addr);
         }
     }
 
-    virtual unsigned int transport_dbg(tlm::tlm_generic_payload& txn) {
+    virtual unsigned int transport_dbg(tlm::tlm_generic_payload& txn)
+    {
         unsigned int len = txn.get_data_length();
         sc_dt::uint64 addr = txn.get_address();
 
@@ -2966,7 +2965,8 @@ protected:
         return ret;
     }
 
-    virtual bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data) {
+    virtual bool get_direct_mem_ptr(tlm::tlm_generic_payload& txn, tlm::tlm_dmi& dmi_data)
+    {
         if (!m_dmi_invalidate_lock.try_lock()) {
             return false;
         }
@@ -3003,9 +3003,8 @@ protected:
             m_dmi_invalidate_lock.unlock();
             return ret;
         }
-        uint64_t offset = page_base -
-                          dmi_data.get_start_address(); // start_address must be <= page_base,
-                                                        // otherwise the DMI is meaningless
+        uint64_t offset = page_base - dmi_data.get_start_address(); // start_address must be <= page_base,
+                                                                    // otherwise the DMI is meaningless
         assert(offset >= 0);
         assert(page_base + page_size <= dmi_data.get_end_address());
         uint64_t start = addr & (~(page_size - 1));
@@ -3025,10 +3024,9 @@ protected:
         dmi_range_valid[CB] = true;
 
         SCP_INFO(SCMOD) << "smmu TBU DMI: translate 0x%" << std::hex << addr << " to 0x" << std::hex
-                        << te.translated_addr << " pg size=" << page_size << " pg base 0x"
-                        << std::hex << page_base << " offset 0x" << std::hex << offset
-                        << " start 0x" << std::hex << dmi_data.get_start_address() << " end 0x"
-                        << std::hex << dmi_data.get_end_address();
+                        << te.translated_addr << " pg size=" << page_size << " pg base 0x" << std::hex << page_base
+                        << " offset 0x" << std::hex << offset << " start 0x" << std::hex << dmi_data.get_start_address()
+                        << " end 0x" << std::hex << dmi_data.get_end_address();
 
         txn.set_address(addr);
         m_dmi_invalidate_lock.unlock();
@@ -3043,13 +3041,14 @@ public:
     tlm_utils::simple_initiator_socket<smmu500_tbu, BUSWIDTH> downstream_socket;
 
     smmu500_tbu(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-    : smmu500_tbu(name, (dynamic_cast<smmu500<BUSWIDTH>*>(o)))
+        : smmu500_tbu(name, (dynamic_cast<smmu500<BUSWIDTH>*>(o)))
     {
     }
     smmu500_tbu(sc_core::sc_module_name name, smmu500<BUSWIDTH>* _smmu)
         : p_topology_id("topology_id", 0x0, "Topology ID for this TBU")
         , upstream_socket("upstream_socket")
-        , downstream_socket("downstream_socket") {
+        , downstream_socket("downstream_socket")
+    {
         smmu = _smmu;
         smmu->tbus.push_back(this);
         upstream_socket.register_b_transport(this, &smmu500_tbu::b_transport);
@@ -3060,14 +3059,15 @@ public:
     void start_invalidates() { m_dmi_invalidate_lock.lock(); }
     void stop_invalidates() { m_dmi_invalidate_lock.unlock(); }
 
-    void invalidate(uint32_t CB) {
+    void invalidate(uint32_t CB)
+    {
         if (dmi_range_valid[CB]) {
             upstream_socket->invalidate_direct_mem_ptr(dmi_range[CB].first, dmi_range[CB].second);
         }
         dmi_range_valid[CB] = false;
     }
 };
-}
+} // namespace gs
 
 typedef gs::smmu500<> smmu500;
 GSC_MODULE_REGISTER(smmu500);

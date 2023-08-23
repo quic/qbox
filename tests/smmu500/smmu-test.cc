@@ -5,7 +5,8 @@
 #include <greensocs/gsutils/cciutils.h>
 #include <memory>
 
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char* argv[])
+{
     auto m_broker = std::make_unique<gs::ConfigurableBroker>(argc, argv);
     gs::smmu500<> smmu("test_smmu");
     return 0;

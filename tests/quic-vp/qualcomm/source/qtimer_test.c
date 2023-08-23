@@ -30,12 +30,10 @@ int main()
     int i;
     exit_flag = 0;
     printf("\nCSR base=0x%x; L2VIC base=0x%x\n", CSR_BASE, L2VIC_BASE);
-    printf("QTimer1 will go off 20 times (once every 1/%d sec).\n",
-           (QTMR_FREQ) / (ticks_per_qtimer1));
-    printf("QTimer2 will go off 2 times (once every 1/%d sec).\n\n",
-           (QTMR_FREQ) / (ticks_per_qtimer2));
+    printf("QTimer1 will go off 20 times (once every 1/%d sec).\n", (QTMR_FREQ) / (ticks_per_qtimer1));
+    printf("QTimer2 will go off 2 times (once every 1/%d sec).\n\n", (QTMR_FREQ) / (ticks_per_qtimer2));
 
-    add_translation((void *)CSR_BASE, (void *)CSR_BASE, 4);
+    add_translation((void*)CSR_BASE, (void*)CSR_BASE, 4);
 
     enable_core_interrupt();
 
@@ -49,7 +47,7 @@ int main()
          *  all threads are waiting.
          */
         asm_wait();
-	printf ("qtimer_cnt1 = %d, qtimer_cnt2 = %d\n", qtimer1_cnt, qtimer2_cnt);
+        printf("qtimer_cnt1 = %d, qtimer_cnt2 = %d\n", qtimer1_cnt, qtimer2_cnt);
     }
     printf("PASS\n");
     return 0;

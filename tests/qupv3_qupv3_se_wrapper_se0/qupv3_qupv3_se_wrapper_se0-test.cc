@@ -50,7 +50,8 @@ public:
         , m_backend_stdio("backend")
         , m_router("router")
         , m_initiator("initiator")
-        , m_signal("irq") {
+        , m_signal("irq")
+    {
         m_initiator.socket.bind(m_router.target_socket);
         m_router.initiator_socket(m_uart.target_socket);
         m_uart.backend_socket.bind(m_backend_stdio.socket);
@@ -60,7 +61,8 @@ public:
 };
 
 /* Test QUP UART Tx */
-TEST_BENCH(TestUart, UartWrite) {
+TEST_BENCH(TestUart, UartWrite)
+{
     m_initiator.do_write(0x600, 0x08000000);
     m_initiator.do_write(0x270, 0x5); // print ABCDE but not X
 
@@ -76,7 +78,8 @@ TEST_BENCH(TestUart, UartWrite) {
     sc_core::sc_stop();
 }
 
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char* argv[])
+{
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)
                           .logAsync(false)

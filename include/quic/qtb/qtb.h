@@ -36,7 +36,8 @@ public:
     tlm_utils::simple_target_socket<qtb, BUSWIDTH> control_socket;
 
 private:
-    void b_transport_control(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
+    void b_transport_control(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
+    {
         unsigned char* ptr = trans.get_data_ptr();
         sc_dt::uint64 addr = trans.get_address();
 
@@ -101,7 +102,8 @@ private:
         }
     }
 
-    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
+    {
         triggered = true;
         sc_dt::uint64 addr = trans.get_address();
         SCP_INFO(SCMOD) << "received from TBU: " << std::hex << addr;
@@ -114,7 +116,8 @@ public:
         : sc_core::sc_module(nm)
         , initiator_socket("initiator_socket")
         , target_socket("target_socket")
-        , control_socket("control_socket") {
+        , control_socket("control_socket")
+    {
         control_socket.register_b_transport(this, &qtb::b_transport_control);
         target_socket.register_b_transport(this, &qtb::b_transport);
     }

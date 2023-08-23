@@ -88,30 +88,27 @@
 class GreenSocsPlatform : public gs::ModuleFactory::Container
 {
 protected:
-
     cci::cci_param<int> p_quantum_ns;
 
 public:
     GreenSocsPlatform(const sc_core::sc_module_name& n)
-        : gs::ModuleFactory::Container(n)
-        , p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
-        {
+        : gs::ModuleFactory::Container(n), p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
+    {
         using tlm_utils::tlm_quantumkeeper;
 
         SCP_DEBUG(()) << "Constructor";
 
         sc_core::sc_time global_quantum(p_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);
-
     }
 
     SCP_LOGGER(());
 
-    ~GreenSocsPlatform() {
-    }
+    ~GreenSocsPlatform() {}
 };
 
-static void parse_local_args(int argc, char* argv[]) {
+static void parse_local_args(int argc, char* argv[])
+{
     // getopt permutes argv array, so copy it to argv_cp
     const int BUFFER_SIZE = 8192;
     char argv_buffer[BUFFER_SIZE];
@@ -133,8 +130,7 @@ static void parse_local_args(int argc, char* argv[]) {
                                             { 0, 0, 0, 0 } };
     while (1) {
         int c = getopt_long(argc, argv_cp, optstring, long_options, 0);
-        if (c == EOF)
-            break;
+        if (c == EOF) break;
         if (c == 'h') {
             std::cout << "\nPossible Options/Arguments:\n"
                          "\n"
@@ -161,8 +157,7 @@ static void parse_local_args(int argc, char* argv[]) {
                       << std::flush;
             exit(0);
         } else if (c == 'v') {
-            std::cout << "\nQualcomm QEMU-Virtual Platform " << QQVP_VERSION << "\n"
-                      << std::flush;
+            std::cout << "\nQualcomm QEMU-Virtual Platform " << QQVP_VERSION << "\n" << std::flush;
             exit(0);
         }
     }
@@ -170,7 +165,8 @@ static void parse_local_args(int argc, char* argv[]) {
     delete[] argv_cp;
 }
 
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char* argv[])
+{
     parse_local_args(argc, argv);
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)
@@ -207,8 +203,7 @@ int sc_main(int argc, char* argv[]) {
     auto end = std::chrono::system_clock::now();
 
     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-    std::cout << "Simulation Time: " << sc_core::sc_time_stamp().to_seconds() << "SC_SEC"
-              << std::endl;
+    std::cout << "Simulation Time: " << sc_core::sc_time_stamp().to_seconds() << "SC_SEC" << std::endl;
     std::cout << "Simulation Duration: " << elapsed.count() << "s (Wall Clock)" << std::endl;
 
     return 0;

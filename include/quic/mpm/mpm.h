@@ -55,7 +55,8 @@ private:
     // more reliable initial state.
     uint32_t register_range[REGION_SIZE / 4];
 
-    void dev_write(uint64_t offset, uint32_t val, unsigned size) {
+    void dev_write(uint64_t offset, uint32_t val, unsigned size)
+    {
         SCP_DEBUG(SCMOD) << std::hex << "write offset " << offset;
         uint32_t reg_index = offset / 4;
         switch (offset) {
@@ -85,7 +86,8 @@ private:
         update_ev.notify();
     }
 
-    uint32_t dev_read(uint64_t offset, unsigned size) {
+    uint32_t dev_read(uint64_t offset, unsigned size)
+    {
         SCP_DEBUG(SCMOD) << std::hex << "read offset " << offset;
         double time = sc_core::sc_time_stamp().to_seconds();
         uint64_t clocks = time * register_range[MPM_CONTROL_CNTFID0 / 4];
@@ -118,14 +120,16 @@ private:
         return 0;
     }
 
-    void dev_reset() {
+    void dev_reset()
+    {
         memset(register_range, 0, sizeof(register_range));
         register_range[MPM_CONTROL_CNTFID0 / 4] = 0x124F800;
         register_range[MPM_CONTROL_ID / 4] = 0x10000000;
         dev_update();
     }
 
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
@@ -155,7 +159,8 @@ private:
 
 public:
     SC_HAS_PROCESS(dev);
-    mpm_control(sc_core::sc_module_name name): socket("socket") {
+    mpm_control(sc_core::sc_module_name name): socket("socket")
+    {
         socket.register_b_transport(this, &mpm_control::b_transport);
         SC_THREAD(dev_reset);
 

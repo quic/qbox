@@ -13,7 +13,8 @@ class pll : public sc_core::sc_module
     uint32_t regs[0x10000];
 
 protected:
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
@@ -50,7 +51,5 @@ protected:
 public:
     tlm_utils::simple_target_socket<pll, BUSWIDTH> socket;
 
-    pll(sc_core::sc_module_name name): socket("socket") {
-        socket.register_b_transport(this, &pll::b_transport);
-    }
+    pll(sc_core::sc_module_name name): socket("socket") { socket.register_b_transport(this, &pll::b_transport); }
 };

@@ -20,6 +20,7 @@
 class hexagon_cluster : public sc_core::sc_module
 {
     SCP_LOGGER();
+
 public:
     cci::cci_param<unsigned> p_hexagon_num_threads;
     cci::cci_param<uint32_t> p_hexagon_start_addr;
@@ -45,11 +46,14 @@ private:
     sc_core::sc_vector<QemuCpuHexagon> m_hexagon_threads;
     GlobalPeripheralInitiator m_global_peripheral_initiator_hex;
     gs::Memory<> m_fallback_mem;
-    
-    public:
+
+public:
     // gs::Router<> parent_router;
     gs::Router<> m_router;
-    hexagon_cluster(const sc_core::sc_module_name& name, sc_core::sc_object* o): hexagon_cluster(name, *(dynamic_cast<QemuInstance*>(o))) {}
+    hexagon_cluster(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : hexagon_cluster(name, *(dynamic_cast<QemuInstance*>(o)))
+    {
+    }
     hexagon_cluster(const sc_core::sc_module_name& n, QemuInstance& qemu_hex_inst)
         : sc_core::sc_module(n)
         , m_broker(cci::cci_get_broker())
@@ -93,10 +97,10 @@ private:
         for (auto& pll : m_plls) {
             m_router.initiator_socket.bind(pll.socket);
         }
-        
+
         m_router.initiator_socket.bind(m_rom.socket);
-        
-        for(auto& vtcm : m_vtcm_mem){
+
+        for (auto& vtcm : m_vtcm_mem) {
             m_router.initiator_socket.bind(vtcm.socket);
         }
 

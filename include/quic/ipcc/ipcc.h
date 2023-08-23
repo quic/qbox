@@ -95,7 +95,8 @@ private:
         // be constructed during elaboration
         uint32_t p_client_size;
         uint32_t p_version;
-        bool status(int client, int signal) {
+        bool status(int client, int signal)
+        {
             assert(client < p_client_size);
             assert(signal < p_client_size);
             if (signal < 32)
@@ -103,7 +104,8 @@ private:
             else
                 return (regs[CLIENT_SIGNAL_STATUS_1_n + client] & (1 << (signal - 32))) != 0;
         }
-        bool enable(int client, int signal) {
+        bool enable(int client, int signal)
+        {
             assert(client < p_client_size);
             assert(signal < p_client_size);
             if (signal < 32)
@@ -112,7 +114,8 @@ private:
                 return (regs[CLIENT_ENABLE_STATUS_1_n + client] & (1 << (signal - 32))) != 0;
         }
 
-        void set_status(int client, int signal) {
+        void set_status(int client, int signal)
+        {
             assert(client < p_client_size);
             assert(signal < p_client_size);
             if (signal < 32)
@@ -121,7 +124,8 @@ private:
                 regs[CLIENT_SIGNAL_STATUS_1_n + client] |= (1 << (signal - 32));
         }
 
-        void clear_status(int client, int signal) {
+        void clear_status(int client, int signal)
+        {
             assert(client < p_client_size);
             assert(signal < p_client_size);
             if (signal < 32)
@@ -130,7 +134,8 @@ private:
                 regs[CLIENT_SIGNAL_STATUS_1_n + client] &= ~(1 << (signal - 32));
         }
 
-        void set_enable(int client, int signal) {
+        void set_enable(int client, int signal)
+        {
             assert(client < p_client_size);
             assert(signal < p_client_size);
             if (signal < 32)
@@ -139,7 +144,8 @@ private:
                 regs[CLIENT_ENABLE_STATUS_1_n + client] |= (1 << (signal - 32));
         }
 
-        void clear_enable(int client, int signal) {
+        void clear_enable(int client, int signal)
+        {
             assert(client < p_client_size);
             assert(signal < p_client_size);
             if (signal < 32)
@@ -148,7 +154,8 @@ private:
                 regs[CLIENT_ENABLE_STATUS_1_n + client] &= ~(1 << (signal - 32));
         }
 
-        IPC_client(): p_client_size(MAX_CLIENT_SIZE), p_version(0x10200) {
+        IPC_client(): p_client_size(MAX_CLIENT_SIZE), p_version(0x10200)
+        {
             memset(regs, 0, sizeof(regs));
             regs[VERSION] = p_version;
             regs[RECV_ID] = 0xFFFFFFFF;
@@ -160,7 +167,8 @@ private:
 protected:
     cci::cci_param<unsigned int> p_num_irq;
 
-    uint32_t read(IPC_client& src, uint64_t addr) {
+    uint32_t read(IPC_client& src, uint64_t addr)
+    {
         uint32_t ret = src.regs[addr / 4];
         // Side effects
         switch (addr / 4) {
@@ -179,7 +187,8 @@ protected:
 
         return ret;
     }
-    void write(IPC_client& src, uint64_t addr, uint32_t data) {
+    void write(IPC_client& src, uint64_t addr, uint32_t data)
+    {
         src.regs[addr / 4] = data;
         // side effects
         switch (addr / 4) {
@@ -231,13 +240,15 @@ protected:
         }
         }
     }
-    void send(IPC_client& src, int c, int s) {
+    void send(IPC_client& src, int c, int s)
+    {
         int p = src.regs[ID] & 0x3f;
         int sc = (src.regs[ID] >> 16) & 0x3f;
         IPC_client& dst = client[p][c];
         dst.set_status(sc, s);
     }
-    void update_irq() {
+    void update_irq()
+    {
         int client_size = client[0][0].p_client_size;
         for (int c = 0; c < client_size; c++) {
             int allirqcount = 0;
@@ -287,7 +298,8 @@ protected:
             }
         }
     }
-    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
+    {
         unsigned int len = txn.get_data_length();
         unsigned char* ptr = txn.get_data_ptr();
         sc_dt::uint64 addr = txn.get_address();
@@ -332,9 +344,7 @@ public:
     SC_HAS_PROCESS(IPCC);
 
     IPCC(sc_core::sc_module_name name)
-    : p_num_irq ("num_irq", MAX_CLIENT_SIZE, "Number of irq")
-    , socket("target_socket")
-    , irq ("irq", p_num_irq)
+        : p_num_irq("num_irq", MAX_CLIENT_SIZE, "Number of irq"), socket("target_socket"), irq("irq", p_num_irq)
     {
         int client_size = client[0][0].p_client_size;
         for (int p = 0; p < 3; p++) {

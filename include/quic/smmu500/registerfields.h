@@ -47,14 +47,10 @@
     enum { R_##reg##_##field##_MASK = MAKE_64BIT_MASK(shift, length) };
 
 /* Extract a field from a register */
-#define FIELD_EX8(storage, reg, field) \
-    extract8((storage), R_##reg##_##field##_SHIFT, R_##reg##_##field##_LENGTH)
-#define FIELD_EX16(storage, reg, field) \
-    extract16((storage), R_##reg##_##field##_SHIFT, R_##reg##_##field##_LENGTH)
-#define FIELD_EX32(storage, reg, field) \
-    extract32((storage), R_##reg##_##field##_SHIFT, R_##reg##_##field##_LENGTH)
-#define FIELD_EX64(storage, reg, field) \
-    extract64((storage), R_##reg##_##field##_SHIFT, R_##reg##_##field##_LENGTH)
+#define FIELD_EX8(storage, reg, field)  extract8((storage), R_##reg##_##field##_SHIFT, R_##reg##_##field##_LENGTH)
+#define FIELD_EX16(storage, reg, field) extract16((storage), R_##reg##_##field##_SHIFT, R_##reg##_##field##_LENGTH)
+#define FIELD_EX32(storage, reg, field) extract32((storage), R_##reg##_##field##_SHIFT, R_##reg##_##field##_LENGTH)
+#define FIELD_EX64(storage, reg, field) extract64((storage), R_##reg##_##field##_SHIFT, R_##reg##_##field##_LENGTH)
 
 /* Extract a field from an array of registers */
 #define ARRAY_FIELD_EX32(regs, reg, field) FIELD_EX32((regs)[R_##reg], reg, field)
@@ -102,10 +98,8 @@
     })
 
 /* Deposit a field to array of registers.  */
-#define ARRAY_FIELD_DP32(regs, reg, field, val) \
-    (regs)[R_##reg] = FIELD_DP32((regs)[R_##reg], reg, field, val);
-#define ARRAY_FIELD_DP64(regs, reg, field, val) \
-    (regs)[R_##reg] = FIELD_DP64((regs)[R_##reg], reg, field, val);
+#define ARRAY_FIELD_DP32(regs, reg, field, val) (regs)[R_##reg] = FIELD_DP32((regs)[R_##reg], reg, field, val);
+#define ARRAY_FIELD_DP64(regs, reg, field, val) (regs)[R_##reg] = FIELD_DP64((regs)[R_##reg], reg, field, val);
 
 #endif
 

@@ -51,11 +51,8 @@ public:
     InitiatorTester n_initiator;
 
     TestSpi(const sc_core::sc_module_name& n)
-        : TestBench(n)
-        , m_spi("qup_spi1")
-        , s_spi("qup_spi2")
-        , m_initiator("initiator")
-        , n_initiator("initiator") {
+        : TestBench(n), m_spi("qup_spi1"), s_spi("qup_spi2"), m_initiator("initiator"), n_initiator("initiator")
+    {
         m_initiator.socket.bind(m_spi.socket);
         n_initiator.socket.bind(s_spi.socket);
 
@@ -65,14 +62,14 @@ public:
     }
 };
 
-TEST_BENCH(TestSpi, SpiWrite) {
+TEST_BENCH(TestSpi, SpiWrite)
+{
     int fifo_in_data, fifo_out_data = 0;
-    int irq_status, fifo_status     = 0;
-    int len, len1                   = 0x0;
-    int word_count, val             = 0;
+    int irq_status, fifo_status = 0;
+    int len, len1 = 0x0;
+    int word_count, val = 0;
 
-    std::cout << std::endl
-              << ">>>>[Initialization]<<<<" << std::endl;
+    std::cout << std::endl << ">>>>[Initialization]<<<<" << std::endl;
     /*Master Initialization*/
     m_initiator.do_write(SE_IRQ_EN, 0xF);                 /*Enable SE interrupts*/
     m_initiator.do_write(GENI_RX_RFR_WATERMARK_REG, 0xE); /*GENI_RX_RFR_WATERMARK_REG*/
@@ -97,11 +94,10 @@ TEST_BENCH(TestSpi, SpiWrite) {
     n_initiator.do_write(SE_SPI_SLAVE_EN, 0x1);           /*slave enable*/
     n_initiator.do_write(GENI_CFG_SEQ_START, 0x1);        /*Configuration sequence start*/
 
-    std::cout << std::endl
-              << ">>>>[TX PROCESS-1]<<<<" << std::endl;
+    std::cout << std::endl << ">>>>[TX PROCESS-1]<<<<" << std::endl;
     /*Transaction -TX (Master Write)*/
     /*Verify TX watermark and cmd_done interrupt set, FIFO wordcount*/
-    len          = 0x1;
+    len = 0x1;
     fifo_in_data = 0x12;
     m_initiator.do_write(SPI_TX_TRANS_LEN, len);    /*SPI_TX_TRANS_LEN*/
     m_initiator.do_write(GENI_M_CMD_0, 0x08000000); /*M_CMD(TX only)*/
@@ -126,12 +122,11 @@ TEST_BENCH(TestSpi, SpiWrite) {
     EXPECT_EQ(fifo_out_data, fifo_in_data);                                 /*Data check*/
     n_initiator.do_write(GENI_M_IRQ_CLEAR, RX_FIFO_WATERMARK | M_CMD_DONE); /*GENI_M_IRQ_CLEAR*/
 
-    std::cout << std::endl
-              << ">>>>[TX PROCESS-2]<<<<" << std::endl;
+    std::cout << std::endl << ">>>>[TX PROCESS-2]<<<<" << std::endl;
     /*Transaction -TX (Master Write)*/
     /*verify Rx watermark, Rx FIFO status wordcount and data check in loopback mode*/
-    len          = 0x2;
-    word_count   = 0x1;
+    len = 0x2;
+    word_count = 0x1;
     fifo_in_data = 0x1234;
 
     m_initiator.do_write(SPI_LOOPBACK_CFG, 0x1); /*SPI_LOOPBACK_CFG*/
@@ -165,12 +160,11 @@ TEST_BENCH(TestSpi, SpiWrite) {
     m_initiator.do_write(GENI_M_IRQ_CLEAR, RX_FIFO_LAST | RX_FIFO_WATERMARK | M_CMD_DONE); /*GENI_M_IRQ_CLEAR*/
     m_initiator.do_write(SPI_LOOPBACK_CFG, 0x0);                                           /*SPI_LOOPBACK_CFG*/
 
-    std::cout << std::endl
-              << ">>>>[TX PROCESS-3]<<<<" << std::endl;
+    std::cout << std::endl << ">>>>[TX PROCESS-3]<<<<" << std::endl;
     /*Transaction -TX (Master Write)*/
     /*Verify multi word scenario*/
-    len          = 0x8;
-    word_count   = 0x2;
+    len = 0x8;
+    word_count = 0x2;
     fifo_in_data = 0x12345678;
     m_initiator.do_write(SPI_TX_TRANS_LEN, len);    /*SPI_TX_TRANS_LEN*/
     m_initiator.do_write(GENI_M_CMD_0, 0x08000000); /*M_CMD*/
@@ -196,10 +190,9 @@ TEST_BENCH(TestSpi, SpiWrite) {
 
     n_initiator.do_write(GENI_M_IRQ_CLEAR, RX_FIFO_WATERMARK | M_CMD_DONE); /*GENI_M_IRQ_CLEAR*/
 
-    std::cout << std::endl
-              << ">>>>[RX PROCESS-1]<<<<" << std::endl;
+    std::cout << std::endl << ">>>>[RX PROCESS-1]<<<<" << std::endl;
     /*Verify data received from slave is read by Master*/
-    len          = 0x1;
+    len = 0x1;
     fifo_in_data = 0x10;
     /*Feed data in slave*/
     n_initiator.do_write(SPI_TX_TRANS_LEN, len);        /*SPI_TX_TRANS_LEN*/
@@ -222,11 +215,10 @@ TEST_BENCH(TestSpi, SpiWrite) {
 
     m_initiator.do_write(GENI_M_IRQ_CLEAR, RX_FIFO_LAST | RX_FIFO_WATERMARK | M_CMD_DONE); /*GENI_M_IRQ_CLEAR*/
 
-    std::cout << std::endl
-              << ">>>>[RX PROCESS-2]<<<<" << std::endl;
+    std::cout << std::endl << ">>>>[RX PROCESS-2]<<<<" << std::endl;
     /*Verify multi word data received from slave is read by Master*/
-    len          = 0x8;
-    word_count   = 0x2;
+    len = 0x8;
+    word_count = 0x2;
     fifo_in_data = 0x10203040;
     /*Feed data in slave*/
     n_initiator.do_write(SPI_TX_TRANS_LEN, len);        /*SPI_TX_TRANS_LEN*/
@@ -255,11 +247,10 @@ TEST_BENCH(TestSpi, SpiWrite) {
     EXPECT_EQ(irq_status & M_CMD_DONE, M_CMD_DONE);                                        /*cmd_done set condition*/
     m_initiator.do_write(GENI_M_IRQ_CLEAR, RX_FIFO_LAST | RX_FIFO_WATERMARK | M_CMD_DONE); /*GENI_M_IRQ_CLEAR*/
 
-    std::cout << std::endl
-              << ">>>>[EXCHANGE PROCESS(Dual same length)-1]<<<<" << std::endl;
+    std::cout << std::endl << ">>>>[EXCHANGE PROCESS(Dual same length)-1]<<<<" << std::endl;
     /*verify xchange data from master with one byte data(Tx, Rx)*/
-    len          = 0x1;
-    val          = 0x12;
+    len = 0x1;
+    val = 0x12;
     fifo_in_data = 0xaa;
 
     /*Feed data in slave*/
@@ -291,12 +282,11 @@ TEST_BENCH(TestSpi, SpiWrite) {
     EXPECT_EQ(fifo_out_data, val);                                                         /*Data check*/
     n_initiator.do_write(GENI_M_IRQ_CLEAR, RX_FIFO_LAST | RX_FIFO_WATERMARK | M_CMD_DONE); /*GENI_M_IRQ_CLEAR*/
 
-    std::cout << std::endl
-              << ">>>>[EXCHANGE PROCESS(Dual same length)-2]<<<<" << std::endl;
+    std::cout << std::endl << ">>>>[EXCHANGE PROCESS(Dual same length)-2]<<<<" << std::endl;
     /*Verify xchange from master with 4bytes data (Tx, Rx)*/
-    len          = 0x4;
+    len = 0x4;
     fifo_in_data = 0x11223344;
-    val          = 0x12345678;
+    val = 0x12345678;
 
     /*Feed data in slave*/
     n_initiator.do_write(SPI_TX_TRANS_LEN, len);    /*SPI_TX_TRANS_LEN*/
@@ -326,13 +316,12 @@ TEST_BENCH(TestSpi, SpiWrite) {
     EXPECT_EQ(fifo_out_data, val);                                                         /*Data check*/
     n_initiator.do_write(GENI_M_IRQ_CLEAR, RX_FIFO_LAST | RX_FIFO_WATERMARK | M_CMD_DONE); /*GENI_M_IRQ_CLEAR*/
 
-    std::cout << std::endl
-              << ">>>>[EXCHANGE PROCESS(Dual not same length)-3]<<<<" << std::endl;
+    std::cout << std::endl << ">>>>[EXCHANGE PROCESS(Dual not same length)-3]<<<<" << std::endl;
     /*verify xchange from master with 4bytes Tx and 3bytes Rx*/
-    len          = 0x3;
-    len1         = 0x4;
+    len = 0x3;
+    len1 = 0x4;
     fifo_in_data = 0x112233;
-    val          = 0x12345678;
+    val = 0x12345678;
 
     /*Feed data in slave*/
     n_initiator.do_write(SPI_TX_TRANS_LEN, len);    /*SPI_TX_TRANS_LEN*/
@@ -367,7 +356,8 @@ TEST_BENCH(TestSpi, SpiWrite) {
     sc_core::sc_stop();
 }
 
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char* argv[])
+{
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
