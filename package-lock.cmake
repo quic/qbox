@@ -33,7 +33,7 @@ CPMDeclarePackage(SCP
 # qbox
 CPMDeclarePackage(qbox
   NAME qbox
-  GIT_TAG v0.9.12
+  GIT_TAG v1.0.0
   GIT_REPOSITORY ${GREENSOCS_GIT}qbox.git
   GIT_SHALLOW on
 )
