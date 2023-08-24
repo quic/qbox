@@ -51,6 +51,7 @@ private:
     std::vector<qemu::SDL2Console> m_sdl2_consoles;
     qemu::DisplayGLCtxOps m_gl_ctx_ops;
     bool m_instantiated = false;
+    bool m_simulation_started = false;
 
     QemuDisplay(const sc_core::sc_module_name& name, QemuDevice& gpu): sc_module(name) {
         QemuInstance* gpu_qemu_inst = &gpu.get_qemu_inst();
@@ -86,19 +87,21 @@ public:
         qemu::LibQemu& lib = inst->get();
         QemuDisplay* display = reinterpret_cast<QemuDisplay*>(lib.dcl_new(dcl).get_user_data());
 
+        if (display->m_simulation_started) {
+            lib.unlock_iothread();
+        }
+
         // SDL2 GL switch should run on main kernel thread as it may resize the window. At
         // initialization time, it is scheduled to run on SystemC kernel thread without waiting for
         // its completion. This will prevent the deadlocking situation where SystemC is not running
         // the switch "on_sysc" as it is waiting for QEMU to "finish/yeld", but that does not happen
         // as QEMU is in turn waiting for its switch function to run on SystemC kernel thread.
-        if (display->m_realized) {
-            lib.unlock_iothread();
-            display->m_on_sysc.run_on_sysc(
-                [&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); }, true);
+        display->m_on_sysc.run_on_sysc(
+            [&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); },
+            display->m_simulation_started);
+
+        if (display->m_simulation_started) {
             lib.lock_iothread();
-        } else {
-            display->m_on_sysc.run_on_sysc(
-                [&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); }, false);
         }
     }
 
@@ -111,13 +114,17 @@ public:
     static void gl_refresh(DisplayChangeListener* dcl) {
         qemu::LibQemu& lib = inst->get();
         QemuDisplay* display = reinterpret_cast<QemuDisplay*>(lib.dcl_new(dcl).get_user_data());
-        // SDL2 GL refresh should run on main kernel thread as it polls events
-        if (display->m_realized) {
+
+        if (display->m_simulation_started) {
             lib.unlock_iothread();
-            display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_gl_refresh(dcl); }, true);
+        }
+
+        // SDL2 GL refresh should run on main kernel thread as it polls events
+        display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_gl_refresh(dcl); },
+                                       display->m_simulation_started);
+
+        if (display->m_simulation_started) {
             lib.lock_iothread();
-        } else {
-            display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_gl_refresh(dcl); }, false);
         }
     }
 
@@ -214,6 +221,8 @@ public:
     virtual void before_end_of_elaboration() override { instantiate(); }
 
     virtual void end_of_elaboration() override { realize(); }
+
+    void start_of_simulation(void) override { m_simulation_started = true; }
 
     QemuInstance& get_qemu_inst() { return *inst; }
 
