@@ -552,19 +552,19 @@ if (ARM_NUM_CPUS > 0) then
     local QUP_BANKS = {
         -- QUPV3_2 / u_qupv3_wrapper_2 / qupv3_se_irq[*]:
         { addr = 0x880000, primary_idx = nil,
-          qgic_spi_irqs = { 373, 583, 584, 585, 586, 587, 834, 835, },
+            qgic_spi_irqs = { 373, 583, 584, 585, 586, 587, 833, },
         },
         -- QUPV3_0 / u_qupv3_wrapper_0 / qupv3_se_irq[*]:
         { addr = 0x980000, primary_idx = nil,
-          qgic_spi_irqs = {633, 634, 635, 636, 637, 638, 639, 640, },
+            qgic_spi_irqs = { 550, 551, 529, 530, 531, 535, 536, },
         },
         -- QUPV3_1 / u_qupv3_wrapper_1 / qupv3_se_irq[*]:
         { addr = 0xa80000, primary_idx = 3,
-          qgic_spi_irqs = { 353, 354, 355, 356, 357, 358, 836, 837, },
+            qgic_spi_irqs = { 353, 354, 355, 356, 357, 358, 835, },
         },
     };
 
-    local qup_index = 0;
+    qup_index = 0;
     for _, bank in next, QUP_BANKS do
         -- assert(bank.count == #bank.qgic_spi_irqs)
         for i, spi_irq in next, bank.qgic_spi_irqs do
