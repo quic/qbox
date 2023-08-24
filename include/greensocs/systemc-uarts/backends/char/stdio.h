@@ -68,7 +68,7 @@ public:
 #endif
     }
 
-    CharBackendStdio(sc_core::sc_module_name name, bool read_write = true) : m_running(true) {
+    CharBackendStdio(sc_core::sc_module_name name, bool read_write = true): m_running(true) {
         SCP_DEBUG(SCMOD) << "CharBackendStdio constructor";
         SC_METHOD(rcv);
         sensitive << m_event;
@@ -149,7 +149,7 @@ public:
                 m_receive(m_opaque, &c, 1);
             } else {
                 /* notify myself later, hopefully the queue drains */
-                m_event.notify(sc_core::sc_time(1, sc_core::SC_MS));
+                m_event.notify(); // sc_core::sc_time(1, sc_core::SC_MS));
                 return;
             }
         }
@@ -162,9 +162,9 @@ public:
 
     ~CharBackendStdio() {
         m_running = false;
-        if(rcv_pthread_id)
+        if (rcv_pthread_id)
             pthread_kill(rcv_pthread_id, SIGURG);
-        if(rcv_thread_id->joinable())
+        if (rcv_thread_id->joinable())
             rcv_thread_id->join();
     }
 };
