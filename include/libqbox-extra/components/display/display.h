@@ -40,6 +40,7 @@ private:
     std::vector<qemu::SDL2Console> m_sdl2_consoles;
     qemu::DisplayGLCtxOps m_gl_ctx_ops;
     bool m_instantiated = false;
+    bool m_simulation_started = false;
 
     QemuDevice* selectGpu(sc_core::sc_object* o);
 
@@ -59,7 +60,6 @@ public:
     void realize();
 
     MainThreadQemuDisplay(QemuDevice* gpu);
-
     /**
      * @brief Construct a MainThreadQemuDisplay
      *
@@ -88,6 +88,8 @@ public:
     void before_end_of_elaboration() { instantiate(); }
 
     void end_of_elaboration() { realize(); }
+
+    void start_of_simulation(void) { m_simulation_started = true; }
 
     QemuInstance& get_qemu_inst() { return *inst; }
 

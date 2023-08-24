@@ -89,17 +89,20 @@ void MainThreadQemuDisplay::gl_switch(DisplayChangeListener* dcl, DisplaySurface
     qemu::LibQemu& lib = inst->get();
     MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
 
+    if (display->m_simulation_started) {
+        lib.unlock_iothread();
+    }
+
     // SDL2 GL switch should run on main kernel thread as it may resize the window. At
     // initialization time, it is scheduled to run on SystemC kernel thread without waiting for
     // its completion. This will prevent the deadlocking situation where SystemC is not running
     // the switch "on_sysc" as it is waiting for QEMU to "finish/yeld", but that does not happen
     // as QEMU is in turn waiting for its switch function to run on SystemC kernel thread.
-    if (display->m_realized) {
-        lib.unlock_iothread();
-        display->m_on_sysc.run_on_sysc([&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); }, true);
+    display->m_on_sysc.run_on_sysc(
+            [&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); },
+            display->m_simulation_started);
+    if (display->m_simulation_started) {
         lib.lock_iothread();
-    } else {
-        display->m_on_sysc.run_on_sysc([&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); }, false);
     }
 }
 
@@ -114,13 +117,16 @@ void MainThreadQemuDisplay::gl_refresh(DisplayChangeListener* dcl)
 {
     qemu::LibQemu& lib = inst->get();
     MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
-    // SDL2 GL refresh should run on main kernel thread as it polls events
-    if (display->m_realized) {
+    if (display->m_simulation_started) {
         lib.unlock_iothread();
-        display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_gl_refresh(dcl); }, true);
+    }
+
+    // SDL2 GL refresh should run on main kernel thread as it polls events
+    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_gl_refresh(dcl); },
+                                       display->m_simulation_started);
+
+    if (display->m_simulation_started) {
         lib.lock_iothread();
-    } else {
-        display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_gl_refresh(dcl); }, false);
     }
 }
 
