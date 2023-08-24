@@ -135,7 +135,7 @@ public:
                 m_receive(m_opaque, &c, 1);
             } else {
                 /* notify myself later, hopefully the queue drains */
-                m_event.notify(sc_core::sc_time(1, sc_core::SC_MS));
+                m_event.notify(); // sc_core::sc_time(1, sc_core::SC_MS));
                 return;
             }
         }
