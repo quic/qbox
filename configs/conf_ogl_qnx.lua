@@ -1,6 +1,6 @@
 print("  local configuration in " .. top());
 
-local NUM_GPUS = 1,
+local NUM_GPUS = 1
 
 tableMerge(platform, {
 

@@ -179,7 +179,7 @@ local ARCH_TIMER_NS_EL2_IRQ = 16 + 10
 
 local ARM_NUM_CPUS = 8;
 local NUM_REDISTS = 1;
-local HEXAGON_NUM_CLUSTERS = 3;
+-- local HEXAGON_NUM_CLUSTERS = 3;
 
 zipfile = valid_file(top().."../top.zip");
 
@@ -232,7 +232,7 @@ platform = {
         qemu_inst_mgr_h = {
             moduletype = "QemuInstanceManager";
         },
-        
+
         qemu_hex_inst_0= {
             moduletype="QemuInstance";
             args = {"&qemu_inst_mgr_h", "HEXAGON"};
@@ -246,14 +246,14 @@ platform = {
             tcg_mode="SINGLE",
             sync_policy = "multithread-unconstrained"
         },
-    
+
         qemu_hex_inst_2= {
             moduletype="QemuInstance";
             args = {"&qemu_inst_mgr_h", "HEXAGON"};
             tcg_mode="SINGLE",
             sync_policy = "multithread-unconstrained"
         },
-    
+
 
         hexagon_cluster_0 = nsp0ss;
         hexagon_cluster_1 = nsp1ss;
@@ -297,7 +297,7 @@ platform = {
         sync_policy = "multithread-unconstrained"
     },
 
-    gic_0 =  {  
+    gic_0 =  {
                 moduletype = "QemuArmGicv3",
                 args = {"&platform.qemu_inst"},
                 dist_iface    = {address=APSS_GIC600_GICD_APSS, size= OFFSET_APSS_ALIAS0_GICR_CTLR, bind = "&router.initiator_socket"};
@@ -306,7 +306,7 @@ platform = {
                 redist_region = {ARM_NUM_CPUS / NUM_REDISTS};
                 num_spi=960
             };
-    virtionet0_0= { 
+    virtionet0_0= {
                     moduletype = "QemuVirtioMMIONet",
                     args = {"&platform.qemu_inst"};
                     mem    =   {address=0x1c120000, size=0x10000, bind = "&router.initiator_socket"},
@@ -347,7 +347,7 @@ platform = {
     --     moduletype = "Pl011",
     --     args = {"&platform.charbackend_stdio_0"};
     --     target_socket = {address= UART0,
-    --                               size=0x1000, 
+    --                               size=0x1000,
     --                               bind = "&router.initiator_socket"},
     --     irq = {bind = "&gic_0.spi_in_379"},
     -- };
@@ -404,7 +404,7 @@ platform = {
         moduletype = "smmu500_tbu",
         args = {"&platform.smmu_0"},
         topology_id=0x21C0,
-        upstream_socket = { 
+        upstream_socket = {
                             -- address=NSP0_AHB_HIGH,
                             -- size=0xF00000000-NSP0_AHB_HIGH,
                             -- relative_addresses=false,
@@ -417,7 +417,7 @@ platform = {
        moduletype = "smmu500_tbu",
        args = {"&platform.smmu_0"},
        topology_id=0x29C0,
-       upstream_socket = { 
+       upstream_socket = {
                         --    address=NSP1_AHB_HIGH,
                         --    size=0xF00000000-NSP1_AHB_HIGH,
                         --    relative_addresses=false,
@@ -430,7 +430,7 @@ platform = {
         moduletype = "smmu500_tbu",
         args = {"&platform.smmu_0"},
         topology_id=0x3000,
-        upstream_socket = { 
+        upstream_socket = {
                             -- address=ADSP_AHB_HIGH,
                             -- size=0xF00000000-ADSP_AHB_HIGH,
                             -- relative_addresses=false,
@@ -453,8 +453,8 @@ platform = {
     memorydumper_0 = {
         moduletype = "MemoryDumper",
         initiator_socket = {bind = "&router.target_socket"};
-        target_socket={address=0x1B300040, 
-                        size=0x10, 
+        target_socket={address=0x1B300040,
+                        size=0x10,
                         bind = "&router.initiator_socket"}
             },
 

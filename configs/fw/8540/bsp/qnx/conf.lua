@@ -1,6 +1,6 @@
 print("  local configuration in " .. top());
 
-local NUM_GPUS = 1,
+local NUM_GPUS = 1
 
 tableMerge(platform, {
 
@@ -9,7 +9,7 @@ tableMerge(platform, {
         mem = { address = 0x1c0d0000, size = 0x2000, bind = "&router.initiator_socket"},
         irq_out = {bind = "&gic_0.spi_in_9"},
         args = {"&platform.qemu_inst"};
-        blkdev_str = "file=" .. valid_file(top() .. "system_8540_qdrive_qvp.img") .. ",format=raw,if=none,readonly=off" 
+        blkdev_str = "file=" .. valid_file(top() .. "system_8540_qdrive_qvp.img") .. ",format=raw,if=none,readonly=off"
     };
 });
 

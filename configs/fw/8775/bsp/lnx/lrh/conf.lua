@@ -23,7 +23,7 @@ local UART0 = PCIE_3APCIE_WRAPPER_AXI_G3X4_EDMA_AUTO
 platform["uart_qup_17"].input = false
 
 -- Number of gpus
-local NUM_GPUS = 0,
+local NUM_GPUS = 0
 
 tableMerge(platform, {
     virtioblk_0 = {
@@ -43,7 +43,7 @@ tableMerge(platform, {
        moduletype = "Pl011",
        args = {"&platform.charbackend_stdio_0"};
        target_socket = {address= UART0,
-                                 size=0x1000, 
+                                 size=0x1000,
                                  bind = "&router.initiator_socket"},
        irq = {bind = "&gic_0.spi_in_379"},
    };

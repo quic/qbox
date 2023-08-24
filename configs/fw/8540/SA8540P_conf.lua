@@ -37,9 +37,9 @@ local NSP1_AHB_SIZE = 0x05000000
 local NSP0_AHB_HIGH = NSP0_BASE + NSP0_AHB_SIZE -- = 0x1f000000
 local NSP1_AHB_HIGH = NSP1_BASE + NSP1_AHB_SIZE -- = 0x25000000
 
--- This is the actual region size of NSP0 avoiding collisions with other 
+-- This is the actual region size of NSP0 avoiding collisions with other
 -- devices e.g.  virtioblk_0, virtionet0_0.
--- (ahb_base + 0xA1000 + 0x2000) is the highest device address allocated in get_dsp() at qdsp6.lua. 
+-- (ahb_base + 0xA1000 + 0x2000) is the highest device address allocated in get_dsp() at qdsp6.lua.
 local NSP0_REGION_SIZE = (0x1B300000 - NSP0_BASE) + 0xA1000 + 0x2000;
 local NSP1_REGION_SIZE = (0x21300000 - NSP1_BASE) + 0xA1000 + 0x2000;
 
@@ -150,7 +150,7 @@ local ARCH_TIMER_NS_EL2_IRQ = 16 + 10
 
 local ARM_NUM_CPUS = 8;
 local NUM_REDISTS = 1;
-local HEXAGON_NUM_CLUSTERS = 2;
+-- local HEXAGON_NUM_CLUSTERS = 2;
 
 zipfile = valid_file(top().."../top.zip");
 
@@ -198,7 +198,7 @@ platform = {
         qemu_inst_mgr_h = {
             moduletype = "QemuInstanceManager";
         },
-        
+
         qemu_hex_inst_0= {
             moduletype="QemuInstance";
             args = {"&qemu_inst_mgr_h", "HEXAGON"};
@@ -216,7 +216,7 @@ platform = {
         hexagon_cluster_0 = nsp0ss;
         hexagon_cluster_1 = nsp1ss;
     },
-    
+
 
     router = {
         moduletype="Router";
@@ -228,7 +228,7 @@ platform = {
                 target_socket = {bind = "&router.initiator_socket";},
                 shared_memory=IS_SHARED_MEM,
                 };
-    
+
 --    ram_0 = {
 --        moduletype="Memory";
 --        target_socket = {"&platform.DDR_space", bind= "&router.initiator_socket"},
@@ -267,7 +267,7 @@ platform = {
                 -- is used MUST be a multiple of 32
                 redist_region = {ARM_NUM_CPUS / NUM_REDISTS};
                 num_spi=960};
-    virtionet0_0= { 
+    virtionet0_0= {
                     moduletype = "QemuVirtioMMIONet",
                     args = {"&platform.qemu_inst"};
                     mem    =   {address=0x1c120000, size=0x10000, bind = "&router.initiator_socket"},
@@ -286,7 +286,7 @@ platform = {
                     socket = {address=0x0C210000, size=0x1000, bind="&router.initiator_socket"},
     };
 
-    qtimer_0=   { 
+    qtimer_0=   {
         moduletype = "QemuHexagonQtimer",
         args = {"&platform.qemu_inst"};
         mem  =   {address=0x17c20000, size=0x1000, bind = "&router.initiator_socket"};
@@ -309,7 +309,7 @@ platform = {
 --        moduletype = "Pl011",
 --        args = {"&platform.charbackend_stdio_0"};
 --        target_socket = {address= UART0,
---                                  size=0x1000, 
+--                                  size=0x1000,
 --                                  bind = "&router.initiator_socket"},
 --        irq = {bind = "&gic_0.spi_in_379"},
 --    };
@@ -362,7 +362,7 @@ platform = {
               moduletype = "smmu500_tbu",
               args = {"&platform.smmu_0"},
               topology_id=0x31A0,
-              upstream_socket = { 
+              upstream_socket = {
                                 --   address=NSP0_AHB_HIGH,
                                 --   size=0xF00000000-NSP0_AHB_HIGH,
                                 --   relative_addresses=false,
@@ -374,7 +374,7 @@ platform = {
              moduletype = "smmu500_tbu",
              args = {"&platform.smmu_0"},
              topology_id=0x39A0,
-             upstream_socket = { 
+             upstream_socket = {
                                 --  address=NSP1_AHB_HIGH,
                                 --  size=0xF00000000-NSP1_AHB_HIGH,
                                 --  relative_addresses=false,
@@ -398,8 +398,8 @@ platform = {
     memorydumper_0 = {
                 moduletype = "MemoryDumper",
                 initiator_socket = {bind = "&router.target_socket"};
-                target_socket={address=0x1B300040, 
-                                size=0x10, 
+                target_socket={address=0x1B300040,
+                                size=0x10,
                                 bind = "&router.initiator_socket"}
                     },
 
