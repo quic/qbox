@@ -109,3 +109,12 @@ if (platform.with_gpu == true) then
         platform["display_0"]=display;
     end
 end
+
+-- Ensure none of the QUP's have grabbed stdin, as we connect it to the PL011
+
+for i,v in pairs(platform) do
+    if (i:find("backend_", 1, true) == 1) then
+        v["args"]={false};
+        platform[i] = v;
+    end
+end
