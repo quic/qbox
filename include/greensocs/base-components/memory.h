@@ -39,6 +39,7 @@
 
 #include "shmem_extension.h"
 #include <greensocs/gsutils/module_factory_registery.h>
+#include <unordered_map>
 
 #ifndef _WIN32
 #include <fcntl.h>
@@ -115,7 +116,14 @@ class Memory : public sc_core::sc_module
                 }
                 if (m_mem.p_shmem) {
                     std::stringstream shmname_stream;
-                    shmname_stream << "/" << getpid() << "-" << std::string(m_mem.name()) << std::to_string(m_address);
+                    shmname_stream << "/" << std::hex << getpid() << "-" << std::hex
+                                   << MemoryServices::get().get_shmem_seg_num();
+                    if (shmname_stream.str().size() > 31) { /*PSHMNAMLEN in Mac OS*/
+                        size_t hash = std::hash<std::string>{}(
+                            shmname_stream.str()); // hash length is 16 hex digits in 64 bit machines.
+                        shmname_stream.str("");    // clear
+                        shmname_stream << "/" << std::hex << hash;
+                    }
                     std::string shmname = shmname_stream.str();
                     if ((m_ptr = MemoryServices::get().map_mem_create(shmname.c_str(), m_len)) != nullptr) {
                         m_mapped = true;

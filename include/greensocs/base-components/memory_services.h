@@ -101,6 +101,8 @@ public:
 
     const char* name() const { return m_name.c_str(); }
 
+    size_t get_shmem_seg_num() const { return m_shmem_info_map.size(); }
+
     void cleanup()
     {
         if (finished || !child_cleaner_forked) return;
