@@ -164,8 +164,9 @@ public:
                 }
                 if (munmap(cl_info, sizeof(shm_cleaner_info)) == -1) {
                     perror("munmap");
-                    exit(EXIT_FAILURE);
+                    _Exit(EXIT_FAILURE);
                 }
+                _Exit(EXIT_SUCCESS);
             });
 
         } // else child process
