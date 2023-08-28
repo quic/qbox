@@ -11,14 +11,52 @@ from collections import deque
 # A simpler and non-interactive version of pexpect
 class QCSubprocess:
     EOF = object()
+    cleanup_list = []
+    cleanup_installed = False
+    cleanup_ran = False
+
+    @classmethod
+    def _cleanup(cls):
+        if cls.cleanup_ran:
+            return
+        cls.cleanup_ran = True
+        print("Running QCSubprocess cleanup...")
+        for p in cls.cleanup_list:
+            if p.proc is not None and p.poll is not None:
+                p.proc.send_signal(signal.SIGQUIT)
+                p.proc.wait()
+
+    @classmethod
+    def _set_to_clean(cls, qcproc):
+        cls.cleanup_list.append(qcproc)
+        if not cls.cleanup_installed:
+
+            # 1. Normal termination
+            @atexit.register
+            def atexit_cleanup():
+                cls._cleanup()
+
+            # 2. Abormal termination due to uncaught exception
+            old_excepthook = sys.excepthook
+            def new_excepthook(a, b, c):
+                cls._cleanup()
+                return old_excepthook(a, b, c)
+            sys.excepthook = new_excepthook
+
+            # 3. Abnormal termination due to signal
+            for sig in [signal.SIGHUP, signal.SIGQUIT, signal.SIGABRT, signal.SIGTERM]:
+                old_handler = signal.getsignal(sig)
+                def new_handler(signum, frame):
+                    cls._cleanup()
+                    return old_handler(signum, frame)
+                signal.signal(sig, new_handler)
+
+            cls.cleanup_installed = True
+
     def __init__(self, args, env=None, timeout_sec=None):
         self.proc = None
         self.name = args[0]
-        @atexit.register
-        def cleanup():
-            if self.proc is not None:
-                self.proc.send_signal(signal.SIGQUIT)
-                self.proc.wait()
+        self.__class__._set_to_clean(self)
         print(f"QCSubprocess: running '{' '.join(args)}'")
         print("With env: ", env)
         self.proc = subprocess.Popen(
