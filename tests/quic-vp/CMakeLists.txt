@@ -5,23 +5,23 @@ macro(gs_add_test test conf_lua image_dir extra)
     set(test_dir "${QQVP_FIRMWARE_REPO_DIR}/${image_dir}")
 
     if ("${test}" MATCHES "LeMans.*")
-	set(ADSP_OPTS -a)
+        set(ADSP_OPTS -a)
     else()
-	unset(ADSP_OPTS)
+        unset(ADSP_OPTS)
     endif()
 
     if(EXISTS ${test_dir})
-	if (${QQVP_RESULTS_DIR})
-		set(DIR_OPTS -d ${QQVP_RESULTS_DIR}/${test})
-	endif()
+        if (${QQVP_RESULTS_DIR})
+            set(DIR_OPTS -d ${QQVP_RESULTS_DIR}/${test})
+        endif()
         add_test(
             NAME ${test}
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/Interaction_test.py
                 -e ${CMAKE_BINARY_DIR}/vp
                 -l ${CMAKE_SOURCE_DIR}/configs/fw/${conf_lua}
                 -i ${test_dir}
-		${DIR_OPTS}
-		${ADSP_OPTS}
+                ${DIR_OPTS}
+                ${ADSP_OPTS}
                 -- ${extra}
         )
         set_tests_properties(${test} PROPERTIES TIMEOUT 600)
@@ -40,9 +40,9 @@ gs_add_test(LeMans_fastrpc_calc_test 8775/SA8775P_conf.lua "lemans" "")
 foreach(flavor IN ITEMS opengl red_hat)
     if(EXISTS ${QQVP_FIRMWARE_REPO_DIR}/${flavor}_linux)
         if("${flavor}" STREQUAL "red_hat")
-	    if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+            if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
                 # red-hat boot test takes too long in Debug builds,
-		# and tuntap is not supported on OSX.
+                # and tuntap is not supported on OSX.
                 continue()
             endif()
             set(EXTRA_OPTS -i "${CMAKE_SOURCE_DIR}/configs/fw/8775/bsp/lnx/lrh"
