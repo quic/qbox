@@ -17,7 +17,7 @@ class QCSubprocess:
         @atexit.register
         def cleanup():
             if self.proc is not None:
-                self.proc.kill()
+                self.proc.send_signal(signal.SIGQUIT)
                 self.proc.wait()
         print(f"QCSubprocess: running '{' '.join(args)}'")
         print("With env: ", env)
@@ -66,6 +66,9 @@ context:
             if regex.search(line) is not None:
                 break
             recent_lines.append(line)
+
+    def send_signal(self, signal):
+        self.proc.send_signal(signal)
 
     @classmethod
     def _ensure_ssh_connects(cls, args, timeout_sec=60., attempts=6):

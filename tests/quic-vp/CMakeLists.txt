@@ -1,10 +1,22 @@
+add_executable(vp-hex-remote
+    ${CMAKE_SOURCE_DIR}/rplugins/hexagon/src/remote_hex.cc
+)
+target_link_libraries(vp-hex-remote
+    ${TARGET_LIBS}
+)
 
 set(QQVP_FIRMWARE_REPO_DIR "$ENV{QQVP_FIRMWARE_REPO_DIR}" CACHE STRING "")
 
 macro(gs_add_test test conf_lua image_dir extra)
     set(test_dir "${QQVP_FIRMWARE_REPO_DIR}/${image_dir}")
 
-    if ("${test}" MATCHES "LeMans.*")
+    if ("${test}" MATCHES ".*Remote.*")
+        set(PLUGIN_OPTS -r ${CMAKE_SOURCE_DIR}/rplugins/hexagon/config)
+    else()
+        unset(PLUGIN_OPTS)
+    endif()
+
+    if ("${test}" MATCHES ".*LeMans.*")
         set(ADSP_OPTS -a)
     else()
         unset(ADSP_OPTS)
@@ -22,6 +34,7 @@ macro(gs_add_test test conf_lua image_dir extra)
                 -i ${test_dir}
                 ${DIR_OPTS}
                 ${ADSP_OPTS}
+                ${PLUGIN_OPTS}
                 -- ${extra}
         )
         set_tests_properties(${test} PROPERTIES TIMEOUT 600)
@@ -36,6 +49,7 @@ gs_add_test(Makena_fastrpc_calc_test_quantum 8540/SA8540P_conf.lua "makena/defau
 gs_add_test(LeMans_fastrpc_calc_test_quantum 8775/SA8775P_conf.lua "lemans" "${SYNC}")
 gs_add_test(Makena_fastrpc_calc_test 8540/SA8540P_conf.lua "makena/default" "")
 gs_add_test(LeMans_fastrpc_calc_test 8775/SA8775P_conf.lua "lemans" "")
+gs_add_test(Remote-hex-LeMans_fastrpc_calc_test 8775/SA8775P_conf.lua "lemans" "")
 
 foreach(flavor IN ITEMS opengl red_hat)
     if(EXISTS ${QQVP_FIRMWARE_REPO_DIR}/${flavor}_linux)

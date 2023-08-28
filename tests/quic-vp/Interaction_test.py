@@ -7,6 +7,7 @@ from truth.truth import AssertThat
 import psutil
 import time
 from QCSubprocess import QCSubprocess
+import signal
 
 def fastrpc_calc_test():
     test = False
@@ -19,6 +20,7 @@ def fastrpc_calc_test():
     parser.add_argument("-a", "--adsp", action='store_true', help="Test ADSP too")
     parser.add_argument("-g", "--enable-gpu",
         action='store_true', help="Enable platform GPU")
+    parser.add_argument("-r", "--rplugconf", metavar="", help="Path to remote hexagon plugin config directory")
     parser.add_argument("-d", "--log-dir", metavar="", help="Dir to store log files at")
     parser.add_argument('extra_args', nargs='*',
         help="Forward additional arguments to vp")
@@ -57,6 +59,9 @@ def fastrpc_calc_test():
         "QQVP_IMAGE_DIR": img_path.as_posix(),
         "PWD": os.environ['PWD']
     }
+
+    if args.rplugconf:
+        env["QQVP_PLUGIN_DIR"] = Path(args.rplugconf).as_posix()
 
     # Useful for local developement when using custom compiler installation
     # for building vp
@@ -113,7 +118,14 @@ def fastrpc_calc_test():
     # Look for the rtl8139 PCI Ethernet Network Controller device:
     pci.expect('vid/did: 10ec/8139')
 
-    return pci.success() and calc.success()
+    ret = pci.success() and calc.success()
+
+    # make sure to use SIGQUIT to terminate the vp as this signal is handled in
+    # include/greensocs/gsutils/utils.h and it should be called for proper cleanup.
+    vp.send_signal(signal.SIGQUIT)
+    vp.success(timeout_sec=None)
+
+    return ret
 
 
 AssertThat(fastrpc_calc_test()).IsTrue()
