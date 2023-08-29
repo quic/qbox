@@ -7,19 +7,14 @@ target_link_libraries(vp-hex-remote
 
 set(QQVP_FIRMWARE_REPO_DIR "$ENV{QQVP_FIRMWARE_REPO_DIR}" CACHE STRING "")
 
-macro(gs_add_test test conf_lua image_dir extra)
+function(gs_add_test test conf_lua image_dir extra)
     set(test_dir "${QQVP_FIRMWARE_REPO_DIR}/${image_dir}")
 
     if ("${test}" MATCHES ".*Remote.*")
         set(PLUGIN_OPTS -r ${CMAKE_SOURCE_DIR}/rplugins/hexagon/config)
-    else()
-        unset(PLUGIN_OPTS)
     endif()
-
     if ("${test}" MATCHES ".*LeMans.*")
         set(ADSP_OPTS -a)
-    else()
-        unset(ADSP_OPTS)
     endif()
 
     if(EXISTS ${test_dir})
@@ -41,7 +36,7 @@ macro(gs_add_test test conf_lua image_dir extra)
     else()
         message(WARNING "Skipping test ${test}, could not find '${test_dir}'. To enable tests, set QQVP_FIRMWARE_REPO_DIR in environment.")
     endif()
-endmacro()
+endfunction()
 
 set(SYNC --param platform.qemu_inst.sync_policy=\"multithread-quantum\")
 
