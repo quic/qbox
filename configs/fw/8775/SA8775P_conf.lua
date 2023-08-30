@@ -365,7 +365,7 @@ platform = {
     gpex_0 = {
         moduletype = "QemuGPEX";
         args = {"&platform.qemu_inst"};
-        bus_master = {"&router.target_socket"};
+        bus_master = {bind = "&router.target_socket"};
         pio_iface = { address = 0x003eff0000, size = 0x0000010000, bind= "&router.initiator_socket"};
         mmio_iface = { address = 0x0060000000, size = 0x002B500000, bind= "&router.initiator_socket" };
         ecam_iface = { address = 0x4010000000, size = 0x0010000000, bind= "&router.initiator_socket" };

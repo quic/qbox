@@ -82,21 +82,20 @@ tableJoin(platform["load"], {
 
 print (_KERNEL64_LOAD_ADDR);
 print (_DTB_LOAD_ADDR);
-platform["with_gpu"] = false;
+platform["with_gpu"] = true;
 
 if (platform.with_gpu == true) then
     if (NUM_GPUS > 0) then
         for i=0,(NUM_GPUS-1) do
-            print (i);
             if (i==0) then
                 gpu = {
                     moduletype = "QemuVirtioGpuGlPci";
-                    args = {"&platform.qemu_inst"};
+                    args = {"&platform.qemu_inst", "&platform.gpex_0"};
                 }
             else
                 gpu = {
                     moduletype = "QemuVirtioGpuPci";
-                    args = {"&platform.qemu_inst"};
+                    args = {"&platform.qemu_inst", "&platform.gpex_0"};
                 }
             end
             platform["gpu_"..tostring(i)]=gpu;

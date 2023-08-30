@@ -1,6 +1,7 @@
 print("  local configuration in " .. top());
 
-local NUM_GPUS = 1
+-- Number of gpus
+local NUM_GPUS = 0
 
 tableMerge(platform, {
 
@@ -32,12 +33,12 @@ if (platform.with_gpu == true) then
             if (i==0) then
                 gpu = {
                     moduletype = "QemuVirtioGpuGlPci";
-                    args = {"&platform.qemu_inst"};
+                    args = {"&platform.qemu_inst", "&platform.gpex_0"};
                 }
             else
                 gpu = {
                     moduletype = "QemuVirtioGpuPci";
-                    args = {"&platform.qemu_inst"};
+                    args = {"&platform.qemu_inst", "&platform.gpex_0"};
                 }
             end
             platform["gpu_"..tostring(i)]=gpu;
