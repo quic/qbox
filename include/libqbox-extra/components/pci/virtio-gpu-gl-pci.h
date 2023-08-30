@@ -17,10 +17,10 @@ class QemuVirtioGpuGlPci : public QemuVirtioGpu
 public:
     cci::cci_param<uint64_t> p_hostmem_mb;
 
-    QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, sc_core::sc_object* o);
-    QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, QemuInstance& inst);
+    QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t);
+    QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, QemuInstance& inst, QemuGPEX* gpex);
 
     void before_end_of_elaboration() override;
 };
-GSC_MODULE_REGISTER(QemuVirtioGpuGlPci, sc_core::sc_object*);
+GSC_MODULE_REGISTER(QemuVirtioGpuGlPci, sc_core::sc_object*, sc_core::sc_object*);
 #endif // _LIBQBOX_COMPONENTS_VIRTIO_GPU_GL_PCI_H

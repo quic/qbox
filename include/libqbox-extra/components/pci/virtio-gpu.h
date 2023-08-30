@@ -22,9 +22,10 @@ public:
     void gpex_realize(qemu::Bus& bus) override { QemuGPEX::Device::gpex_realize(bus); }
 
 protected:
-    QemuVirtioGpu(const sc_core::sc_module_name& name, QemuInstance& inst, const char* gpu_type)
+    QemuVirtioGpu(const sc_core::sc_module_name& name, QemuInstance& inst, const char* gpu_type, QemuGPEX* gpex)
         : QemuGPEX::Device(name, inst, (std::string("virtio-gpu-") + gpu_type).c_str())
     {
+        gpex->add_device(*this);
     }
 };
 #endif

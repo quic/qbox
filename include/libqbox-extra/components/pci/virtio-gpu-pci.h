@@ -15,11 +15,11 @@
 class QemuVirtioGpuPci : public QemuVirtioGpu
 {
 public:
-    QemuVirtioGpuPci(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : QemuVirtioGpuPci(name, *(dynamic_cast<QemuInstance*>(o)))
+    QemuVirtioGpuPci(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
+        : QemuVirtioGpuPci(name, *(dynamic_cast<QemuInstance*>(o)), (dynamic_cast<QemuGPEX*>(t)))
     {
     }
-    QemuVirtioGpuPci(const sc_core::sc_module_name& name, QemuInstance& inst): QemuVirtioGpu(name, inst, "pci") {}
+    QemuVirtioGpuPci(const sc_core::sc_module_name& name, QemuInstance& inst, QemuGPEX* gpex): QemuVirtioGpu(name, inst, "pci", gpex) {}
 };
-GSC_MODULE_REGISTER(QemuVirtioGpuPci, sc_core::sc_object*);
+GSC_MODULE_REGISTER(QemuVirtioGpuPci, sc_core::sc_object*, sc_core::sc_object*);
 #endif
