@@ -8,12 +8,13 @@ include:
     - .general_build_job_template
   script:
     - !reference [.general_build_job_template, script]
-    - if test "$CI_PIPELINE_SOURCE" == "schedule"; then
-      git clone $AUTHENTICATED_GIT_URL/qqvp/testing/qemu-qurt-tests.git &&
-      qemu-qurt-tests/run_tests_qqvp.sh
-         $PWD/build/vp
-         $QQVP_FIRMWARE_REPO_DIR/lemans
-         $PWD/tests/quic-vp/qurt-test/;
+    - |
+      if test "$CI_PIPELINE_SOURCE" == "schedule"; then
+        git clone $AUTHENTICATED_GIT_URL/qqvp/testing/qemu-qurt-tests.git
+        qemu-qurt-tests/run_tests_qqvp.sh
+           $PWD/build/vp
+           $QQVP_FIRMWARE_REPO_DIR/lemans
+           $PWD/tests/quic-vp/qurt-test/
       fi
   variables:
     REPO_CMAKE_ARGS: -DQQVP_RESULTS_DIR=${RESULTS_DIR} # From cmake-boilerplate
