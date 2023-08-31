@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 import signal
+import os
 import re
 import sys
 import atexit
@@ -22,7 +23,8 @@ class QCSubprocess:
         cls.cleanup_ran = True
         print("Running QCSubprocess cleanup...")
         for p in cls.cleanup_list:
-            if p.proc is not None and p.poll is not None:
+            if p.proc is not None and p.proc.poll() is None:
+                print(f"Ending '{p.name}'")
                 p.proc.send_signal(signal.SIGQUIT)
                 p.proc.wait()
 
@@ -48,7 +50,8 @@ class QCSubprocess:
                 old_handler = signal.getsignal(sig)
                 def new_handler(signum, frame):
                     cls._cleanup()
-                    return old_handler(signum, frame)
+                    signal.signal(signum, old_handler)
+                    os.kill(os.getpid(), signum)
                 signal.signal(sig, new_handler)
 
             cls.cleanup_installed = True
