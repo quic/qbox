@@ -29,7 +29,7 @@
  *
  * @details This class abstracts a Qemu display as a SystemC module.
  */
-class MainThreadQemuDisplay : public sc_core::sc_module
+class MainThreadQemuDisplay
 {
 private:
     static QemuInstance* inst;
@@ -41,12 +41,10 @@ private:
     qemu::DisplayGLCtxOps m_gl_ctx_ops;
     bool m_instantiated = false;
 
-    MainThreadQemuDisplay(const sc_core::sc_module_name& name, QemuDevice& gpu);
-
-    QemuDevice& selectGpu(sc_core::sc_object& o);
+    QemuDevice* selectGpu(sc_core::sc_object* o);
 
 public:
-    bool is_realized() { return m_realized; }
+    bool is_realized() const { return m_realized; }
 
     void instantiate();
 
@@ -60,35 +58,36 @@ public:
 
     void realize();
 
+    MainThreadQemuDisplay(QemuDevice* gpu);
+
     /**
-     * @brief Construct a QEMUDisplay
+     * @brief Construct a MainThreadQemuDisplay
+     *
+     * @param[in] gpu GPU module associated to this diplay.
+     */
+    MainThreadQemuDisplay(sc_core::sc_object* gpu);
+
+    /**
+     * @brief Construct a MainThreadQemuDisplay
      *
      * @param[in] name SystemC module name
      * @param[in] gpu GPU module associated to this diplay.
      */
-    MainThreadQemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object* gpu);
+    MainThreadQemuDisplay(QemuVirtioGpu& gpu);
 
     /**
-     * @brief Construct a QEMUDisplay
-     *
-     * @param[in] name SystemC module name
-     * @param[in] gpu GPU module associated to this diplay.
-     */
-    MainThreadQemuDisplay(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu);
-
-    /**
-     * @brief Construct a QEMUDisplay
+     * @brief Construct a MainThreadQemuDisplay
      *
      * @param[in] name SystemC module name
      * @param[in] gpu GPU module associated to this display
      */
-    MainThreadQemuDisplay(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu);
+    MainThreadQemuDisplay(QemuVirtioMMIOGpuGl& gpu);
 
-    virtual ~MainThreadQemuDisplay();
+    ~MainThreadQemuDisplay();
 
-    virtual void before_end_of_elaboration() override { instantiate(); }
+    void before_end_of_elaboration() { instantiate(); }
 
-    virtual void end_of_elaboration() override { realize(); }
+    void end_of_elaboration() { realize(); }
 
     QemuInstance& get_qemu_inst() { return *inst; }
 
@@ -98,6 +97,53 @@ public:
 };
 
 QemuInstance* MainThreadQemuDisplay::inst = nullptr;
-GSC_MODULE_REGISTER(MainThreadQemuDisplay, sc_core::sc_object*);
+
+class QemuDisplay : public sc_core::sc_module
+{
+private:
+#ifdef __APPLE__
+    MainThreadQemuDisplay m_main_display;
+#endif
+
+    QemuDisplay(const sc_core::sc_module_name& name, QemuDevice& gpu);
+
+public:
+    /**
+     * @brief Construct a QemuDisplay
+     *
+     * @param[in] name SystemC module name
+     * @param[in] gpu GPU module associated to this diplay.
+     */
+    QemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object* gpu);
+
+    /**
+     * @brief Construct a QemuDisplay
+     *
+     * @param[in] name SystemC module name
+     * @param[in] gpu GPU module associated to this diplay.
+     */
+    QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu);
+
+    /**
+     * @brief Construct a QemuDisplay
+     *
+     * @param[in] name SystemC module name
+     * @param[in] gpu GPU module associated to this display
+     */
+    QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu);
+
+    void before_end_of_elaboration();
+
+    void end_of_elaboration();
+
+    QemuInstance* get_qemu_inst();
+
+    bool is_instantiated() const;
+    bool is_realized() const;
+
+    const std::vector<qemu::SDL2Console>* get_sdl2_consoles() const;
+};
+
+GSC_MODULE_REGISTER(QemuDisplay, sc_core::sc_object*);
 
 #endif // _LIBQBOX_COMPONENTS_DISPLAY_H

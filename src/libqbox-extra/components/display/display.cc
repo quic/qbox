@@ -29,38 +29,39 @@ MainThreadQemuDisplay::~MainThreadQemuDisplay()
     inst->get().sdl2_cleanup();
 }
 
-MainThreadQemuDisplay::MainThreadQemuDisplay(const sc_core::sc_module_name& name, QemuDevice& gpu): sc_module(name)
+MainThreadQemuDisplay::MainThreadQemuDisplay(QemuDevice* gpu)
 {
-    QemuInstance* gpu_qemu_inst = &gpu.get_qemu_inst();
+    if (!gpu) {
+        SCP_FATAL() << "Ivalid GPU";
+    }
+    QemuInstance* gpu_qemu_inst = &gpu->get_qemu_inst();
     if (inst && inst != gpu_qemu_inst) {
-        SCP_FATAL(SCMOD) << "Can not create another MainThreadQemuDisplay on a different QemuInstance";
+        SCP_FATAL() << "Can not create another MainThreadQemuDisplay on a different QemuInstance";
     }
     MainThreadQemuDisplay::inst = gpu_qemu_inst;
 }
 
-MainThreadQemuDisplay::MainThreadQemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-    : MainThreadQemuDisplay(name, selectGpu(*o))
+MainThreadQemuDisplay::MainThreadQemuDisplay(sc_core::sc_object* o): MainThreadQemuDisplay(selectGpu(o)) {}
+
+MainThreadQemuDisplay::MainThreadQemuDisplay(QemuVirtioGpu& gpu)
+    : MainThreadQemuDisplay(reinterpret_cast<QemuDevice*>(&gpu))
 {
 }
 
-MainThreadQemuDisplay::MainThreadQemuDisplay(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu)
-    : MainThreadQemuDisplay(name, reinterpret_cast<QemuDevice&>(gpu))
+MainThreadQemuDisplay::MainThreadQemuDisplay(QemuVirtioMMIOGpuGl& gpu)
+    : MainThreadQemuDisplay(reinterpret_cast<QemuDevice*>(&gpu))
 {
 }
 
-MainThreadQemuDisplay::MainThreadQemuDisplay(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu)
-    : MainThreadQemuDisplay(name, reinterpret_cast<QemuDevice&>(gpu))
+QemuDevice* MainThreadQemuDisplay::selectGpu(sc_core::sc_object* o)
 {
-}
-
-QemuDevice& MainThreadQemuDisplay::selectGpu(sc_core::sc_object& o)
-{
-    if (dynamic_cast<QemuVirtioMMIOGpuGl*>(&o) != nullptr) {
-        return reinterpret_cast<QemuDevice&>(*dynamic_cast<QemuVirtioMMIOGpuGl*>(&o));
-    } else if (dynamic_cast<QemuVirtioGpu*>(&o) != nullptr) {
-        return reinterpret_cast<QemuDevice&>(*dynamic_cast<QemuVirtioGpu*>(&o));
+    if (dynamic_cast<QemuVirtioMMIOGpuGl*>(o) != nullptr) {
+        return dynamic_cast<QemuVirtioMMIOGpuGl*>(o);
+    } else if (dynamic_cast<QemuVirtioGpu*>(o) != nullptr) {
+        return dynamic_cast<QemuVirtioGpu*>(o);
     } else {
-        SCP_FATAL(SCMOD) << " the type of the object 'o' is not a QemuVirtioMMIOGpuGl or QemuVirtioGpu";
+        SCP_FATAL() << "The type of the object 'o' is not a QemuVirtioMMIOGpuGl or QemuVirtioGpu";
+        return nullptr;
     }
 }
 
@@ -73,7 +74,7 @@ void MainThreadQemuDisplay::instantiate()
     inst->get().enable_opengl();
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        SCP_WARN(SCMOD) << "Skipping Display module: Failed to initialize SDL: " << SDL_GetError();
+        SCP_WARN() << "Skipping Display module: Failed to initialize SDL: " << SDL_GetError();
         return;
     }
 
@@ -144,8 +145,8 @@ void MainThreadQemuDisplay::realize()
 
     std::vector<qemu::Console> consoles = lib.get_all_consoles();
     if (consoles.empty()) {
-        SCP_FATAL(SCMOD) << "Failed to get any console. Please make sure graphics device is "
-                            "realized before the display.";
+        SCP_FATAL() << "Failed to get any console. Please make sure graphics device is "
+                       "realized before the display.";
     }
 
     qemu::DisplayOptions dpy_opts = lib.display_options_new();
@@ -185,4 +186,84 @@ void MainThreadQemuDisplay::realize()
     }
 
     m_realized = true;
+}
+
+QemuDisplay::QemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+    : sc_module(name)
+#ifdef __APPLE__
+    // On MacOS use libqbox's QemuDisplay SystemC module.
+    ,m_main_display(o)
+#endif
+{
+#ifndef __APPLE__
+    // Use QEMU's integrated display only if we are NOT on MacOS.
+    // On MacOS use libqbox's QemuDisplay SystemC module.
+    QemuDevice* gpu = (dynamic_cast<QemuDevice*>(o));
+    gpu->get_qemu_inst().set_display_arg("sdl,gl=on");
+#endif
+}
+
+QemuDisplay::QemuDisplay(const sc_core::sc_module_name& name, QemuDevice& gpu)
+    : QemuDisplay(name, reinterpret_cast<sc_core::sc_object*>(&gpu))
+{
+}
+
+QemuDisplay::QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu)
+    : QemuDisplay(name, reinterpret_cast<sc_core::sc_object*>(&gpu))
+{
+}
+
+QemuDisplay::QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu)
+    : QemuDisplay(name, reinterpret_cast<sc_core::sc_object*>(&gpu))
+{
+}
+
+void QemuDisplay::before_end_of_elaboration()
+{
+#ifdef __APPLE__
+    m_main_display.instantiate();
+#endif
+}
+
+void QemuDisplay::end_of_elaboration()
+{
+#ifdef __APPLE__
+    m_main_display.realize();
+#endif
+}
+
+QemuInstance* QemuDisplay::get_qemu_inst()
+{
+#ifdef __APPLE__
+    return &m_main_display.get_qemu_inst();
+#else
+    return nullptr;
+#endif
+}
+
+bool QemuDisplay::is_instantiated() const
+{
+#ifdef __APPLE__
+    return m_main_display.is_instantiated();
+#else
+    return true;
+#endif
+}
+
+bool QemuDisplay::is_realized() const
+{
+#ifdef __APPLE__
+    return m_main_display.is_realized();
+#else
+    return true;
+#endif
+}
+
+const std::vector<qemu::SDL2Console>* QemuDisplay::get_sdl2_consoles() const
+{
+#ifdef __APPLE__
+    return &m_main_display.get_sdl2_consoles();
+#else
+    return nullptr;
+#endif
 }

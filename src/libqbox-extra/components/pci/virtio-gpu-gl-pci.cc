@@ -18,10 +18,6 @@ QemuVirtioGpuGlPci::QemuVirtioGpuGlPci(const sc_core::sc_module_name& name, Qemu
     , p_hostmem_mb("hostmem_mb", 2048, "MB to allocate for host visible shared memory")
 {
 #ifndef __APPLE__
-    // Use QEMU's integrated display only if we are NOT on MacOS.
-    // On MacOS use libqbox's QemuDisplay SystemC module.
-    m_inst.set_display_arg("sdl,gl=on");
-
 #ifdef HAVE_VIRGL_RESOURCE_BLOB
     // Create memory object for host visible shared memory only if blob
     // resources are available in virgl otherwise it is not needed.

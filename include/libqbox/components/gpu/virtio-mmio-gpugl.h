@@ -23,11 +23,6 @@ public:
     QemuVirtioMMIOGpuGl(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuVirtioMMIO(nm, inst, "virtio-gpu-gl-device")
     {
-#ifndef __APPLE__
-        // Use QEMU's integrated display only if we are NOT on MacOS.
-        // On MacOS use libqbox's QemuDisplay SystemC module.
-        m_inst.set_display_arg("sdl,gl=on");
-#endif
     }
 
     void before_end_of_elaboration() override { QemuVirtioMMIO::before_end_of_elaboration(); }

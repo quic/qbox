@@ -20,7 +20,7 @@ private:
     QemuInstanceManager m_inst_manager;
     QemuInstance m_inst;
     std::unique_ptr<QemuVirtioMMIOGpuGl> m_gpu;
-    std::unique_ptr<MainThreadQemuDisplay> m_display;
+    std::unique_ptr<QemuDisplay> m_display;
 
 public:
     MainThreadDisplayTest(const sc_core::sc_module_name& n)
@@ -33,7 +33,7 @@ public:
         }
 
         m_gpu = std::make_unique<QemuVirtioMMIOGpuGl>("gpu", m_inst);
-        m_display = std::make_unique<MainThreadQemuDisplay>("display", *m_gpu);
+        m_display = std::make_unique<QemuDisplay>("display", *m_gpu);
     }
 
     virtual void end_of_simulation() override
@@ -43,7 +43,7 @@ public:
         if (m_display) {
             TEST_ASSERT(m_display->is_instantiated());
             TEST_ASSERT(m_display->is_realized());
-            TEST_ASSERT(!m_display->get_sdl2_consoles().empty());
+            TEST_ASSERT(!m_display->get_sdl2_consoles()->empty());
         }
     }
 };
