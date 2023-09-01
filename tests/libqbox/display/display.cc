@@ -14,16 +14,17 @@
 
 #include "test/test.h"
 
-class DisplayTest : public TestBench
+class MainThreadDisplayTest : public TestBench
 {
 private:
     QemuInstanceManager m_inst_manager;
     QemuInstance m_inst;
     std::unique_ptr<QemuVirtioMMIOGpuGl> m_gpu;
-    std::unique_ptr<QemuDisplay> m_display;
+    std::unique_ptr<MainThreadQemuDisplay> m_display;
 
 public:
-    DisplayTest(const sc_core::sc_module_name& n): TestBench(n), m_inst("inst", &m_inst_manager, qemu::Target::AARCH64)
+    MainThreadDisplayTest(const sc_core::sc_module_name& n)
+        : TestBench(n), m_inst("inst", &m_inst_manager, qemu::Target::AARCH64)
     {
         if (SDL_Init(SDL_INIT_VIDEO) < 0) {
             // Skip this test on platforms with no video device available
@@ -32,7 +33,7 @@ public:
         }
 
         m_gpu = std::make_unique<QemuVirtioMMIOGpuGl>("gpu", m_inst);
-        m_display = std::make_unique<QemuDisplay>("display", *m_gpu);
+        m_display = std::make_unique<MainThreadQemuDisplay>("display", *m_gpu);
     }
 
     virtual void end_of_simulation() override
@@ -47,4 +48,4 @@ public:
     }
 };
 
-int sc_main(int argc, char* argv[]) { return run_testbench<DisplayTest>(argc, argv); }
+int sc_main(int argc, char* argv[]) { return run_testbench<MainThreadDisplayTest>(argc, argv); }

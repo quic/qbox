@@ -23,13 +23,13 @@
 #include <SDL_syswm.h>
 
 /**
- * @class QemuDisplay
+ * @class MainThreadQemuDisplay
  *
  * @brief Qemu Display abstraction as a SystemC module
  *
  * @details This class abstracts a Qemu display as a SystemC module.
  */
-class QemuDisplay : public sc_core::sc_module
+class MainThreadQemuDisplay : public sc_core::sc_module
 {
 private:
     static QemuInstance* inst;
@@ -41,13 +41,13 @@ private:
     qemu::DisplayGLCtxOps m_gl_ctx_ops;
     bool m_instantiated = false;
 
-    QemuDisplay(const sc_core::sc_module_name& name, QemuDevice& gpu): sc_module(name)
+    MainThreadQemuDisplay(const sc_core::sc_module_name& name, QemuDevice& gpu): sc_module(name)
     {
         QemuInstance* gpu_qemu_inst = &gpu.get_qemu_inst();
         if (inst && inst != gpu_qemu_inst) {
-            SCP_FATAL(SCMOD) << "Can not create another QemuDisplay on a different QemuInstance";
+            SCP_FATAL(SCMOD) << "Can not create another MainThreadQemuDisplay on a different QemuInstance";
         }
-        QemuDisplay::inst = gpu_qemu_inst;
+        MainThreadQemuDisplay::inst = gpu_qemu_inst;
     }
 
     QemuDevice& selectGpu(sc_core::sc_object& o)
@@ -86,7 +86,7 @@ public:
     static void gl_switch(DisplayChangeListener* dcl, DisplaySurface* new_surface)
     {
         qemu::LibQemu& lib = inst->get();
-        QemuDisplay* display = reinterpret_cast<QemuDisplay*>(lib.dcl_new(dcl).get_user_data());
+        MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
 
         // SDL2 GL switch should run on main kernel thread as it may resize the window. At
         // initialization time, it is scheduled to run on SystemC kernel thread without waiting for
@@ -112,7 +112,7 @@ public:
     static void gl_refresh(DisplayChangeListener* dcl)
     {
         qemu::LibQemu& lib = inst->get();
-        QemuDisplay* display = reinterpret_cast<QemuDisplay*>(lib.dcl_new(dcl).get_user_data());
+        MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
         // SDL2 GL refresh should run on main kernel thread as it polls events
         if (display->m_realized) {
             lib.unlock_iothread();
@@ -125,7 +125,8 @@ public:
 
     static bool is_compatible_dcl(DisplayGLCtx* ctx, DisplayChangeListener* dcl)
     {
-        QemuDisplay* display = reinterpret_cast<QemuDisplay*>(inst->get().dcl_new(dcl).get_user_data());
+        MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(
+            inst->get().dcl_new(dcl).get_user_data());
         return display->m_ops.is_used_by(dcl);
     }
 
@@ -187,7 +188,10 @@ public:
         m_realized = true;
     }
 
-    QemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object* o): QemuDisplay(name, selectGpu(*o)) {}
+    MainThreadQemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : MainThreadQemuDisplay(name, selectGpu(*o))
+    {
+    }
 
     /**
      * @brief Construct a QEMUDisplay
@@ -195,8 +199,8 @@ public:
      * @param[in] name SystemC module name
      * @param[in] gpu GPU module associated to this diplay.
      */
-    QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu)
-        : QemuDisplay(name, reinterpret_cast<QemuDevice&>(gpu))
+    MainThreadQemuDisplay(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu)
+        : MainThreadQemuDisplay(name, reinterpret_cast<QemuDevice&>(gpu))
     {
     }
 
@@ -206,12 +210,12 @@ public:
      * @param[in] name SystemC module name
      * @param[in] gpu GPU module associated to this display
      */
-    QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu)
-        : QemuDisplay(name, reinterpret_cast<QemuDevice&>(gpu))
+    MainThreadQemuDisplay(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu)
+        : MainThreadQemuDisplay(name, reinterpret_cast<QemuDevice&>(gpu))
     {
     }
 
-    virtual ~QemuDisplay()
+    virtual ~MainThreadQemuDisplay()
     {
         // TODO: need a better strategy for teardown
         m_ops.set_name("deleted");
@@ -232,6 +236,7 @@ public:
     const std::vector<qemu::SDL2Console>& get_sdl2_consoles() const { return m_sdl2_consoles; }
 };
 
-QemuInstance* QemuDisplay::inst = nullptr;
-GSC_MODULE_REGISTER(QemuDisplay, sc_core::sc_object*);
+QemuInstance* MainThreadQemuDisplay::inst = nullptr;
+GSC_MODULE_REGISTER(MainThreadQemuDisplay, sc_core::sc_object*);
+
 #endif // _LIBQBOX_COMPONENTS_DISPLAY_H
