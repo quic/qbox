@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2022 GreenSocs
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #include <systemc>
 #include <tlm>
 #include <scp/report.h>

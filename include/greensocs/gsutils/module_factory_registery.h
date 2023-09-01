@@ -1,7 +1,8 @@
 
 /*
- *  Copyright (C) 2023  Qualcomm
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef GREENSOCS_MODULE_FACTORY_REG_H

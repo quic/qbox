@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #include <systemc>
 #include <tlm>
 #include <tlm_utils/simple_initiator_socket.h>
