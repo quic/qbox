@@ -83,6 +83,7 @@ public:
 
     void end_of_elaboration() { socket.can_receive_any(); }
 
+    void enqueue(char c) { socket.enqueue(c); }
     void* rcv_thread()
     {
         struct sigaction act = { 0 };
@@ -100,7 +101,7 @@ public:
         while (m_running) {
             int r = read(fd, &c, 1);
             if (r == 1) {
-                socket.enqueue(c);
+                enqueue(c);
             }
             if (r == 0) {
                 break;
