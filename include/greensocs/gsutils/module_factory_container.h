@@ -84,6 +84,7 @@ public:
         for (int i = 0; cci::cci_get_broker().has_preset_value(modulename + ".args." + std::to_string(i)); i++) {
             SCP_TRACE(())("Looking for : {}.args.{}", modulename, std::to_string(i));
 
+            gs::cci_clear_unused(m_broker, modulename + ".args." + std::to_string(i));
             auto arg = cci::cci_get_broker().get_preset_cci_value(modulename + ".args." + std::to_string(i));
             if (arg.is_string() && std::string(arg.get_string())[0] == '&') {
                 std::string parent = std::string(modulename).substr(0, modulename.find_last_of("."));
@@ -136,6 +137,7 @@ public:
              * object Note that the names are relative to the current module (this).
              */
             std::string targetname = std::string(m->name()) + "." + param;
+            gs::cci_clear_unused(m_broker, targetname + ".0");
             if (m_broker.get_preset_cci_value(targetname + ".0").is_string()) {
                 // deal with an alias
                 std::string src = m_broker.get_preset_cci_value(targetname + ".0").get_string();
@@ -143,6 +145,7 @@ public:
                 m_broker.set_preset_cci_value(targetname + ".size", m_broker.get_preset_cci_value(src + ".size"));
             }
             std::string bindname = targetname + ".bind";
+            gs::cci_clear_unused(m_broker, bindname);
             if (!m_broker.get_preset_cci_value(bindname).is_string()) {
                 continue;
             }
@@ -276,6 +279,7 @@ public:
                     }
                     allModules.push_back(no_construct_mod);
                 } else {
+                    gs::cci_clear_unused(m_broker, std::string(sc_module::name()) + "." + name + ".moduletype");
                     std::string type = m_broker
                                            .get_preset_cci_value(std::string(sc_module::name()) + "." + name +
                                                                  ".moduletype")
@@ -315,7 +319,7 @@ private:
 
 public:
     cci::cci_broker_handle m_broker;
-    cci_param<std::string> moduletype; // for consistency
+    cci::cci_param<std::string> moduletype; // for consistency
     cci::cci_param<uint32_t> p_tlm_initiator_ports_num;
     cci::cci_param<uint32_t> p_tlm_target_ports_num;
     cci::cci_param<uint32_t> p_initiator_signals_num;

@@ -316,13 +316,6 @@ protected:
             return 0;
     }
 
-    void cci_ignore(std::string name)
-    {
-        std::string fullname = std::string(sc_module::name()) + "." + name;
-        m_broker.ignore_unconsumed_preset_values(
-            [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == fullname; });
-    }
-
     bool read(uint8_t* data, uint64_t offset, uint64_t len)
     {
         // force end of elaboration to ensure we fix the sizes
@@ -423,17 +416,12 @@ public:
 
         if (p_verbose) {
             int level;
-            if (!m_broker.get_preset_cci_value(std::string(name) + "." + SCP_LOG_LEVEL_PARAM_NAME)
-                     .template try_get<int>(level) ||
+            if (!gs::cci_get<int>(m_broker, std::string(name) + "." + SCP_LOG_LEVEL_PARAM_NAME, level) ||
                 level < (int)(scp::log::WARNING)) {
                 m_broker.set_preset_cci_value((std::string(name) + "." + SCP_LOG_LEVEL_PARAM_NAME).c_str(),
                                               cci::cci_value(static_cast<int>(scp::log::WARNING)));
             }
         }
-
-        cci_ignore("address");
-        cci_ignore("size");
-        cci_ignore("relative_addresses");
 
         socket.register_b_transport(this, &Memory::b_transport);
         socket.register_transport_dbg(this, &Memory::transport_dbg);
@@ -457,8 +445,7 @@ public:
         SCP_DEBUG(SCMOD) << "m_size: " << m_size;
 
         m_relative_addresses = true;
-        if (m_broker.has_preset_value(ts_name + ".relative_addresses")) {
-            m_relative_addresses = m_broker.get_preset_cci_value(ts_name + ".relative_addresses").get_bool();
+        if (gs::cci_get<bool>(m_broker, ts_name + ".relative_addresses", m_relative_addresses)) {
             m_broker.lock_preset_value(ts_name + ".relative_addresses");
         }
     }
@@ -477,7 +464,8 @@ public:
     {
         if (!m_size) {
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
-            if (m_broker.get_preset_cci_value(ts_name + ".0").is_string()) {
+            std::string ts_name_alias;
+            if (gs::cci_get<std::string>(m_broker, ts_name + ".0", ts_name_alias)) {
                 // deal with an alias
                 if (m_broker.has_preset_value(ts_name + ".size") &&
                     m_broker.get_preset_cci_value(ts_name + ".size").is_number()) {
@@ -486,15 +474,11 @@ public:
                      "also provided.",
                      ts_name);
                 } else {
-                    ts_name = m_broker.get_preset_cci_value(ts_name + ".0").get_string();
+                    ts_name = ts_name_alias;
                     if (ts_name[0] == '&') ts_name = (ts_name.erase(0, 1)) + ".target_socket";
                 }
             }
-            if (!m_broker.has_preset_value(ts_name + ".size")) {
-                SCP_FATAL(SCMOD) << "Can't find " << ts_name << ".size";
-            }
-            m_size = m_broker.get_preset_cci_value(ts_name + ".size").get_uint64();
-            m_broker.lock_preset_value(ts_name + ".size");
+            m_size = gs::cci_get<uint64_t>(m_broker, ts_name + ".size");
         }
         return m_size;
     }
@@ -508,16 +492,16 @@ public:
     {
         if (!m_address_valid) {
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
-            if (m_broker.get_preset_cci_value(ts_name + ".0").is_string()) {
+            std::string ts_name_alias;
+            if (gs::cci_get<std::string>(m_broker, ts_name + ".0", ts_name_alias)) {
                 // deal with an alias
-                if (m_broker.has_preset_value(ts_name + ".address") &&
-                    m_broker.get_preset_cci_value(ts_name + ".address").is_number()) {
+                if (gs::cci_get<uint64_t>(m_broker, ts_name + ".address", m_address)) {
                     SCP_WARN(SCMOD)
                     ("The configuration alias provided ({}) will be ignored as a valid address is "
                      "also provided.",
                      ts_name);
                 } else {
-                    ts_name = m_broker.get_preset_cci_value(ts_name + ".0").get_string();
+                    ts_name = ts_name_alias;
                     if (ts_name[0] == '&') ts_name = (ts_name.erase(0, 1)) + ".target_socket";
                 }
             }

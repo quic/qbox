@@ -202,42 +202,33 @@ protected:
                 SCP_WARN(()) << "elf file loading into local memory will interpret addresses "
                                 "relative to the memory - probably not what you want?";
             }
-            std::string file = cci_get<std::string>(name + ".elf_file");
+            std::string file = gs::cci_get<std::string>(m_broker, name + ".elf_file");
             elf_load(file);
             read = true;
         } else {
             uint64_t addr = 0;
             if (m_use_callback) {
-                if (m_broker.has_preset_value(name + ".offset"))
-                    addr = cci_get<uint64_t>(name + ".offset");
-                else
-                    SCP_FATAL(()) << "No offset found for '" << name << "'";
+                addr = gs::cci_get<uint64_t>(m_broker, name + ".offset");
             } else {
-                if (m_broker.has_preset_value(name + ".address"))
-                    addr = cci_get<uint64_t>(name + ".address");
-                else
-                    SCP_FATAL(()) << "No address found for '" << name << "'";
+                addr = gs::cci_get<uint64_t>(m_broker, name + ".address");
             }
-            if (m_broker.has_preset_value(name + ".bin_file")) {
-                std::string file = cci_get<std::string>(name + ".bin_file");
+            std::string file;
+            if (gs::cci_get<std::string>(m_broker, name + ".bin_file", file)) {
                 SCP_INFO(())("Loading binary file {} to {:#x}", file, addr);
                 file_load(file, addr);
                 read = true;
             }
-            if (m_broker.has_preset_value(name + ".csv_file")) {
-                std::string file = cci_get<std::string>(name + ".csv_file");
-                std::string addr_str = cci_get<std::string>(name + ".addr_str");
-                std::string val_str = cci_get<std::string>(name + ".value_str");
+            if (gs::cci_get<std::string>(m_broker, name + ".csv_file", file)) {
+                std::string addr_str = gs::cci_get<std::string>(m_broker, name + ".addr_str");
+                std::string val_str = gs::cci_get<std::string>(m_broker, name + ".value_str");
                 bool byte_swap = false;
-                if (m_broker.has_preset_value(name + ".byte_swap")) {
-                    byte_swap = cci_get<bool>(name + ".byte_swap");
-                }
+                byte_swap = gs::cci_get<bool>(m_broker, name + ".byte_swap", byte_swap);
                 SCP_INFO(())("Loading csv file {}, ({}) to {:#x}", file, (name + ".csv_file"), addr);
                 csv_load(file, addr, addr_str, val_str, byte_swap);
                 read = true;
             }
-            if (m_broker.has_preset_value(name + ".param")) {
-                std::string param = cci_get<std::string>(name + ".param");
+            std::string param;
+            if (gs::cci_get<std::string>(m_broker, name + ".param", param)) {
                 cci::cci_param_typed_handle<std::string> data(m_broker.get_param_handle(param));
                 if (!data.is_valid()) {
                     SCP_FATAL(()) << "Unable to find valid source param '" << param << "' for '" << name << "'";
@@ -248,9 +239,7 @@ protected:
             }
             if (sc_cci_children((name + ".data").c_str()).size()) {
                 bool byte_swap = false;
-                if (m_broker.has_preset_value(name + ".byte_swap")) {
-                    byte_swap = cci_get<bool>(name + ".byte_swap");
-                }
+                gs::cci_get<bool>(m_broker, name + ".byte_swap", byte_swap);
                 SCP_INFO(())("Loading config data to {:#x}", addr);
                 data_load(name + ".data", addr, byte_swap);
                 read = true;
@@ -346,7 +335,7 @@ private:
                     uint32_t d;
                     uint8_t b[sizeof(uint32_t)];
                 } data;
-                data.d = cci_get<uint32_t>(param + "." + std::string(s));
+                data.d = gs::cci_get<uint32_t>(m_broker, param + "." + std::string(s));
                 if (byte_swap) {
                     data.d = byte_swap32(data.d);
                 }

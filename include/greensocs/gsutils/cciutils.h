@@ -154,40 +154,95 @@ std::list<std::string> sc_cci_children(sc_core::sc_module_name name);
  */
 std::list<std::string> sc_cci_list_items(sc_core::sc_module_name module_name, std::string list_name);
 
+std::string get_parent_name(sc_core::sc_module_name n);
+
+cci::cci_value cci_get(cci::cci_broker_handle broker, std::string name);
+
 template <typename T>
 T cci_get(cci::cci_broker_handle broker, std::string name)
 {
-    broker.ignore_unconsumed_preset_values(
-        [name](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == name; });
-    broker.lock_preset_value(name);
     T ret{};
-    if (!broker.get_preset_cci_value(name).template try_get<T>(ret)) {
-        SCP_ERR("cciutils.cci_get") << "Unable to get parameter " << name << "\nIs your .lua file up-to-date?";
-    };
-    return ret;
-}
+    cci_value v = cci_get(broker, name);
 
-static std::string get_parent_name(sc_core::sc_module_name n)
-{
-    std::string name(n);
-    auto pos = name.find_last_of('.');
-    if (pos != std::string::npos) {
-        return name.substr(0, pos);
+    if (!v.template try_get<T>(ret)) {
+            SCP_ERR("cciutils.cci_get") << "Unable to get parameter " << name << "\nIs your .lua file up-to-date?";
     }
-    return "";
+    return ret;
 }
 
 template <typename T>
-std::vector<T> cci_get_vector(cci::cci_broker_handle broker, const std::string base)
+T cci_get_d(cci::cci_broker_handle broker, std::string name, T default_val)
 {
-    std::vector<T> ret;
-    for (std::string s : sc_cci_children(base.c_str())) {
-        if (std::count_if(s.begin(), s.end(), [](unsigned char c) { return std::isdigit(c); })) {
-            ret.push_back(cci_get<T>(broker, base + "." + s));
-        }
+    T ret{};
+    cci_value v = cci_get(broker, name);
+
+    if (!v.template try_get<T>(ret)) {
+        return default_val;
     }
     return ret;
 }
+
+template <typename T>
+bool cci_get(cci::cci_broker_handle broker, std::string name, T& param)
+{
+    return cci_get(broker, name).try_get<T>(param);
+}
+
+class HelpSingleton : public sc_core::sc_module
+{
+public:
+    static HelpSingleton* GetInstance();
+    std::set<std::string> m_unused;
+    std::set<std::string> m_used;
+    std::set<std::string> m_capture;
+
+    void start_of_simulation()
+    {
+        if (!m_unused.empty()){
+            SCP_WARN("Param check") << "";
+            SCP_WARN("Param check") << "Unused Parameters:";
+            SCP_WARN("Param check") << "===================================";
+            for (auto p : m_unused) {
+                SCP_WARN("Param check") << "Params: Unused parameter : " << p;
+            }
+        }
+    }
+
+    void print_used_parameter(cci::cci_broker_handle broker)
+    {
+        for (auto v : m_used) {
+            if (cci_get(broker, v).to_json() == "null") {
+                std::cout << "Configurable Parameters: " << v << " the value is not set" << std::endl;
+            } else {
+                std::cout << "Configurable Parameters: " << v << " the value is: " << cci_get(broker, v).to_json()
+                          << std::endl;
+            }
+        }
+    }
+
+    void set_unused(const std::string& parname, const cci_originator& originator)
+    {
+        if (m_capture.find(originator.name()) != m_capture.end())
+            m_unused.insert(parname);
+    }
+
+    void capture_originator(std::string name){
+        m_capture.insert(name);
+    }
+
+    void clear_unused(const std::string& parname)
+    {
+        m_used.insert(parname);
+        auto iter = m_unused.find(parname);
+        if (iter != m_unused.end()) {
+            m_unused.erase(iter);
+        }
+    }
+
+private:
+    HelpSingleton();
+    static HelpSingleton* pHelpSingleton;
+};
 
 /**
  * @brief Configurable Broker class, inherits from the 'standard' cci_utils broker, but adds
@@ -199,8 +254,10 @@ class ConfigurableBroker : public cci_utils::consuming_broker
 {
 private:
     std::set<std::string> m_unignored; // before conf_file
+
 public:
     // a set of perameters that should be exposed up the broker stack
+    HelpSingleton* m_help_helper;
     std::set<std::string> hide;
     cci_param<std::string> conf_file;
     friend class PrivateConfigurableBroker;
@@ -377,39 +434,6 @@ protected:
         }
     }
 
-    class help_helper : public sc_core::sc_module
-    {
-    public:
-        help_helper(sc_core::sc_module_name name) {}
-        std::function<void()> help_cb;
-        void register_cb(std::function<void()> cb) { help_cb = cb; }
-        void end_of_elaboration()
-        {
-            if (help_cb) help_cb();
-        }
-
-        void start_of_simulation()
-        {
-            cci::cci_broker_handle m_broker = cci::cci_get_broker();
-            if (!help_cb) return;
-            // remove lua builtins
-            m_broker.ignore_unconsumed_preset_values([](const std::pair<std::string, cci::cci_value>& iv) -> bool {
-                return ((iv.first)[0] == '_' || iv.first == "math.maxinteger") || (iv.first == "math.mininteger") ||
-                       (iv.first == "utf8.charpattern");
-            });
-
-            auto uncon = m_broker.get_unconsumed_preset_values();
-            for (auto p : uncon) {
-                SCP_WARN("cciutils.help")
-                    << "Params: Unconsumed parameter : " << p.first << " = " << p.second.to_json();
-            }
-
-            if (help_cb) exit(0);
-        }
-    };
-
-    help_helper m_help_helper;
-
 public:
     /*
      * public interface functions
@@ -436,56 +460,19 @@ public:
         return consumed_preset_cci_values;
     }
 
-    void print_debug(bool top = true)
-    {
-        /* NB there is a race condition between this and the QEMU uart which
-         * has a tendency to wipe the buffer. We will use cerr here */
-
-        if (top) {
-            std::cerr << std::endl
-                      << "Available Configuration Parameters:" << std::endl
-                      << "===================================" << std::endl;
-        }
-
-        for (auto p : get_consumed_preset_values()) {
-            std::cerr << "Consumed parameter : " << p.first << " (with value 0x" << std::hex << p.second << ")"
-                      << std::endl;
-        }
-
-        std::string ending = "childbroker";
-        for (auto p : get_param_handles(get_cci_originator("Command line help"))) {
-            if (!std::equal(ending.rbegin(), ending.rend(), std::string(p.name()).rbegin())) {
-                std::cerr << p.name() << " : " << p.get_description() << " (configured value " << p.get_cci_value()
-                          << ") " << std::endl;
-            } else {
-                cci_param_typed_handle<ConfigurableBroker*> c(p);
-                ConfigurableBroker* cc = c.get_value();
-                if (cc != this) {
-                    cc->print_debug(false);
-                }
-            }
-        }
-        if (top) {
-            std::cerr << std::endl << "Logging parameters :" << std::endl;
-            for (auto p : scp::get_logging_parameters()) {
-                std::cerr << p << std::endl;
-            }
-            std::cerr << "---" << std::endl;
-        }
-    }
-
-    /**
-     * @brief Construct a new Configurable Broker object
-     * default constructor:
-     * When constructed with no initialised parameters, it is assumed that ALL
-     * parameters are to be treated as private
-     * @param name Broker name (Default provided)
-     * @param load_conf_file : request that configuration file is loaded (default true)
-     */
+/**
+ * @brief Construct a new Configurable Broker object
+ * default constructor:
+ * When constructed with no initialised parameters, it is assumed that ALL
+ * parameters are to be treated as private
+ * @param name Broker name (Default provided)
+ * @param load_conf_file : request that configuration file is loaded (default true)
+ */
 #define BROKERNAME "gs::ConfigurableBroker"
     ConfigurableBroker(const std::string& name = BROKERNAME, bool load_conf_file = true,
                        std::function<void(std::string)> uninitialized_cb = nullptr)
         : consuming_broker(hierarchical_name() + "." + name)
+        , m_help_helper(HelpSingleton::GetInstance())
         , conf_file("lua_conf", "", cci_broker_handle(get_parent_broker(), get_cci_originator(name.c_str())),
                     "Local lua configuration file", CCI_RELATIVE_NAME, get_cci_originator(name.c_str()))
         , m_orig_name(hierarchical_name())
@@ -493,7 +480,6 @@ public:
         , m_parent(get_parent_broker()) // local convenience function
         , m_child_ref(NULL)
         , m_uninitialized_cb(uninitialized_cb)
-        , m_help_helper("help_helper")
 
     {
         if (has_parent) {
@@ -555,6 +541,7 @@ public:
             set_preset_cci_value(relname(p.first), p.second, m_originator);
         }
 
+        m_help_helper->capture_originator("lua");
         LuaFile_Tool lua("lua", argc, argv, "", enforce_config_file);
 
         static const char* optstring = "d";
@@ -569,7 +556,6 @@ public:
             switch (c) {
             case 'd': // -d and --debug
                 sc_core::sc_spawn_options opts;
-                m_help_helper.register_cb([&]() -> void { print_debug(); });
                 break;
             }
         }
@@ -655,6 +641,7 @@ public:
 
     void add_param(cci_param_if* par) override
     {
+        m_help_helper->clear_unused(par->name());
         if (sendToParent(par->name())) {
             return m_parent.add_param(par);
         } else {
@@ -699,6 +686,7 @@ public:
         }
         for (auto u = m_unignored.begin(); u != m_unignored.end();) {
             if (pred(make_pair(*u, cci_value(0)))) {
+                m_help_helper->clear_unused(*u);
                 u = m_unignored.erase(u);
             } else {
                 ++u;
@@ -717,6 +705,7 @@ public:
     void set_preset_cci_value(const std::string& parname, const cci_value& cci_value,
                               const cci_originator& originator) override
     {
+        m_help_helper->set_unused(parname, originator);
         if (sendToParent(parname)) {
             return m_parent.set_preset_cci_value(parname, cci_value, originator);
         } else {
@@ -724,6 +713,7 @@ public:
             return consuming_broker::set_preset_cci_value(parname, cci_value, originator);
         }
     }
+
     cci_param_untyped_handle get_param_handle(const std::string& parname,
                                               const cci_originator& originator) const override
     {
@@ -756,7 +746,7 @@ public:
     }
 
     bool is_global_broker() const override { return (!has_parent); }
-};
+}; // namespace gs
 
 class PrivateConfigurableBroker : public gs::ConfigurableBroker
 {
@@ -813,6 +803,21 @@ public:
         return cci_preset_value_range(pred, PrivateConfigurableBroker::get_unconsumed_preset_values());
     }
 };
+
+void cci_clear_unused(cci::cci_broker_handle broker, std::string name);
+
+template <typename T>
+std::vector<T> cci_get_vector(cci::cci_broker_handle broker, const std::string base)
+{
+    std::vector<T> ret;
+    for (std::string s : sc_cci_children(base.c_str())) {
+        if (std::count_if(s.begin(), s.end(), [](unsigned char c) { return std::isdigit(c); })) {
+            ret.push_back(cci_get<T>(broker, base + "." + s));
+        }
+    }
+    return ret;
+}
+
 } // namespace gs
 
 /**

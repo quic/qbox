@@ -23,7 +23,7 @@ class pass : public sc_core::sc_module
     /* Alias from - to */
     void alias_preset_param(std::string a, std::string b, bool required = false)
     {
-        if (m_broker.has_preset_value(a)) {
+        if (gs::cci_get<std::string>(m_broker, a, b)) {
             m_broker.set_preset_cci_value(b, m_broker.get_preset_cci_value(a));
             m_broker.lock_preset_value(a);
             m_broker.ignore_unconsumed_preset_values(

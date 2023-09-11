@@ -461,9 +461,6 @@ public:
             m_inst.get().start_gdb_server(ss.str());
         }
 
-        for (auto p : gs::sc_cci_children(sc_module::name())) {
-            SCP_WARN(()) << "Unexpected parameter " + p + " to " + sc_module::name();
-        }
     }
 
     virtual void start_of_simulation() override

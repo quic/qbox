@@ -110,6 +110,33 @@ std::list<std::string> gs::sc_cci_list_items(sc_core::sc_module_name module_name
     return children;
 }
 
+std::string gs::get_parent_name(sc_core::sc_module_name n)
+{
+    std::string name(n);
+    auto pos = name.find_last_of('.');
+    if (pos != std::string::npos) {
+        return name.substr(0, pos);
+    }
+    return "";
+}
+
+cci::cci_value gs::cci_get(cci::cci_broker_handle broker, std::string name)
+{
+    auto h = broker.get_param_handle(name);
+    cci_clear_unused(broker, name);
+    if (h.is_valid()) {
+        return h.get_cci_value();
+    } else {
+        broker.lock_preset_value(name);
+        return broker.get_preset_cci_value(name);
+    }
+}
+
+void gs::cci_clear_unused(cci::cci_broker_handle broker, std::string name)
+{
+    HelpSingleton::GetInstance()->clear_unused(name);
+}
+
 /* handle static list for CCI parameter pre-registration */
 #include <greensocs/gsutils/module_factory_registery.h>
 
@@ -117,4 +144,19 @@ std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>>* gs::Modul
 {
     static std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>> list;
     return &list;
+}
+
+gs::HelpSingleton* gs::HelpSingleton::pHelpSingleton= NULL;
+
+gs::HelpSingleton::HelpSingleton():sc_core::sc_module(sc_core::sc_module_name("help_singleton"))
+{
+   // do init stuff
+}
+
+gs::HelpSingleton* gs::HelpSingleton::GetInstance()
+{
+	if (pHelpSingleton== NULL) {
+		pHelpSingleton = new HelpSingleton();
+	}
+	return pHelpSingleton;
 }

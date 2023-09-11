@@ -167,10 +167,10 @@ private:
                     uint64_t maxa;
                     for (auto nn : gs::sc_cci_children(parent(name()).c_str())) {
                         std::string fn = parent(name()) + "." + nn;
-                        uint64_t n_size = get_val<uint64_t>(fn + ".target_socket.size", 0);
+                        uint64_t n_size = gs::cci_get_d<uint64_t>(m_broker, fn + ".target_socket.size", 0);
                         if (n_size) {
-                            uint64_t n_addr = get_val<uint64_t>(fn + ".target_socket.address", 0);
-                            uint64_t n_num = get_val<uint64_t>(fn + ".number", 0);
+                            uint64_t n_addr = gs::cci_get_d<uint64_t>(m_broker, fn + ".target_socket.address", 0);
+                            uint64_t n_num = gs::cci_get_d<uint64_t>(m_broker, fn + ".number", 0);
                             name_map[n_addr] = nn + " " + name_map[n_addr];
                             if (n_addr + (n_num ? n_num * n_size : n_size) > maxa) {
                                 maxa = n_addr + (n_num ? n_num * n_size : n_size);
@@ -451,54 +451,6 @@ protected:
     }
 
 private:
-    template <class TYPE>
-    inline TYPE get_val(std::string s, bool use_default, TYPE default_val)
-    {
-        TYPE ret;
-
-        auto h = m_broker.get_param_handle(s);
-        cci::cci_value v;
-        if (h.is_valid()) {
-            v = h.get_cci_value();
-        } else {
-            if (!m_broker.has_preset_value(s)) {
-                if (use_default) {
-                    m_broker.lock_preset_value(s);
-                    return default_val;
-                } else {
-                    SCP_FATAL(()) << "Can't find " << s << " in " << m_broker.name();
-                }
-            }
-
-            v = m_broker.get_preset_cci_value(s);
-        }
-        if (v.is_uint64())
-            ret = v.get_uint64();
-        else if (v.is_int64())
-            ret = v.get_int64();
-        else if (v.is_bool())
-            ret = v.get_bool();
-        else if (use_default)
-            ret = default_val;
-        else {
-            SCP_FATAL(())("Unknown type for {} : {}", s, v.to_json());
-        }
-
-        m_broker.lock_preset_value(s);
-        m_broker.ignore_unconsumed_preset_values(
-            [&s](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == (s); });
-        return ret;
-    }
-    template <class TYPE>
-    inline TYPE get_val(std::string s, TYPE default_val)
-    {
-        return get_val<TYPE>(s, true, default_val);
-    }
-    template <class TYPE>
-    inline TYPE get_val(std::string s)
-    {
-        return get_val<TYPE>(s, false, 0);
-    }
     bool initialized = false;
     void lazy_initialize()
     {
@@ -506,14 +458,14 @@ private:
         initialized = true;
 
         for (auto& ti : bound_targets) {
-            if (get_val<bool>(ti.name + ".dynamic", false) == true) {
+            if (gs::cci_get_d<bool>(m_broker, ti.name + ".dynamic", false) == true) {
                 dynamic_targets.push_back(&ti);
                 continue;
             }
             std::string name = ti.name;
-            if (m_broker.get_preset_cci_value(ti.name + ".0").is_string()) {
+            std::string src;
+            if (gs::cci_get<std::string>(m_broker, ti.name + ".0", src)) {
                 // deal with an alias
-                std::string src = m_broker.get_preset_cci_value(ti.name + ".0").get_string();
                 if (m_broker.has_preset_value(ti.name + ".address") &&
                     m_broker.get_preset_cci_value(ti.name + ".address").is_number()) {
                     SCP_WARN((D[ti.index]), ti.name)
@@ -528,11 +480,11 @@ private:
                 }
             }
 
-            ti.address = get_val<uint64_t>(name + ".address");
-            ti.size = get_val<uint64_t>(name + ".size");
-            ti.use_offset = get_val<bool>(name + ".relative_addresses", true);
-            ti.is_callback = get_val<bool>(name + ".is_callback", false);
-            ti.chained = get_val<bool>(name + ".chained", false);
+            ti.address = gs::cci_get<uint64_t>(m_broker, name + ".address");
+            ti.size = gs::cci_get<uint64_t>(m_broker, name + ".size");
+            ti.use_offset = gs::cci_get_d<bool>(m_broker, name + ".relative_addresses", true);
+            ti.is_callback = gs::cci_get_d<bool>(m_broker, name + ".is_callback", false);
+            ti.chained = gs::cci_get_d<bool>(m_broker, name + ".chained", false);
 
             SCP_INFO((D[ti.index]), ti.name)
                 << "Address map " << ti.name + " at"
@@ -555,8 +507,8 @@ private:
 
                 for (std::string n : gs::sc_cci_children((ti.name + ".aliases").c_str())) {
                     std::string name = ti.name + ".aliases." + n;
-                    uint64_t address = get_val<uint64_t>(name + ".address");
-                    uint64_t size = get_val<uint64_t>(name + ".size");
+                    uint64_t address = gs::cci_get<uint64_t>(m_broker,name + ".address");
+                    uint64_t size = gs::cci_get<uint64_t>(m_broker,name + ".size");
                     SCP_INFO((D[ti.index]), ti.name)("Adding alias {} {:#x} (size: {})", name, address, size);
                     struct target_info ati = ti;
                     ati.address = address;
