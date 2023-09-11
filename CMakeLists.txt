@@ -206,8 +206,9 @@ if(UNIX AND NOT APPLE)
 endif()
 
 gs_export()
-install(TARGETS rpc DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-
-add_subdirectory(platforms)
+if (NOT DEFINED GS_ONLY)
+    install(TARGETS rpc DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+    add_subdirectory(platforms)
+endif()
 
 gs_enable_testing()
