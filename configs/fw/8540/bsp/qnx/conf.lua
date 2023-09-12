@@ -14,8 +14,20 @@ tableMerge(platform, {
     };
 });
 
+
+if _bootloader_aarch64 then
+    print ("Using arm64 bootloader")
+    tableJoin(platform["load"], {
+        { data = _bootloader_aarch64, address = INITIAL_DDR_SPACE_14GB };
+    });
+else
+    print ("Using local bootloader")
+    tableJoin(platform["load"], {
+        { bin_file = valid_file(top() .. "bl31.bin"), address = INITIAL_DDR_SPACE_14GB };
+    });
+end
+
 tableJoin(platform["load"], {
-    { bin_file = valid_file(top() .. "bl31.bin"), address = INITIAL_DDR_SPACE_14GB };
     { bin_file = valid_file(top() .. "mifs_qdrive_qvp.img"), address = INITIAL_DDR_SPACE_14GB + OFFSET_MIFS_DDR_SPACE };
     { bin_file = valid_file(top() .. "smem_init.bin"), address = INITIAL_DDR_SPACE_14GB + OFFSET_SMEM_DDR_SPACE };
     { bin_file = valid_file(top() .. "cmd_db_header.bin"), address = 0x0C3F0000 };
