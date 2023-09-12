@@ -152,7 +152,7 @@ local ARM_NUM_CPUS = 8;
 local NUM_REDISTS = 1;
 -- local HEXAGON_NUM_CLUSTERS = 2;
 
-zipfile = valid_file(top().."../top.zip");
+zipfile = valid_file(top().."../top_SA8540.zip");
 
 platform = {
     with_gpu = false;
