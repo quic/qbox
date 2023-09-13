@@ -160,7 +160,7 @@ T cci_get(cci::cci_broker_handle broker, std::string name)
     broker.ignore_unconsumed_preset_values(
         [name](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == name; });
     broker.lock_preset_value(name);
-    T ret;
+    T ret{};
     if (!broker.get_preset_cci_value(name).template try_get<T>(ret)) {
         SCP_ERR("cciutils.cci_get") << "Unable to get parameter " << name << "\nIs your .lua file up-to-date?";
     };
