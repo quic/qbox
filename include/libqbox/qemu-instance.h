@@ -284,12 +284,12 @@ public:
         , m_conf_broker(cci::cci_get_broker())
         , m_inst(loader, t)
         , m_dmi_mgr(m_inst)
-        , p_args("qemu_args", "", "additional space separated arguments")
         , p_tcg_mode("tcg_mode", "MULTI", "The TCG mode required, SINGLE, COROUTINE or MULTI")
         , p_sync_policy("sync_policy", "multithread-quantum", "Synchronization Policy to use")
         , m_tcg_mode(StringToTcgMode(p_tcg_mode))
         , p_icount("icount", false, "Enable virtual instruction counter")
         , p_icount_mips("icount_mips_shift", 0, "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
+        , p_args("qemu_args", "", "additional space separated arguments")
         , p_display_argument_set(false)
         , p_accel("accel", "tcg", "Virtualization accelerator")
     {
