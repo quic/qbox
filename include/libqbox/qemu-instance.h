@@ -268,6 +268,7 @@ protected:
         } else {
             SCP_FATAL(()) << "Unable to find QEMU target container";
         }
+        __builtin_unreachable();
     }
 
 public:
