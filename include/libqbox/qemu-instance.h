@@ -243,8 +243,10 @@ protected:
 
         if (p_accel.get_value() == "tcg") {
             push_tcg_mode_args();
-        } else {
+        } else if (p_accel.get_value() == "hvf") {
             m_inst.push_qemu_arg(p_accel.get_value().c_str());
+        } else {
+            SCP_FATAL(()) << "Invalid accel property '" << p_accel.get_value() << "'";
         }
     }
 
