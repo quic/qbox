@@ -14,9 +14,9 @@ namespace gs {
 
 static const char* log_enabled = std::getenv("GS_LOG");
 static const char* log_enabled_stdout = std::getenv("GS_LOG_STDOUT");
-static char __gs_log_buffer[100];
 #define GS_LOG(...)                                                                                                   \
     do {                                                                                                              \
+        static char __gs_log_buffer[100];                                                                             \
         if (gs::log_enabled) {                                                                                        \
             if (gs::log_enabled_stdout) {                                                                             \
                 fprintf(stdout, "%s:%d ", __FILE__, __LINE__);                                                        \
