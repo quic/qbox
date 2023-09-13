@@ -16,20 +16,20 @@ static const char* log_enabled = std::getenv("GS_LOG");
 static const char* log_enabled_stdout = std::getenv("GS_LOG_STDOUT");
 #define GS_LOG(...)                                                                                                   \
     do {                                                                                                              \
-        static char __gs_log_buffer[100];                                                                             \
+        static char gs_log_buffer[100];                                                                               \
         if (gs::log_enabled) {                                                                                        \
             if (gs::log_enabled_stdout) {                                                                             \
                 fprintf(stdout, "%s:%d ", __FILE__, __LINE__);                                                        \
                 fprintf(stdout, __VA_ARGS__);                                                                         \
                 fprintf(stdout, "\n");                                                                                \
             } else {                                                                                                  \
-                snprintf(gs::__gs_log_buffer, sizeof(gs::__gs_log_buffer), __VA_ARGS__);                              \
+                snprintf(gs::gs_log_buffer, sizeof(gs::gs_log_buffer), __VA_ARGS__);                                  \
                 auto p = sc_core::sc_get_current_process_b();                                                         \
                 if (p)                                                                                                \
                     sc_core::sc_report_handler::report(sc_core::SC_INFO, p->get_parent_object()->basename(),          \
-                                                       gs::__gs_log_buffer, __FILE__, __LINE__);                      \
+                                                       gs::gs_log_buffer, __FILE__, __LINE__);                        \
                 else                                                                                                  \
-                    sc_core::sc_report_handler::report(sc_core::SC_INFO, "non_module", gs::__gs_log_buffer, __FILE__, \
+                    sc_core::sc_report_handler::report(sc_core::SC_INFO, "non_module", gs::gs_log_buffer, __FILE__,   \
                                                        __LINE__);                                                     \
             }                                                                                                         \
         }                                                                                                             \
