@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+import sys
+import json
+
+def load(arg1):
+    data = json.load(open(arg1))
+    formatted_data = json.dumps(data, indent=4)
+
+    sys.stdout.write(formatted_data)
+    sys.stdout.write('\n')
+
+def main(argv):
+    if (len(argv) < 2):
+        print (argv[0], '<name of json file>')
+    else:
+        load (argv[1])
+
+if __name__ == "__main__":
+        main(sys.argv)
+
