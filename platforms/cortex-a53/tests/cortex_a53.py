@@ -56,7 +56,8 @@ def vp_test():
 
     child = pexpect.spawn(vp_path.as_posix(), ["--gs_luafile", args.lua], env=env)
     child.logfile = stdout.buffer
-    child.expect("buildroot login:")
+    child.expect("buildroot")
+    child.expect("login:")
     child.sendline("root")
     child.expect("#")
 
