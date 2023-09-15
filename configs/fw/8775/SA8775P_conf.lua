@@ -465,20 +465,6 @@ platform = {
         zipfile=zipfile
     };
 
---[[ Temporary, substitute this for fallback_0 stanza above when booting Gunyah
-
-      fallback_0 = {
-          moduletype="Memory",
-          target_socket={address=0x0, size=0x40000000, dynamic=true, bind="&router.initiator_socket"},
-          dmi_allow=false, verbose=true,
-          log_level=0,
-          load={csv_file=MAKENA_REGS_CSV,
-          offset=0, addr_str="Address",
-          value_str="Reset Value", byte_swap=true}
-     };
---]]
-
-
     global_peripheral_initiator_arm_0 = {
             moduletype = "GlobalPeripheralInitiator",
             args = {"&platform.qemu_inst", "&platform.cpu_0"},
@@ -551,7 +537,7 @@ local smmu = {
     target_socket = {address=0x15000000, size=0x100000, bind= "&router.initiator_socket"},
     num_tbu = 2,
     num_pages = 128,
-    num_cb = 128;
+    num_cb = num_cb,
     num_smr = 224,
     irq_global = {bind = "&gic_0.spi_in_"..irq_global},
 }
@@ -572,11 +558,31 @@ smmu = {
     target_socket = {address=0x15200000, size=0x100000, bind= "&router.initiator_socket"},
     num_tbu = 0,
     num_pages = 64,
-    num_cb = 64;
+    num_cb = num_cb,
     num_smr = 64,
     irq_global = {bind = "&gic_0.spi_in_"..irq_global},
 }
 
+for i = 0, num_cb - 1 do
+    smmu["irq_context_" .. i] = {bind = "&gic_0.spi_in_" .. irq_context + i}
+end
+platform["smmu_"..tostring(smmu_index)] = smmu;
+
+irq_context = 678
+irq_global = 672
+num_cb = 10
+smmu_index = 2;
+
+smmu = {
+    moduletype = "smmu500",
+    dma = {bind = "&router.target_socket"},
+    target_socket = {address=0x3DA0000, size=0x100000, bind= "&router.initiator_socket"},
+    num_tbu = 0,
+    num_pages = 16,
+    num_cb = num_cb,
+    num_smr = 10,
+    irq_global = {bind = "&gic_0.spi_in_"..irq_global},
+}
 for i = 0, num_cb - 1 do
     smmu["irq_context_" .. i] = {bind = "&gic_0.spi_in_" .. irq_context + i}
 end

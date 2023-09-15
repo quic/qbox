@@ -1783,7 +1783,7 @@ private:
     {
         unsigned int i;
 
-        for (i = 0; i < 16; i++) {
+        for (i = 0; i < p_num_cb; i++) {
             smmu_update_ctx_irq(i);
         }
     }
