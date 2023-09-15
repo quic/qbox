@@ -422,8 +422,10 @@ public:
     {
         if (!m_finished) {
             if (val) {
+                m_deadline_timer->del();
                 m_qk->stop();
             } else {
+                rearm_deadline_timer();
                 m_qk->start();
             }
             m_inst.get().lock_iothread();
