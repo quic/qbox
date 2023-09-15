@@ -309,12 +309,14 @@ public:
     /* The default memory socket. Mapped to the default CPU address space in QEMU */
     QemuInitiatorSocket<> socket;
     TargetSignalSocket<bool> halt;
+    TargetSignalSocket<bool> reset;
 
     SC_HAS_PROCESS(QemuCpu);
 
     QemuCpu(const sc_core::sc_module_name& name, QemuInstance& inst, const std::string& type_name)
         : QemuDevice(name, inst, (type_name + "-cpu").c_str())
         , halt("halt")
+        , reset("reset")
         , m_qemu_kick_ev(false)
         , m_signaled(false)
         , p_gdb_port("gdb_port", 0, "Wait for gdb connection on TCP port <gdb_port>")
@@ -324,8 +326,10 @@ public:
 
         m_external_ev |= m_qemu_kick_ev;
 
-        auto cb = std::bind(&QemuCpu::halt_cb, this, _1);
-        halt.register_value_changed_cb(cb);
+        auto haltcb = std::bind(&QemuCpu::halt_cb, this, _1);
+        halt.register_value_changed_cb(haltcb);
+        auto resetcb = std::bind(&QemuCpu::reset_cb, this, _1);
+        reset.register_value_changed_cb(resetcb);
 
         create_quantum_keeper();
         set_coroutine_mode();
@@ -434,7 +438,18 @@ public:
             m_qemu_kick_ev.async_notify(); // notify the other thread so that the CPU is allowed to continue
         }
     }
-
+    void reset_cb(const bool& val)
+    {
+        if (!m_finished && val) {
+            m_qk->start();
+            SCP_WARN(())("calling reset");
+            m_inst.get().lock_iothread();
+            m_cpu.reset();
+            m_inst.get().unlock_iothread();
+            socket.reset();
+            m_qemu_kick_ev.async_notify(); // notify the other thread so that the CPU is allowed to continue
+        }
+    }
     virtual void end_of_elaboration() override
     {
         QemuDevice::end_of_elaboration();

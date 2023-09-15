@@ -15,6 +15,7 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <scp/report.h>
 #include <greensocs/gsutils/module_factory_registery.h>
+#include <greensocs/gsutils/ports/target-signal-socket.h>
 
 #include <cinttypes>
 #include <fcntl.h>
@@ -94,6 +95,7 @@ class Loader : public sc_core::sc_module
 
 public:
     simple_initiator_socket_zero<Loader<BUSWIDTH>> initiator_socket;
+    TargetSignalSocket<bool> reset;
 
 private:
     cci::cci_broker_handle m_broker;
@@ -102,13 +104,6 @@ private:
 
     std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> write_cb;
     bool m_use_callback = false;
-
-    void cci_ignore(std::string name)
-    {
-        std::string fullname = std::string(sc_module::name()) + "." + name;
-        m_broker.ignore_unconsumed_preset_values(
-            [fullname](const std::pair<std::string, cci::cci_value>& iv) -> bool { return iv.first == fullname; });
-    }
 
     std::list<std::string> sc_cci_children(sc_core::sc_module_name name)
     {
@@ -172,17 +167,28 @@ public:
     Loader(sc_core::sc_module_name name)
         : initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
         , m_broker(cci::cci_get_broker())
-
+        , reset("reset")
     {
         SCP_TRACE(())("default constructor");
+        reset.register_value_changed_cb([&](bool value) {
+            if (value) {
+                end_of_elaboration();
+            }
+        });
     }
     Loader(sc_core::sc_module_name name, std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> _write)
         : initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
         , m_broker(cci::cci_get_broker())
+        , reset("reset")
         , write_cb(_write)
     {
         SCP_TRACE(())("constructor with callback");
         m_use_callback = true;
+        reset.register_value_changed_cb([&](bool value) {
+            if (value) {
+                end_of_elaboration();
+            }
+        });
     }
 
     ~Loader() {}

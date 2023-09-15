@@ -205,6 +205,9 @@ public:
                 if (try_bind<QemuInitiatorSignalSocket, TargetSignalSocket<bool>>(i_obj, t_obj)) break;
                 if (try_bind<InitiatorSignalSocket<bool>, QemuTargetSignalSocket>(i_obj, t_obj)) break;
                 if (try_bind<InitiatorSignalSocket<bool>, TargetSignalSocket<bool>>(i_obj, t_obj)) break;
+                if (try_bind<sc_core::sc_port<sc_core::sc_signal_inout_if<bool>, 0, sc_core::SC_ZERO_OR_MORE_BOUND>,
+                             TargetSignalSocket<bool>>(i_obj, t_obj))
+                    break;
                 SCP_FATAL(())("No bind found for: {} to {}", i_obj->name(), t_obj->name());
             }
         }

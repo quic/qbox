@@ -587,6 +587,15 @@ public:
 
         /* For 7.2 this may need to be safe aync work ???????? */
     }
+
+    virtual void reset()
+    {
+        auto it = m_dmi_aliases.begin();
+        while (it != m_dmi_aliases.end()) {
+            DmiRegionAlias::Ptr r = it->second;
+            it = remove_alias(it);
+        }
+    }
 };
 
 #endif
