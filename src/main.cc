@@ -132,47 +132,46 @@ static void parse_local_args(int argc, char* argv[])
         int c = getopt_long(argc, argv_cp, optstring, long_options, 0);
         if (c == EOF) break;
         if (c == 'h') {
-          std::cout
-              << "\nPossible Options/Arguments:\n"
-                 "\n"
-                 "      --gs_luafile <filename>\n"
-                 "        execute a Lua script and loads all the globals as\n"
-                 "        parameters [required]\n"
-                 "\n"
-                 "      --param <param_name=value>\n"
-                 "        set param name (foo.baa) to value\n"
-                 "\n"
-                 "\t Example: Passing arguments directly to qemu, setup the "
-                 "qemu monitor on Arm\n"
-                 "\t\t --param 'platform.qemu_inst.qemu_args=\"-monitor "
-                 "tcp:127.0.0.1:5000,server,nowait\"'\n"
-                 "\t Example: Passing arguments directly to qemu, setup the "
-                 "qemu monitor on Hexagon\n"
-                 "\t\t --param "
-                 "'platform.hex_plugin.qemu_hex_inst_0.qemu_args=\"-monitor "
-                 "tcp:127.0.0.1:5001,server,nowait\"' \n"
-                 "\t Example: Setting up a the gdb-port on Arm\n"
-                 "\t\t --param 'platform.cpu_0.gdb_port=1234'\n"
-                 "\t Example: Setting up a the gdb-port on Hexagon\n"
-                 "\t\t --param "
-                 "'platform.hex_plugin.hexagon_cluster_0.hexagon_thread_0.gdb_"
-                 "port=1234'\n"
-                 "\n"
-                 "      --debug\n"
-                 "        shows the state of the configurable parameters at\n"
-                 "        the beginning of the simulation and halts.\n"
-                 "\n"
-                 "      --version\n"
-                 "        displays the qqvp version\n"
-                 "\n"
-                 "      --help\n"
-                 "        this help\n"
-                 "\n"
-                 "      Any extra arguments will be treated as lua config\n"
-                 "      files. That is, as --gs_luafile arguments.\n"
-                 "\n"
-              << std::flush;
-          exit(0);
+            std::cout << "\nPossible Options/Arguments:\n"
+                         "\n"
+                         "      --gs_luafile <filename>\n"
+                         "        execute a Lua script and loads all the globals as\n"
+                         "        parameters [required]\n"
+                         "\n"
+                         "      --param <param_name=value>\n"
+                         "        set param name (foo.baa) to value\n"
+                         "\n"
+                         "\t Example: Passing arguments directly to qemu, setup the "
+                         "qemu monitor on Arm\n"
+                         "\t\t --param 'platform.qemu_inst.qemu_args=\"-monitor "
+                         "tcp:127.0.0.1:5000,server,nowait\"'\n"
+                         "\t Example: Passing arguments directly to qemu, setup the "
+                         "qemu monitor on Hexagon\n"
+                         "\t\t --param "
+                         "'platform.hex_plugin.qemu_hex_inst_0.qemu_args=\"-monitor "
+                         "tcp:127.0.0.1:5001,server,nowait\"' \n"
+                         "\t Example: Setting up a the gdb-port on Arm\n"
+                         "\t\t --param 'platform.cpu_0.gdb_port=1234'\n"
+                         "\t Example: Setting up a the gdb-port on Hexagon\n"
+                         "\t\t --param "
+                         "'platform.hex_plugin.hexagon_cluster_0.hexagon_thread_0.gdb_"
+                         "port=1234'\n"
+                         "\n"
+                         "      --debug=[path]\n"
+                         "        shows the state of the configurable parameters at\n"
+                         "        the beginning of the simulation and halts.\n"
+                         "\n"
+                         "      --version\n"
+                         "        displays the qqvp version\n"
+                         "\n"
+                         "      --help\n"
+                         "        this help\n"
+                         "\n"
+                         "      Any extra arguments will be treated as lua config\n"
+                         "      files. That is, as --gs_luafile arguments.\n"
+                         "\n"
+                      << std::flush;
+            exit(0);
         } else if (c == 'v') {
             std::cout << "\nQualcomm QEMU-Virtual Platform " << QQVP_VERSION << "\n" << std::flush;
             exit(0);
@@ -180,6 +179,24 @@ static void parse_local_args(int argc, char* argv[])
     }
 
     delete[] argv_cp;
+}
+
+static void print_debug(int argc, char* argv[], cci::cci_broker_handle broker)
+{
+    static const char* optstring = "d:";
+    static struct option long_options[] = { { "debug", required_argument, 0, 'd' }, // '--debug' = '-d'
+                                            { 0, 0, 0, 0 } };
+    optind = 0; // reset of getopt
+    opterr = 0; // avoid error message for not recognized option
+
+    while (1) {
+        int c = getopt_long(argc, argv, optstring, long_options, 0);
+        if (c == EOF) break;
+        if (c == 'd') { // -d and --debug
+            gs::HelpSingleton::GetInstance()->print_used_parameter(broker, (optarg == NULL) ? "" : optarg);
+            exit(0);
+        }
+    }
 }
 
 int sc_main(int argc, char* argv[])
@@ -193,7 +210,7 @@ int sc_main(int argc, char* argv[])
 
     gs::ConfigurableBroker m_broker(argc, argv);
     cci::cci_originator orig("sc_main");
-    cci::cci_param<int> p_log_level{ "log_level", 0, "Default log level", cci::CCI_ABSOLUTE_NAME, orig };
+    cci::cci_param<int> p_log_level{ "log_level", 3, "Default log level", cci::CCI_ABSOLUTE_NAME, orig };
     cci::cci_param<std::string> p_zipfile{ "zipfile", "", "Default log level", cci::CCI_ABSOLUTE_NAME, orig };
 
     gs::json_zip_archive jza(zip_open(p_zipfile.get_value().c_str(), ZIP_RDONLY, nullptr));
@@ -201,7 +218,7 @@ int sc_main(int argc, char* argv[])
     jza.json_read_cci(m_broker.create_broker_handle(orig), "platform");
 
     GreenSocsPlatform platform("platform");
-
+    print_debug(argc, argv, m_broker.create_broker_handle(orig));
     auto start = std::chrono::system_clock::now();
     try {
         SCP_INFO() << "SC_START";
