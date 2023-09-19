@@ -61,6 +61,9 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # Other Dependencies
 gs_addexpackage("gh:rpclib/rpclib#v2.3.0")
 
+find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+gs_addexpackage("gh:pybind/pybind11#v2.11.1")
+
 set(srcs
     src/libgssync/qkmultithread.cc
     src/libgssync/qk_factory.cc
@@ -71,6 +74,7 @@ set(srcs
     src/systemc-macs/components/phy.cc
     src/systemc-macs/models/xgmac.cc
     src/gsutils/cciutils.cc
+    src/python-utils/python_binder.cc
 )
 
 if (NOT WITHOUT_QEMU)
@@ -152,15 +156,16 @@ if (NOT WITHOUT_QEMU)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
     find_package(Threads REQUIRED)
 
-    target_link_libraries(${PROJECT_NAME} PUBLIC
-        ${TARGET_LIBS}
-        ${LIBELF_LIBRARIES}
-        Threads::Threads
-        ${SDL2_LIBRARIES}
-        libqemu
-        rpc
-        ${CMAKE_DL_LIBS}
-    )
+target_link_libraries(${PROJECT_NAME} PUBLIC
+     ${TARGET_LIBS}
+     ${LIBELF_LIBRARIES}
+     Threads::Threads
+     ${SDL2_LIBRARIES}
+     libqemu
+     rpc
+     pybind11::embed
+     ${CMAKE_DL_LIBS}
+)
 
     install(DIRECTORY ${LIBQEMU_CXX_SRC_INCLUDE_DIR}
         DESTINATION ${LIBQEMU_CXX_INCLUDE_DIR})
