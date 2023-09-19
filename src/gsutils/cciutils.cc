@@ -146,17 +146,14 @@ std::vector<std::function<cci::cci_param<gs::cci_constructor_vl>*()>>* gs::Modul
     return &list;
 }
 
-gs::HelpSingleton* gs::HelpSingleton::pHelpSingleton= NULL;
+gs::HelpSingleton* gs::HelpSingleton::pHelpSingleton = NULL;
 
-gs::HelpSingleton::HelpSingleton():sc_core::sc_module(sc_core::sc_module_name("help_singleton"))
-{
-   // do init stuff
-}
+gs::HelpSingleton::HelpSingleton(): sc_core::sc_module(sc_core::sc_module_name("help_singleton")) {}
 
 gs::HelpSingleton* gs::HelpSingleton::GetInstance()
 {
-	if (pHelpSingleton== NULL) {
-		pHelpSingleton = new HelpSingleton();
-	}
-	return pHelpSingleton;
+    if (pHelpSingleton == NULL) {
+        pHelpSingleton = new HelpSingleton();
+    }
+    return pHelpSingleton;
 }

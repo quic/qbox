@@ -507,8 +507,8 @@ private:
 
                 for (std::string n : gs::sc_cci_children((ti.name + ".aliases").c_str())) {
                     std::string name = ti.name + ".aliases." + n;
-                    uint64_t address = gs::cci_get<uint64_t>(m_broker,name + ".address");
-                    uint64_t size = gs::cci_get<uint64_t>(m_broker,name + ".size");
+                    uint64_t address = gs::cci_get<uint64_t>(m_broker, name + ".address");
+                    uint64_t size = gs::cci_get<uint64_t>(m_broker, name + ".size");
                     SCP_INFO((D[ti.index]), ti.name)("Adding alias {} {:#x} (size: {})", name, address, size);
                     struct target_info ati = ti;
                     ati.address = address;

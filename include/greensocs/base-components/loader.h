@@ -81,6 +81,8 @@ template <unsigned int BUSWIDTH = 32>
 class Loader : public sc_core::sc_module
 {
     SCP_LOGGER();
+    cci::cci_broker_handle m_broker;
+
     template <typename MODULE, typename TYPES = tlm::tlm_base_protocol_types>
     class simple_initiator_socket_zero
         : public tlm_utils::simple_initiator_socket_b<MODULE, BUSWIDTH, TYPES, sc_core::SC_ZERO_OR_MORE_BOUND>
@@ -98,7 +100,6 @@ public:
     TargetSignalSocket<bool> reset;
 
 private:
-    cci::cci_broker_handle m_broker;
 
     uint64_t m_address = 0;
 
@@ -165,8 +166,8 @@ private:
 
 public:
     Loader(sc_core::sc_module_name name)
-        : initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
-        , m_broker(cci::cci_get_broker())
+        : m_broker(cci::cci_get_broker())
+        , initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
         , reset("reset")
     {
         SCP_TRACE(())("default constructor");
@@ -177,8 +178,8 @@ public:
         });
     }
     Loader(sc_core::sc_module_name name, std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> _write)
-        : initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
-        , m_broker(cci::cci_get_broker())
+        : m_broker(cci::cci_get_broker())
+        , initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
         , reset("reset")
         , write_cb(_write)
     {

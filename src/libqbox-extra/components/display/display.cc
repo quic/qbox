@@ -159,7 +159,7 @@ void MainThreadQemuDisplay::realize()
 
     m_sdl2_consoles = lib.sdl2_create_consoles(consoles.size());
 
-    for (int i = 0; i < consoles.size(); ++i) {
+    for (long unsigned int i = 0; i < consoles.size(); ++i) {
         qemu::Console& cons = consoles[i];
         qemu::SDL2Console& sdl2_console = m_sdl2_consoles[i];
         sdl2_console.init(cons, this);

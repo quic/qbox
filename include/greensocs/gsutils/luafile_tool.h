@@ -173,7 +173,7 @@ public:
             return error;
         }
         lua_close(L);
-    
+
         // remove lua builtins
         m_broker.ignore_unconsumed_preset_values([](const std::pair<std::string, cci::cci_value>& iv) -> bool {
             return ((iv.first)[0] == '_' || iv.first == "math.maxinteger") || (iv.first == "math.mininteger") ||

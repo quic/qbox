@@ -60,6 +60,7 @@ class cci_constructor_vl : public std::function<sc_core::sc_module*(sc_core::sc_
     template <typename _T, typename... U, size_t... I>
     _T* new_t(sc_core::sc_module_name name, std::tuple<U...> tuple, std::index_sequence<I...>)
     {
+        (void)tuple; // mark tupal as used for older compilers.
         return new _T(name, std::get<I>(tuple)...);
     }
 
@@ -165,7 +166,7 @@ T cci_get(cci::cci_broker_handle broker, std::string name)
     cci_value v = cci_get(broker, name);
 
     if (!v.template try_get<T>(ret)) {
-            SCP_ERR("cciutils.cci_get") << "Unable to get parameter " << name << "\nIs your .lua file up-to-date?";
+        SCP_ERR("cciutils.cci_get") << "Unable to get parameter " << name << "\nIs your .lua file up-to-date?";
     }
     return ret;
 }
@@ -198,7 +199,7 @@ public:
 
     void start_of_simulation()
     {
-        if (!m_unused.empty()){
+        if (!m_unused.empty()) {
             SCP_WARN("Param check") << "";
             SCP_WARN("Param check") << "Unused Parameters:";
             SCP_WARN("Param check") << "===================================";
@@ -222,13 +223,10 @@ public:
 
     void set_unused(const std::string& parname, const cci_originator& originator)
     {
-        if (m_capture.find(originator.name()) != m_capture.end())
-            m_unused.insert(parname);
+        if (m_capture.find(originator.name()) != m_capture.end()) m_unused.insert(parname);
     }
 
-    void capture_originator(std::string name){
-        m_capture.insert(name);
-    }
+    void capture_originator(std::string name) { m_capture.insert(name); }
 
     void clear_unused(const std::string& parname)
     {
