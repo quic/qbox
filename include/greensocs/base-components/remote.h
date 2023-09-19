@@ -1140,19 +1140,21 @@ public:
         _Exit(EXIT_SUCCESS);
     }
 
-    void before_end_of_elaboration()
+    void before_end_of_elaboration() override
     {
         if (is_local_mode()) return;
         send_status();
         std::lock_guard<std::mutex> lg(m_cci_db_mut);
         set_cci_db(m_cci_db);
     }
-    void end_of_elaboration()
+
+    void end_of_elaboration() override
     {
         if (is_local_mode()) return;
         send_status();
     }
-    void start_of_simulation()
+
+    void start_of_simulation() override
     {
         if (is_local_mode()) return;
         send_status();
@@ -1173,7 +1175,7 @@ public:
 #endif
     }
 
-    void end_of_simulation()
+    void end_of_simulation() override
     {
         if (is_local_mode()) return;
         // m_qk->stop();
