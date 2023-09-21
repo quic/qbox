@@ -167,7 +167,7 @@ platform = {
         -- remote_argv = {"--param=log_level=2"},
         tlm_initiator_ports_num = 4,
         tlm_target_ports_num = 2,
-        target_signals_num = 2,
+        target_signals_num = 20,
         initiator_signals_num = 0,
         -- https://ipcatalog.qualcomm.com/memmap/chip/434/map/1356/version/11766/block/24917388
         target_socket_0 = {address=NSP0_BASE , size= NSP0_REGION_SIZE, relative_addresses=false, bind = "&router.initiator_socket"}; --nsp0ss
@@ -180,7 +180,7 @@ platform = {
             tlm_initiator_ports_num = 2,
             tlm_target_ports_num = 4,
             target_signals_num = 0,
-            initiator_signals_num = 2,
+            initiator_signals_num = 20,
 
             initiator_signal_socket_0 = {bind = "&hexagon_cluster_0.l2vic.irq_in_30"}, --nsp0ss
             initiator_signal_socket_1 = {bind = "&hexagon_cluster_1.l2vic.irq_in_30"}, --nsp1ss
@@ -193,6 +193,23 @@ platform = {
 
             initiator_socket_0 = {bind = "&hexagon_cluster_0.router.target_socket"}, --nsp0ss
             initiator_socket_1 = {bind = "&hexagon_cluster_1.router.target_socket"}, --nsp1ss
+
+            initiator_signal_socket_3 = { bind = "&hexagon_cluster_0.hexagon_thread_0.reset" },
+            initiator_signal_socket_4 = { bind = "&hexagon_cluster_0.hexagon_thread_1.reset" },
+            initiator_signal_socket_5 = { bind = "&hexagon_cluster_0.hexagon_thread_2.reset" },
+            initiator_signal_socket_6 = { bind = "&hexagon_cluster_0.hexagon_thread_3.reset" },
+            initiator_signal_socket_7 = { bind = "&hexagon_cluster_0.hexagon_thread_4.reset" },
+            initiator_signal_socket_8 = { bind = "&hexagon_cluster_0.hexagon_thread_5.reset" },
+
+            initiator_signal_socket_9 = { bind = "&hexagon_cluster_1.hexagon_thread_0.reset" },
+            initiator_signal_socket_10 = { bind = "&hexagon_cluster_1.hexagon_thread_5.reset" },
+            initiator_signal_socket_11 = { bind = "&hexagon_cluster_1.hexagon_thread_1.reset" },
+            initiator_signal_socket_12 = { bind = "&hexagon_cluster_1.hexagon_thread_2.reset" },
+            initiator_signal_socket_13 = { bind = "&hexagon_cluster_1.hexagon_thread_3.reset" },
+            initiator_signal_socket_14 = { bind = "&hexagon_cluster_1.hexagon_thread_4.reset" },
+
+            initiator_signal_socket_17 = { bind = "&hexagon_cluster_0.csr.reset" },
+            initiator_signal_socket_18 = { bind = "&hexagon_cluster_1.csr.reset" },
         },
 
         qemu_inst_mgr_h = {
@@ -215,6 +232,24 @@ platform = {
 
         hexagon_cluster_0 = nsp0ss;
         hexagon_cluster_1 = nsp1ss;
+
+        target_signal_socket_3 = { bind = "&reset.reset" },
+        target_signal_socket_4 = { bind = "&reset.reset" },
+        target_signal_socket_5 = { bind = "&reset.reset" },
+        target_signal_socket_6 = { bind = "&reset.reset" },
+        target_signal_socket_7 = { bind = "&reset.reset" },
+        target_signal_socket_8 = { bind = "&reset.reset" },
+        target_signal_socket_9 = { bind = "&reset.reset" },
+        target_signal_socket_10 = { bind = "&reset.reset" },
+        target_signal_socket_11 = { bind = "&reset.reset" },
+        target_signal_socket_12 = { bind = "&reset.reset" },
+        target_signal_socket_13 = { bind = "&reset.reset" },
+        target_signal_socket_14 = { bind = "&reset.reset" },
+        target_signal_socket_15 = { bind = "&reset.reset" },
+        target_signal_socket_16 = { bind = "&reset.reset" },
+        target_signal_socket_17 = { bind = "&reset.reset" },
+        target_signal_socket_18 = { bind = "&reset.reset" },
+        target_signal_socket_19 = { bind = "&reset.reset" },
     },
 
 
@@ -412,6 +447,11 @@ platform = {
                    global_initiator = {bind = "&router.target_socket"},
     };
 
+    reset = {
+        moduletype = "ResetGPIO",
+        args = { "&platform.qemu_inst" },
+    },
+
     load={
         moduletype = "Loader",
         initiator_socket = {bind = "&router.target_socket"};
@@ -446,6 +486,7 @@ platform = {
         {data={0xc2f6}, address=0x1174e8};
 --      {data={0x00020400}, address=0x10E0000};
 --      {data={0x60000003}, address=0x10E000C};
+        reset = { bind = "&reset.reset" };
     };
 };
 
@@ -464,6 +505,7 @@ local smmu = {
     num_cb = 128;
     num_smr = 224,
     irq_global = {bind = "&gic_0.spi_in_"..irq_global},
+    reset = { bind = "&reset.reset" },
 }
 for i = 0, num_cb - 1 do
     smmu["irq_context_" .. i] = {bind = "&gic_0.spi_in_" .. irq_context + i}
@@ -529,6 +571,7 @@ if (ARM_NUM_CPUS > 0) then
             pmu_interrupt = {bind = "&gic_0.ppi_in_cpu_"..i.."_23"},
             psci_conduit = "smc";
             mp_affinity = (math.floor(i / 8) << 8) | (i % 8);
+            reset = { bind = "&reset.reset" },
             start_powered_off = true;
         };
         if (i==0) then

@@ -56,6 +56,7 @@
 #include <libqbox-extra/components/display/display.h>
 #include <libqbox-extra/components/usb/kbd.h>
 #include <libqbox-extra/components/usb/tablet.h>
+#include <libqbox-extra/components/meta/reset_gpio.h>
 
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/memory.h>
