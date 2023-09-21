@@ -20,6 +20,7 @@
 #pragma once
 
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
+#include <greensocs/gsutils/ports/target-signal-socket.h>
 #include <systemc>
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
@@ -81,6 +82,7 @@ public:
     InitiatorSignalSocket<bool> hex_halt;
     InitiatorSignalSocket<bool> nmi;
     tlm_utils::simple_target_socket<csr> socket;
+    TargetSignalSocket<bool> reset;
 
 private:
     void csr_update()
@@ -93,7 +95,7 @@ private:
         if (nmi_clear_status) {
             nmi_triggered_csr = false;
         }
-
+        SCP_TRACE(SCMOD)("Writing to HEX ... {}", !boot_status);
         hex_halt->write(!boot_status);
     }
 
@@ -195,8 +197,6 @@ private:
         nmi_triggered_csr = false;
         boot_core_start = false;
         boot_status = false;
-
-        csr_update();
     }
 
     void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
@@ -230,9 +230,11 @@ private:
 
 public:
     SC_HAS_PROCESS(csr);
-    csr(sc_core::sc_module_name name): socket("socket")
+    csr(sc_core::sc_module_name name): socket("socket"), reset("reset")
     {
         socket.register_b_transport(this, &csr::b_transport);
+
+        reset.register_value_changed_cb([&](bool value) { csr_reset(); });
         SC_THREAD(csr_reset);
 
         SC_METHOD(csr_update);

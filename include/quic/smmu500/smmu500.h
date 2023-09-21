@@ -43,6 +43,7 @@
 #include <memory>
 
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
+#include <greensocs/gsutils/ports/target-signal-socket.h>
 #include <sys/types.h>
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
@@ -97,6 +98,8 @@ public:
 
     InitiatorSignalSocket<bool> irq_global;
     sc_core::sc_vector<InitiatorSignalSocket<bool>> irq_context;
+
+    TargetSignalSocket<bool> reset;
 
     std::vector<smmu500_tbu<BUSWIDTH>*> tbus;
 
@@ -2874,6 +2877,7 @@ public:
         , irq_context("irq_context", p_num_cb,
                       [this](const char* n, size_t i) { return new InitiatorSignalSocket<bool>(n); })
         , dma_socket("dma")
+        , reset("reset")
     {
         socket.register_b_transport(this, &smmu500<BUSWIDTH>::b_transport);
 
@@ -2912,6 +2916,22 @@ public:
         ARRAY_FIELD_DP32(regs, SMMU_SCR1, NSNUMSMRGO, p_num_smr);
         regs[R_SMMU_SIDR7] = p_version;
         regs[R_SMMU_TBU_PWR_STATUS] = (1 << p_num_tbu) - 1;
+        reset.register_value_changed_cb([&](bool value) {
+            if (value) {
+                for (int i = 0; i < R_MAX; i++) {
+                    regs[i] = regs_access_info[i].reset;
+                }
+                unsigned int num_pages_log2 = 31 - clz32(p_num_cb);
+                ARRAY_FIELD_DP32(regs, SMMU_SIDR0, ATOSNS, p_ato);
+                ARRAY_FIELD_DP32(regs, SMMU_SIDR0, NUMSMRG, p_num_smr);
+                ARRAY_FIELD_DP32(regs, SMMU_SIDR1, NUMCB, p_num_cb);
+                ARRAY_FIELD_DP32(regs, SMMU_SIDR1, NUMPAGENDXB, num_pages_log2 - 1);
+                ARRAY_FIELD_DP32(regs, SMMU_SCR1, NSNUMCBO, p_num_cb);
+                ARRAY_FIELD_DP32(regs, SMMU_SCR1, NSNUMSMRGO, p_num_smr);
+                regs[R_SMMU_SIDR7] = p_version;
+                regs[R_SMMU_TBU_PWR_STATUS] = (1 << p_num_tbu) - 1;
+            }
+        });
     }
 
     ~smmu500() { free(regs_access_info); }
