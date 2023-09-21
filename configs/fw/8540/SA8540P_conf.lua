@@ -349,10 +349,6 @@ platform = {
         irq_out_1 = {bind = "&gic_0.spi_in_0"};
         irq_out_2 = {bind = "&gic_0.spi_in_0"};
         irq_out_3 = {bind = "&gic_0.spi_in_0"};
-        irq_num_0 = 0;
-        irq_num_1 = 0;
-        irq_num_2 = 0;
-        irq_num_3 = 0;
     };
 
     -- qtb = { control_socket = {address=0x15180000, size=0x80000}};
