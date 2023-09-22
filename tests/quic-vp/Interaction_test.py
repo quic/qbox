@@ -78,47 +78,53 @@ def fastrpc_calc_test():
         vp_args += args.extra_args
 
     vp = QCSubprocess(vp_args, env, timeout_sec)
-    num_dsps = 3 if args.adsp else 2
-    for _ in range(num_dsps):
-        vp.expect(r"DSP Image Creation Date:.+\s*\n")
-    time.sleep(4)
 
-    def get_logfile(name):
-        if log_dir is not None:
-            return log_dir.joinpath(logname).as_posix()
-        return None
+    ret = True
+    num_boot_cycles = 3
+    for i in range(num_boot_cycles):
+        num_dsps = 3 if args.adsp else 2
+        for _ in range(num_dsps):
+            vp.expect(r"DSP Image Creation Date:.+\s*\n")
+        time.sleep(4)
 
-    adsp_args = "&& /mnt/bin/fastrpc_calc_test 0 100 0" if args.adsp else ""
+        def get_logfile(name):
+            if log_dir is not None:
+                return log_dir.joinpath(logname).as_posix()
+            return None
 
-    frpc_calc_args = [
-        "sh -c '/mnt/bin/fastrpc_calc_test 0 100 3 && " # CDSP0
-               "/mnt/bin/fastrpc_calc_test 0 100 4 "    # CDSP1
-               f"{adsp_args}'"                          # ADSP
-    ]
+        adsp_args = "&& /mnt/bin/fastrpc_calc_test 0 100 0" if args.adsp else ""
 
-    # NOTE: we use ssh here instead of directly communicating through pexpect
-    # and VP's UART due to oddnesses with /dev/tty in QNX when running on
-    # MacOS CI. For more details, see QTOOL-95796.
-    calc = QCSubprocess.ssh(frpc_calc_args, ssh_port,
-                            logfile=get_logfile("frpc_ssh.log"),
-                            timeout_sec=timeout_sec)
-    for _ in range(num_dsps):
-        calc.expect('- sum = 4950')
-        calc.expect('- success')
+        frpc_calc_args = [
+            "sh -c '/mnt/bin/fastrpc_calc_test 0 100 3 && " # CDSP0
+                   "/mnt/bin/fastrpc_calc_test 0 100 4 "    # CDSP1
+                   f"{adsp_args}'"                          # ADSP
+        ]
 
-    pcitool_args = [ "sh -l -c '/mnt/bin/pci-tool -v'", ]
-    pci = QCSubprocess.ssh(pcitool_args, ssh_port,
-                           logfile=get_logfile("pcitool_ssh.log"),
-                           timeout_sec=timeout_sec)
-    pci.expect('B000:D00:F00 @ idx 0')
-    # Look for GPU device:
-    if args.enable_gpu:
-        pci.expect('vid/did: 1af4/1050')
+        # NOTE: we use ssh here instead of directly communicating through pexpect
+        # and VP's UART due to oddnesses with /dev/tty in QNX when running on
+        # MacOS CI. For more details, see QTOOL-95796.
+        calc = QCSubprocess.ssh(frpc_calc_args, ssh_port,
+                                logfile=get_logfile("frpc_ssh.log"),
+                                timeout_sec=timeout_sec)
+        for _ in range(num_dsps):
+            calc.expect('- sum = 4950')
+            calc.expect('- success')
 
-    # Look for the rtl8139 PCI Ethernet Network Controller device:
-    pci.expect('vid/did: 10ec/8139')
+        pcitool_args = [ "sh -l -c '/mnt/bin/pci-tool -v'", ]
+        pci = QCSubprocess.ssh(pcitool_args, ssh_port,
+                               logfile=get_logfile("pcitool_ssh.log"),
+                               timeout_sec=timeout_sec)
+        pci.expect('B000:D00:F00 @ idx 0')
+        # Look for GPU device:
+        if args.enable_gpu:
+            pci.expect('vid/did: 1af4/1050')
 
-    ret = pci.success() and calc.success()
+        # Look for the rtl8139 PCI Ethernet Network Controller device:
+        pci.expect('vid/did: 10ec/8139')
+
+        ret = ret and pci.success() and calc.success()
+
+        reboot = QCSubprocess.ssh(['/mnt/bin/reset'], ssh_port)
 
     # make sure to use SIGQUIT to terminate the vp as this signal is handled in
     # include/greensocs/gsutils/utils.h and it should be called for proper cleanup.
