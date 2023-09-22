@@ -209,14 +209,21 @@ public:
         }
     }
 
-    void print_used_parameter(cci::cci_broker_handle broker)
+    void print_used_parameter(cci::cci_broker_handle broker, std::string path = "")
     {
         for (auto v : m_used) {
-            if (cci_get(broker, v).to_json() == "null") {
-                std::cout << "Configurable Parameters: " << v << " the value is not set" << std::endl;
-            } else {
-                std::cout << "Configurable Parameters: " << v << " the value is: " << cci_get(broker, v).to_json()
-                          << std::endl;
+            if (v.rfind(path, 0) == 0) {
+                cci::cci_value c = cci_get(broker, v);
+                if (c.to_json() == "null") {
+                    std::cout << "Configurable Parameters: " << v << " the value is not set";
+                } else {
+                    std::cout << "Configurable Parameters: " << v << " the value is: " << c.to_json();
+                }
+                auto h = broker.get_param_handle(v);
+                if (h.is_valid()) {
+                    std::cout << " (" << h.get_description() << ")";
+                }
+                std::cout << std::endl;
             }
         }
     }
@@ -541,23 +548,6 @@ public:
 
         m_help_helper->capture_originator("lua");
         LuaFile_Tool lua("lua", argc, argv, "", enforce_config_file);
-
-        static const char* optstring = "d";
-        static struct option long_options[] = { { "debug", 0, 0, 'd' }, // '--debug' = '-d'
-                                                { 0, 0, 0, 0 } };
-
-        opterr = 0;
-        optind = 1;
-        while (1) {
-            int c = getopt_long(argc, argv, optstring, long_options, 0);
-            if (c == EOF) break;
-            switch (c) {
-            case 'd': // -d and --debug
-                sc_core::sc_spawn_options opts;
-                break;
-            }
-        }
-        optind = 1;
 
         /* check to see if the conf_file was set ! */
         if (load_conf_file && !(std::string(conf_file).empty())) {

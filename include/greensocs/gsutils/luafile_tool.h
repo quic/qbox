@@ -269,13 +269,15 @@ protected:
         optind = 0; // reset of getopt
         opterr = 0; // avoid error message for not recognized option
 #ifdef ENABLE_SHORT_COMMAND_LINE_OPTIONS
-        static const char* optstring = "l:p:d";
+        static const char* optstring = "l:p:d:hv";
 #else
         static const char* optstring = "";
 #endif
         static struct option long_options[] = { { "gs_luafile", required_argument, 0, 'l' }, // '--luafile filename'
                                                 { "param", required_argument, 0, 'p' },      // --param foo.baa=10
-                                                { "debug", no_argument, 0, 'd' },            // '--debug' = '-d'
+                                                { "debug", required_argument, 0, 'd' },      // '--debug' = '-d'
+                                                { "help", no_argument, 0, 'h' },
+                                                { "version", no_argument, 0, 'v' },
                                                 { 0, 0, 0, 0 } };
 
         opterr = 1; // restore error message for not recognized option
@@ -306,8 +308,9 @@ protected:
                 m_broker.set_preset_cci_value(rel(key), cci::cci_value(cci::cci_value::from_json(value)));
                 break;
             }
-
             case 'd':
+            case 'v':
+            case 'h':
                 /* ignore for now */
                 break;
 
