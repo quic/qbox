@@ -240,7 +240,7 @@ protected:
 
 public:
     RouterTestBenchSimple(const sc_core::sc_module_name& n)
-        : TestBench(n), m_initiator("initiator"), m_router("router"), m_pass("pass", true), m_target()
+        : TestBench(n), m_initiator("initiator"), m_router("router"), m_pass("pass"), m_target()
     {
         int id = 0;
 

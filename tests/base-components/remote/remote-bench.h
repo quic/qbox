@@ -97,7 +97,7 @@ public:
         , m_router("router")
         , m_pass("pass")
         , m_mem1("mem1")
-        , m_log("local", true)
+        , m_log("local")
     {
         SCP_INFO(SCMOD) << " path:  = " << getexepath();
 

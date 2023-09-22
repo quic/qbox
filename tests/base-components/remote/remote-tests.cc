@@ -45,10 +45,12 @@ int sc_main(int argc, char* argv[])
                                         { "test_bench.pass.mem2.target_socket.size", cci::cci_value(0x1000) },
                                         { "test_bench.pass.mem3.target_socket.address", cci::cci_value(0x23000) },
                                         { "test_bench.pass.mem3.target_socket.size", cci::cci_value(0x1000) },
+                                        { "test_bench.local.target_socket.address", cci::cci_value(0x11000) },
+                                        { "test_bench.local.target_socket.size", cci::cci_value(0x1000) },
 
-                                        { "test_bench.mem1.verbose", cci::cci_value(true) },
-                                        { "test_bench.pass.mem2.verbose", cci::cci_value(true) },
-                                        { "test_bench.pass.mem3.verbose", cci::cci_value(true) },
+                                        { "test_bench.mem1.log_level", cci::cci_value(4) },
+                                        { "test_bench.pass.mem2.log_level", cci::cci_value(4) },
+                                        { "test_bench.pass.mem3.log_level", cci::cci_value(4) },
 
                                         { "test_bench.mem1.shared_memory", cci::cci_value(true) },
                                         { "test_bench.pass.mem2.shared_memory", cci::cci_value(true) },

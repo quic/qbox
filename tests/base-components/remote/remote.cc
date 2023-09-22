@@ -30,7 +30,7 @@ class RemoteTest : public sc_core::sc_module
 public:
     SC_HAS_PROCESS(RemoteTest);
     RemoteTest(const sc_core::sc_module_name& n)
-        : m_pass("remote_pass"), m_router("remote_router"), m_loopback("loopback", true), m_mem2("mem2"), m_mem3("mem3")
+        : m_pass("remote_pass"), m_router("remote_router"), m_loopback("loopback"), m_mem2("mem2"), m_mem3("mem3")
     {
         auto m_broker = cci::cci_get_broker();
 

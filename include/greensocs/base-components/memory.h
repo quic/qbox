@@ -57,6 +57,8 @@ class Memory : public sc_core::sc_module
     bool m_address_valid = false;
     bool m_relative_addresses;
 
+    SCP_LOGGER(());
+
     // Templated on the power of 2 to use to divide the blocks up
     template <unsigned int N = 2>
     class SubBlock
@@ -204,8 +206,8 @@ protected:
             return false;
         }
 
-        SCP_TRACE(SCMOD) << " : DMI access to address "
-                         << "0x" << std::hex << addr;
+        SCP_TRACE(()) << " : DMI access to address "
+                      << "0x" << std::hex << addr;
 
         if (p_rom)
             dmi_data.allow_read();
@@ -246,9 +248,9 @@ protected:
         unsigned int bel = txn.get_byte_enable_length();
 
         if (txn.get_streaming_width() < len) {
-            SCP_FATAL(SCMOD) << "not supported.";
+            SCP_FATAL(()) << "not supported.";
         }
-        if (p_verbose) SCP_WARN(SCMOD) << "b_transport :" << scp::scp_txn_tostring(txn);
+        SCP_INFO(()) << "b_transport :" << scp::scp_txn_tostring(txn);
 
         if (!m_relative_addresses) {
             if (addr < m_address) {
@@ -268,12 +270,12 @@ protected:
                 for (unsigned int i = 0; i < len; i++)
                     if (byt[i % bel] == TLM_BYTE_ENABLED) {
                         if (!read(&(ptr[i]), (addr + i), 1)) {
-                            SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
+                            SCP_FATAL(()) << "Address + length is out of range of the memory size";
                         }
                     }
             } else {
                 if (!read(ptr, addr, len)) {
-                    SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
+                    SCP_FATAL(()) << "Address + length is out of range of the memory size";
                 }
             }
             break;
@@ -286,17 +288,17 @@ protected:
                 for (unsigned int i = 0; i < len; i++)
                     if (byt[i % bel] == TLM_BYTE_ENABLED) {
                         if (!write(&(ptr[i]), (addr + i), 1)) {
-                            SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
+                            SCP_FATAL(()) << "Address + length is out of range of the memory size";
                         }
                     }
             } else {
                 if (!write(ptr, addr, len)) {
-                    SCP_FATAL(SCMOD) << "Address + length is out of range of the memory size";
+                    SCP_FATAL(()) << "Address + length is out of range of the memory size";
                 }
             }
             break;
         default:
-            SCP_FATAL(SCMOD) << "TLM command not supported";
+            SCP_FATAL(()) << "TLM command not supported";
             break;
         }
         delay += p_latency;
@@ -369,7 +371,6 @@ public:
     tlm_utils::multi_passthrough_target_socket<Memory<BUSWIDTH>> socket;
     cci::cci_param<bool> p_rom;
     cci::cci_param<bool> p_dmi;
-    cci::cci_param<bool> p_verbose;
     cci::cci_param<sc_core::sc_time> p_latency;
     cci::cci_param<std::string> p_mapfile;
     cci::cci_param<uint64_t> p_max_block_size;
@@ -391,7 +392,6 @@ public:
         , socket("target_socket")
         , p_rom("read_only", false, "Read Only Memory (default false)")
         , p_dmi("dmi_allow", true, "DMI allowed (default true)")
-        , p_verbose("verbose", false, "Switch on verbose logging")
         , p_latency("latency", sc_core::sc_time(10, sc_core::SC_NS), "Latency reported for DMI access")
         , p_mapfile("map_file", "", "(optional) file to map this memory")
         , p_max_block_size("max_block_size", 0x100000000, "Maximum size of the sub bloc")
@@ -401,25 +401,16 @@ public:
         , p_init_mem_val("init_mem_val", 0, "Value to initialize memory to")
         , load("load", [&](const uint8_t* data, uint64_t offset, uint64_t len) -> void {
             if (!write(data, offset, len)) {
-                SCP_WARN(SCMOD) << " Offset : 0x" << std::hex << offset << " of the out of range";
+                SCP_WARN(()) << " Offset : 0x" << std::hex << offset << " of the out of range";
             }
         })
     {
-        SCP_DEBUG(SCMOD) << "Memory constructor";
+        SCP_DEBUG(()) << "Memory constructor";
         MemoryServices::get().init(); // allow any init required
         if (_size) {
             std::string ts_name = std::string(sc_module::name()) + ".target_socket";
             if (!m_broker.has_preset_value(ts_name + ".size")) {
                 m_broker.set_preset_cci_value(ts_name + ".size", cci::cci_value(_size));
-            }
-        }
-
-        if (p_verbose) {
-            int level;
-            if (!gs::cci_get<int>(m_broker, std::string(name) + "." + SCP_LOG_LEVEL_PARAM_NAME, level) ||
-                level < (int)(scp::log::WARNING)) {
-                m_broker.set_preset_cci_value((std::string(name) + "." + SCP_LOG_LEVEL_PARAM_NAME).c_str(),
-                                              cci::cci_value(static_cast<int>(scp::log::WARNING)));
             }
         }
 
@@ -441,8 +432,8 @@ public:
 
         m_sub_block = std::make_unique<Memory<BUSWIDTH>::SubBlock<>>(0, m_size, *this);
 
-        SCP_DEBUG(SCMOD) << "m_address: " << m_address;
-        SCP_DEBUG(SCMOD) << "m_size: " << m_size;
+        SCP_DEBUG(()) << "m_address: " << m_address;
+        SCP_DEBUG(()) << "m_size: " << m_size;
 
         m_relative_addresses = true;
         if (gs::cci_get<bool>(m_broker, ts_name + ".relative_addresses", m_relative_addresses)) {
@@ -469,7 +460,7 @@ public:
                 // deal with an alias
                 if (m_broker.has_preset_value(ts_name + ".size") &&
                     m_broker.get_preset_cci_value(ts_name + ".size").is_number()) {
-                    SCP_WARN(SCMOD)
+                    SCP_WARN(())
                     ("The configuration alias provided ({}) will be ignored as a valid size is "
                      "also provided.",
                      ts_name);
@@ -496,7 +487,7 @@ public:
             if (gs::cci_get<std::string>(m_broker, ts_name + ".0", ts_name_alias)) {
                 // deal with an alias
                 if (gs::cci_get<uint64_t>(m_broker, ts_name + ".address", m_address)) {
-                    SCP_WARN(SCMOD)
+                    SCP_WARN(())
                     ("The configuration alias provided ({}) will be ignored as a valid address is "
                      "also provided.",
                      ts_name);
@@ -507,7 +498,7 @@ public:
             }
             if (!m_broker.has_preset_value(ts_name + ".address")) {
                 m_address = 0; // fine for relative addressing
-                SCP_WARN(SCMOD) << "Can't find " << ts_name << ".address";
+                SCP_WARN(()) << "Can't find " << ts_name << ".address";
             } else {
                 m_address = m_broker.get_preset_cci_value(ts_name + ".address").get_uint64();
             }
