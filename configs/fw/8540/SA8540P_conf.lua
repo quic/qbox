@@ -355,6 +355,7 @@ platform = {
             irq_8 = {bind = "&gic_0.spi_in_229"},
             irq_18 = {bind = "&hex_plugin.target_signal_socket_1"},
             irq_6 = {bind = "&hex_plugin.target_signal_socket_0"},
+            reset = { bind = "&reset.reset" },
         };
 
     usb_0 = {

@@ -6,6 +6,7 @@
 #pragma once
 
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
+#include <greensocs/gsutils/ports/target-signal-socket.h>
 #include <systemc>
 #include <cci_configuration>
 #include <tlm>
@@ -154,12 +155,13 @@ private:
                 regs[CLIENT_ENABLE_STATUS_1_n + client] &= ~(1 << (signal - 32));
         }
 
-        IPC_client(): p_client_size(MAX_CLIENT_SIZE), p_version(0x10200)
+        void reset()
         {
             memset(regs, 0, sizeof(regs));
             regs[VERSION] = p_version;
             regs[RECV_ID] = 0xFFFFFFFF;
-        };
+        }
+        IPC_client(): p_client_size(MAX_CLIENT_SIZE), p_version(0x10200) { reset(); };
     };
     IPC_client client[4][MAX_CLIENT_SIZE];
     sc_core::sc_event update_irq_ev;
@@ -340,11 +342,15 @@ public:
     // InitiatorSignalSocket<bool> irq[MAX_CLIENT_SIZE];
     sc_core::sc_vector<InitiatorSignalSocket<bool>> irq;
     bool irq_status[MAX_CLIENT_SIZE] = { false };
+    TargetSignalSocket<bool> reset;
 
     SC_HAS_PROCESS(IPCC);
 
     IPCC(sc_core::sc_module_name name)
-        : p_num_irq("num_irq", MAX_CLIENT_SIZE, "Number of irq"), socket("target_socket"), irq("irq", p_num_irq)
+        : p_num_irq("num_irq", MAX_CLIENT_SIZE, "Number of irq")
+        , socket("target_socket")
+        , irq("irq", p_num_irq)
+        , reset("reset")
     {
         int client_size = client[0][0].p_client_size;
         for (int p = 0; p < 3; p++) {
@@ -356,6 +362,16 @@ public:
 
         SC_METHOD(update_irq);
         sensitive << update_irq_ev;
+
+        reset.register_value_changed_cb([&](bool value) {
+            int client_size = client[0][0].p_client_size;
+            for (int p = 0; p < 3; p++) {
+                for (int c = 0; c < client_size; c++) {
+                    client[p][c].reset();
+                }
+            }
+            update_irq();
+        });
     }
 
     IPCC() = delete;

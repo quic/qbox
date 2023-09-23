@@ -398,6 +398,7 @@ platform = {
             irq_18 = {bind = "&hex_plugin.target_signal_socket_1"},
             irq_6 = {bind = "&hex_plugin.target_signal_socket_0"},
             irq_3 = {bind = "&hex_plugin.target_signal_socket_2"},
+            reset = { bind = "&reset.reset" },
         };
     mpm = { socket = {address=0x0C210000, size=0x1000}};
 
