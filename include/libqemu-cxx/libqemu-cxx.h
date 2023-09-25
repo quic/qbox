@@ -78,6 +78,7 @@ private:
     LibraryLoaderIface& m_library_loader;
     const char* m_lib_path;
     Target m_target;
+    bool m_auto_start;
 
     std::vector<char*> m_qemu_argv;
 

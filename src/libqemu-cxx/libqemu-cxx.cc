@@ -16,12 +16,12 @@
 namespace qemu {
 
 LibQemu::LibQemu(LibraryLoaderIface& library_loader, const char* lib_path)
-    : m_library_loader(library_loader), m_lib_path(lib_path)
+    : m_library_loader(library_loader), m_lib_path(lib_path), m_auto_start(true)
 {
 }
 
 LibQemu::LibQemu(LibraryLoaderIface& library_loader, Target t)
-    : m_library_loader(library_loader), m_lib_path(nullptr), m_target(t)
+    : m_library_loader(library_loader), m_lib_path(nullptr), m_target(t), m_auto_start(true)
 {
 }
 
@@ -36,6 +36,9 @@ void LibQemu::push_qemu_arg(const char* arg)
 {
     char* dst = new char[std::strlen(arg) + 1];
     std::strcpy(dst, arg);
+    if (std::strncmp(arg, "-S", 2) == 0) {
+        m_auto_start = false;
+    }
 
     assert(!is_inited());
     m_qemu_argv.push_back(dst);
@@ -90,7 +93,7 @@ void LibQemu::init()
 void LibQemu::start_gdb_server(std::string port)
 {
     m_int->exports().gdbserver_start(port.c_str());
-    m_int->exports().libqemu_set_autostart(0);
+    m_int->exports().libqemu_set_autostart(m_auto_start);
 }
 
 void LibQemu::vm_start() { m_int->exports().vm_start(); }
