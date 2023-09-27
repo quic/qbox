@@ -165,7 +165,7 @@ private:
         }
         IPC_client(): p_client_size(MAX_CLIENT_SIZE), p_version(0x10200) { reset(); };
     };
-    IPC_client client[4][MAX_CLIENT_SIZE];
+    IPC_client client[3][MAX_CLIENT_SIZE];
     sc_core::sc_event update_irq_ev;
 
 protected:
@@ -354,6 +354,7 @@ public:
         , irq("irq", p_num_irq)
         , reset("reset")
     {
+        SCP_TRACE(())("Init");
         int client_size = client[0][0].p_client_size;
         for (int p = 0; p < 3; p++) {
             for (int c = 0; c < client_size; c++) {
@@ -372,14 +373,10 @@ public:
                 for (int p = 0; p < 3; p++) {
                     for (int c = 0; c < client_size; c++) {
                         client[p][c].reset();
+                        client[p][c].regs[ID] = (c << 16) + p;
                     }
                 }
-                for (int c = 0; c < MAX_CLIENT_SIZE; c++) {
-                    if (irq_status[c]) {
-                        irq_status[c] = false;
-                        irq[c]->write(0);
-                    }
-                }
+                update_irq();
             }
         });
     }
