@@ -27,6 +27,7 @@
 
 class ResetGPIO : public QemuDevice
 {
+    SCP_LOGGER();
     QemuInitiatorSignalSocket m_reset_i;
     QemuTargetSignalSocket m_reset_t;
 
@@ -40,9 +41,13 @@ public:
     ResetGPIO(const sc_core::sc_module_name& n, QemuInstance& inst)
         : QemuDevice(n, inst, "reset_gpio"), m_reset_i("_qemu_reset_i"), m_reset_t("_qemu_reset_t"), reset("reset")
     {
+        SCP_TRACE(())("Init");
         m_reset_i.bind(m_reset_t);
         m_reset_t.register_value_changed_cb([&](bool value) {
             for (int i = 0; i < reset.size(); i++) {
+                if (auto t = dynamic_cast<TargetSignalSocketProxy<bool>*>(reset[i])) {
+                    SCP_WARN(())("Reset {} to {}", value, t->get_parent().name());
+                }
                 reset[i]->write(value);
             }
         });

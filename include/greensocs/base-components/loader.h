@@ -171,11 +171,14 @@ public:
         , reset("reset")
     {
         SCP_TRACE(())("default constructor");
-        reset.register_value_changed_cb([&](bool value) {
-            if (value) {
-                end_of_elaboration();
-            }
-        });
+        reset.register_value_changed_cb([&](bool value) { doreset(value); });
+    }
+    void doreset(bool value)
+    {
+        SCP_WARN(())("Reset");
+        if (value) {
+            end_of_elaboration();
+        }
     }
     Loader(sc_core::sc_module_name name, std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> _write)
         : m_broker(cci::cci_get_broker())
@@ -185,11 +188,7 @@ public:
     {
         SCP_TRACE(())("constructor with callback");
         m_use_callback = true;
-        reset.register_value_changed_cb([&](bool value) {
-            if (value) {
-                end_of_elaboration();
-            }
-        });
+        reset.register_value_changed_cb([&](bool value) { doreset(value); });
     }
 
     ~Loader() {}

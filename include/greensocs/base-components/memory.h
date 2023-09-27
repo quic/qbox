@@ -63,6 +63,7 @@ class Memory : public sc_core::sc_module
     template <unsigned int N = 2>
     class SubBlock
     {
+        SCP_LOGGER();
         uint64_t m_len;     // size of the bloc
         uint64_t m_address; // this is an absolute address and this is the
                             // beginning of the bloc/Memory
@@ -76,21 +77,21 @@ class Memory : public sc_core::sc_module
         ShmemIDExtension m_shmemID;
 
     public:
-        SubBlock(uint64_t address, uint64_t len, Memory& mem): m_len(len), m_address(address), m_mem(mem) {}
-
-        void reset()
+        SubBlock(uint64_t address, uint64_t len, Memory& mem): m_len(len), m_address(address), m_mem(mem)
         {
+            SCP_TRACE(())("Init");
+        }
+
+        void doreset()
+        {
+            SCP_WARN((), m_mem.name())("Reset (block at offset {:x})", m_address);
             for (int i=0; i<N; i++) {
-                if (m_sub_blocks[i]) m_sub_blocks[i].reset();
+                if (m_sub_blocks[i]) m_sub_blocks[i]->doreset();
             }
             if (m_mem.p_init_mem && m_ptr) {
-                SCP_WARN(()) << ": resetting 0x" << std::hex
-                    << reinterpret_cast<uint64_t>(m_ptr)
-                    << ": 0x"<< m_mem.p_init_mem_val << ",  0x" << m_len <<"\n";
                 memset(m_ptr, m_mem.p_init_mem_val, m_len);
             }
         }
-
         SubBlock& access(uint64_t address)
         {
             // address is the address of where we want to write/read
@@ -433,9 +434,12 @@ public:
         socket.register_b_transport(this, &Memory::b_transport);
         socket.register_transport_dbg(this, &Memory::transport_dbg);
         socket.register_get_direct_mem_ptr(this, &Memory::get_direct_mem_ptr);
+
         reset.register_value_changed_cb([&](bool value) {
             if (value) {
-                m_sub_block.reset();
+                SCP_WARN(()) << "Reset";
+                m_sub_block->doreset();
+                load.doreset(value);
             }
         });
     }
