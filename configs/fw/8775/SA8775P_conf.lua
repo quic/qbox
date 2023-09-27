@@ -194,7 +194,7 @@ platform = {
         -- remote_argv = {"--param=log_level=2"},
         tlm_initiator_ports_num = 6,
         tlm_target_ports_num = 3,
-        target_signals_num = 20,
+        target_signals_num = 23,
         initiator_signals_num = 0,
         -- https://ipcatalog.qualcomm.com/memmap/chip/434/map/1356/version/11766/block/24917388
         target_socket_0 = {address=NSP0_BASE , size= NSP0_AHB_HIGH - NSP0_BASE, relative_addresses=false, bind = "&router.initiator_socket"}; --nsp0ss
@@ -209,7 +209,7 @@ platform = {
             tlm_initiator_ports_num = 3,
             tlm_target_ports_num = 6,
             target_signals_num = 0,
-            initiator_signals_num = 20,
+            initiator_signals_num = 23,
 
             initiator_signal_socket_0 = {bind = "&hexagon_cluster_0.l2vic.irq_in_30"}, --nsp0ss
             initiator_signal_socket_1 = {bind = "&hexagon_cluster_1.l2vic.irq_in_30"}, --nsp1ss
@@ -228,19 +228,19 @@ platform = {
             initiator_socket_1 = {bind = "&hexagon_cluster_1.router.target_socket"}, --nsp1ss
             initiator_socket_2 = {bind = "&hexagon_cluster_2.router.target_socket"}, --adsp
 
-            initiator_signal_socket_13 = { bind = "&hexagon_cluster_0.hexagon_thread_0.reset" },
+            initiator_signal_socket_13 = { bind = "&hexagon_cluster_0.hexagon_thread_5.reset" },
             initiator_signal_socket_14 = { bind = "&hexagon_cluster_0.hexagon_thread_1.reset" },
             initiator_signal_socket_15 = { bind = "&hexagon_cluster_0.hexagon_thread_2.reset" },
             initiator_signal_socket_16 = { bind = "&hexagon_cluster_0.hexagon_thread_3.reset" },
             initiator_signal_socket_17 = { bind = "&hexagon_cluster_0.hexagon_thread_4.reset" },
-            initiator_signal_socket_18 = { bind = "&hexagon_cluster_0.hexagon_thread_5.reset" },
+            initiator_signal_socket_18 = { bind = "&hexagon_cluster_0.hexagon_thread_0.reset" },
 
-            initiator_signal_socket_3 = { bind = "&hexagon_cluster_1.hexagon_thread_0.reset" },
-            initiator_signal_socket_4 = { bind = "&hexagon_cluster_1.hexagon_thread_5.reset" },
-            initiator_signal_socket_5 = { bind = "&hexagon_cluster_1.hexagon_thread_1.reset" },
-            initiator_signal_socket_6 = { bind = "&hexagon_cluster_1.hexagon_thread_2.reset" },
-            initiator_signal_socket_7 = { bind = "&hexagon_cluster_1.hexagon_thread_3.reset" },
-            initiator_signal_socket_8 = { bind = "&hexagon_cluster_1.hexagon_thread_4.reset" },
+            initiator_signal_socket_3 = { bind = "&hexagon_cluster_1.hexagon_thread_5.reset" },
+            initiator_signal_socket_4 = { bind = "&hexagon_cluster_1.hexagon_thread_1.reset" },
+            initiator_signal_socket_5 = { bind = "&hexagon_cluster_1.hexagon_thread_2.reset" },
+            initiator_signal_socket_6 = { bind = "&hexagon_cluster_1.hexagon_thread_3.reset" },
+            initiator_signal_socket_7 = { bind = "&hexagon_cluster_1.hexagon_thread_4.reset" },
+            initiator_signal_socket_8 = { bind = "&hexagon_cluster_1.hexagon_thread_0.reset" },
 
             initiator_signal_socket_19 = { bind = "&hexagon_cluster_2.hexagon_thread_0.reset" },
             initiator_signal_socket_9 = { bind = "&hexagon_cluster_2.hexagon_thread_1.reset" },
@@ -248,6 +248,10 @@ platform = {
             initiator_signal_socket_10 = { bind = "&hexagon_cluster_0.csr.reset" },
             initiator_signal_socket_11 = { bind = "&hexagon_cluster_1.csr.reset" },
             initiator_signal_socket_12 = { bind = "&hexagon_cluster_2.csr.reset" },
+
+            initiator_signal_socket_20 = { bind = "&hexagon_cluster_0.l2vic.reset"};
+            initiator_signal_socket_21 = { bind = "&hexagon_cluster_1.l2vic.reset"};
+            initiator_signal_socket_22 = { bind = "&hexagon_cluster_2.l2vic.reset"};
         },
 
         qemu_inst_mgr_h = {
@@ -257,7 +261,7 @@ platform = {
         qemu_hex_inst_0= {
             moduletype="QemuInstance";
             args = {"&qemu_inst_mgr_h", "HEXAGON"};
-            tcg_mode="MULTI",
+            tcg_mode="SINGLE",
             sync_policy = "multithread-unconstrained"
         },
 
@@ -297,6 +301,9 @@ platform = {
         target_signal_socket_17 = { bind = "&reset.reset" },
         target_signal_socket_18 = { bind = "&reset.reset" },
         target_signal_socket_19 = { bind = "&reset.reset" },
+        target_signal_socket_20 = { bind = "&reset.reset" },
+        target_signal_socket_21 = { bind = "&reset.reset" },
+        target_signal_socket_22 = { bind = "&reset.reset" },
     },
 
     quantum_ns = 10000000;
