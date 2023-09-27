@@ -325,6 +325,7 @@ protected:
         unsigned int len = txn.get_data_length();
         sc_core::sc_time delay = sc_core::SC_ZERO_TIME;
         b_transport(id, txn, delay);
+        SCP_INFO(()) << "b_transport dbg :" << scp::scp_txn_tostring(txn);
         if (txn.get_response_status() == tlm::TLM_OK_RESPONSE)
             return len;
         else
