@@ -56,6 +56,8 @@ IPC_PROTOCOLp_CLIENTc_CLIENT_ENABLE_STATUS_1_n, 0x400900, Read, Yes, 0x0
 
 class IPCC : public sc_core::sc_module
 {
+    SCP_LOGGER();
+
 private:
     enum IPCC_Regs {
         VERSION,
@@ -181,7 +183,7 @@ protected:
                 if (irq_status[sc]) {
                     irq_status[sc] = false;
                     irq[sc]->write(0);
-                    SCP_INFO(SCMOD) << "CLEAR IRQ (on read) " << sc;
+                    SCP_INFO(()) << "CLEAR IRQ (on read) " << sc;
                 }
             }
             break;
@@ -226,7 +228,7 @@ protected:
             if (irq_status[sc]) {
                 irq[sc]->write(0);
                 irq_status[sc] = false;
-                SCP_INFO(SCMOD) << "CLEAR IRQ " << sc;
+                SCP_INFO(()) << "CLEAR IRQ " << sc;
             }
             break;
         }
@@ -287,13 +289,13 @@ protected:
             }
             if (allirqcount >= 1) {
                 if (!irq_status[c]) {
-                    SCP_INFO(SCMOD) << "SEND IRQ " << c;
+                    SCP_INFO(()) << "SEND IRQ " << c;
                     irq_status[c] = true;
                     irq[c]->write(1);
                 }
             } else {
                 if (irq_status[c]) {
-                    SCP_INFO(SCMOD) << "CLEAR IRQ " << c;
+                    SCP_INFO(()) << "CLEAR IRQ " << c;
                     irq_status[c] = false;
                     irq[c]->write(0);
                 }
@@ -317,18 +319,18 @@ protected:
         case tlm::TLM_READ_COMMAND: {
             uint32_t data = read(client[p][c], addr & 0xfff);
             memcpy(ptr, &data, len);
-            SCP_INFO(SCMOD) << "b_transport read " << std::hex << addr << " " << data;
+            SCP_INFO(()) << "b_transport read " << std::hex << addr << " " << data;
             break;
         }
         case tlm::TLM_WRITE_COMMAND: {
             uint32_t data;
             memcpy(&data, ptr, len);
-            SCP_INFO(SCMOD) << "b_transport write " << std::hex << addr << " " << data;
+            SCP_INFO(()) << "b_transport write " << std::hex << addr << " " << data;
             write(client[p][c], addr & 0xfff, data);
             break;
         }
         default:
-            SCP_ERR(SCMOD) << "TLM command not supported";
+            SCP_ERR(()) << "TLM command not supported";
             break;
         }
 
@@ -364,13 +366,21 @@ public:
         sensitive << update_irq_ev;
 
         reset.register_value_changed_cb([&](bool value) {
-            int client_size = client[0][0].p_client_size;
-            for (int p = 0; p < 3; p++) {
-                for (int c = 0; c < client_size; c++) {
-                    client[p][c].reset();
+            if (value) {
+                SCP_WARN(())("Reset");
+                int client_size = client[0][0].p_client_size;
+                for (int p = 0; p < 3; p++) {
+                    for (int c = 0; c < client_size; c++) {
+                        client[p][c].reset();
+                    }
+                }
+                for (int c = 0; c < MAX_CLIENT_SIZE; c++) {
+                    if (irq_status[c]) {
+                        irq_status[c] = false;
+                        irq[c]->write(0);
+                    }
                 }
             }
-            update_irq();
         });
     }
 

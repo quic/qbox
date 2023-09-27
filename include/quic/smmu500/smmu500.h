@@ -66,6 +66,8 @@ class smmu500_tbu;
 template <unsigned int BUSWIDTH = 32>
 class smmu500 : public sc_core::sc_module
 {
+    SCP_LOGGER();
+
 public:
     typedef enum {
         IOMMU_NONE = 0,
@@ -1188,7 +1190,7 @@ private:
             }
         }
 
-        SCP_INFO(SCMOD) << "SMMU StreamID 0x" << std::hex << stream_id << " -> CB" << cbndx;
+        SCP_INFO(()) << "SMMU StreamID 0x" << std::hex << stream_id << " -> CB" << cbndx;
         return cbndx;
     }
 
@@ -1248,43 +1250,43 @@ private:
 
     void dump_trans_req(TransReq const& tr)
     {
-        SCP_DEBUG(SCMOD) << "Translation Req\n"
-                         << "VA: 0x" << tr.va << "\n"
-                         << "TCR[0]: 0x" << tr.tcr[0] << "\n"
-                         << "TCR[1]: 0x" << tr.tcr[1] << "\n"
-                         << "TCR[2]: 0x" << tr.tcr[2] << "\n"
-                         << "ACCESS: 0x" << tr.access << "\n"
-                         << "Stage: " << std::dec << tr.stage << "\n"
-                         << "S2_enabled: " << (tr.s2_enabled ? "true" : "false") << "\n"
-                         << "S2_CB: " << tr.s2_cb << "\n"
-                         << std::hex << "PA: 0x" << tr.pa << "\n"
-                         << "Prot: 0x" << tr.prot << "\n"
-                         << "Page size: 0x" << tr.page_size << "\n"
-                         << "Error: " << (tr.err ? "true" : "false") << "\n";
+        SCP_DEBUG(()) << "Translation Req\n"
+                      << "VA: 0x" << tr.va << "\n"
+                      << "TCR[0]: 0x" << tr.tcr[0] << "\n"
+                      << "TCR[1]: 0x" << tr.tcr[1] << "\n"
+                      << "TCR[2]: 0x" << tr.tcr[2] << "\n"
+                      << "ACCESS: 0x" << tr.access << "\n"
+                      << "Stage: " << std::dec << tr.stage << "\n"
+                      << "S2_enabled: " << (tr.s2_enabled ? "true" : "false") << "\n"
+                      << "S2_CB: " << tr.s2_cb << "\n"
+                      << std::hex << "PA: 0x" << tr.pa << "\n"
+                      << "Prot: 0x" << tr.prot << "\n"
+                      << "Page size: 0x" << tr.page_size << "\n"
+                      << "Error: " << (tr.err ? "true" : "false") << "\n";
     }
 
     void dump_cb_state(unsigned int cb)
     {
         unsigned int cb_offset = smmu_cb_offset(cb);
 
-        SCP_DEBUG(SCMOD) << "CB" << cb << ":\n"
-                         << std::hex << "FSR=0x" << regs[R_SMMU_CB0_FSR + cb_offset] << "\n"
-                         << "FAR.low=0x" << regs[R_SMMU_CB0_FAR_LOW + cb_offset] << "\n"
-                         << "FAR.high=0x" << regs[R_SMMU_CB0_FAR_HIGH + cb_offset] << "\n"
-                         << "IPAFAR.low=0x" << regs[R_SMMU_CB0_IPAFAR_LOW + cb_offset] << "\n"
-                         << "IPAFAR.high=0x" << regs[R_SMMU_CB0_IPAFAR_HIGH + cb_offset] << "\n"
-                         << "SCR0=0x" << regs[R_SMMU_SCR0 + cb_offset] << "\n"
-                         << "NSCR0=0x" << regs[R_SMMU_NSCR0 + cb_offset] << "\n"
-                         << "CBFRSYNRA" << std::dec << cb << std::hex << "=0x" << regs[R_SMMU_CBFRSYNRA0 + cb_offset]
-                         << "\n"
-                         << "CBAR" << std::dec << cb << std::hex << "=0x" << regs[R_SMMU_CBAR0 + cb] << "\n"
-                         << "CBA2R" << std::dec << cb << std::hex << "=0x" << regs[R_SMMU_CBA2R0 + cb] << "\n"
-                         << "SCTLR=0x" << regs[R_SMMU_CB0_SCTLR + cb_offset] << "\n"
-                         << "TTBR0.low=0x" << regs[R_SMMU_CB0_TTBR0_LOW + cb_offset] << "\n"
-                         << "TTBR0.high=0x" << regs[R_SMMU_CB0_TTBR0_HIGH + cb_offset] << "\n";
+        SCP_DEBUG(()) << "CB" << cb << ":\n"
+                      << std::hex << "FSR=0x" << regs[R_SMMU_CB0_FSR + cb_offset] << "\n"
+                      << "FAR.low=0x" << regs[R_SMMU_CB0_FAR_LOW + cb_offset] << "\n"
+                      << "FAR.high=0x" << regs[R_SMMU_CB0_FAR_HIGH + cb_offset] << "\n"
+                      << "IPAFAR.low=0x" << regs[R_SMMU_CB0_IPAFAR_LOW + cb_offset] << "\n"
+                      << "IPAFAR.high=0x" << regs[R_SMMU_CB0_IPAFAR_HIGH + cb_offset] << "\n"
+                      << "SCR0=0x" << regs[R_SMMU_SCR0 + cb_offset] << "\n"
+                      << "NSCR0=0x" << regs[R_SMMU_NSCR0 + cb_offset] << "\n"
+                      << "CBFRSYNRA" << std::dec << cb << std::hex << "=0x" << regs[R_SMMU_CBFRSYNRA0 + cb_offset]
+                      << "\n"
+                      << "CBAR" << std::dec << cb << std::hex << "=0x" << regs[R_SMMU_CBAR0 + cb] << "\n"
+                      << "CBA2R" << std::dec << cb << std::hex << "=0x" << regs[R_SMMU_CBA2R0 + cb] << "\n"
+                      << "SCTLR=0x" << regs[R_SMMU_CB0_SCTLR + cb_offset] << "\n"
+                      << "TTBR0.low=0x" << regs[R_SMMU_CB0_TTBR0_LOW + cb_offset] << "\n"
+                      << "TTBR0.high=0x" << regs[R_SMMU_CB0_TTBR0_HIGH + cb_offset] << "\n";
     }
 
-    void dump_state() { SCP_DEBUG(SCMOD) << "smmu regs:"; }
+    void dump_state() { SCP_DEBUG(()) << "smmu regs:"; }
 
     void smmu_ptw64(unsigned int cb, TransReq* req)
     {
@@ -1323,7 +1325,7 @@ private:
         if (FIELD_EX32(sctlr, SMMU_CB0_SCTLR, M) == 0) {
             req->pa = req->va;
             req->prot = IOMMU_RW;
-            SCP_INFO(SCMOD) << "SMMU disabled for context " << cb << " sctlr=" << std::hex << sctlr;
+            SCP_INFO(()) << "SMMU disabled for context " << cb << " sctlr=" << std::hex << sctlr;
             return;
         }
 
@@ -1396,7 +1398,7 @@ private:
             firstblocklevel = 1;
             break;
         default:
-            SCP_ERR(SCMOD) << "Wrong pagesize";
+            SCP_ERR(()) << "Wrong pagesize";
             break;
         }
 
@@ -1482,22 +1484,21 @@ private:
             dma_socket->b_transport(txn, now);
 
             if (txn.get_response_status() != tlm::TLM_OK_RESPONSE) {
-                SCP_INFO(SCMOD) << "Bad DMA response";
+                SCP_INFO(()) << "Bad DMA response";
                 goto do_fault;
             }
 
             type = desc & 3;
 
-            SCP_INFO(SCMOD) << "S" << req->stage << " L" << level << " va=0x" << std::hex << req->va
-                            << " gz=" << grainsize << " descaddr=0x" << std::hex << descaddr << " desc=0x" << std::hex
-                            << desc << " asb=" << addrselectbottom << " index=0x" << std::hex << index
-                            << " osize=" << outputsize;
+            SCP_INFO(()) << "S" << req->stage << " L" << level << " va=0x" << std::hex << req->va << " gz=" << grainsize
+                         << " descaddr=0x" << std::hex << descaddr << " desc=0x" << std::hex << desc
+                         << " asb=" << addrselectbottom << " index=0x" << std::hex << index << " osize=" << outputsize;
             ttbr = extract64(desc, 0, 48);
             ttbr &= ~descmask;
 
             /* special case.  */
             if (!(type & 2) && level == 3) {
-                SCP_INFO(SCMOD) << "bad level 3 desc";
+                SCP_INFO(()) << "bad level 3 desc";
                 goto do_fault;
             }
 
@@ -1508,7 +1509,7 @@ private:
             case 2:
             case 0:
                 /* Invalid.  */
-                SCP_INFO(SCMOD) << "bad desc";
+                SCP_INFO(()) << "bad desc";
                 goto do_fault;
                 break;
             case 1:
@@ -1556,21 +1557,21 @@ private:
         req->prot = IOMMU_RW;
         if ((attrs & (1 << 8)) == 0) {
             /* Access flag */
-            SCP_INFO(SCMOD) << "access forbidden " << std::hex << attrs;
+            SCP_INFO(()) << "access forbidden " << std::hex << attrs;
             goto do_fault;
         }
 
         if (req->stage == 1) {
             /* AP[1] SBO.  */
             if (!(attrs & (1 << 4))) {
-                SCP_INFO(SCMOD) << "AP[1] should be one but set to zero!";
+                SCP_INFO(()) << "AP[1] should be one but set to zero!";
                 goto do_fault;
             }
 
             if (attrs & (1 << 5)) {
                 /* Write access forbidden */
                 if (req->access == IOMMU_WO) {
-                    SCP_INFO(SCMOD) << "Write access forbidden " << std::hex << attrs;
+                    SCP_INFO(()) << "Write access forbidden " << std::hex << attrs;
                     goto do_fault;
                 }
                 req->prot &= ~IOMMU_WO;
@@ -1602,11 +1603,11 @@ private:
         }
 
         req->pa = ttbr;
-        SCP_INFO(SCMOD) << "0x" << std::hex << req->va << " -> 0x" << std::hex << req->pa;
+        SCP_INFO(()) << "0x" << std::hex << req->va << " -> 0x" << std::hex << req->pa;
         return;
 
     do_fault:
-        SCP_INFO(SCMOD) << "smmu fault CB" << cb;
+        SCP_INFO(()) << "smmu fault CB" << cb;
         dump_trans_req(*req);
         dump_cb_state(cb);
         smmu_fault(cb, req, level);
@@ -1705,7 +1706,7 @@ private:
         bool err;
         uint64_t page_size;
 
-        SCP_INFO(SCMOD) << "ATS: va=0x" << std::hex << va << " cb=" << cb << " wr=" << wr << " s2=" << s2;
+        SCP_INFO(()) << "ATS: va=0x" << std::hex << va << " cb=" << cb << " wr=" << wr << " s2=" << s2;
         err = smmu500_at(cb, va, wr, s2, &pa, &prot, &page_size);
 
         regs[R_SMMU_GPAR] = pa | err;
@@ -1888,11 +1889,11 @@ protected:
         unsigned int bel = txn.get_byte_enable_length();
 
         if (txn.get_streaming_width() < len) {
-            SCP_ERR(SCMOD) << "streaming width not supported.";
+            SCP_ERR(()) << "streaming width not supported.";
         }
 
         if (!(len == 4 || len == 8)) {
-            SCP_ERR(SCMOD) << "only 4 or 8 byte transactions supported.";
+            SCP_ERR(()) << "only 4 or 8 byte transactions supported.";
         }
 
         std::stringstream info;
@@ -1967,7 +1968,7 @@ protected:
         } else {
             info << " value 0x" << (*(uint64_t*)ptr);
         }
-        SCP_INFO(SCMOD) << info.str();
+        SCP_INFO(()) << info.str();
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
 
         txn.set_dmi_allowed(false);
@@ -2918,6 +2919,7 @@ public:
         regs[R_SMMU_TBU_PWR_STATUS] = (1 << p_num_tbu) - 1;
         reset.register_value_changed_cb([&](bool value) {
             if (value) {
+                SCP_WARN(())("Reset");
                 for (int i = 0; i < R_MAX; i++) {
                     regs[i] = regs_access_info[i].reset;
                 }
@@ -2940,6 +2942,7 @@ public:
 template <unsigned int BUSWIDTH>
 class smmu500_tbu : public sc_core::sc_module
 {
+    SCP_LOGGER();
     smmu500<BUSWIDTH>* smmu;
     std::mutex m_dmi_invalidate_lock;
 
@@ -2962,8 +2965,8 @@ protected:
         } else {
             //            uint64_t page_size = (te.addr_mask + 1);
             txn.set_address(te.translated_addr | (addr & te.addr_mask)); // FIX better handled in smmu_translate?
-            SCP_INFO(SCMOD) << "smmu TBU b_transport: translate 0x" << std::hex << addr << " to 0x" << std::hex
-                            << te.translated_addr;
+            SCP_INFO(()) << "smmu TBU b_transport: translate 0x" << std::hex << addr << " to 0x" << std::hex
+                         << te.translated_addr;
             downstream_socket->b_transport(txn, delay);
             txn.set_address(addr);
         }
@@ -3043,10 +3046,10 @@ protected:
         }
         dmi_range_valid[CB] = true;
 
-        SCP_INFO(SCMOD) << "smmu TBU DMI: translate 0x%" << std::hex << addr << " to 0x" << std::hex
-                        << te.translated_addr << " pg size=" << page_size << " pg base 0x" << std::hex << page_base
-                        << " offset 0x" << std::hex << offset << " start 0x" << std::hex << dmi_data.get_start_address()
-                        << " end 0x" << std::hex << dmi_data.get_end_address();
+        SCP_INFO(()) << "smmu TBU DMI: translate 0x%" << std::hex << addr << " to 0x" << std::hex << te.translated_addr
+                     << " pg size=" << page_size << " pg base 0x" << std::hex << page_base << " offset 0x" << std::hex
+                     << offset << " start 0x" << std::hex << dmi_data.get_start_address() << " end 0x" << std::hex
+                     << dmi_data.get_end_address();
 
         txn.set_address(addr);
         m_dmi_invalidate_lock.unlock();

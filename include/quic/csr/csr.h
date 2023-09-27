@@ -69,6 +69,8 @@
 
 class csr : public sc_core::sc_module
 {
+    SCP_LOGGER();
+
 private:
     bool nmi_gen = false;
     bool nmi_clear_status = false;
@@ -95,7 +97,7 @@ private:
         if (nmi_clear_status) {
             nmi_triggered_csr = false;
         }
-        SCP_TRACE(SCMOD)("Writing to HEX ... {}", !boot_status);
+        SCP_TRACE(())("Writing to HEX ... {}", !boot_status);
         hex_halt->write(!boot_status);
     }
 
@@ -116,7 +118,7 @@ private:
             ret_cfg = val;
             break;
         default:
-            SCP_WARN(SCMOD) << "Unimplemented write";
+            SCP_WARN(()) << "Unimplemented write";
             break;
         }
 
@@ -184,7 +186,7 @@ private:
         case QDSP6SS_MEM_STAGGER_RESET_STATUS:
             return 0x0;
         default:
-            SCP_WARN(SCMOD) << "Unimplemented read";
+            SCP_WARN(()) << "Unimplemented read";
             return 0x0;
         }
         return 0;
@@ -192,6 +194,8 @@ private:
 
     void csr_reset()
     {
+        SCP_WARN(())("Reset");
+
         nmi_gen = false;
         nmi_clear_status = false;
         nmi_triggered_csr = false;
@@ -210,18 +214,18 @@ private:
         case tlm::TLM_READ_COMMAND: {
             uint32_t data = csr_read(addr & 0xfff, len);
             memcpy(ptr, &data, len);
-            SCP_INFO(SCMOD) << "b_transport read " << std::hex << addr << " " << data;
+            SCP_INFO(()) << "b_transport read " << std::hex << addr << " " << data;
             break;
         }
         case tlm::TLM_WRITE_COMMAND: {
             uint32_t data;
             memcpy(&data, ptr, len);
-            SCP_INFO(SCMOD) << "b_transport write " << std::hex << addr << " " << data;
+            SCP_INFO(()) << "b_transport write " << std::hex << addr << " " << data;
             csr_write(addr & 0xfff, data, len);
             break;
         }
         default:
-            SCP_ERR(SCMOD) << "TLM command not supported";
+            SCP_ERR(()) << "TLM command not supported";
             break;
         }
 
@@ -232,10 +236,14 @@ public:
     SC_HAS_PROCESS(csr);
     csr(sc_core::sc_module_name name): socket("socket"), reset("reset")
     {
+        SCP_TRACE(())("Init");
         socket.register_b_transport(this, &csr::b_transport);
 
-        reset.register_value_changed_cb([&](bool value) { csr_reset(); });
-        SC_THREAD(csr_reset);
+        reset.register_value_changed_cb([&](bool value) {
+            csr_reset();
+            csr_update();
+        });
+        csr_reset();
 
         SC_METHOD(csr_update);
         sensitive << update_ev;

@@ -228,26 +228,26 @@ platform = {
             initiator_socket_1 = {bind = "&hexagon_cluster_1.router.target_socket"}, --nsp1ss
             initiator_socket_2 = {bind = "&hexagon_cluster_2.router.target_socket"}, --adsp
 
-            initiator_signal_socket_3 = { bind = "&hexagon_cluster_0.hexagon_thread_0.reset" },
-            initiator_signal_socket_4 = { bind = "&hexagon_cluster_0.hexagon_thread_1.reset" },
-            initiator_signal_socket_5 = { bind = "&hexagon_cluster_0.hexagon_thread_2.reset" },
-            initiator_signal_socket_6 = { bind = "&hexagon_cluster_0.hexagon_thread_3.reset" },
-            initiator_signal_socket_7 = { bind = "&hexagon_cluster_0.hexagon_thread_4.reset" },
-            initiator_signal_socket_8 = { bind = "&hexagon_cluster_0.hexagon_thread_5.reset" },
+            initiator_signal_socket_13 = { bind = "&hexagon_cluster_0.hexagon_thread_0.reset" },
+            initiator_signal_socket_14 = { bind = "&hexagon_cluster_0.hexagon_thread_1.reset" },
+            initiator_signal_socket_15 = { bind = "&hexagon_cluster_0.hexagon_thread_2.reset" },
+            initiator_signal_socket_16 = { bind = "&hexagon_cluster_0.hexagon_thread_3.reset" },
+            initiator_signal_socket_17 = { bind = "&hexagon_cluster_0.hexagon_thread_4.reset" },
+            initiator_signal_socket_18 = { bind = "&hexagon_cluster_0.hexagon_thread_5.reset" },
 
-            initiator_signal_socket_9 = { bind = "&hexagon_cluster_1.hexagon_thread_0.reset" },
-            initiator_signal_socket_10 = { bind = "&hexagon_cluster_1.hexagon_thread_5.reset" },
-            initiator_signal_socket_11 = { bind = "&hexagon_cluster_1.hexagon_thread_1.reset" },
-            initiator_signal_socket_12 = { bind = "&hexagon_cluster_1.hexagon_thread_2.reset" },
-            initiator_signal_socket_13 = { bind = "&hexagon_cluster_1.hexagon_thread_3.reset" },
-            initiator_signal_socket_14 = { bind = "&hexagon_cluster_1.hexagon_thread_4.reset" },
+            initiator_signal_socket_3 = { bind = "&hexagon_cluster_1.hexagon_thread_0.reset" },
+            initiator_signal_socket_4 = { bind = "&hexagon_cluster_1.hexagon_thread_5.reset" },
+            initiator_signal_socket_5 = { bind = "&hexagon_cluster_1.hexagon_thread_1.reset" },
+            initiator_signal_socket_6 = { bind = "&hexagon_cluster_1.hexagon_thread_2.reset" },
+            initiator_signal_socket_7 = { bind = "&hexagon_cluster_1.hexagon_thread_3.reset" },
+            initiator_signal_socket_8 = { bind = "&hexagon_cluster_1.hexagon_thread_4.reset" },
 
-            initiator_signal_socket_15 = { bind = "&hexagon_cluster_2.hexagon_thread_0.reset" },
-            initiator_signal_socket_16 = { bind = "&hexagon_cluster_2.hexagon_thread_1.reset" },
+            initiator_signal_socket_19 = { bind = "&hexagon_cluster_2.hexagon_thread_0.reset" },
+            initiator_signal_socket_9 = { bind = "&hexagon_cluster_2.hexagon_thread_1.reset" },
 
-            initiator_signal_socket_17 = { bind = "&hexagon_cluster_0.csr.reset" },
-            initiator_signal_socket_18 = { bind = "&hexagon_cluster_1.csr.reset" },
-            initiator_signal_socket_19 = { bind = "&hexagon_cluster_2.csr.reset" },
+            initiator_signal_socket_10 = { bind = "&hexagon_cluster_0.csr.reset" },
+            initiator_signal_socket_11 = { bind = "&hexagon_cluster_1.csr.reset" },
+            initiator_signal_socket_12 = { bind = "&hexagon_cluster_2.csr.reset" },
         },
 
         qemu_inst_mgr_h = {
@@ -257,7 +257,7 @@ platform = {
         qemu_hex_inst_0= {
             moduletype="QemuInstance";
             args = {"&qemu_inst_mgr_h", "HEXAGON"};
-            tcg_mode="SINGLE",
+            tcg_mode="MULTI",
             sync_policy = "multithread-unconstrained"
         },
 
@@ -309,7 +309,11 @@ platform = {
 
    DDR_space = {moduletype="Memory";
                target_socket = {bind = "&router.initiator_socket";},
-               shared_memory=IS_SHARED_MEM};
+--               shared_memory=IS_SHARED_MEM;
+               init_mem=true;
+               init_mem_val=0;
+               reset = { bind = "&reset.reset" };
+            };
 
     -- ram_0=  {
     --             moduletype="Memory";
@@ -318,7 +322,11 @@ platform = {
 
    DDR_space_1 = {moduletype="Memory";
                target_socket = {bind = "&router.initiator_socket";},
-               shared_memory=IS_SHARED_MEM};
+--               shared_memory=IS_SHARED_MEM,
+               init_mem=true;
+               init_mem_val=0;
+               reset = { bind = "&reset.reset" };
+            };
 
     -- ram_1=  {
     --             moduletype="Memory";
