@@ -78,6 +78,19 @@ class Memory : public sc_core::sc_module
     public:
         SubBlock(uint64_t address, uint64_t len, Memory& mem): m_len(len), m_address(address), m_mem(mem) {}
 
+        void reset()
+        {
+            for (int i=0; i<N; i++) {
+                if (m_sub_blocks[i]) m_sub_blocks[i].reset();
+            }
+            if (m_mem.p_init_mem && m_ptr) {
+                SCP_WARN(()) << ": resetting 0x" << std::hex
+                    << reinterpret_cast<uint64_t>(m_ptr)
+                    << ": 0x"<< m_mem.p_init_mem_val << ",  0x" << m_len <<"\n";
+                memset(m_ptr, m_mem.p_init_mem_val, m_len);
+            }
+        }
+
         SubBlock& access(uint64_t address)
         {
             // address is the address of where we want to write/read
@@ -369,6 +382,7 @@ protected:
 
 public:
     tlm_utils::multi_passthrough_target_socket<Memory<BUSWIDTH>> socket;
+    TargetSignalSocket<bool> reset;
     cci::cci_param<bool> p_rom;
     cci::cci_param<bool> p_dmi;
     cci::cci_param<sc_core::sc_time> p_latency;
@@ -390,6 +404,7 @@ public:
         : m_sub_block(nullptr)
         , m_broker(cci::cci_get_broker())
         , socket("target_socket")
+        , reset("reset")
         , p_rom("read_only", false, "Read Only Memory (default false)")
         , p_dmi("dmi_allow", true, "DMI allowed (default true)")
         , p_latency("latency", sc_core::sc_time(10, sc_core::SC_NS), "Latency reported for DMI access")
@@ -417,6 +432,11 @@ public:
         socket.register_b_transport(this, &Memory::b_transport);
         socket.register_transport_dbg(this, &Memory::transport_dbg);
         socket.register_get_direct_mem_ptr(this, &Memory::get_direct_mem_ptr);
+        reset.register_value_changed_cb([&](bool value) {
+            if (value) {
+                m_sub_block.reset();
+            }
+        });
     }
 
     void before_end_of_elaboration()
