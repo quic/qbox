@@ -56,9 +56,7 @@ public:
         gs::SigHandler::get().set_sig_num(sig);
         char ch[1] = { 's' };
         ssize_t bytes_written = ::write(gs::SigHandler::get().get_write_sock_end(), &ch, 1);
-        if (bytes_written == -1) {
-            SCP_FATAL("SigHandler") << "There is an issue when you try to send some datas";
-        }
+        if (bytes_written < 0) _Exit(EXIT_FAILURE);
     }
 
     static void force_exit_sig_handler(int sig)
