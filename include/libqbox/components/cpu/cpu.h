@@ -449,6 +449,7 @@ public:
             socket.reset();
             m_qemu_kick_ev.async_notify(); // notify the other thread so that the CPU is allowed to continue
         }
+        m_qk->reset();
     }
     virtual void end_of_elaboration() override
     {
