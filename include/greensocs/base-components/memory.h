@@ -85,7 +85,7 @@ class Memory : public sc_core::sc_module
         void doreset()
         {
             SCP_WARN((), m_mem.name())("Reset (block at offset {:x})", m_address);
-            for (int i=0; i<N; i++) {
+            for (unsigned int i = 0; i < N; i++) {
                 if (m_sub_blocks[i]) m_sub_blocks[i]->doreset();
             }
             if (m_mem.p_init_mem && m_ptr) {
