@@ -25,6 +25,7 @@ public:
     QemuTargetSocket<> socket_fast;
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
     sc_core::sc_vector<QemuInitiatorSignalSocket> irq_out;
+    QemuTargetSignalSocket reset;
 
     QemuHexagonL2vic(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuDevice(nm, inst, "l2vic")
@@ -34,6 +35,7 @@ public:
         , socket_fast("fastmem", inst)
         , irq_in("irq_in", p_num_sources, [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
         , irq_out("irq_out", p_num_outputs, [](const char* n, int i) { return new QemuInitiatorSignalSocket(n); })
+        , reset("reset")
     {
     }
 
@@ -51,6 +53,7 @@ public:
         for (int i = 0; i < p_num_sources; i++) {
             irq_in[i].init(m_dev, i);
         }
+        reset.init_named(m_dev, "reset", 0);
         for (int i = 0; i < p_num_outputs; i++) {
             irq_out[i].init_sbd(sbd, i);
         }
