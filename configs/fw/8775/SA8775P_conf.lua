@@ -316,7 +316,7 @@ platform = {
 
    DDR_space = {moduletype="Memory";
                target_socket = {bind = "&router.initiator_socket";},
---               shared_memory=IS_SHARED_MEM;
+               shared_memory=IS_SHARED_MEM;
                init_mem=true;
                init_mem_val=0;
                reset = { bind = "&reset.reset" };
@@ -329,7 +329,7 @@ platform = {
 
    DDR_space_1 = {moduletype="Memory";
                target_socket = {bind = "&router.initiator_socket";},
---               shared_memory=IS_SHARED_MEM,
+               shared_memory=IS_SHARED_MEM,
                init_mem=true;
                init_mem_val=0;
                reset = { bind = "&reset.reset" };
