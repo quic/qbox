@@ -228,6 +228,8 @@ PYBIND11_EMBEDDED_MODULE(cpp_shared_vars, m) { m.attr("module_args") = std::stri
 
 PYBIND11_EMBEDDED_MODULE(tlm_do_b_transport, m) {}
 
+PYBIND11_EMBEDDED_MODULE(initiator_signal_socket, m) {}
+
 class PyInterpreterManager
 {
 private:
@@ -264,14 +266,22 @@ public:
         , p_py_mod_args("py_module_args", "", "a string of command line arguments to be passed to the module")
         , p_tlm_initiator_ports_num("tlm_initiator_ports_num", 0, "number of tlm initiator ports")
         , p_tlm_target_ports_num("tlm_target_ports_num", 0, "number of tlm target ports")
+        , p_initiator_signals_num("initiator_signals_num", 0, "number of initiator signals")
+        , p_target_signals_num("target_signals_num", 0, "number of target signals")
         , initiator_sockets("initiator_socket")
         , target_sockets("target_socket")
+        , initiator_signal_sockets("initiator_signal_socket")
+        , target_signal_sockets("target_signal_socket")
     {
         SCP_DEBUG(()) << "PythonBinder constructor";
         initiator_sockets.init(p_tlm_initiator_ports_num.get_value(),
                                [this](const char* n, int i) { return new tlm_initiator_socket_t(n); });
         target_sockets.init(p_tlm_target_ports_num.get_value(),
                             [this](const char* n, int i) { return new tlm_target_socket_t(n); });
+        initiator_signal_sockets.init(p_initiator_signals_num.get_value(),
+                                      [this](const char* n, int i) { return new InitiatorSignalSocket<bool>(n); });
+        target_signal_sockets.init(p_target_signals_num.get_value(),
+                                   [this](const char* n, int i) { return new TargetSignalSocket<bool>(n); });
 
         for (int i = 0; i < p_tlm_target_ports_num.get_value(); i++) {
             target_sockets[i].register_b_transport(this, &PythonBinder::b_transport, i);
@@ -281,6 +291,10 @@ public:
         for (int i = 0; i < p_tlm_initiator_ports_num.get_value(); i++) {
             initiator_sockets[i].register_invalidate_direct_mem_ptr(this, &PythonBinder::invalidate_direct_mem_ptr);
         }
+        for (int i = 0; i < p_target_signals_num.get_value(); i++) {
+            target_signal_sockets[i].register_value_changed_cb([this, i](bool value) { target_signal_cb(i, value); });
+        }
+
         init_binder();
     }
 
@@ -308,6 +322,10 @@ private:
                 [this](int id, pybind11::object& py_trans, pybind11::object& delay) {
                     do_b_transport(id, py_trans, delay);
                 });
+
+            m_initiator_signal_socket_mod = pybind11::module_::import("initiator_signal_socket");
+            m_initiator_signal_socket_mod.attr("write") = pybind11::cpp_function(
+                [this](int id, bool value) { initiator_signal_sockets[id]->write(value); });
 
             std::string module_name_param = p_py_mod_name.get_value();
             std::string py_suffix = ".py";
@@ -385,18 +403,32 @@ private:
 
     virtual void end_of_simulation() override { exec_if_py_fn_exist("end_of_simulation"); }
 
+    void target_signal_cb(int id, bool value)
+    {
+        try {
+            m_main_mod.attr("target_signal_cb")(id, value);
+        } catch (const std::exception& e) {
+            SCP_FATAL(()) << e.what();
+        }
+    }
+
 public:
     cci::cci_param<std::string> p_py_mod_name;
     cci::cci_param<std::string> p_py_mod_dir;
     cci::cci_param<std::string> p_py_mod_args;
     cci::cci_param<uint32_t> p_tlm_initiator_ports_num;
     cci::cci_param<uint32_t> p_tlm_target_ports_num;
+    cci::cci_param<uint32_t> p_initiator_signals_num;
+    cci::cci_param<uint32_t> p_target_signals_num;
     sc_core::sc_vector<tlm_initiator_socket_t> initiator_sockets;
     sc_core::sc_vector<tlm_target_socket_t> target_sockets;
+    sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets;
+    sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
 
 private:
     pybind11::module_ m_main_mod;
     pybind11::module_ m_tlm_do_b_transport_mod;
+    pybind11::module_ m_initiator_signal_socket_mod;
     pybind11::module_ m_cpp_shared_vars_mod;
 };
 } // namespace gs

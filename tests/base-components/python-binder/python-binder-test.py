@@ -1,16 +1,16 @@
-from tlm_generic_payload import tlm_command
-from tlm_generic_payload import tlm_response_status
-from tlm_generic_payload import tlm_generic_payload
-from sc_core import sc_time
-from sc_core import sc_time_unit
-from sc_core import wait
+from tlm_generic_payload import tlm_command, tlm_response_status, tlm_generic_payload
+import initiator_signal_socket
+from sc_core import sc_time, sc_time_unit, sc_spawn, sc_spawn_options, wait, sc_event
 import tlm_do_b_transport
 import cpp_shared_vars
 import functools
 import numpy as np
-from typing import List
+from typing import List, Callable
 import argparse
 import shlex
+
+signal_write_values: List[bool] = []
+signal_writer_event = sc_event()
 
 
 def parse_args(args_str: str) -> argparse.Namespace:
@@ -75,6 +75,7 @@ def generate_test_data3() -> List[int]:
         0xFF,
     ]
 
+
 def start_of_simulation() -> None:
     trans = tlm_generic_payload()
     trans.set_address(0x1008)
@@ -83,8 +84,41 @@ def start_of_simulation() -> None:
     data = generate_test_data3()[:8]
     trans.set_data_ptr(data)
     trans.set_command(tlm_command.TLM_WRITE_COMMAND)
-    delay = sc_time(0,sc_time_unit.SC_NS)
+    delay = sc_time(0, sc_time_unit.SC_NS)
     tlm_do_b_transport.do_b_transport(0, trans, delay)
+    signal_writer_event.notify(sc_time(0, sc_time_unit.SC_NS))
+
+
+def signal_writer() -> None:
+    for _ in range(0, 2):
+        initiator_signal_socket.write(0, False)
+        wait(sc_time(10, sc_time_unit.SC_NS))
+        initiator_signal_socket.write(0, True)
+        wait(sc_time(10, sc_time_unit.SC_NS))
+
+
+def spawn_sc_thread(thread: Callable, thread_name: str, event: sc_event) -> None:
+    try:
+        options = sc_spawn_options()
+        options.set_sensitivity(event)
+        options.dont_initialize()
+        sc_spawn(thread, thread_name, options)
+    except Exception as e:
+        log(f"spawn_sc_thread error: {e}")
+
+
+def end_of_elaboration() -> None:
+    spawn_sc_thread(signal_writer, "signal_writer", signal_writer_event)
+
+
+def target_signal_cb(id: int, value: bool) -> None:
+    log(f"target signal socket {id} received value: {value}")
+    signal_write_values.append(value)
+
+
+def end_of_simulation() -> None:
+    test_signal_write_values = [True, False, True, False]
+    assert test_signal_write_values == signal_write_values
 
 
 def test1(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:

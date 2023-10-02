@@ -7,6 +7,8 @@
 #include "memory.h"
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/test-bench.h>
+#include <greensocs/gsutils/ports/initiator-signal-socket.h>
+#include <greensocs/gsutils/ports/target-signal-socket.h>
 #include <vector>
 #include <sstream>
 #include <memory>
@@ -14,6 +16,7 @@
 #include <unistd.h>
 #include <cerrno>
 #include <libgen.h>
+#include <vector>
 
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>
@@ -47,12 +50,26 @@ class PythonBinderTestBench : public TestBench
 public:
     SCP_LOGGER();
     PythonBinderTestBench(const sc_core::sc_module_name& n)
-        : TestBench(n), m_initiator("initiator"), m_python_binder("python-binder"), m_router("router"), m_mem("mem")
+        : TestBench(n)
+        , m_initiator("initiator")
+        , m_python_binder("python-binder")
+        , m_router("router")
+        , m_mem("mem")
+        , m_test_initiator_signal_socket("test_initiator_signal_socket")
+        , m_test_target_signal_socket("test_target_signal_socket")
     {
+        SC_THREAD(do_signals_check);
+        sensitive << signals_writer_event;
+        dont_initialize();
+
         m_initiator.socket.bind(m_router.target_socket);
         m_python_binder.initiator_sockets[0].bind(m_router.target_socket);
         m_router.initiator_socket.bind(m_python_binder.target_sockets[0]);
         m_router.initiator_socket.bind(m_mem.socket);
+        m_test_initiator_signal_socket.bind(m_python_binder.target_signal_sockets[0]);
+        m_python_binder.initiator_signal_sockets[0].bind(m_test_target_signal_socket);
+        m_test_target_signal_socket.register_value_changed_cb(
+            [this](bool value) { m_signal_write_values.push_back(value); });
     }
 
     void do_basic_trans_check(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay, uint64_t addr, uint8_t* data,
@@ -89,6 +106,21 @@ public:
         SCP_INFO(()) << sstr.str();
     }
 
+    void do_signals_check()
+    {
+        SCP_INFO(()) << "signals check test";
+        for (int i = 0; i < 2; i++) {
+            SCP_INFO(()) << "initiator signal write: true";
+            m_test_initiator_signal_socket->write(true);
+            sc_core::wait(sc_core::sc_time(sc_core::SC_ZERO_TIME));
+            SCP_INFO(()) << "initiator signal write: false";
+            m_test_initiator_signal_socket->write(false);
+            sc_core::wait(sc_core::sc_time(sc_core::SC_ZERO_TIME));
+        }
+        std::vector<bool> test_signal_write_values = { false, true, false, true };
+        ASSERT_EQ(m_signal_write_values, test_signal_write_values);
+    }
+
     void print_dashes()
     {
         SCP_INFO(()) << "-----------------------------------------------------------------------------";
@@ -99,4 +131,8 @@ protected:
     gs::PythonBinder<> m_python_binder;
     gs::Router<> m_router;
     gs::Memory<> m_mem;
+    InitiatorSignalSocket<bool> m_test_initiator_signal_socket;
+    TargetSignalSocket<bool> m_test_target_signal_socket;
+    std::vector<bool> m_signal_write_values;
+    sc_core::sc_event signals_writer_event;
 };

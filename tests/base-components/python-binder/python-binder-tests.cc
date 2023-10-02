@@ -28,9 +28,13 @@ TEST_BENCH(PythonBinderTestBench, test_bench)
     print_dashes();
     do_basic_trans_check(trans, delay, 0x2200, (uint8_t*)&r_data2, (uint8_t*)&w_data + 16, 16,
                          tlm::tlm_command::TLM_READ_COMMAND);
+
     print_dashes();
-    SCP_DEBUG(()) << "Simulation time = " << sc_core::sc_time_stamp();
-    ASSERT_EQ(sc_core::sc_time_stamp(), sc_core::sc_time(3, sc_core::sc_time_unit::SC_US));
+    signals_writer_event.notify(sc_core::sc_time(sc_core::SC_ZERO_TIME));
+    sc_core::wait(sc_core::sc_time(1, sc_core::sc_time_unit::SC_US));
+    print_dashes();
+    SCP_INFO(()) << "Simulation time = " << sc_core::sc_time_stamp();
+    ASSERT_EQ(sc_core::sc_time_stamp(), sc_core::sc_time(4, sc_core::sc_time_unit::SC_US));
 }
 
 int sc_main(int argc, char* argv[])
@@ -44,6 +48,8 @@ int sc_main(int argc, char* argv[])
 
             { "test_bench.python-binder.tlm_initiator_ports_num", cci::cci_value(1) },
             { "test_bench.python-binder.tlm_target_ports_num", cci::cci_value(1) },
+            { "test_bench.python-binder.initiator_signals_num", cci::cci_value(1) },
+            { "test_bench.python-binder.target_signals_num", cci::cci_value(1) },
             { "test_bench.python-binder.target_socket_0.address", cci::cci_value(0x2000) },
             { "test_bench.python-binder.target_socket_0.size", cci::cci_value(0x1000) },
             { "test_bench.python-binder.target_socket_0.relative_addresses", cci::cci_value(false) },
