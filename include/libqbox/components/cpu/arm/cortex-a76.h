@@ -152,6 +152,10 @@ public:
         irq_timer_sec_out.init(m_dev, 3);
         irq_maintenance_out.init_named(m_dev, "gicv3-maintenance-interrupt", 0);
         irq_pmu_out.init_named(m_dev, "pmu-interrupt", 0);
+
+        // This is needed for KVM otherwise the GIC won't reset properly when a system reset is requested
+        qemu::CpuAarch64 cpu(m_cpu);
+        cpu.register_reset();
     }
 
     void start_of_simulation() override

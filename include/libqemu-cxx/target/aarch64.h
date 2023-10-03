@@ -28,6 +28,7 @@ public:
     void set_exclusive_val(uint64_t val);
 
     void post_init();
+    void register_reset();
 };
 
 class CpuAarch64 : public CpuArm
