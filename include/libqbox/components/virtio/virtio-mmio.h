@@ -15,8 +15,13 @@
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 
+#include "greensocs/gsutils/cciutils.h"
+#include <scp/report.h>
+
 class QemuVirtioMMIO : public QemuDevice
 {
+    SCP_LOGGER();
+
 public:
     QemuTargetSocket<> socket;
     QemuInitiatorSignalSocket irq_out;
@@ -36,12 +41,33 @@ public:
         , irq_out("irq_out")
         , virtio_mmio_device("virtio_mmio", inst, "virtio-mmio")
     {
+        SCP_TRACE(())("Constructor");
     }
 
     void before_end_of_elaboration() override
     {
         virtio_mmio_device.instantiate();
         QemuDevice::before_end_of_elaboration();
+        for (auto n : gs::sc_cci_children((std::string(name()) + ".device_properties").c_str())) {
+            cci::cci_value v = gs::cci_get(cci::cci_get_broker(), std::string(name()) + ".device_properties." + n);
+            /* NB we could use _parse here,but JSON strings dont always match QEMU command line strings! */
+            if (v.is_bool()) {
+                SCP_DEBUG(())("Setting bool {} to {}", n, v.to_json());
+                m_dev.set_prop_bool(n.c_str(), v.get_bool());
+                continue;
+            }
+            if (v.is_number()) {
+                SCP_DEBUG(())("Setting number {} to {}", n, v.to_json());
+                m_dev.set_prop_int(n.c_str(), v.get_uint64());
+                continue;
+            }
+            if (v.is_string()) {
+                SCP_DEBUG(())("Setting string {} to {}", n, v.to_json());
+                m_dev.set_prop_str(n.c_str(), v.get_string().c_str());
+                continue;
+            }
+            SCP_WARN(())("Ignoring property {}, unknown type. {}", n, v.to_json());
+        }
 
         virtio_mmio_device.get_qemu_dev().set_prop_bool("force-legacy", true);
 
