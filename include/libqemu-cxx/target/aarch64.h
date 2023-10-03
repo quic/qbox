@@ -26,6 +26,8 @@ public:
     uint64_t get_exclusive_addr() const;
     uint64_t get_exclusive_val() const;
     void set_exclusive_val(uint64_t val);
+
+    void post_init();
 };
 
 class CpuAarch64 : public CpuArm

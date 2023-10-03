@@ -22,6 +22,8 @@ uint64_t CpuArm::get_exclusive_val() const { return m_int->exports().cpu_arm_get
 
 void CpuArm::set_exclusive_val(uint64_t val) { m_int->exports().cpu_arm_set_exclusive_val(m_obj, val); }
 
+void CpuArm::post_init() { m_int->exports().cpu_arm_post_init(m_obj); }
+
 void CpuAarch64::set_aarch64_mode(bool aarch64_mode)
 {
     m_int->exports().cpu_aarch64_set_aarch64_mode(m_obj, aarch64_mode);

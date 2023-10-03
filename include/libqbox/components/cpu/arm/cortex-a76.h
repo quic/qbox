@@ -154,6 +154,19 @@ public:
         irq_pmu_out.init_named(m_dev, "pmu-interrupt", 0);
     }
 
+    void start_of_simulation() override
+    {
+        // According to qemu/hw/arm/virt.c:
+        // virt_cpu_post_init() must be called after the CPUs have been realized
+        // and the GIC has been created.
+        // I am not sure if this the right place where to call it. I wonder if a
+        // `before_start_of_simulation` stage would be a better place for this.
+        qemu::CpuAarch64 cpu(m_cpu);
+        cpu.post_init();
+
+        QemuCpu::start_of_simulation();
+    }
+
     void initiator_customize_tlm_payload(TlmPayload& payload) override
     {
         uint64_t addr;
