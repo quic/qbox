@@ -9,6 +9,7 @@ tableMerge(platform, {
         moduletype="QemuVirtioMMIOBlk",
         mem = { address = 0x1c0d0000, size = 0x2000, bind = "&router.initiator_socket"},
         irq_out = {bind = "&gic_0.spi_in_9"},
+        args = {"&platform.qemu_inst",},
         blkdev_str = "file=" .. valid_file(top() .. "system_lemans_qdrive_qvp.img") .. ",format=raw,if=none,readonly=off" };
 });
 
