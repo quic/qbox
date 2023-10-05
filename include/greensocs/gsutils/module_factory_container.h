@@ -22,11 +22,13 @@
 #include <greensocs/libgsutils.h>
 #include <greensocs/libgssync.h>
 
+#ifndef WITHOUT_QEMU
 #include <libqbox/qemu-instance.h>
 #include <libqbox/ports/target.h>
 #include <libqbox/ports/initiator.h>
 #include <libqbox/ports/target-signal-socket.h>
 #include <libqbox/ports/initiator-signal-socket.h>
+#endif
 
 #include <greensocs/systemc-uarts/backends/char-bf/stdio.h>
 #include <greensocs/gsutils/ports/biflow-socket.h>
@@ -169,14 +171,11 @@ public:
 
             // actually you could probably just cast everything to (tlm::tlm_target_socket<>*), but
             // we will dynamic cast to be sure.
-
             while (1) {
                 if (try_bind<tlm_utils::multi_init_base<>, tlm::tlm_base_target_socket<>>(i_obj, t_obj)) break;
                 if (try_bind<tlm_utils::multi_init_base<>, tlm_utils::multi_target_base<>>(i_obj, t_obj)) break;
-                if (try_bind<tlm_utils::multi_init_base<>, QemuTargetSocket<>>(i_obj, t_obj)) break;
                 if (try_bind<tlm::tlm_base_initiator_socket<>, tlm::tlm_base_target_socket<>>(i_obj, t_obj)) break;
                 if (try_bind<tlm::tlm_base_initiator_socket<>, tlm_utils::multi_target_base<>>(i_obj, t_obj)) break;
-                if (try_bind<tlm::tlm_base_initiator_socket<>, QemuTargetSocket<>>(i_obj, t_obj)) break;
                 if (try_bind<tlm::tlm_base_initiator_socket<32, tlm::tlm_fw_transport_if<>, tlm::tlm_bw_transport_if<>,
                                                             1, sc_core::SC_ZERO_OR_MORE_BOUND>,
                              tlm_utils::multi_target_base<>>(i_obj, t_obj))
@@ -201,16 +200,20 @@ public:
                         tlm::tlm_target_socket<32, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>>(
                         i_obj, t_obj))
                     break;
+                if (try_bind<sc_core::sc_port<sc_core::sc_signal_inout_if<bool>, 0, sc_core::SC_ZERO_OR_MORE_BOUND>,
+                             TargetSignalSocket<bool>>(i_obj, t_obj))
+                    break;
+#ifndef WITHOUT_QEMU
+                if (try_bind<InitiatorSignalSocket<bool>, TargetSignalSocket<bool>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, tlm::tlm_base_target_socket<>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, tlm_utils::multi_target_base<>>(i_obj, t_obj)) break;
+                if (try_bind<tlm_utils::multi_init_base<>, QemuTargetSocket<>>(i_obj, t_obj)) break;
+                if (try_bind<tlm::tlm_base_initiator_socket<>, QemuTargetSocket<>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, QemuTargetSocket<>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSignalSocket, QemuTargetSignalSocket>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSignalSocket, TargetSignalSocket<bool>>(i_obj, t_obj)) break;
                 if (try_bind<InitiatorSignalSocket<bool>, QemuTargetSignalSocket>(i_obj, t_obj)) break;
-                if (try_bind<InitiatorSignalSocket<bool>, TargetSignalSocket<bool>>(i_obj, t_obj)) break;
-                if (try_bind<sc_core::sc_port<sc_core::sc_signal_inout_if<bool>, 0, sc_core::SC_ZERO_OR_MORE_BOUND>,
-                             TargetSignalSocket<bool>>(i_obj, t_obj))
-                    break;
+#endif
                 SCP_FATAL(())("No bind found for: {} to {}", i_obj->name(), t_obj->name());
             }
         }
