@@ -8,9 +8,9 @@ TEST_BENCH(PythonBinderTestBench, test_bench)
         0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
     };
     uint8_t r_data1[8];
-    memset(r_data1, 0, 8);
+    memset(r_data1, 0, sizeof(r_data1) / sizeof(uint8_t));
     uint8_t r_data2[16];
-    memset(r_data2, 0, 16);
+    memset(r_data2, 0, sizeof(r_data2) / sizeof(uint8_t));
 
     sc_core::sc_time delay(0, sc_core::sc_time_unit::SC_NS);
 
@@ -18,16 +18,14 @@ TEST_BENCH(PythonBinderTestBench, test_bench)
     tlm::tlm_generic_payload trans;
     print_dashes();
     // write to  python-binder
-    do_basic_trans_check(trans, delay, 0x2000, (uint8_t*)&w_data, nullptr, 8, tlm::tlm_command::TLM_WRITE_COMMAND);
+    do_basic_trans_check(trans, delay, 0x2000, w_data, nullptr, 8, tlm::tlm_command::TLM_WRITE_COMMAND);
     print_dashes();
     // write to  python-binder
-    do_basic_trans_check(trans, delay, 0x2100, (uint8_t*)&w_data, nullptr, 8, tlm::tlm_command::TLM_WRITE_COMMAND);
+    do_basic_trans_check(trans, delay, 0x2100, w_data, nullptr, 8, tlm::tlm_command::TLM_WRITE_COMMAND);
     // read from memory
-    do_basic_trans_check(trans, delay, 0x1000, (uint8_t*)&r_data1, (uint8_t*)&w_data + 8, 16,
-                         tlm::tlm_command::TLM_READ_COMMAND);
+    do_basic_trans_check(trans, delay, 0x1000, r_data1, &w_data[8], 16, tlm::tlm_command::TLM_READ_COMMAND);
     print_dashes();
-    do_basic_trans_check(trans, delay, 0x2200, (uint8_t*)&r_data2, (uint8_t*)&w_data + 16, 16,
-                         tlm::tlm_command::TLM_READ_COMMAND);
+    do_basic_trans_check(trans, delay, 0x2200, r_data2, &w_data[16], 16, tlm::tlm_command::TLM_READ_COMMAND);
 
     print_dashes();
     signals_writer_event.notify(sc_core::sc_time(sc_core::SC_ZERO_TIME));

@@ -224,6 +224,7 @@ else()
         ${TARGET_LIBS}
         ${LIBELF_LIBRARIES}
         rpc
+        pybind11::embed
         ${CMAKE_DL_LIBS}
     )
 

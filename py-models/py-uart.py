@@ -62,11 +62,21 @@ EXIT_SUCCESS = 0x0
 EXIT_FAILURE = 0x1
 
 
+def sigint_handler(signno: int, frame: Optional[FrameType]) -> None:
+    """handler for SIGINT to make the guest OS aware of CTRL+C"""
+    ch = b"\x03"
+    receiver.queue.put(ch)
+    receiver.send_event.notify(sc_time(0, sc_time_unit.SC_NS))
+
+
+def module_init() -> None:
+    signal.signal(signal.SIGINT, sigint_handler)
+    log(f"loaded module: {__name__}")
+    log(f"module args: {cpp_shared_vars.module_args}")
+
+
 def log(msg: str) -> None:
     print(f"[python] {msg}", file=sys.stderr)
-
-
-log(f"module args: {cpp_shared_vars.module_args}")
 
 
 def parse_args(args_str: str) -> argparse.Namespace:
@@ -109,7 +119,6 @@ class ctrl:
 class stdin_receiver:
     send_event: async_event
     queue: Queue
-    timeout: int  # ms
     ifd: int
 
     def __post_init__(self):
@@ -128,18 +137,8 @@ class stdin_receiver:
 
 
 receiver = stdin_receiver(
-    send_event=async_event(True), queue=Queue(), timeout=300, ifd=sys.stdin.fileno()
+    send_event=async_event(True), queue=Queue(), ifd=sys.stdin.fileno()
 )
-
-
-def sigint_handler(signno: int, frame: Optional[FrameType]) -> None:
-    """handler for SIGINT to make the guest OS aware of CTRL+C"""
-    ch = b"\x03"
-    receiver.queue.put(ch)
-    receiver.send_event.notify(sc_time(0, sc_time_unit.SC_NS))
-
-
-signal.signal(signal.SIGINT, sigint_handler)
 
 
 def notifier() -> None:
@@ -152,10 +151,10 @@ def notifier() -> None:
                 # let's do the processing in the sendall systemc method by notifying a systemc event
                 receiver.send_event.notify(sc_time(0, sc_time_unit.SC_NS))
             wait(sc_time(1 / args.baudrate, sc_time_unit.SC_US))
-        except SystemExit as syse:
+        except SystemExit:
             break
         except Exception as e:
-            log(f"notifier sc thread error: {e}")
+            raise Exception(f"notifier sc thread error: {e}")
 
 
 def sendall() -> None:
@@ -168,10 +167,10 @@ def sendall() -> None:
         txn.set_command(tlm_command.TLM_IGNORE_COMMAND)
         delay = sc_time(1 / args.baudrate, sc_time_unit.SC_US)
         tlm_do_b_transport.do_b_transport(0, txn, delay)
-    except SystemExit as syse:
+    except SystemExit:
         return
     except Exception as e:
-        log(f"sendall sc method error: {e}")
+        raise Exception(f"sendall sc method error: {e}")
 
 
 def spawn_sc_method(method: Callable, method_name: str, event: async_event) -> None:
@@ -182,10 +181,10 @@ def spawn_sc_method(method: Callable, method_name: str, event: async_event) -> N
         options.dont_initialize()
         options.set_sensitivity(event)
         sc_spawn(method, method_name, options)
-    except SystemExit as syse:
+    except SystemExit:
         return
     except Exception as e:
-        log(f"spawn_sc_method error: {e}")
+        raise Exception(f"spawn_sc_method error: {e}")
 
 
 def spawn_sc_thread(thread: Callable, thread_name: str) -> None:
@@ -193,10 +192,10 @@ def spawn_sc_thread(thread: Callable, thread_name: str) -> None:
     try:
         options = sc_spawn_options()
         sc_spawn(thread, thread_name, options)
-    except SystemExit as syse:
+    except SystemExit:
         return
     except Exception as e:
-        log(f"spawn_sc_thread error: {e}")
+        raise Exception(f"spawn_sc_thread error: {e}")
 
 
 def set_send_limit_to_inf() -> None:
@@ -212,10 +211,10 @@ def set_send_limit_to_inf() -> None:
         trans.set_command(tlm_command.TLM_IGNORE_COMMAND)
         delay = sc_time()  # control trans, no need to set delay
         tlm_do_b_transport.do_b_transport(1, trans, delay)
-    except SystemExit as syse:
+    except SystemExit:
         return
     except Exception as e:
-        log(f"set_send_limit_to_inf error: {e}")
+        raise Exception(f"set_send_limit_to_inf error: {e}")
 
 
 def before_end_of_elaboration() -> None:
@@ -229,10 +228,10 @@ def before_end_of_elaboration() -> None:
             )
             spawn_sc_thread(thread=notifier, thread_name="notifier")
         set_send_limit_to_inf()
-    except SystemExit as syse:
+    except SystemExit:
         return
     except Exception as e:
-        log(f"before_end_of_elaboration error: {e}")
+        raise Exception(f"before_end_of_elaboration error: {e}")
 
 
 def b_transport(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
@@ -244,10 +243,10 @@ def b_transport(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
             for i in range(0, data_len):
                 os.write(sys.stdout.fileno(), data[i])
             sys.stdout.flush()
-    except SystemExit as syse:
+    except SystemExit:
         return
     except Exception as e:
-        log(f"b_transport error: {e}")
+        raise Exception(f"b_transport error: {e}")
 
 
 @atexit.register
@@ -255,3 +254,6 @@ def terminate() -> None:
     """cleanup before exiting"""
     receiver.reset_termios_attr()
     log("py-uart script terminated")
+
+
+module_init()
