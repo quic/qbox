@@ -353,6 +353,7 @@ protected:
         }
     }
 
+public:
     MemTxResult qemu_io_read(uint64_t addr, uint64_t* val, unsigned int size, MemTxAttrs attrs)
     {
         return qemu_io_access(tlm::TLM_READ_COMMAND, addr, val, size, attrs);
@@ -363,7 +364,6 @@ protected:
         return qemu_io_access(tlm::TLM_WRITE_COMMAND, addr, &val, size, attrs);
     }
 
-public:
     QemuInitiatorSocket(const char* name, QemuInitiatorIface& initiator, QemuInstance& inst)
         : TlmInitiatorSocket(name)
         , m_inst(inst)
