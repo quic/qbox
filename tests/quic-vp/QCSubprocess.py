@@ -72,8 +72,10 @@ class QCSubprocess:
         if timeout_sec is not None:
             secs = int(round(timeout_sec))
             def handler(signum, _):
-                self.proc.kill()
-                raise subprocess.TimeoutExpired(self.name, secs)
+                if self.proc.poll() is None:
+                    self.proc.send_signal(signal.SIGQUIT)
+                    self.proc.wait()
+                    raise subprocess.TimeoutExpired(self.name, secs)
             signal.signal(signal.SIGALRM, handler)
             signal.alarm(secs)
 
@@ -113,14 +115,16 @@ context:
 
     @classmethod
     def _ensure_ssh_connects(cls, args, timeout_sec=60., attempts=6):
+        last_excp = None
         for _ in range(attempts):
             try:
-                assert(cls(args + ["true"], timeout_sec=timeout_sec).success())
+                assert(cls(args + ["true"]).success(timeout_sec=timeout_sec))
                 print("SSH connection test passed.")
                 return
-            except (subprocess.TimeoutExpired, AssertionError):
+            except Exception as e:
+                last_excp = e
                 pass
-        raise Exception(f"Failed to connect to sshd after {attempts} attempts")
+        raise Exception(f"Failed to connect to sshd after {attempts} attempts. Last error: {str(last_excp)}")
 
     @classmethod
     def ssh(cls, args, port, logfile=None, env=None, timeout_sec=None):
