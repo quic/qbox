@@ -71,7 +71,7 @@ target_link_libraries(${PROJECT_NAME} INTERFACE
     ${LIBZIP_LIBRARY}
 )
 
-gs_export()
+gs_export(${PROJECT_NAME})
 
 if(APPLE)
     target_link_options(vp PRIVATE "LINKER:-dead_strip_dylibs")
