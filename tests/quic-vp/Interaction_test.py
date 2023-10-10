@@ -89,7 +89,7 @@ def fastrpc_calc_test():
 
         def get_logfile(name):
             if log_dir is not None:
-                return log_dir.joinpath(logname).as_posix()
+                return log_dir.joinpath(name).as_posix()
             return None
 
         adsp_args = "&& /mnt/bin/fastrpc_calc_test 0 100 0" if args.adsp else ""

@@ -18,7 +18,7 @@ function(gs_add_test test conf_lua image_dir extra)
     endif()
 
     if(EXISTS ${test_dir})
-        if (${QQVP_RESULTS_DIR})
+        if (QQVP_RESULTS_DIR)
             set(DIR_OPTS -d ${QQVP_RESULTS_DIR}/${test})
         endif()
         add_test(
