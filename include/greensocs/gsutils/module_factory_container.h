@@ -203,8 +203,8 @@ public:
                 if (try_bind<sc_core::sc_port<sc_core::sc_signal_inout_if<bool>, 0, sc_core::SC_ZERO_OR_MORE_BOUND>,
                              TargetSignalSocket<bool>>(i_obj, t_obj))
                     break;
-#ifndef WITHOUT_QEMU
                 if (try_bind<InitiatorSignalSocket<bool>, TargetSignalSocket<bool>>(i_obj, t_obj)) break;
+#ifndef WITHOUT_QEMU
                 if (try_bind<QemuInitiatorSocket<>, tlm::tlm_base_target_socket<>>(i_obj, t_obj)) break;
                 if (try_bind<QemuInitiatorSocket<>, tlm_utils::multi_target_base<>>(i_obj, t_obj)) break;
                 if (try_bind<tlm_utils::multi_init_base<>, QemuTargetSocket<>>(i_obj, t_obj)) break;
