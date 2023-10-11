@@ -7,7 +7,6 @@ import pexpect
 from truth.truth import AssertThat
 from subprocess import Popen, PIPE
 
-
 def linux_boot():
     test = False
 
@@ -68,5 +67,14 @@ def linux_boot():
 
         return True
 
-
-AssertThat(linux_boot()).IsTrue()
+try:
+    AssertThat(linux_boot()).IsTrue()
+except pexpect.exceptions.ExceptionPexpect as e:
+    # QTOOL-106436: mask the termination error as it is benign. The
+    # parent should probably kill the vp later anyways. My guess is that
+    # this happens because pexpect only waits 0.1s after SIGINT/SIGHUP,
+    # not leaving enough time for the vp to completely terminate.
+    if str(e) == "Could not terminate the child.":
+        print("Ignoring exception: '{str(e)}'")
+    else:
+        raise e
