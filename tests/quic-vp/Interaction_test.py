@@ -8,6 +8,7 @@ import psutil
 import time
 from QCSubprocess import QCSubprocess
 import signal
+import utils
 
 def fastrpc_calc_test():
     test = False
@@ -81,7 +82,7 @@ def fastrpc_calc_test():
     vp = QCSubprocess(vp_args, env, timeout_sec)
 
     ret = True
-    for i in range(num_boot_cycles):
+    for i in utils.timed_range(num_boot_cycles):
         num_dsps = 3 if args.adsp else 2
         for _ in range(num_dsps):
             vp.expect(r"DSP Image Creation Date:.+\s*\n")
