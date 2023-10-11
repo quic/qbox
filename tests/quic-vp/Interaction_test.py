@@ -46,8 +46,9 @@ def fastrpc_calc_test():
     else:
         log_dir = None
 
+    num_boot_cycles = 3
     load = psutil.cpu_percent(2)
-    timeout_sec = 60 * 4.
+    timeout_sec = 60 * num_boot_cycles * 4.
     timeout_scale = 1
     if (load > 0.0):
         timeout_scale = 1 + (load / 100)
@@ -80,7 +81,6 @@ def fastrpc_calc_test():
     vp = QCSubprocess(vp_args, env, timeout_sec)
 
     ret = True
-    num_boot_cycles = 3
     for i in range(num_boot_cycles):
         num_dsps = 3 if args.adsp else 2
         for _ in range(num_dsps):

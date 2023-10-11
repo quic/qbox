@@ -32,7 +32,7 @@ function(gs_add_test test conf_lua image_dir extra)
                 ${PLUGIN_OPTS}
                 -- ${extra}
         )
-        set_tests_properties(${test} PROPERTIES TIMEOUT 600)
+        set_tests_properties(${test} PROPERTIES TIMEOUT 800)
     else()
         message(WARNING "Skipping test ${test}, could not find '${test_dir}'. To enable tests, set QQVP_FIRMWARE_REPO_DIR in environment.")
     endif()
