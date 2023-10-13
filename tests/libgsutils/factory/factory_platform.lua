@@ -7,7 +7,7 @@ platform = {
     },
 
     router = {
-        moduletype="Router";
+        moduletype="router";
     },
 
     rom_0 = {

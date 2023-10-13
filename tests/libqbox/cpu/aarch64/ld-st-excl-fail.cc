@@ -21,7 +21,7 @@
  * Each CPU tries to lock a memory region which has been pre-locked at the
  * beginning of the test. The corresponding stxr should fail in all cases.
  */
-class CpuArmCortexA53LdStExclTest : public CpuTestBench<QemuCpuArmCortexA53, CpuTesterExclusive>
+class CpuArmCortexA53LdStExclTest : public CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterExclusive>
 {
     bool passed = true;
 
@@ -51,7 +51,7 @@ public:
     SC_HAS_PROCESS(CpuArmCortexA53LdStExclTest);
 
     CpuArmCortexA53LdStExclTest(const sc_core::sc_module_name& n)
-        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterExclusive>(n)
+        : CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterExclusive>(n)
     {
         char buf[2048];
 
@@ -76,7 +76,7 @@ public:
     virtual void end_of_simulation() override
     {
         TEST_ASSERT(passed);
-        CpuTestBench<QemuCpuArmCortexA53, CpuTesterExclusive>::end_of_simulation();
+        CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterExclusive>::end_of_simulation();
     }
 };
 

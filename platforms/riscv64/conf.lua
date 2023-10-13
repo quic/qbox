@@ -52,11 +52,13 @@ platform = {
     -- cpu_0 = { gdb_port = 1234 };
 
     router = {
-        moduletype="Router";
+        moduletype="router";
+
     },
 
     qemu_inst_mgr = {
         moduletype = "QemuInstanceManager";
+        dylib_path = "qemu-instance.so"
     },
 
     qemu_inst= {
@@ -101,33 +103,33 @@ platform = {
         };
     
     resetvec_rom_0= {
-            moduletype = "Memory",
+            moduletype = "memory",
             target_socket  = {address=0x00001000, size=0x1000, bind = "&router.initiator_socket"},
             load={data={0x0400f06f}, offset=0}
         };
     
     rom_0=   {
-            moduletype = "Memory",
+            moduletype = "memory",
             target_socket  = {address=0x10000, size=64 * 1024, bind = "&router.initiator_socket"}
         };
     
     sram_0=   {
-            moduletype = "Memory",
+            moduletype = "memory",
             target_socket  = {address=0x60000000, size=128 * 1024, bind = "&router.initiator_socket"}
         };
     
     dram_0=   {
-            moduletype = "Memory",
+            moduletype = "memory",
             target_socket  = {address=0x1000000000, size=256 * 1024 * 1024, bind = "&router.initiator_socket"}
         };
     
     qspi_0=   {
-            moduletype = "Memory",
+            moduletype = "memory",
             target_socket  = {address=0x70000000, size=256 * 1024 * 1024, bind = "&router.initiator_socket"}
         };
     
     boot_gpio_0={
-            moduletype = "Memory",
+            moduletype = "memory",
             target_socket  = {address=0xa0000010, size=0x08, bind = "&router.initiator_socket"},
             load= {data={2},offset=0}
         };
@@ -147,7 +149,7 @@ platform = {
     -- };
 
     load={
-        moduletype = "Loader",
+        moduletype = "loader",
         initiator_socket = {bind = "&router.target_socket"};
         {data=_bootloader_riscv64, address=0x10040 };
     }
@@ -156,7 +158,7 @@ platform = {
 if (RISCV_NUM_CPUS > 0) then
     for i=0,(RISCV_NUM_CPUS-1) do
         local cpu = {
-            moduletype = "QemuCpuRiscv64Rv64";
+            moduletype = "qemu_cpu_riscv64";
             args = {"&platform.qemu_inst", i};
             mem = {bind = "&router.target_socket"};
         };

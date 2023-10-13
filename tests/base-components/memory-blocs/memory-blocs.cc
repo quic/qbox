@@ -288,7 +288,7 @@ public:
 protected:
     gs::ConfigurableBroker m_broker;
     InitiatorTester m_initiator;
-    gs::Memory<> m_memory;
+    gs::memory<> m_memory;
 
 public:
     MemoryBlocs(const sc_core::sc_module_name& n)

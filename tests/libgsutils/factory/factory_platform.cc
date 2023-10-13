@@ -45,7 +45,7 @@ int sc_main(int argc, char** argv)
     auto broker_h = m_broker.create_broker_handle(orig);
     ArgParser ap{ broker_h, argc, argv };
 
-    typedef gs::Memory<> Memory;
+    typedef gs::memory<> Memory;
     GSC_MODULE_REGISTER(Memory);
 
     FactoryPlatform platform("platform");

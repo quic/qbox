@@ -21,7 +21,7 @@
 #include <signal.h>
 #include <termios.h>
 
-class CharBackendStdio : public sc_core::sc_module
+class char_backend_stdio : public sc_core::sc_module
 {
 protected:
     cci::cci_param<bool> p_read_write;
@@ -34,7 +34,7 @@ private:
     SCP_LOGGER();
 
 public:
-    gs::biflow_socket<CharBackendStdio> socket;
+    gs::biflow_socket<char_backend_stdio> socket;
 
 #ifdef WIN32
 #pragma message("CharBackendStdio not yet implemented for WIN32")
@@ -54,7 +54,7 @@ public:
         tcsetattr(fd, TCSANOW, &tty);
     }
 
-    CharBackendStdio(sc_core::sc_module_name name)
+    char_backend_stdio(sc_core::sc_module_name name)
         : sc_core::sc_module(name)
         , p_read_write("read_write", true, "read_write if true start rcv_thread")
         , socket("biflow_socket")
@@ -81,9 +81,9 @@ public:
                 socket.enqueue(ch);
             }
         });
-        if (p_read_write) rcv_thread_id = std::thread(&CharBackendStdio::rcv_thread, this);
+        if (p_read_write) rcv_thread_id = std::thread(&char_backend_stdio::rcv_thread, this);
 
-        socket.register_b_transport(this, &CharBackendStdio::writefn);
+        socket.register_b_transport(this, &char_backend_stdio::writefn);
     }
 
     void end_of_elaboration() { socket.can_receive_any(); }
@@ -125,12 +125,12 @@ public:
         fflush(stdout);
     }
 
-    ~CharBackendStdio()
+    ~char_backend_stdio()
     {
         m_running = false;
         if (rcv_pthread_id) pthread_kill(rcv_pthread_id, SIGURG);
         if (rcv_thread_id.joinable()) rcv_thread_id.join();
     }
 };
-GSC_MODULE_REGISTER(CharBackendStdio);
+extern "C" void module_register();
 #endif

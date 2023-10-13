@@ -105,7 +105,7 @@ function(qbox_extra_add_test target)
     add_executable(${target} ${ARGN})
     install(TARGETS ${target} DESTINATION bin)
     target_include_directories(${target} PRIVATE ${QBOX_TEST_DIR}/include)
-    target_link_libraries(${target} PRIVATE ${TARGET_LIBS})
+    target_link_libraries(${target} PRIVATE ${TARGET_LIBS} display)
     add_test(NAME ${target} COMMAND $<TARGET_FILE:${target}>)
 endfunction(qbox_extra_add_test)
 

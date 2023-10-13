@@ -185,58 +185,58 @@ void MainThreadQemuDisplay::realize()
     m_realized = true;
 }
 
-QemuDisplay::QemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+display::display(const sc_core::sc_module_name& name, sc_core::sc_object* o)
     : sc_module(name)
 #ifdef __APPLE__
-    // On MacOS use libqbox's QemuDisplay SystemC module.
-    , m_main_display(o)
+    // On MacOS use libqbox's display SystemC module.
+    ,m_main_display(o)
 #endif
 {
 #ifndef __APPLE__
     // Use QEMU's integrated display only if we are NOT on MacOS.
-    // On MacOS use libqbox's QemuDisplay SystemC module.
+    // On MacOS use libqbox's display SystemC module.
     QemuDevice* gpu = (dynamic_cast<QemuDevice*>(o));
     gpu->get_qemu_inst().set_display_arg("sdl,gl=on");
 #endif
 }
 
-QemuDisplay::QemuDisplay(const sc_core::sc_module_name& name, QemuDevice& gpu)
-    : QemuDisplay(name, reinterpret_cast<sc_core::sc_object*>(&gpu))
+display::display(const sc_core::sc_module_name& name, QemuDevice& gpu)
+    : display(name, reinterpret_cast<sc_core::sc_object*>(&gpu))
 {
 }
 
-QemuDisplay::QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu)
-    : QemuDisplay(name, reinterpret_cast<sc_core::sc_object*>(&gpu))
+display::display(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu)
+    : display(name, reinterpret_cast<sc_core::sc_object*>(&gpu))
 {
 }
 
-QemuDisplay::QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu)
-    : QemuDisplay(name, reinterpret_cast<sc_core::sc_object*>(&gpu))
+display::display(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu)
+    : display(name, reinterpret_cast<sc_core::sc_object*>(&gpu))
 {
 }
 
-void QemuDisplay::before_end_of_elaboration()
+void display::before_end_of_elaboration()
 {
 #ifdef __APPLE__
     m_main_display.instantiate();
 #endif
 }
 
-void QemuDisplay::end_of_elaboration()
+void display::end_of_elaboration()
 {
 #ifdef __APPLE__
     m_main_display.realize();
 #endif
 }
 
-void QemuDisplay::start_of_simulation()
+void display::start_of_simulation()
 {
 #ifdef __APPLE__
     m_main_display.start_of_simulation();
 #endif
 }
 
-QemuInstance* QemuDisplay::get_qemu_inst()
+QemuInstance* display::get_qemu_inst()
 {
 #ifdef __APPLE__
     return &m_main_display.get_qemu_inst();
@@ -245,7 +245,7 @@ QemuInstance* QemuDisplay::get_qemu_inst()
 #endif
 }
 
-bool QemuDisplay::is_instantiated() const
+bool display::is_instantiated() const
 {
 #ifdef __APPLE__
     return m_main_display.is_instantiated();
@@ -254,7 +254,7 @@ bool QemuDisplay::is_instantiated() const
 #endif
 }
 
-bool QemuDisplay::is_realized() const
+bool display::is_realized() const
 {
 #ifdef __APPLE__
     return m_main_display.is_realized();
@@ -263,11 +263,16 @@ bool QemuDisplay::is_realized() const
 #endif
 }
 
-const std::vector<qemu::SDL2Console>* QemuDisplay::get_sdl2_consoles() const
+const std::vector<qemu::SDL2Console>* display::get_sdl2_consoles() const
 {
 #ifdef __APPLE__
     return &m_main_display.get_sdl2_consoles();
 #else
     return nullptr;
 #endif
+}
+
+void module_register()
+{
+    GSC_MODULE_REGISTER_C(display, sc_core::sc_object*);
 }

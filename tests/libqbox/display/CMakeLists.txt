@@ -1,1 +1,1 @@
-qbox_extra_add_test(display display.cc)
+qbox_extra_add_test(display-test display.cc)

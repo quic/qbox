@@ -20,12 +20,13 @@
 #ifndef _LIBQBOX_COMPONENTS_RESET_GPIO_INITIATOR_H
 #define _LIBQBOX_COMPONENTS_RESET_GPIO_INITIATOR_H
 
-#include "libqbox/ports/initiator.h"
+#include "libqbox/ports/initiator-signal-socket.h"
+#include "libqbox/ports/target-signal-socket.h"
 #include "libqbox/components/device.h"
 #include "libqbox/qemu-instance.h"
 #include <greensocs/gsutils/module_factory_registery.h>
 
-class ResetGPIO : public QemuDevice
+class reset_gpio : public QemuDevice
 {
     SCP_LOGGER();
     QemuInitiatorSignalSocket m_reset_i;
@@ -34,11 +35,11 @@ class ResetGPIO : public QemuDevice
 public:
     sc_core::sc_port<sc_core::sc_signal_inout_if<bool>, 0, sc_core::SC_ZERO_OR_MORE_BOUND> reset;
 
-    ResetGPIO(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : ResetGPIO(name, *(dynamic_cast<QemuInstance*>(o)))
+    reset_gpio(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : reset_gpio(name, *(dynamic_cast<QemuInstance*>(o)))
     {
     }
-    ResetGPIO(const sc_core::sc_module_name& n, QemuInstance& inst)
+    reset_gpio(const sc_core::sc_module_name& n, QemuInstance& inst)
         : QemuDevice(n, inst, "reset_gpio"), m_reset_i("_qemu_reset_i"), m_reset_t("_qemu_reset_t"), reset("reset")
     {
         SCP_TRACE(())("Init");
@@ -60,5 +61,6 @@ public:
     }
     virtual void start_of_simulation() override { m_dev.set_prop_bool("active", true); }
 };
-GSC_MODULE_REGISTER(ResetGPIO, sc_core::sc_object*);
+
+void module_register();
 #endif //_LIBQBOX_COMPONENTS_RESET_GPIO_INITIATOR_H

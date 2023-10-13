@@ -14,12 +14,7 @@
 #include <greensocs/gsutils/argparser.h>
 #include <greensocs/gsutils/module_factory_container.h>
 
-#include <libqbox/components/cpu/arm/cortex-a53.h>
-#include <libqbox/components/irq-ctrl/arm-gicv3.h>
 #include <libqbox/components/uart/pl011.h>
-
-#include <greensocs/base-components/memory.h>
-#include <greensocs/base-components/router.h>
 
 class GreenSocsPlatform : public gs::ModuleFactory::Container
 {

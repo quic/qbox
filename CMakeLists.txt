@@ -113,9 +113,7 @@ if (NOT WITHOUT_QEMU)
         src/libqemu-cxx/target/riscv.cc
         src/libqemu-cxx/target/microblaze.cc
         src/libqemu-cxx/target-info.cc
-        src/libqbox/dmi_utils.cc
-        src/libqbox-extra/components/pci/virtio-gpu-gl-pci.cc
-        src/libqbox-extra/components/display/display.cc
+        src/libqbox/dmi_utils/dmi_utils.cc
     )
 
     add_library(${PROJECT_NAME} SHARED
@@ -245,6 +243,10 @@ else()
 
     gs_export(${PROJECT_NAME})
 endif()
+
+create_library(libqbox-extra)
+create_library(libqbox)
+create_library(greensocs)
 
 if(UNIX AND NOT APPLE)
     target_link_libraries(${PROJECT_NAME} INTERFACE rt)

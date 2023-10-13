@@ -22,7 +22,7 @@ public:
 
 protected:
     InitiatorTester m_initiator;
-    gs::Memory<> m_target;
+    gs::memory<> m_target;
 
     /* Initiator callback */
     void invalidate_direct_mem_ptr(uint64_t start_range, uint64_t end_range)

@@ -17,7 +17,7 @@
 #include <libqemu/libqemu.h>
 #include <libqbox/qemu-instance.h>
 #include <libqbox/components/gpu/virtio-mmio-gpugl.h>
-#include <libqbox-extra/components/pci/virtio-gpu-gl-pci.h>
+#include <libqbox-extra/components/pci/virtio_gpu.h>
 
 /**
  * @class MainThreadQemuDisplay
@@ -97,39 +97,39 @@ public:
 
 QemuInstance* MainThreadQemuDisplay::inst = nullptr;
 
-class QemuDisplay : public sc_core::sc_module
+class display : public sc_core::sc_module
 {
 private:
 #ifdef __APPLE__
     MainThreadQemuDisplay m_main_display;
 #endif
 
-    QemuDisplay(const sc_core::sc_module_name& name, QemuDevice& gpu);
+    display (const sc_core::sc_module_name& name, QemuDevice& gpu);
 
 public:
     /**
-     * @brief Construct a QemuDisplay
+     * @brief Construct a display
      *
      * @param[in] name SystemC module name
      * @param[in] gpu GPU module associated to this diplay.
      */
-    QemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object* gpu);
+    display(const sc_core::sc_module_name& name, sc_core::sc_object* gpu);
 
     /**
-     * @brief Construct a QemuDisplay
+     * @brief Construct a display
      *
      * @param[in] name SystemC module name
      * @param[in] gpu GPU module associated to this diplay.
      */
-    QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu);
+    display(const sc_core::sc_module_name& name, QemuVirtioGpu& gpu);
 
     /**
-     * @brief Construct a QemuDisplay
+     * @brief Construct a display
      *
      * @param[in] name SystemC module name
      * @param[in] gpu GPU module associated to this display
      */
-    QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu);
+    display(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu);
 
     void before_end_of_elaboration() override;
 
@@ -145,6 +145,6 @@ public:
     const std::vector<qemu::SDL2Console>* get_sdl2_consoles() const;
 };
 
-GSC_MODULE_REGISTER(QemuDisplay, sc_core::sc_object*);
+extern "C" void module_register();
 
 #endif // _LIBQBOX_COMPONENTS_DISPLAY_H

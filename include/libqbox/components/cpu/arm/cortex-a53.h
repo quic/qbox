@@ -21,7 +21,7 @@
 #include "libqbox/ports/target-signal-socket.h"
 #include "libqbox/qemu-instance.h"
 
-class QemuCpuArmCortexA53 : public QemuCpuArm
+class qemu_cpu_arm_cortexA53 : public QemuCpuArm
 {
 protected:
     int get_psci_conduit_val() const
@@ -78,11 +78,11 @@ public:
     QemuInitiatorSignalSocket irq_timer_hyp_out;
     QemuInitiatorSignalSocket irq_timer_sec_out;
 
-    QemuCpuArmCortexA53(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : QemuCpuArmCortexA53(name, *(dynamic_cast<QemuInstance*>(o)))
+    qemu_cpu_arm_cortexA53(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : qemu_cpu_arm_cortexA53(name, *(dynamic_cast<QemuInstance*>(o)))
     {
     }
-    QemuCpuArmCortexA53(sc_core::sc_module_name name, QemuInstance& inst)
+    qemu_cpu_arm_cortexA53(sc_core::sc_module_name name, QemuInstance& inst)
         : QemuCpuArm(name, inst, "cortex-a53-arm")
         , p_mp_affinity("mp_affinity", 0, "Multi-processor affinity value")
         , p_has_el2("has_el2", true, "ARM virtualization extensions")
@@ -240,4 +240,5 @@ public:
         }
     }
 };
-GSC_MODULE_REGISTER(QemuCpuArmCortexA53, sc_core::sc_object*);
+
+extern "C" void module_register();

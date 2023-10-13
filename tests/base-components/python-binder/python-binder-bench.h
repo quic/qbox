@@ -129,8 +129,8 @@ public:
 protected:
     InitiatorTester m_initiator;
     gs::PythonBinder<> m_python_binder;
-    gs::Router<> m_router;
-    gs::Memory<> m_mem;
+    gs::router<> m_router;
+    gs::memory<> m_mem;
     InitiatorSignalSocket<bool> m_test_initiator_signal_socket;
     TargetSignalSocket<bool> m_test_target_signal_socket;
     std::vector<bool> m_signal_write_values;

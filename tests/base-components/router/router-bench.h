@@ -32,7 +32,7 @@ public:
 
 private:
     InitiatorTester m_initiator;
-    gs::Router<> m_router;
+    gs::router<> m_router;
     std::vector<TargetTester*> m_target;
     gs::pass<> m_pass;
 

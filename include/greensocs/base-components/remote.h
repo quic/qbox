@@ -1208,4 +1208,5 @@ typedef gs::LocalPass<> LocalPass;
 typedef gs::RemotePass<> RemotePass;
 GSC_MODULE_REGISTER(LocalPass);
 GSC_MODULE_REGISTER(RemotePass);
+extern "C" void module_register();
 #endif

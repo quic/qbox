@@ -28,7 +28,7 @@
  * performed as I/O access and not DMI one. It then re-enable DMI hint and the
  * test repeats.
  */
-class CpuArmCortexA53DmiTest : public CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>
+class CpuArmCortexA53DmiTest : public CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterDmi>
 {
 public:
     static constexpr int NUM_WRITES = 512;
@@ -105,7 +105,7 @@ protected:
 public:
     SC_HAS_PROCESS(CpuArmCortexA53DmiTest);
 
-    CpuArmCortexA53DmiTest(const sc_core::sc_module_name& n): CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>(n)
+    CpuArmCortexA53DmiTest(const sc_core::sc_module_name& n): CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterDmi>(n)
     {
         char buf[1024];
         SCP_DEBUG(SCMOD) << "CpuArmCortexA53DmiTest constructor";
@@ -230,7 +230,7 @@ public:
 
     virtual void end_of_simulation() override
     {
-        CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>::end_of_simulation();
+        CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterDmi>::end_of_simulation();
 
         for (int i = 0; i < p_num_cpu; i++) {
             SCP_INFO(SCMOD) << "CPU " << i << " " << m_tester.get_buf_value(i) << " expecting " << m_num_write_per_cpu;

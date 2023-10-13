@@ -15,14 +15,7 @@
 #include <greensocs/gsutils/cciutils.h>
 #include <greensocs/gsutils/module_factory_container.h>
 
-#include <libqbox/components/cpu/arm/neoverse-n1.h>
-#include <libqbox/components/irq-ctrl/arm-gicv3.h>
 #include <libqbox/components/uart/pl011.h>
-#include <libqbox-extra/components/meta/global_peripheral_initiator.h>
-#include <libqbox-extra/components/net/opencores_eth.h>
-
-#include <greensocs/base-components/router.h>
-#include <greensocs/base-components/memory.h>
 
 #include <greensocs/systemc-macs/dwmac.h>
 #include <greensocs/systemc-macs/backends/net/tap.h>

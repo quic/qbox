@@ -47,8 +47,8 @@ private:
     gs::PassRPC<> m_pass; // should be first model, to handle BEOE
     InitiatorTester m_initiator;
     InitiatorTester m_initiator_dma;
-    gs::Router<> m_router;
-    gs::Memory<> m_mem1;
+    gs::router<> m_router;
+    gs::memory<> m_mem1;
     gs::pass<> m_log;
 
 public:

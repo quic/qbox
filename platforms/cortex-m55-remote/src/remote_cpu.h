@@ -54,7 +54,7 @@ private:
     cci::cci_broker_handle m_broker;
     cci::cci_param<int> m_gdb_port;
     QemuInstance& m_qemu_inst;
-    gs::Router<> m_router;
+    gs::router<> m_router;
     CpuArmCortexM55 m_cpu;
 };
 GSC_MODULE_REGISTER(RemoteCPU, sc_core::sc_object*);

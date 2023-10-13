@@ -34,7 +34,7 @@ private:
     sc_core::sc_vector<InitiatorTester> m_initiators;
     InitiatorTester m_initiator;
     TargetTester m_target;
-    gs::Router<> m_router;
+    gs::router<> m_router;
 
     bool m_last_dmi_inval_valid = false;
     uint64_t m_last_dmi_inval_start;

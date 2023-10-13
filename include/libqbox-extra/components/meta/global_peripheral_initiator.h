@@ -13,7 +13,7 @@
 #include "libqbox/qemu-instance.h"
 #include <greensocs/gsutils/module_factory_registery.h>
 
-class GlobalPeripheralInitiator : public QemuInitiatorIface, public sc_core::sc_module
+class global_peripheral_initiator : public QemuInitiatorIface, public sc_core::sc_module
 {
 public:
     // QemuInitiatorIface functions
@@ -24,11 +24,11 @@ public:
     virtual void initiator_set_local_time(const sc_core::sc_time&) override {}
 
     QemuInitiatorSocket<> m_initiator;
-    GlobalPeripheralInitiator(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
-        : GlobalPeripheralInitiator(name, *(dynamic_cast<QemuInstance*>(o)), *(dynamic_cast<QemuDevice*>(t)))
+    global_peripheral_initiator(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
+        : global_peripheral_initiator(name, *(dynamic_cast<QemuInstance*>(o)), *(dynamic_cast<QemuDevice*>(t)))
     {
     }
-    GlobalPeripheralInitiator(const sc_core::sc_module_name& nm, QemuInstance& inst, QemuDevice& owner)
+    global_peripheral_initiator(const sc_core::sc_module_name& nm, QemuInstance& inst, QemuDevice& owner)
         : m_initiator("global_initiator", *this, inst), m_owner(owner)
     {
     }
@@ -44,5 +44,6 @@ public:
 private:
     QemuDevice& m_owner;
 };
-GSC_MODULE_REGISTER(GlobalPeripheralInitiator, sc_core::sc_object*, sc_core::sc_object*);
+
+extern "C" void module_register();
 #endif //_LIBQBOX_COMPONENTS_GOLBAL_PERIPHERAL_INITIATOR_H

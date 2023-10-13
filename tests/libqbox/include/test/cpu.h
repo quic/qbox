@@ -57,9 +57,9 @@ protected:
     cci::cci_param<int> p_num_cpu;
     cci::cci_param<int> p_quantum_ns;
 
-    gs::Router<> m_router;
-    gs::Memory<> m_mem;
-    gs::Memory<> m_bulkmem;
+    gs::router<> m_router;
+    gs::memory<> m_mem;
+    gs::memory<> m_bulkmem;
 
     static constexpr const char* EXCEPTION_FW = R"(
         _start:

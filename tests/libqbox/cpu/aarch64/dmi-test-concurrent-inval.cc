@@ -28,7 +28,7 @@
  * checks that all dedicated memory areas contain the final value (corresponding
  * to the number of read/modify/write operations the CPUs did).
  */
-class CpuArmCortexA53DmiConcurrentInvalTest : public CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>
+class CpuArmCortexA53DmiConcurrentInvalTest : public CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterDmi>
 {
 public:
     static constexpr int NUM_WRITES = 1024;
@@ -117,7 +117,7 @@ public:
     SC_HAS_PROCESS(CpuArmCortexA53DmiConcurrentInvalTest);
 
     CpuArmCortexA53DmiConcurrentInvalTest(const sc_core::sc_module_name& n)
-        : CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>(n), invalidated(p_num_cpu, false)
+        : CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterDmi>(n), invalidated(p_num_cpu, false)
     {
         char buf[2048];
         SCP_DEBUG(SCMOD) << "CpuArmCortexA53DmiConcurrentInvalTest constructor";
@@ -191,7 +191,7 @@ public:
 
     virtual void end_of_simulation() override
     {
-        CpuTestBench<QemuCpuArmCortexA53, CpuTesterDmi>::end_of_simulation();
+        CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterDmi>::end_of_simulation();
 
         for (int i = 0; i < p_num_cpu; i++) {
             TEST_ASSERT(m_tester.get_buf_value(i) == ((m_num_write_per_cpu + 3) & (-1ull << 2)));

@@ -12,9 +12,9 @@
 
 #include <greensocs/libgssync.h>
 
-#include "gpex.h"
+#include "qemu_gpex.h"
 
-class QemuNvmeDisk : public QemuGPEX::Device
+class QemuNvmeDisk : public qemu_gpex::Device
 {
     // TODO: use a real backend object
 protected:
@@ -25,7 +25,7 @@ protected:
 
 public:
     QemuNvmeDisk(const sc_core::sc_module_name& name, QemuInstance& inst)
-        : QemuGPEX::Device(name, inst, "nvme")
+        : qemu_gpex::Device(name, inst, "nvme")
         , p_serial("serial", basename(), "Serial name of the nvme disk")
         , p_blob_file("blob_file", "", "Blob file to load as data storage")
         , max_ioqpairs("max_ioqpairs", 64, "Passed through to QEMU max_ioqpairs")
@@ -42,7 +42,7 @@ public:
 
     void before_end_of_elaboration() override
     {
-        QemuGPEX::Device::before_end_of_elaboration();
+        qemu_gpex::Device::before_end_of_elaboration();
 
         std::string serial = p_serial;
         m_dev.set_prop_str("serial", serial.c_str());
@@ -50,6 +50,6 @@ public:
         m_dev.set_prop_int("max_ioqpairs", max_ioqpairs);
     }
 
-    void gpex_realize(qemu::Bus& bus) override { QemuGPEX::Device::gpex_realize(bus); }
+    void gpex_realize(qemu::Bus& bus) override { qemu_gpex::Device::gpex_realize(bus); }
 };
 #endif

@@ -53,17 +53,17 @@ public:
     }
 };
 
-class QemuCpuRiscv64Rv64 : public QemuCpuRiscv64
+class qemu_cpu_riscv64 : public QemuCpuRiscv64
 {
 public:
-    QemuCpuRiscv64Rv64(const sc_core::sc_module_name& name, sc_core::sc_object* o, uint64_t hartid)
-        : QemuCpuRiscv64Rv64(name, *(dynamic_cast<QemuInstance*>(o)), hartid)
+    qemu_cpu_riscv64(const sc_core::sc_module_name& name, sc_core::sc_object* o, uint64_t hartid)
+        : qemu_cpu_riscv64(name, *(dynamic_cast<QemuInstance*>(o)), hartid)
     {
     }
-    QemuCpuRiscv64Rv64(const sc_core::sc_module_name& n, QemuInstance& inst, uint64_t hartid)
+    qemu_cpu_riscv64(const sc_core::sc_module_name& n, QemuInstance& inst, uint64_t hartid)
         : QemuCpuRiscv64(n, inst, "rv64", hartid)
     {
     }
 };
 
-GSC_MODULE_REGISTER(QemuCpuRiscv64Rv64, sc_core::sc_object*, uint64_t);
+extern "C" void module_register();

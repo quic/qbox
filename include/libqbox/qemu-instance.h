@@ -78,7 +78,7 @@ public:
     virtual ~QemuInstanceManager() { delete m_loader; }
 };
 
-GSC_MODULE_REGISTER(QemuInstanceManager);
+// GSC_MODULE_REGISTER(QemuInstanceManager);
 
 /**
  * @class QemuInstance
@@ -455,6 +455,5 @@ private:
     void start_of_simulation(void) { get().finish_qemu_init(); }
 };
 
-GSC_MODULE_REGISTER(QemuInstance, sc_core::sc_object*, std::string);
-
+extern "C" void module_register();
 #endif

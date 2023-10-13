@@ -35,11 +35,12 @@ platform = {
     -- cpu_1 = { gdb_port = 1234 };
 
     router = {
-        moduletype="Router";
+        moduletype="router";
     },
 
     qemu_inst_mgr = {
         moduletype = "QemuInstanceManager";
+        dylib_path = "qemu-instance.so";
     },
 
     qemu_inst= {
@@ -50,7 +51,7 @@ platform = {
     },
 
     gic_0=  {
-        moduletype = "QemuArmGicv3",
+        moduletype = "arm_gicv3",
         args = {"&platform.qemu_inst"},
         dist_iface    = {address=0xc8000000, size= 0x10000, bind = "&router.initiator_socket"};
         redist_iface_0= {address=0xc8010000, size=0x20000, bind = "&router.initiator_socket"};
@@ -62,7 +63,7 @@ platform = {
         num_spi=64};
 
     ram_0 = {
-        moduletype="Memory";
+        moduletype="memory";
         target_socket = {address=0x00000000, size=0x10000000, bind= "&router.initiator_socket"},
     };
 
@@ -85,13 +86,13 @@ platform = {
     --     };
 
     global_peripheral_initiator_arm_0 = {
-        moduletype = "GlobalPeripheralInitiator",
+        moduletype = "global_peripheral_initiator",
         args = {"&platform.qemu_inst", "&platform.cpu_0"},
         global_initiator = {bind = "&router.target_socket"},
     };
 
     load={
-        moduletype = "Loader",
+        moduletype = "loader",
         initiator_socket = {bind = "&router.target_socket"};
         {data=_bootloader_aarch64, address=0x00000000 }; -- align address with rvbar
     }
@@ -100,7 +101,7 @@ platform = {
 if (ARM_NUM_CPUS > 0) then
     for i=0,(ARM_NUM_CPUS-1) do
         local cpu = {
-            moduletype = "QemuCpuArmNeoverseN1";
+            moduletype = "qemu_cpu_arm_neoverseN1";
             args = {"&platform.qemu_inst"};
             mem = {bind = "&router.target_socket"};
             has_el3 = true;

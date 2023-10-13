@@ -51,7 +51,7 @@ namespace gs {
 #define ALIGNEDBITS 12
 
 template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
-class Memory : public sc_core::sc_module
+class memory : public sc_core::sc_module
 {
     uint64_t m_size = 0;
     uint64_t m_address;
@@ -68,7 +68,7 @@ class Memory : public sc_core::sc_module
         uint64_t m_len;     // size of the bloc
         uint64_t m_address; // this is an absolute address and this is the
                             // beginning of the bloc/Memory
-        Memory<BUSWIDTH>& m_mem;
+        memory<BUSWIDTH>& m_mem;
 
         uint8_t* m_ptr = nullptr;
         std::array<std::unique_ptr<SubBlock>, (1 << N)> m_sub_blocks;
@@ -78,7 +78,7 @@ class Memory : public sc_core::sc_module
         ShmemIDExtension m_shmemID;
 
     public:
-        SubBlock(uint64_t address, uint64_t len, Memory& mem): m_len(len), m_address(address), m_mem(mem)
+        SubBlock(uint64_t address, uint64_t len, memory& mem): m_len(len), m_address(address), m_mem(mem)
         {
             SCP_TRACE(())("Init");
         }
@@ -200,7 +200,7 @@ class Memory : public sc_core::sc_module
     };
 
 private:
-    std::unique_ptr<Memory<BUSWIDTH>::SubBlock<>> m_sub_block;
+    std::unique_ptr<memory<BUSWIDTH>::SubBlock<>> m_sub_block;
     cci::cci_broker_handle m_broker;
 
 protected:
@@ -384,7 +384,7 @@ protected:
     }
 
 public:
-    tlm_utils::multi_passthrough_target_socket<Memory<BUSWIDTH>, BUSWIDTH> socket;
+    tlm_utils::multi_passthrough_target_socket<memory<BUSWIDTH>, BUSWIDTH> socket;
     TargetSignalSocket<bool> reset;
     cci::cci_param<bool> p_rom;
     cci::cci_param<bool> p_dmi;
@@ -396,14 +396,14 @@ public:
     cci::cci_param<bool> p_init_mem;
     cci::cci_param<int> p_init_mem_val; // to match the signature of memset
 
-    gs::Loader<> load;
+    gs::loader<> load;
 
     // NB
     // A size given by a config will always take precedence
     // A size set on the constructor will take precedence over
     // the size given on an e.g. 'add_target' in the router
 
-    Memory(sc_core::sc_module_name name, uint64_t _size = 0)
+    memory(sc_core::sc_module_name name, uint64_t _size = 0)
         : m_sub_block(nullptr)
         , m_broker(cci::cci_get_broker())
         , socket("target_socket")
@@ -432,9 +432,9 @@ public:
             }
         }
 
-        socket.register_b_transport(this, &Memory::b_transport);
-        socket.register_transport_dbg(this, &Memory::transport_dbg);
-        socket.register_get_direct_mem_ptr(this, &Memory::get_direct_mem_ptr);
+        socket.register_b_transport(this, &memory::b_transport);
+        socket.register_transport_dbg(this, &memory::transport_dbg);
+        socket.register_get_direct_mem_ptr(this, &memory::get_direct_mem_ptr);
 
         reset.register_value_changed_cb([&](bool value) {
             if (value) {
@@ -456,7 +456,7 @@ public:
         m_address = base();
         m_size = size();
 
-        m_sub_block = std::make_unique<Memory<BUSWIDTH>::SubBlock<>>(0, m_size, *this);
+        m_sub_block = std::make_unique<memory<BUSWIDTH>::SubBlock<>>(0, m_size, *this);
 
         SCP_DEBUG(()) << "m_address: " << m_address;
         SCP_DEBUG(()) << "m_size: " << m_size;
@@ -467,10 +467,10 @@ public:
         }
     }
 
-    Memory() = delete;
-    Memory(const Memory&) = delete;
+    memory() = delete;
+    memory(const memory&) = delete;
 
-    ~Memory() {}
+    ~memory() {}
 
     /**
      * @brief this function returns the size of the memory
@@ -535,6 +535,6 @@ public:
     }
 };
 } // namespace gs
-typedef gs::Memory<> Memory;
-GSC_MODULE_REGISTER(Memory);
+
+extern "C" void module_register();
 #endif

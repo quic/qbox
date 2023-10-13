@@ -11,7 +11,7 @@
 
 #include "memory.h"
 #include "router.h"
-#include "memorydumper.h"
+#include "memory_dumper.h"
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/test-bench.h>
 
@@ -26,9 +26,9 @@ public:
 
 protected:
     InitiatorTester m_initiator;
-    gs::Router<> m_router;
-    std::vector<gs::Memory<>*> m_memory;
-    gs::MemoryDumper<> m_dumper;
+    gs::router<> m_router;
+    std::vector<gs::memory<>*> m_memory;
+    gs::memory_dumper<> m_dumper;
 
     /* Initiator callback */
     void invalidate_direct_mem_ptr(uint64_t start_range, uint64_t end_range)
@@ -80,7 +80,7 @@ public:
         for (int i = 0; i < NB_MEMORY; i++) {
             char txt[20];
             snprintf(txt, 20, "Memory_%d", i);
-            m_memory.push_back(new gs::Memory<>(txt, size[i]));
+            m_memory.push_back(new gs::memory<>(txt, size[i]));
             memory_size.push_back(address[i] + size[i]);
         }
 

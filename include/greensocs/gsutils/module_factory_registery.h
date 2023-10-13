@@ -55,7 +55,6 @@ struct cci::cci_value_converter<gs::cci_constructor_vl> {
         cci::cci_param_typed_handle<gs::cci_constructor_vl> m_fac(
             cci::cci_get_broker().get_param_handle(CCI_GS_MF_NAME + moduletype));
         if (!m_fac.is_valid()) {
-            SC_REPORT_ERROR("ModuleFactory", ("Can't find module type: " + moduletype).c_str());
             return false;
         }
         dst = *m_fac;
@@ -78,5 +77,10 @@ struct cci::cci_value_converter<gs::cci_constructor_vl> {
     };                                                                                                                 \
     static struct gs::ModuleFactory::ModuleRegistrationWrapper&                                                        \
         GS_MODULEFACTORY_moduleReg_inst_##__NAME__ = GS_MODULEFACTORY_moduleReg_##__NAME__::get()
+
+#define GSC_MODULE_REGISTER_C(__NAME__, ...)                                                                \
+    static cci::cci_param<gs::cci_constructor_vl> module_construct_param##__NAME__(                         \
+        CCI_GS_MF_NAME #__NAME__, gs::cci_constructor_vl::FactoryMaker<__NAME__, ##__VA_ARGS__>(#__NAME__), \
+        "default constructor", cci::CCI_ABSOLUTE_NAME)
 
 #endif

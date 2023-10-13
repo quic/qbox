@@ -22,9 +22,9 @@ class RemoteTest : public sc_core::sc_module
     gs::PassRPC<> m_pass;
     gs::pass<> m_loopback;
 
-    gs::Router<> m_router;
-    gs::Memory<> m_mem2;
-    gs::Memory<> m_mem3;
+    gs::router<> m_router;
+    gs::memory<> m_mem2;
+    gs::memory<> m_mem3;
     InitiatorTester* m_initiator;
 
 public:

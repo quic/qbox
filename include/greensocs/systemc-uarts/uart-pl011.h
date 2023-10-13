@@ -370,4 +370,5 @@ public:
 
     ~Pl011() { delete s; }
 };
-GSC_MODULE_REGISTER(Pl011);
+
+extern "C" void module_register();

@@ -28,7 +28,7 @@
  * On each write, the test bench checks the written value. It also checks the
  * number of write at the end of the simulation.
  */
-class CpuArmCortexA53WriteReadTest : public CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>
+class CpuArmCortexA53WriteReadTest : public CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterMmio>
 {
 public:
     static constexpr uint64_t NUM_WRITES = 10 * 1024;
@@ -86,7 +86,7 @@ public:
 
 protected:
 public:
-    CpuArmCortexA53WriteReadTest(const sc_core::sc_module_name& n): CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>(n)
+    CpuArmCortexA53WriteReadTest(const sc_core::sc_module_name& n): CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterMmio>(n)
     {
         char buf[1024];
 
@@ -109,7 +109,7 @@ public:
         SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data;
     }
 
-    virtual void end_of_simulation() override { CpuTestBench<QemuCpuArmCortexA53, CpuTesterMmio>::end_of_simulation(); }
+    virtual void end_of_simulation() override { CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterMmio>::end_of_simulation(); }
 };
 
 constexpr const char* CpuArmCortexA53WriteReadTest::FIRMWARE;

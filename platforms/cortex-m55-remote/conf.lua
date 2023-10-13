@@ -16,11 +16,12 @@ platform = {
     quantum_ns = 10000000;
 
     router = {
-        moduletype="Router";
+        moduletype="router";
+        log_level=0;
     },
 
     ram_0 = {
-            moduletype = "Memory",
+            moduletype = "memory",
             target_socket = {address=0x0, size=0x20000, bind = "&router.initiator_socket"},
             shared_memory=true,
             load={bin_file=top().."fw/cortex-m55/cortex-m55.bin", offset=0},
@@ -31,12 +32,13 @@ platform = {
     },
 
     charbackend_stdio_0 = {
-       moduletype = "CharBackendStdio";
+       moduletype = "char_backend_stdio";
        read_write = true;
-        };
+    };
 
         pl011_uart_0 =  {
         moduletype = "Pl011",
+        dylib_path = "uart-pl011.so";
         target_socket = {address= 0xc0000000, size=0x1000, bind = "&router.initiator_socket"},
         irq = {bind = "&plugin_0.target_signal_socket_0"},
         backend_socket = { bind = "&charbackend_stdio_0.biflow_socket"  },
@@ -44,6 +46,7 @@ platform = {
 
     plugin_0 = {
         moduletype = "RemotePass", -- can be replaced by 'Container'
+        dylib_path = "remote.so",
         exec_path = top().."../../build/platforms/cortex-m55-remote/remote_cpu",
         remote_argv = {"--param=log_level=4"},
         tlm_initiator_ports_num = 2,
@@ -64,19 +67,20 @@ platform = {
             initiator_signal_socket_0 = {bind = "&cpu_0.cpu.nvic.irq_in_0"},
         },
 
-        qmeu_inst_mgr = {
+        qemu_inst_mgr = {
             moduletype = "QemuInstanceManager",
+            dylib_path = "qemu-instance.so";
         },
 
-        qmeu_inst = {
+        qemu_inst = {
             moduletype = "QemuInstance",
-            args = {"&qmeu_inst_mgr", "AARCH64"},
+            args = {"&qemu_inst_mgr", "AARCH64"},
             sync_policy = "multithread-freerunning",
         },
 
         cpu_0={
             moduletype = "RemoteCPU",
-            args = {"&qmeu_inst"},
+            args = {"&qemu_inst"},
             cpu = {
                 nvic = { mem = { address = 0xE000E000, size = 0x10000}, num_irq = 1 },
             },

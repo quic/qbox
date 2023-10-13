@@ -22,12 +22,12 @@ class LoaderTest : public TestBench
 {
 protected:
     InitiatorTester m_initiator;
-    gs::Router<> m_router;
-    gs::Memory<> m_rom1;
-    gs::Memory<> m_rom2;
-    gs::Memory<> m_rom3;
+    gs::router<> m_router;
+    gs::memory<> m_rom1;
+    gs::memory<> m_rom2;
+    gs::memory<> m_rom3;
 
-    gs::Loader<> m_loader;
+    gs::loader<> m_loader;
 
     void do_bus_binding()
     {

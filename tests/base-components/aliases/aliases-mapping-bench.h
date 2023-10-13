@@ -23,10 +23,10 @@ class AliasesMappingTest : public TestBench
 {
 protected:
     InitiatorTester m_initiator;
-    gs::Router<> m_router;
-    gs::Memory<> m_memory;
-    gs::Memory<> m_ram;
-    gs::Memory<> m_rom;
+    gs::router<> m_router;
+    gs::memory<> m_memory;
+    gs::memory<> m_ram;
+    gs::memory<> m_rom;
 
     void do_good_dmi_request_and_check(uint64_t addr, int64_t exp_start, uint64_t exp_end)
     {

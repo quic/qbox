@@ -79,7 +79,7 @@ static std::istream& operator>>(std::istream& str, CSVRow& data)
 }
 
 template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
-class Loader : public sc_core::sc_module
+class loader : public sc_core::sc_module
 {
     SCP_LOGGER();
     cci::cci_broker_handle m_broker;
@@ -97,11 +97,10 @@ class Loader : public sc_core::sc_module
     };
 
 public:
-    simple_initiator_socket_zero<Loader<BUSWIDTH>> initiator_socket;
+    simple_initiator_socket_zero<loader<BUSWIDTH>> initiator_socket;
     TargetSignalSocket<bool> reset;
 
 private:
-
     uint64_t m_address = 0;
 
     std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> write_cb;
@@ -166,7 +165,7 @@ private:
     }
 
 public:
-    Loader(sc_core::sc_module_name name)
+    loader(sc_core::sc_module_name name)
         : m_broker(cci::cci_get_broker())
         , initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
         , reset("reset")
@@ -181,7 +180,7 @@ public:
             end_of_elaboration();
         }
     }
-    Loader(sc_core::sc_module_name name, std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> _write)
+    loader(sc_core::sc_module_name name, std::function<void(const uint8_t* data, uint64_t offset, uint64_t len)> _write)
         : m_broker(cci::cci_get_broker())
         , initiator_socket("initiator_socket") //, [&](std::string s) -> void { register_boundto(s); })
         , reset("reset")
@@ -192,7 +191,7 @@ public:
         reset.register_value_changed_cb([&](bool value) { doreset(value); });
     }
 
-    ~Loader() {}
+    ~loader() {}
 
 protected:
     void load(std::string name)
@@ -569,6 +568,6 @@ private:
     };
 };
 } // namespace gs
-typedef gs::Loader<> Loader;
-GSC_MODULE_REGISTER(Loader);
+
+extern "C" void module_register();
 #endif

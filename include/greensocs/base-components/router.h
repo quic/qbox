@@ -37,7 +37,7 @@
 namespace gs {
 
 template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
-class Router : public sc_core::sc_module
+class router : public sc_core::sc_module
 {
     using TargetSocket = tlm::tlm_base_target_socket_b<BUSWIDTH, tlm::tlm_fw_transport_if<>,
                                                        tlm::tlm_bw_transport_if<>>;
@@ -221,9 +221,9 @@ public:
         ti.name = s;
     }
     // make the sockets public for binding
-    typedef multi_passthrough_initiator_socket_spying<Router<BUSWIDTH>> initiator_socket_type;
+    typedef multi_passthrough_initiator_socket_spying<router<BUSWIDTH>> initiator_socket_type;
     initiator_socket_type initiator_socket;
-    tlm_utils::multi_passthrough_target_socket<Router<BUSWIDTH>, BUSWIDTH> target_socket;
+    tlm_utils::multi_passthrough_target_socket<router<BUSWIDTH>, BUSWIDTH> target_socket;
 
 private:
     std::vector<target_info> bound_targets;
@@ -530,7 +530,7 @@ private:
 public:
     cci::cci_param<bool> lazy_init;
 
-    explicit Router(const sc_core::sc_module_name& nm, cci::cci_broker_handle broker = cci::cci_get_broker())
+    explicit router(const sc_core::sc_module_name& nm, cci::cci_broker_handle broker = cci::cci_get_broker())
         : sc_core::sc_module(nm)
         , initiator_socket("initiator_socket", [&](std::string s) -> void { register_boundto(s); })
         , target_socket("target_socket")
@@ -539,18 +539,18 @@ public:
     {
         SCP_DEBUG(()) << "Router constructed";
 
-        target_socket.register_b_transport(this, &Router::b_transport);
-        target_socket.register_transport_dbg(this, &Router::transport_dbg);
-        target_socket.register_get_direct_mem_ptr(this, &Router::get_direct_mem_ptr);
-        initiator_socket.register_invalidate_direct_mem_ptr(this, &Router::invalidate_direct_mem_ptr);
+        target_socket.register_b_transport(this, &router::b_transport);
+        target_socket.register_transport_dbg(this, &router::transport_dbg);
+        target_socket.register_get_direct_mem_ptr(this, &router::get_direct_mem_ptr);
+        initiator_socket.register_invalidate_direct_mem_ptr(this, &router::invalidate_direct_mem_ptr);
         SCP_DEBUG((DMI)) << "Router Initializing DMI SCP reporting";
     }
 
-    Router() = delete;
+    router() = delete;
 
-    Router(const Router&) = delete;
+    router(const router&) = delete;
 
-    ~Router()
+    ~router()
     {
         while (m_pathIDPool.size()) {
             delete (m_pathIDPool.back());
@@ -582,7 +582,5 @@ public:
 };
 } // namespace gs
 
-// C++17 will do away with this
-typedef gs::Router<> Router;
-GSC_MODULE_REGISTER(Router);
+extern "C" void module_register();
 #endif

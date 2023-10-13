@@ -34,7 +34,7 @@
 #include <greensocs/gsutils/ports/biflow-socket.h>
 #include <greensocs/gsutils/module_factory_registery.h>
 
-class CharBackendSocket : public sc_core::sc_module
+class char_backend_socket : public sc_core::sc_module
 {
 protected:
     cci::cci_param<std::string> p_address;
@@ -47,10 +47,10 @@ private:
     std::string port;
 
 public:
-    gs::biflow_socket<CharBackendSocket> socket;
+    gs::biflow_socket<char_backend_socket> socket;
 
 #ifdef WIN32
-#pragma message("CharBackendSocket not yet implemented for WIN32")
+#pragma message("char_backend_socket not yet implemented for WIN32")
 #endif
 
     int m_srv_socket;
@@ -77,18 +77,18 @@ public:
             setup_tcp_client(ip, port);
         }
 
-        new std::thread(&CharBackendSocket::rcv_thread, this);
+        new std::thread(&char_backend_socket::rcv_thread, this);
     }
 
-    CharBackendSocket(sc_core::sc_module_name name)
+    char_backend_socket(sc_core::sc_module_name name)
         : sc_core::sc_module(name)
         , p_address("address", "127.0.0.1:4001", "socket address IP:Port")
         , p_server("server", true, "type of socket: true if server - false if client")
         , p_nowait("nowait", true, "setting socket in non-blocking mode")
         , socket("biflow_socket")
     {
-        SCP_TRACE(()) << "CharBackendSocket constructor";
-        socket.register_b_transport(this, &CharBackendSocket::writefn);
+        SCP_TRACE(()) << "char_backend_socket constructor";
+        socket.register_b_transport(this, &char_backend_socket::writefn);
     }
 
     void end_of_elaboration() { socket.can_receive_any(); }
@@ -261,5 +261,5 @@ public:
         m_socket = -1;
     }
 };
-GSC_MODULE_REGISTER(CharBackendSocket);
+extern "C" void module_register();
 #endif
