@@ -270,7 +270,8 @@ public:
         std::list<sc_core::sc_module*> allModules;
 
         for (auto name : PriorityConstruct()) {
-            if (m_broker.has_preset_value(std::string(sc_module::name()) + "." + name + ".moduletype")) {
+            auto mod_type_name = std::string(sc_module::name()) + "." + name + ".moduletype";
+            if (m_broker.has_preset_value(mod_type_name)) {
                 if (m_broker.has_preset_value(std::string(sc_module::name()) + "." + name + ".dont_construct")) {
                     sc_core::sc_object* no_construct_mod_obj = nullptr;
                     std::string no_construct_mod_name = std::string(sc_module::name()) + "." + name;
@@ -282,26 +283,28 @@ public:
                     }
                     allModules.push_back(no_construct_mod);
                 } else {
-                    gs::cci_clear_unused(m_broker, std::string(sc_module::name()) + "." + name + ".moduletype");
-                    std::string type = m_broker
-                                           .get_preset_cci_value(std::string(sc_module::name()) + "." + name +
-                                                                 ".moduletype")
-                                           .get_string();
+                    gs::cci_clear_unused(m_broker, mod_type_name);
+                    cci::cci_value cci_type = gs::cci_get(m_broker, mod_type_name);
+                    if (cci_type.is_string()) {
+                        std::string mod_type = cci_type.get_string();
+                        SCP_INFO(()) << "Adding a " << mod_type << " with name "
+                                     << std::string(sc_module::name()) + "." + name;
+                        cci::cci_value_list mod_args = get_module_args(std::string(sc_module::name()) + "." + name);
+                        SCP_INFO(()) << mod_args.size() << " arguments found for " << mod_type;
+                        sc_core::sc_module* m = construct_module(mod_type, name.c_str(), mod_args);
+                        if (!m) {
+                            SC_REPORT_ERROR(
+                                "ModuleFactory",
+                                ("Can't automatically handle argument list for module: " + mod_type).c_str());
+                        }
 
-                    SCP_INFO(()) << "Adding a " << type << " with name " << std::string(sc_module::name()) + "." + name;
-
-                    cci::cci_value_list mod_args = get_module_args(std::string(sc_module::name()) + "." + name);
-                    SCP_INFO(()) << mod_args.size() << " arguments found for " << type;
-                    sc_core::sc_module* m = construct_module(type, name.c_str(), mod_args);
-
-                    if (!m) {
-                        SC_REPORT_ERROR("ModuleFactory",
-                                        ("Can't automatically handle argument list for module: " + type).c_str());
-                    }
-
-                    allModules.push_back(m);
-                    if (!m_local_pass) {
-                        m_local_pass = dynamic_cast<transaction_forwarder_if<PASS>*>(m);
+                        allModules.push_back(m);
+                        if (!m_local_pass) {
+                            m_local_pass = dynamic_cast<transaction_forwarder_if<PASS>*>(m);
+                        }
+                    } else {
+                        SCP_WARN(()) << "The value of the parameter moduletype of the module " << name
+                                     << " is not a string";
                     }
                 }
             } // else it's some other config
