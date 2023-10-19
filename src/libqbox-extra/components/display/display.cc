@@ -238,6 +238,13 @@ void QemuDisplay::end_of_elaboration()
 #endif
 }
 
+void QemuDisplay::start_of_simulation()
+{
+#ifdef __APPLE__
+    m_main_display.start_of_simulation();
+#endif
+}
+
 QemuInstance* QemuDisplay::get_qemu_inst()
 {
 #ifdef __APPLE__
