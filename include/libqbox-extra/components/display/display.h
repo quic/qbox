@@ -134,9 +134,11 @@ public:
      */
     QemuDisplay(const sc_core::sc_module_name& name, QemuVirtioMMIOGpuGl& gpu);
 
-    void before_end_of_elaboration();
+    void before_end_of_elaboration() override;
 
-    void end_of_elaboration();
+    void end_of_elaboration() override;
+
+    void start_of_simulation() override;
 
     QemuInstance* get_qemu_inst();
 
