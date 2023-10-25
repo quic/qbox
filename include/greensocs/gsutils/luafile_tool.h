@@ -73,6 +73,7 @@ class LuaFile_Tool : public sc_core::sc_module
     cci::cci_broker_handle m_broker; ///< CCI configuration handle
     std::string m_orig_name;
     cci::cci_param<int> p_log_level;
+    char* p_images_dir = NULL;
 
     std::string rel(std::string& n) const
     {
@@ -153,12 +154,41 @@ public:
         lua_setglobal(L, "config_chunk");
 
         // little script to run the file
-        const char* config_loader =
+        const char* config_loader_template =
             "-- put some commands here to run before the user script\n"
+            ""
+            "function top()\n"
+            "  local str = debug.getinfo(2, 'S').source:sub(2)\n"
+            "  if str:match('(.*/)') then\n"
+            "    return str:match('(.*/)')\n"
+            "  else\n"
+            "    return './'\n"
+            "  end\n"
+            "end\n"
+            "\n"
+            "function image_file(og_fname)\n"
+            "  local fname = top() .. og_fname\n"
+            "  local ret = io.open(fname, 'r')\n"
+            "  if ret == nil and '%s' ~= '' then\n"
+            "    fname = '%s/'..og_fname\n"
+            "    ret = io.open(fname, 'r')\n"
+            "  end\n"
+            "  if ret == nil then\n"
+            "    print('ERROR: ' .. og_fname .. ' Not found.')\n"
+            "    os.exit(1)\n"
+            "  end\n"
+            "  return fname\n"
+            "end\n"
+            "\n"
             "config_chunk()";
 
+        const char* images_dir = p_images_dir ? p_images_dir : "";
+        int len = std::snprintf(nullptr, 0, config_loader_template, images_dir, images_dir) + 1;
+        std::unique_ptr<char[]> config_loader = std::make_unique<char[]>(len);
+        std::snprintf(config_loader.get(), len, config_loader_template, images_dir, images_dir);
+
         // run
-        if (luaL_dostring(L, config_loader)) {
+        if (luaL_dostring(L, config_loader.get())) {
             SCP_INFO("lua") << lua_tostring(L, -1);
             lua_pop(L, 1); /* pop error message from the stack */
         }
@@ -269,6 +299,7 @@ protected:
         optind = 0; // reset of getopt
         opterr = 0; // avoid error message for not recognized option
 #ifdef ENABLE_SHORT_COMMAND_LINE_OPTIONS
+        // Don't add 'i' here. It must be specified as a long option.
         static const char* optstring = "l:p:d:hv";
 #else
         static const char* optstring = "";
@@ -278,7 +309,28 @@ protected:
                                                 { "debug", required_argument, 0, 'd' },      // '--debug' = '-d'
                                                 { "help", no_argument, 0, 'h' },
                                                 { "version", no_argument, 0, 'v' },
+                                                { "images-dir", required_argument, 0, 'i' }, // internal-only
                                                 { 0, 0, 0, 0 } };
+
+        opterr = 1; // restore error message for not recognized option
+        optind = 0; // reset of getopt
+
+        // parse --images-dir first to make it available for the lua config
+        while (1) {
+            int c = getopt_long(argc, argv_cp, optstring, long_options, 0);
+            if (c == EOF) break;
+            switch (c) {
+            case 'i':
+                SCP_WARN("lua") << "--images-dir is an internal option used for testing."
+                                   " Do not make any assumptions on its behavior as it"
+                                   " may change or even disappear in the future."
+                                << std::endl;
+                p_images_dir = strdup(optarg);
+                break;
+            default:
+                break;
+            }
+        }
 
         opterr = 1; // restore error message for not recognized option
         optind = 0; // reset of getopt
@@ -311,6 +363,7 @@ protected:
             case 'd':
             case 'v':
             case 'h':
+            case 'i':
                 /* ignore for now */
                 break;
 
