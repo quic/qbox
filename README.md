@@ -36,7 +36,9 @@ Install dependencies:
 
 apt update && apt upgrade -y
 
-apt install -y make cmake g++ wget flex bison unzip python pkg-config libpixman-1-dev libglib2.0-dev
+apt install -y make cmake g++ wget flex bison unzip python3 python3-dev python3-pip pkg-config libpixman-1-dev libglib2.0-dev
+
+pip3 install numpy
 
 ```
 
