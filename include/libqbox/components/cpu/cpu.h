@@ -479,6 +479,12 @@ public:
         if (m_inst.can_run()) {
             m_qk->start();
         }
+
+        // Have not managed to figure out the root cause of the issue, but the
+        // PC is not properly set before running KVM, or it is possibly reset to
+        // 0 by some routine. By setting the vcpu as dirty, we trigger pushing
+        // registers to KVM just before running it.
+        m_cpu.set_vcpu_dirty(true);
     }
 
     /* QemuInitiatorIface  */

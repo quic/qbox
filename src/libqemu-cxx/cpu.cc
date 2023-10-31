@@ -91,4 +91,6 @@ void Cpu::set_kick_callback(Cpu::CpuKickCallbackFn cb) { m_int->get_cpu_kick_cb(
 
 bool Cpu::is_in_exclusive_context() const { return m_int->exports().cpu_in_exclusive_context(m_obj); }
 
+void Cpu::set_vcpu_dirty(bool dirty) const { m_int->exports().cpu_set_vcpu_dirty(m_obj, dirty); }
+
 }; // namespace qemu

@@ -610,6 +610,8 @@ public:
     void set_kick_callback(CpuKickCallbackFn cb);
 
     bool is_in_exclusive_context() const;
+
+    void set_vcpu_dirty(bool dirty) const;
 };
 
 class Timer
