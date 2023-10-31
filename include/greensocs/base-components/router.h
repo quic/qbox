@@ -32,10 +32,11 @@
 #include <greensocs/gsutils/cciutils.h>
 // #include <greensocs/gsutils/module_factory.h>
 #include <greensocs/gsutils/module_factory_registery.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 namespace gs {
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class Router : public sc_core::sc_module
 {
     using TargetSocket = tlm::tlm_base_target_socket_b<BUSWIDTH, tlm::tlm_fw_transport_if<>,
@@ -222,7 +223,7 @@ public:
     // make the sockets public for binding
     typedef multi_passthrough_initiator_socket_spying<Router<BUSWIDTH>> initiator_socket_type;
     initiator_socket_type initiator_socket;
-    tlm_utils::multi_passthrough_target_socket<Router<BUSWIDTH>> target_socket;
+    tlm_utils::multi_passthrough_target_socket<Router<BUSWIDTH>, BUSWIDTH> target_socket;
 
 private:
     std::vector<target_info> bound_targets;

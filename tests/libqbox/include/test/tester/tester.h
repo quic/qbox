@@ -16,6 +16,7 @@
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
 
 #include "test/test.h"
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 class CpuTesterCallbackIface
 {
@@ -24,7 +25,7 @@ public:
 
     virtual unsigned int get_num_cpus() = 0;
 
-    virtual void map_target(tlm::tlm_target_socket<>& s, uint64_t addr, uint64_t size) = 0;
+    virtual void map_target(tlm::tlm_target_socket<DEFAULT_TLM_BUSWIDTH>& s, uint64_t addr, uint64_t size) = 0;
     virtual void map_irqs_to_cpus(sc_core::sc_vector<InitiatorSignalSocket<bool> >& irqs) = 0;
 
     virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) = 0;
@@ -40,7 +41,7 @@ class CpuTester : public sc_core::sc_module
 public:
     static constexpr size_t MMIO_SIZE = 1024;
 
-    using TargetSocket = tlm_utils::simple_target_socket_tagged<CpuTester>;
+    using TargetSocket = tlm_utils::simple_target_socket_tagged<CpuTester, DEFAULT_TLM_BUSWIDTH>;
 
 protected:
     CpuTesterCallbackIface& m_cbs;

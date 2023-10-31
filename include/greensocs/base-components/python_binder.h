@@ -24,11 +24,11 @@
 #include <tlm_utils/simple_target_socket.h>
 #include <greensocs/gsutils/ports/initiator-signal-socket.h>
 #include <greensocs/gsutils/ports/target-signal-socket.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 #include <greensocs/libgssync.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
-#define __BUSWIDTH__ 32
 
 namespace gs {
 
@@ -46,7 +46,7 @@ public:
     ~PyInterpreterManager();
 };
 
-template <unsigned int BUSWIDTH = __BUSWIDTH__>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class PythonBinder : public sc_core::sc_module
 {
     SCP_LOGGER();

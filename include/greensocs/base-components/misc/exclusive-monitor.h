@@ -17,6 +17,7 @@
 
 #include <greensocs/gsutils/tlm-extensions/exclusive-access.h>
 #include <greensocs/base-components/pathid_extension.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 /**
  * @class ExclusiveMonitor
@@ -367,8 +368,8 @@ private:
     }
 
 public:
-    tlm_utils::simple_target_socket<ExclusiveMonitor> front_socket;
-    tlm_utils::simple_initiator_socket<ExclusiveMonitor> back_socket;
+    tlm_utils::simple_target_socket<ExclusiveMonitor, DEFAULT_TLM_BUSWIDTH> front_socket;
+    tlm_utils::simple_initiator_socket<ExclusiveMonitor, DEFAULT_TLM_BUSWIDTH> back_socket;
 
     ExclusiveMonitor(const sc_core::sc_module_name& name)
         : sc_core::sc_module(name), front_socket("front-socket"), back_socket("back-socket")

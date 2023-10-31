@@ -15,6 +15,7 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include "greensocs/gsutils/cciutils.h"
 #include <greensocs/gsutils/module_factory_registery.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 namespace gs {
 
@@ -54,7 +55,7 @@ std::vector<std::string> find_object_of_type(sc_core::sc_object* m = NULL)
  * dump their MemoryDumper
  */
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class MemoryDumper : public sc_core::sc_module
 {
     cci::cci_broker_handle m_broker;
@@ -119,8 +120,8 @@ protected:
     }
 
 public:
-    tlm_utils::simple_initiator_socket<MemoryDumper<BUSWIDTH>> initiator_socket;
-    tlm_utils::simple_target_socket<MemoryDumper<BUSWIDTH>> target_socket;
+    tlm_utils::simple_initiator_socket<MemoryDumper<BUSWIDTH>, BUSWIDTH> initiator_socket;
+    tlm_utils::simple_target_socket<MemoryDumper<BUSWIDTH>, BUSWIDTH> target_socket;
 
     MemoryDumper(sc_core::sc_module_name name)
         : m_broker(cci::cci_get_broker())

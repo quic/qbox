@@ -34,8 +34,8 @@
 #include <greensocs/gsutils/ports/biflow-socket.h>
 #include <greensocs/gsutils/module_factory_registery.h>
 #include <greensocs/base-components/transaction_forwarder_if.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
-#define ModuleFactory_CONTAINER_BUSWIDTH 32
 namespace gs {
 namespace ModuleFactory {
 
@@ -171,51 +171,66 @@ public:
 
             // actually you could probably just cast everything to (tlm::tlm_target_socket<>*), but
             // we will dynamic cast to be sure.
-            while (1) {
-                if (try_bind<tlm_utils::multi_init_base<>, tlm::tlm_base_target_socket<>>(i_obj, t_obj)) break;
-                if (try_bind<tlm_utils::multi_init_base<>, tlm_utils::multi_target_base<>>(i_obj, t_obj)) break;
-                if (try_bind<tlm::tlm_base_initiator_socket<>, tlm::tlm_base_target_socket<>>(i_obj, t_obj)) break;
-                if (try_bind<tlm::tlm_base_initiator_socket<>, tlm_utils::multi_target_base<>>(i_obj, t_obj)) break;
-                if (try_bind<tlm::tlm_base_initiator_socket<32, tlm::tlm_fw_transport_if<>, tlm::tlm_bw_transport_if<>,
-                                                            1, sc_core::SC_ZERO_OR_MORE_BOUND>,
-                             tlm_utils::multi_target_base<>>(i_obj, t_obj))
-                    break;
-                if (try_bind<gs::biflow_bindable, gs::biflow_bindable>(i_obj, t_obj)) break;
-                if (try_bind<tlm::tlm_base_initiator_socket<32, tlm::tlm_fw_transport_if<>, tlm::tlm_bw_transport_if<>,
-                                                            1, sc_core::SC_ZERO_OR_MORE_BOUND>,
-                             tlm::tlm_base_target_socket<>>(i_obj, t_obj))
-                    break;
-                if (try_bind<
-                        tlm::tlm_initiator_socket<32, tlm::tlm_base_protocol_types, 1, sc_core::SC_ONE_OR_MORE_BOUND>,
-                        tlm::tlm_target_socket<32, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>>(
-                        i_obj, t_obj))
-                    break;
-                if (try_bind<tlm_utils::multi_init_base<>, tlm::tlm_target_socket<32, tlm::tlm_base_protocol_types, 1,
-                                                                                  sc_core::SC_ZERO_OR_MORE_BOUND>>(
-                        i_obj, t_obj))
-                    break;
-                if (try_bind<
-                        tlm::tlm_base_initiator_socket<32, tlm::tlm_fw_transport_if<>, tlm::tlm_bw_transport_if<>, 1,
-                                                       sc_core::SC_ZERO_OR_MORE_BOUND>,
-                        tlm::tlm_target_socket<32, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>>(
-                        i_obj, t_obj))
-                    break;
-                if (try_bind<sc_core::sc_port<sc_core::sc_signal_inout_if<bool>, 0, sc_core::SC_ZERO_OR_MORE_BOUND>,
-                             TargetSignalSocket<bool>>(i_obj, t_obj))
-                    break;
-                if (try_bind<InitiatorSignalSocket<bool>, TargetSignalSocket<bool>>(i_obj, t_obj)) break;
-#ifndef WITHOUT_QEMU
-                if (try_bind<QemuInitiatorSocket<>, tlm::tlm_base_target_socket<>>(i_obj, t_obj)) break;
-                if (try_bind<QemuInitiatorSocket<>, tlm_utils::multi_target_base<>>(i_obj, t_obj)) break;
-                if (try_bind<tlm_utils::multi_init_base<>, QemuTargetSocket<>>(i_obj, t_obj)) break;
-                if (try_bind<tlm::tlm_base_initiator_socket<>, QemuTargetSocket<>>(i_obj, t_obj)) break;
-                if (try_bind<QemuInitiatorSocket<>, QemuTargetSocket<>>(i_obj, t_obj)) break;
-                if (try_bind<QemuInitiatorSignalSocket, QemuTargetSignalSocket>(i_obj, t_obj)) break;
-                if (try_bind<QemuInitiatorSignalSocket, TargetSignalSocket<bool>>(i_obj, t_obj)) break;
-                if (try_bind<InitiatorSignalSocket<bool>, QemuTargetSignalSocket>(i_obj, t_obj)) break;
-#endif
+            if (!try_bind_all<32>(i_obj, t_obj) && !try_bind_all<64>(i_obj, t_obj)) {
                 SCP_FATAL(())("No bind found for: {} to {}", i_obj->name(), t_obj->name());
             }
+        }
+    }
+
+    /**
+     * FIXME: There should be a better way of doing that.Trying to bind every possible
+     * combination of socket types is not scalable nor readable solution.
+     *
+     */
+    template <unsigned int BIND_BUSWIDTH>
+    bool try_bind_all(sc_core::sc_object* i_obj, sc_core::sc_object* t_obj)
+    {
+        if ((try_bind<tlm_utils::multi_init_base<BIND_BUSWIDTH>, tlm::tlm_base_target_socket<BIND_BUSWIDTH>>(i_obj,
+                                                                                                             t_obj)) ||
+            (try_bind<tlm_utils::multi_init_base<BIND_BUSWIDTH>, tlm_utils::multi_target_base<BIND_BUSWIDTH>>(i_obj,
+                                                                                                              t_obj)) ||
+            (try_bind<tlm::tlm_base_initiator_socket<BIND_BUSWIDTH>, tlm::tlm_base_target_socket<BIND_BUSWIDTH>>(
+                i_obj, t_obj)) ||
+            (try_bind<tlm::tlm_base_initiator_socket<BIND_BUSWIDTH>, tlm_utils::multi_target_base<BIND_BUSWIDTH>>(
+                i_obj, t_obj)) ||
+            (try_bind<tlm::tlm_base_initiator_socket<BIND_BUSWIDTH, tlm::tlm_fw_transport_if<>,
+                                                     tlm::tlm_bw_transport_if<>, 1, sc_core::SC_ZERO_OR_MORE_BOUND>,
+                      tlm_utils::multi_target_base<BIND_BUSWIDTH>>(i_obj, t_obj)) ||
+            (try_bind<gs::biflow_bindable, gs::biflow_bindable>(i_obj, t_obj)) ||
+            (try_bind<tlm::tlm_base_initiator_socket<BIND_BUSWIDTH, tlm::tlm_fw_transport_if<>,
+                                                     tlm::tlm_bw_transport_if<>, 1, sc_core::SC_ZERO_OR_MORE_BOUND>,
+                      tlm::tlm_base_target_socket<BIND_BUSWIDTH>>(i_obj, t_obj)) ||
+            (try_bind<
+                tlm::tlm_initiator_socket<BIND_BUSWIDTH, tlm::tlm_base_protocol_types, 1,
+                                          sc_core::SC_ONE_OR_MORE_BOUND>,
+                tlm::tlm_target_socket<BIND_BUSWIDTH, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>>(
+                i_obj, t_obj)) ||
+            (try_bind<
+                tlm_utils::multi_init_base<BIND_BUSWIDTH>,
+                tlm::tlm_target_socket<BIND_BUSWIDTH, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>>(
+                i_obj, t_obj)) ||
+            (try_bind<
+                tlm::tlm_base_initiator_socket<BIND_BUSWIDTH, tlm::tlm_fw_transport_if<>, tlm::tlm_bw_transport_if<>, 1,
+                                               sc_core::SC_ZERO_OR_MORE_BOUND>,
+                tlm::tlm_target_socket<BIND_BUSWIDTH, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>>(
+                i_obj, t_obj)) ||
+            (try_bind<sc_core::sc_port<sc_core::sc_signal_inout_if<bool>, 0, sc_core::SC_ZERO_OR_MORE_BOUND>,
+                      TargetSignalSocket<bool>>(i_obj, t_obj)) ||
+            (try_bind<InitiatorSignalSocket<bool>, TargetSignalSocket<bool>>(i_obj, t_obj)) ||
+#ifndef WITHOUT_QEMU
+            (try_bind<QemuInitiatorSocket<BIND_BUSWIDTH>, tlm::tlm_base_target_socket<BIND_BUSWIDTH>>(i_obj, t_obj)) ||
+            (try_bind<QemuInitiatorSocket<BIND_BUSWIDTH>, tlm_utils::multi_target_base<BIND_BUSWIDTH>>(i_obj, t_obj)) ||
+            (try_bind<tlm_utils::multi_init_base<BIND_BUSWIDTH>, QemuTargetSocket<BIND_BUSWIDTH>>(i_obj, t_obj)) ||
+            (try_bind<tlm::tlm_base_initiator_socket<BIND_BUSWIDTH>, QemuTargetSocket<BIND_BUSWIDTH>>(i_obj, t_obj)) ||
+            (try_bind<QemuInitiatorSocket<BIND_BUSWIDTH>, QemuTargetSocket<BIND_BUSWIDTH>>(i_obj, t_obj)) ||
+            (try_bind<QemuInitiatorSignalSocket, QemuTargetSignalSocket>(i_obj, t_obj)) ||
+            (try_bind<QemuInitiatorSignalSocket, TargetSignalSocket<bool>>(i_obj, t_obj)) ||
+            (try_bind<InitiatorSignalSocket<bool>, QemuTargetSignalSocket>(i_obj, t_obj)))
+#endif
+        {
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -316,9 +331,9 @@ public:
     }
 
     using tlm_initiator_socket_type = tlm_utils::simple_initiator_socket_b<
-        ContainerBase, ModuleFactory_CONTAINER_BUSWIDTH, tlm::tlm_base_protocol_types, sc_core::SC_ZERO_OR_MORE_BOUND>;
+        ContainerBase, DEFAULT_TLM_BUSWIDTH, tlm::tlm_base_protocol_types, sc_core::SC_ZERO_OR_MORE_BOUND>;
     using tlm_target_socket_type = tlm_utils::simple_target_socket_tagged_b<
-        ContainerBase, ModuleFactory_CONTAINER_BUSWIDTH, tlm::tlm_base_protocol_types, sc_core::SC_ZERO_OR_MORE_BOUND>;
+        ContainerBase, DEFAULT_TLM_BUSWIDTH, tlm::tlm_base_protocol_types, sc_core::SC_ZERO_OR_MORE_BOUND>;
 
 private:
     bool m_defer_modules_construct;

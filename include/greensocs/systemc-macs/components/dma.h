@@ -5,11 +5,12 @@
  */
 
 #pragma once
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 class Dma : public sc_core::sc_module
 {
 public:
-    tlm_utils::simple_initiator_socket<Dma> socket;
+    tlm_utils::simple_initiator_socket<Dma, DEFAULT_TLM_BUSWIDTH> socket;
 
     tlm::tlm_dmi dmi_data;
     bool dmi_valid;

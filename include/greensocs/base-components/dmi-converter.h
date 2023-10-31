@@ -17,6 +17,7 @@
 #include <tlm_utils/multi_passthrough_initiator_socket.h>
 #include <tlm_utils/multi_passthrough_target_socket.h>
 #include <greensocs/gsutils/module_factory_registery.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 #include <map>
 #include <string>
 #include <memory>
@@ -24,7 +25,7 @@
 
 namespace gs {
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class DMIConverter : public sc_core::sc_module
 {
     SCP_LOGGER();

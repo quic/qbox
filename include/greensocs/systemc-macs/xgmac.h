@@ -16,6 +16,7 @@
 #include "components/mac.h"
 
 #include <deque>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 struct XGmacDesc {
     uint32_t ctl_stat;
@@ -42,7 +43,7 @@ class Xgmac : public sc_core::sc_module
 {
 public:
     sc_core::sc_out<bool> sbd_irq, pmt_irq, mci_irq;
-    tlm_utils::simple_target_socket<Xgmac> socket;
+    tlm_utils::simple_target_socket<Xgmac, DEFAULT_TLM_BUSWIDTH> socket;
 
     Dma dma;
 

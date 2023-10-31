@@ -19,6 +19,7 @@
 #include <greensocs/gsutils/cciutils.h>
 #include "rapidjson/document.h"
 #include <greensocs/base-components/memory.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 namespace gs {
 
@@ -46,7 +47,7 @@ public:
  * read/write. when b_transport is called port, the correct lambda's will be invoked
  *
  */
-class port_fnct : public tlm_utils::simple_target_socket<port_fnct>
+class port_fnct : public tlm_utils::simple_target_socket<port_fnct, DEFAULT_TLM_BUSWIDTH>
 {
     SCP_LOGGER();
     std::vector<std::shared_ptr<tlm_fnct>> m_pre_read_fncts;
@@ -130,13 +131,14 @@ public:
 
     port_fnct() = delete;
     port_fnct(std::string name, std::string path_name)
-        : simple_target_socket<port_fnct>((name + "_target_socket").c_str())
+        : simple_target_socket<port_fnct, DEFAULT_TLM_BUSWIDTH>((name + "_target_socket").c_str())
         , p_is_callback(path_name + ".target_socket.is_callback", true, "Is a callback (true)")
     {
         SCP_TRACE(())("Constructor");
         p_is_callback = true;
         p_is_callback.lock();
-        tlm_utils::simple_target_socket<port_fnct>::register_b_transport(this, &port_fnct::b_transport);
+        tlm_utils::simple_target_socket<port_fnct, DEFAULT_TLM_BUSWIDTH>::register_b_transport(this,
+                                                                                               &port_fnct::b_transport);
     }
 };
 
@@ -175,7 +177,7 @@ public:
     cci::cci_param<uint64_t> p_number;
     cci::cci_param<std::string> p_path_name;
 
-    tlm_utils::simple_initiator_socket<proxy_data_array> initiator_socket;
+    tlm_utils::simple_initiator_socket<proxy_data_array, DEFAULT_TLM_BUSWIDTH> initiator_socket;
 
     void get(TYPE* dst, uint64_t idx = 0, uint64_t length = 1)
     {

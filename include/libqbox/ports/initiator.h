@@ -23,6 +23,7 @@
 
 #include "libqbox/qemu-instance.h"
 #include "libqbox/tlm-extensions/qemu-mr-hint.h"
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 class QemuInitiatorIface
 {
@@ -46,7 +47,7 @@ public:
  *          to map the whole address space, receives I/O accesses to it and
  *          forwards them as standard TLM-2.0 transactions.
  */
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class QemuInitiatorSocket
     : public tlm::tlm_initiator_socket<BUSWIDTH, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>,
       public tlm::tlm_bw_transport_if<>

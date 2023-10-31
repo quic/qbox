@@ -16,6 +16,7 @@
 #include <systemc>
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 /**
  * @class TargetTester
@@ -180,7 +181,7 @@ protected:
     }
 
 public:
-    tlm_utils::simple_target_socket<TargetTester> socket;
+    tlm_utils::simple_target_socket<TargetTester, DEFAULT_TLM_BUSWIDTH> socket;
 
     /**
      * @brief Construct a TargetTester object with a name and an MMIO size

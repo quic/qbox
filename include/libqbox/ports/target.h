@@ -12,6 +12,7 @@
 
 #include "libqbox/tlm-extensions/qemu-cpu-hint.h"
 #include "libqbox/tlm-extensions/qemu-mr-hint.h"
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 class TlmTargetToQemuBridge : public tlm::tlm_fw_transport_if<>
 {
@@ -151,7 +152,7 @@ public:
     }
 };
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class QemuTargetSocket
     : public tlm::tlm_target_socket<BUSWIDTH, tlm::tlm_base_protocol_types, 1, sc_core::SC_ZERO_OR_MORE_BOUND>
 {

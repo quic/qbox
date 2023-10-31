@@ -16,11 +16,12 @@
 #include <sstream>
 #include <memory>
 #include <cstring>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 #define MEM_SIZE       4096
 #define MIN_ALLOC_UNIT 8
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class SimpleMemory : public sc_core::sc_module
 {
     SCP_LOGGER();

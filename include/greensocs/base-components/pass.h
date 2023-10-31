@@ -13,11 +13,12 @@
 
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 #include <iomanip>
 
 namespace gs {
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class pass : public sc_core::sc_module
 {
     SCP_LOGGER(());

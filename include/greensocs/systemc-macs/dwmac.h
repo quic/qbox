@@ -17,6 +17,7 @@
 #include "components/mac.h"
 #include "components/mii.h"
 #include "components/phy.h"
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 #include <deque>
 
@@ -483,7 +484,7 @@ protected:
 
 public:
     sc_core::sc_out<bool> intr0, intr1;
-    tlm_utils::simple_target_socket<Dwmac> socket;
+    tlm_utils::simple_target_socket<Dwmac, DEFAULT_TLM_BUSWIDTH> socket;
     Dma dma;
     Phy phy;
 

@@ -16,6 +16,7 @@
 #include <scp/report.h>
 #include <greensocs/gsutils/module_factory_registery.h>
 #include <greensocs/gsutils/ports/target-signal-socket.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 #include <cinttypes>
 #include <fcntl.h>
@@ -77,7 +78,7 @@ static std::istream& operator>>(std::istream& str, CSVRow& data)
     return str;
 }
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class Loader : public sc_core::sc_module
 {
     SCP_LOGGER();

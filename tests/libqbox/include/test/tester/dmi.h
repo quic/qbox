@@ -13,6 +13,7 @@
 #include <scp/report.h>
 
 #include "test/tester/mmio.h"
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 class CpuTesterDmi : public CpuTesterMmio
 {
@@ -110,7 +111,7 @@ protected:
     }
 
 public:
-    tlm_utils::simple_target_socket<CpuTesterDmi> dmi_socket;
+    tlm_utils::simple_target_socket<CpuTesterDmi, DEFAULT_TLM_BUSWIDTH> dmi_socket;
 
     CpuTesterDmi(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs): CpuTesterMmio(n, cbs)
     {

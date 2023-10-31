@@ -14,6 +14,7 @@
 #include <tlm>
 #include <tlm_utils/simple_initiator_socket.h>
 #include <greensocs/gsutils/module_factory_registery.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 /**
  * @class InitiatorTester
@@ -96,7 +97,7 @@ protected:
     }
 
 public:
-    tlm_utils::simple_initiator_socket<InitiatorTester> socket;
+    tlm_utils::simple_initiator_socket<InitiatorTester, DEFAULT_TLM_BUSWIDTH> socket;
 
     InitiatorTester(const sc_core::sc_module_name& n): sc_core::sc_module(n), socket("initiator_socket")
     {

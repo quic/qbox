@@ -11,6 +11,7 @@
 #include <cstring>
 
 #include "test/tester/mmio.h"
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 class CpuTesterDmiSoak : public CpuTesterMmio
 {
@@ -92,7 +93,7 @@ protected:
     }
 
 public:
-    tlm_utils::simple_target_socket<CpuTesterDmiSoak> dmi_socket;
+    tlm_utils::simple_target_socket<CpuTesterDmiSoak, DEFAULT_TLM_BUSWIDTH> dmi_socket;
 
     CpuTesterDmiSoak(const sc_core::sc_module_name& n, CpuTesterCallbackIface& cbs): CpuTesterMmio(n, cbs)
     {

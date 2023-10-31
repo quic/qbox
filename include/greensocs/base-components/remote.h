@@ -48,6 +48,7 @@
 #include "rpc/this_session.h"
 #include "greensocs/libgssync/async_event.h"
 #include <greensocs/base-components/transaction_forwarder_if.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 #define GS_Process_Server_Port     "GS_Process_Server_Port"
 #define GS_Process_Server_Port_Len 22
@@ -60,7 +61,7 @@ namespace gs {
 // #define DMICACHE switchthis on - then you need a mutex
 /* rpc pass through should pass through ONE forward connection ? */
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class PassRPC : public sc_core::sc_module, public transaction_forwarder_if<PASS>
 {
     SCP_LOGGER();
@@ -1182,7 +1183,7 @@ public:
         stop();
     }
 }; // namespace gs
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class LocalPass : public PassRPC<>
 {
 public:
@@ -1192,7 +1193,7 @@ public:
     virtual ~LocalPass() = default;
 };
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class RemotePass : public PassRPC<>
 {
 public:

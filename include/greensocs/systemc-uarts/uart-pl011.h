@@ -19,6 +19,7 @@
 #include <greensocs/libgssync/async_event.h>
 #include <greensocs/gsutils/module_factory_registery.h>
 #include <scp/report.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 #define PL011_INT_TX 0x20
 #define PL011_INT_RX 0x10
@@ -84,7 +85,7 @@ public:
 
     CharBackend* chr;
 
-    tlm_utils::simple_target_socket<Pl011> socket;
+    tlm_utils::simple_target_socket<Pl011, DEFAULT_TLM_BUSWIDTH> socket;
 
     InitiatorSignalSocket<bool> irq;
 

@@ -17,6 +17,7 @@
 #include <cci_configuration>
 
 #include <greensocs/libgsutils.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 /**
  * @class Addrtr
@@ -79,8 +80,8 @@ private:
     }
 
 public:
-    tlm_utils::simple_target_socket<Addrtr> front_socket;
-    tlm_utils::simple_initiator_socket<Addrtr> back_socket;
+    tlm_utils::simple_target_socket<Addrtr, DEFAULT_TLM_BUSWIDTH> front_socket;
+    tlm_utils::simple_initiator_socket<Addrtr, DEFAULT_TLM_BUSWIDTH> back_socket;
     cci::cci_param<uint64_t> offset;
 
     explicit Addrtr(const sc_core::sc_module_name& nm)

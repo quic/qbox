@@ -22,6 +22,7 @@
 
 #include "shmem_extension.h"
 #include <greensocs/gsutils/module_factory_registery.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 #include <unordered_map>
 
 #ifndef _WIN32
@@ -49,7 +50,7 @@ namespace gs {
  */
 #define ALIGNEDBITS 12
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class Memory : public sc_core::sc_module
 {
     uint64_t m_size = 0;
@@ -383,7 +384,7 @@ protected:
     }
 
 public:
-    tlm_utils::multi_passthrough_target_socket<Memory<BUSWIDTH>> socket;
+    tlm_utils::multi_passthrough_target_socket<Memory<BUSWIDTH>, BUSWIDTH> socket;
     TargetSignalSocket<bool> reset;
     cci::cci_param<bool> p_rom;
     cci::cci_param<bool> p_dmi;

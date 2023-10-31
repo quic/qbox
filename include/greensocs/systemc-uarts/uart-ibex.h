@@ -18,6 +18,7 @@
 #include <greensocs/libgssync/async_event.h>
 
 #include <scp/report.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 class IbexUart : public sc_core::sc_module
 {
@@ -90,7 +91,7 @@ public:
     }
 
 public:
-    tlm_utils::simple_target_socket<IbexUart> socket;
+    tlm_utils::simple_target_socket<IbexUart, DEFAULT_TLM_BUSWIDTH> socket;
 
     sc_core::sc_event update_event;
 

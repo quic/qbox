@@ -13,6 +13,7 @@
 #include "tlm_utils/simple_initiator_socket.h"
 
 #include "greensocs/libgssync/runonsysc.h"
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 namespace gs {
 class InLineSync : public sc_core::sc_module
@@ -21,8 +22,8 @@ class InLineSync : public sc_core::sc_module
     void run_on_sysc(std::function<void()> job) { onSystemC.run_on_sysc(job, true); }
 
 public:
-    tlm_utils::simple_target_socket<InLineSync> target_socket;
-    tlm_utils::simple_initiator_socket<InLineSync> initiator_socket;
+    tlm_utils::simple_target_socket<InLineSync, DEFAULT_TLM_BUSWIDTH> target_socket;
+    tlm_utils::simple_initiator_socket<InLineSync, DEFAULT_TLM_BUSWIDTH> initiator_socket;
 
     SC_HAS_PROCESS(InLineSync);
     InLineSync(const sc_core::sc_module_name& name)

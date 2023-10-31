@@ -39,15 +39,16 @@
 #include <tlm>
 #include <tlm_utils/simple_target_socket.h>
 #include <tlm_utils/simple_initiator_socket.h>
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 namespace gs {
 struct biflow_bindable {
     virtual void bind(biflow_bindable& other) = 0;
 
-    virtual tlm::tlm_target_socket<>& get_target_socket() = 0;
-    virtual tlm::tlm_initiator_socket<>& get_initiator_socket() = 0;
-    virtual tlm::tlm_initiator_socket<>& get_target_control_socket() = 0;
-    virtual tlm::tlm_target_socket<>& get_initiator_control_socket() = 0;
+    virtual tlm::tlm_target_socket<DEFAULT_TLM_BUSWIDTH>& get_target_socket() = 0;
+    virtual tlm::tlm_initiator_socket<DEFAULT_TLM_BUSWIDTH>& get_initiator_socket() = 0;
+    virtual tlm::tlm_initiator_socket<DEFAULT_TLM_BUSWIDTH>& get_target_control_socket() = 0;
+    virtual tlm::tlm_target_socket<DEFAULT_TLM_BUSWIDTH>& get_initiator_control_socket() = 0;
 };
 
 template <class MODULE, class T = uint8_t>
@@ -124,11 +125,11 @@ class biflow_socket : public sc_core::sc_module, public biflow_bindable
     }
 
 public:
-    tlm_utils::simple_target_socket<MODULE> target_socket;
-    tlm_utils::simple_initiator_socket<biflow_socket> target_control_socket;
+    tlm_utils::simple_target_socket<MODULE, DEFAULT_TLM_BUSWIDTH> target_socket;
+    tlm_utils::simple_initiator_socket<biflow_socket, DEFAULT_TLM_BUSWIDTH> target_control_socket;
 
-    tlm_utils::simple_initiator_socket<biflow_socket> initiator_socket;
-    tlm_utils::simple_target_socket<biflow_socket> initiator_control_socket;
+    tlm_utils::simple_initiator_socket<biflow_socket, DEFAULT_TLM_BUSWIDTH> initiator_socket;
+    tlm_utils::simple_target_socket<biflow_socket, DEFAULT_TLM_BUSWIDTH> initiator_control_socket;
 
     SC_HAS_PROCESS(biflow_socket);
 
@@ -153,10 +154,10 @@ public:
         m_send_event.async_detach_suspending();
     }
 
-    tlm::tlm_target_socket<>& get_target_socket() { return target_socket; }
-    tlm::tlm_initiator_socket<>& get_initiator_socket() { return initiator_socket; };
-    tlm::tlm_initiator_socket<>& get_target_control_socket() { return target_control_socket; };
-    tlm::tlm_target_socket<>& get_initiator_control_socket() { return initiator_control_socket; };
+    tlm::tlm_target_socket<DEFAULT_TLM_BUSWIDTH>& get_target_socket() { return target_socket; }
+    tlm::tlm_initiator_socket<DEFAULT_TLM_BUSWIDTH>& get_initiator_socket() { return initiator_socket; };
+    tlm::tlm_initiator_socket<DEFAULT_TLM_BUSWIDTH>& get_target_control_socket() { return target_control_socket; };
+    tlm::tlm_target_socket<DEFAULT_TLM_BUSWIDTH>& get_initiator_control_socket() { return initiator_control_socket; };
     /**
      * @brief Bind method to connect two biflow sockets
      *

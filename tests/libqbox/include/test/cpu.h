@@ -27,6 +27,7 @@
 #include "libqbox/qemu-instance.h"
 #include "test/test.h"
 #include "test/tester/tester.h"
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 class CpuTestBenchBase : public TestBench, public CpuTesterCallbackIface
 {
@@ -117,7 +118,10 @@ public:
 
     unsigned int get_num_cpus() { return p_num_cpu; }
 
-    void map_target(tlm::tlm_target_socket<>& s, uint64_t addr, uint64_t size) { m_router.add_target(s, addr, size); }
+    void map_target(tlm::tlm_target_socket<DEFAULT_TLM_BUSWIDTH>& s, uint64_t addr, uint64_t size)
+    {
+        m_router.add_target(s, addr, size);
+    }
 
     virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) { TEST_FAIL("Unexpected CPU read"); }
 

@@ -30,10 +30,11 @@
 #include <tlm_utils/multi_passthrough_target_socket.h>
 
 #include "pathid_extension.h"
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 namespace gs {
 
-template <unsigned int BUSWIDTH = 32>
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
 class Router : public sc_core::sc_module
 {
     using TargetSocket = tlm::tlm_base_target_socket_b<BUSWIDTH, tlm::tlm_fw_transport_if<>,

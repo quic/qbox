@@ -28,6 +28,7 @@
 
 #include "checker.h"
 #include "router.h"
+#include <greensocs/gsutils/tlm_sockets_buswidth.h>
 
 using namespace sc_core;
 
@@ -102,7 +103,7 @@ public:
 class Initiator : public Model
 {
 public:
-    tlm_utils::simple_initiator_socket<Initiator> initiator_socket;
+    tlm_utils::simple_initiator_socket<Initiator, DEFAULT_TLM_BUSWIDTH> initiator_socket;
     Initiator(sc_module_name _name, Checker& _checker): Model(_name, _checker), initiator_socket("initiatorSocket")
     {
         SCP_DEBUG(SCMOD) << "In the constructor Initiator";
@@ -114,7 +115,7 @@ public:
     cci::cci_param<uint64_t> add_base;
     cci::cci_param<uint64_t> add_size;
     virtual void b_transport(tlm::tlm_generic_payload& trans, sc_time& delay) = 0;
-    tlm_utils::simple_target_socket<Target> target_socket;
+    tlm_utils::simple_target_socket<Target, DEFAULT_TLM_BUSWIDTH> target_socket;
     virtual bool requires_systemc() = 0;
     Target(sc_module_name _name, Checker& _checker)
         : Model(_name, _checker), add_base("add_base", 0), add_size("add_size", 1), target_socket("targetSocket")
