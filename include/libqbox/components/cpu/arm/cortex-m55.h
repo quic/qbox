@@ -13,9 +13,9 @@
 #include <greensocs/gsutils/module_factory_registery.h>
 
 #include "libqbox/components/irq-ctrl/armv7m-nvic.h"
-#include "libqbox/components/cpu/cpu.h"
+#include "libqbox/components/cpu/arm/arm.h"
 
-class CpuArmCortexM55 : public QemuCpu
+class CpuArmCortexM55 : public QemuCpuArm
 {
 public:
     static constexpr qemu::Target ARCH = qemu::Target::AARCH64;
@@ -28,7 +28,7 @@ public:
     {
     }
     CpuArmCortexM55(sc_core::sc_module_name name, QemuInstance& inst)
-        : QemuCpu(name, inst, "cortex-m55-arm")
+        : QemuCpuArm(name, inst, "cortex-m55-arm")
         , m_nvic("nvic", inst)
         , p_start_powered_off("start_powered_off", false,
                               "Start and reset the CPU "
@@ -39,7 +39,7 @@ public:
 
     void before_end_of_elaboration() override
     {
-        QemuCpu::before_end_of_elaboration();
+        QemuCpuArm::before_end_of_elaboration();
 
         qemu::CpuArm cpu(m_dev);
 

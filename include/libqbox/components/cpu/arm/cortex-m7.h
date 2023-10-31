@@ -12,19 +12,17 @@
 #include <libqemu-cxx/target/aarch64.h>
 
 #include "libqbox/components/irq-ctrl/armv7m-nvic.h"
-#include "libqbox/components/cpu/cpu.h"
+#include "libqbox/components/cpu/arm/arm.h"
 
-class CpuArmCortexM7 : public QemuCpu
+class CpuArmCortexM7 : public QemuCpuArm
 {
 public:
-    static constexpr qemu::Target ARCH = qemu::Target::AARCH64;
-
     cci::cci_param<bool> p_start_powered_off;
     QemuNvicArmv7m m_nvic;
     cci::cci_param<uint64_t> p_init_nsvtor;
 
     CpuArmCortexM7(sc_core::sc_module_name name, QemuInstance& inst)
-        : QemuCpu(name, inst, "cortex-m7-arm")
+        : QemuCpuArm(name, inst, "cortex-m7-arm")
         , m_nvic("nvic", inst)
         , p_start_powered_off("start_powered_off", false,
                               "Start and reset the CPU "
@@ -35,7 +33,7 @@ public:
 
     void before_end_of_elaboration() override
     {
-        QemuCpu::before_end_of_elaboration();
+        QemuCpuArm::before_end_of_elaboration();
 
         qemu::CpuArm cpu(m_dev);
 

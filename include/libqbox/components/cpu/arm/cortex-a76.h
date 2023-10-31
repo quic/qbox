@@ -15,17 +15,14 @@
 
 #include <greensocs/gsutils/tlm-extensions/exclusive-access.h>
 
-#include "libqbox/components/cpu/cpu.h"
+#include "libqbox/components/cpu/arm/arm.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
 #include "libqbox/qemu-instance.h"
 #include <greensocs/gsutils/module_factory_registery.h>
 
-class QemuCpuArmCortexA76 : public QemuCpu
+class QemuCpuArmCortexA76 : public QemuCpuArm
 {
-public:
-    static constexpr qemu::Target ARCH = qemu::Target::AARCH64;
-
 protected:
     int get_psci_conduit_val() const
     {
@@ -87,7 +84,7 @@ public:
     {
     }
     QemuCpuArmCortexA76(const sc_core::sc_module_name& name, QemuInstance& inst)
-        : QemuCpu(name, inst, "cortex-a76-arm")
+        : QemuCpuArm(name, inst, "cortex-a76-arm")
         , p_mp_affinity("mp_affinity", 0, "Multi-processor affinity value")
         , p_has_el2("has_el2", true, "ARM virtualization extensions")
         , p_has_el3("has_el3", true, "ARM secure-mode extensions")
@@ -120,7 +117,7 @@ public:
 
     void before_end_of_elaboration() override
     {
-        QemuCpu::before_end_of_elaboration();
+        QemuCpuArm::before_end_of_elaboration();
 
         qemu::CpuAarch64 cpu(m_cpu);
         cpu.set_aarch64_mode(true);
@@ -139,7 +136,7 @@ public:
 
     void end_of_elaboration() override
     {
-        QemuCpu::end_of_elaboration();
+        QemuCpuArm::end_of_elaboration();
 
         irq_in.init(m_dev, 0);
         fiq_in.init(m_dev, 1);
@@ -152,23 +149,6 @@ public:
         irq_timer_sec_out.init(m_dev, 3);
         irq_maintenance_out.init_named(m_dev, "gicv3-maintenance-interrupt", 0);
         irq_pmu_out.init_named(m_dev, "pmu-interrupt", 0);
-
-        // This is needed for KVM otherwise the GIC won't reset properly when a system reset is requested
-        qemu::CpuAarch64 cpu(m_cpu);
-        cpu.register_reset();
-    }
-
-    void start_of_simulation() override
-    {
-        // According to qemu/hw/arm/virt.c:
-        // virt_cpu_post_init() must be called after the CPUs have been realized
-        // and the GIC has been created.
-        // I am not sure if this the right place where to call it. I wonder if a
-        // `before_start_of_simulation` stage would be a better place for this.
-        qemu::CpuAarch64 cpu(m_cpu);
-        cpu.post_init();
-
-        QemuCpu::start_of_simulation();
     }
 
     void initiator_customize_tlm_payload(TlmPayload& payload) override

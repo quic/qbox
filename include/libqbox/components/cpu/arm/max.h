@@ -15,15 +15,12 @@
 
 #include <greensocs/gsutils/tlm-extensions/exclusive-access.h>
 
-#include "libqbox/components/cpu/cpu.h"
+#include "libqbox/components/cpu/arm/arm.h"
 #include "libqbox/ports/initiator-signal-socket.h"
 #include "libqbox/ports/target-signal-socket.h"
 
-class QemuCpuArmMax : public QemuCpu
+class QemuCpuArmMax : public QemuCpuArm
 {
-public:
-    static constexpr qemu::Target ARCH = qemu::Target::AARCH64;
-
 protected:
     int get_psci_conduit_val() const
     {
@@ -82,7 +79,7 @@ public:
     QemuInitiatorSignalSocket irq_pmu_out;
 
     QemuCpuArmMax(sc_core::sc_module_name name, QemuInstance& inst)
-        : QemuCpu(name, inst, "max-arm")
+        : QemuCpuArm(name, inst, "max-arm")
         , p_mp_affinity("mp_affinity", 0, "Multi-processor affinity value")
         , p_has_el2("has_el2", true, "ARM virtualization extensions")
         , p_has_el3("has_el3", true, "ARM secure-mode extensions")
@@ -115,7 +112,7 @@ public:
 
     void before_end_of_elaboration() override
     {
-        QemuCpu::before_end_of_elaboration();
+        QemuCpuArm::before_end_of_elaboration();
 
         qemu::CpuAarch64 cpu(m_cpu);
         cpu.set_aarch64_mode(true);
@@ -134,7 +131,7 @@ public:
 
     void end_of_elaboration() override
     {
-        QemuCpu::end_of_elaboration();
+        QemuCpuArm::end_of_elaboration();
 
         irq_in.init(m_dev, 0);
         fiq_in.init(m_dev, 1);
