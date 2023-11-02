@@ -51,7 +51,8 @@ public:
         , u_backend_stdio_2("backend_2")
         , m_initiator_1("initiator_1")
         , m_irq_trigger("irq_trigger")
-        , m_initiator_2("initiator_2") {
+        , m_initiator_2("initiator_2")
+    {
         m_initiator_1.socket.bind(m_uart_1.socket);
         m_initiator_2.socket.bind(m_uart_2.socket);
         m_uart_1.backend_socket.bind(u_backend_stdio_1.socket);
@@ -61,7 +62,8 @@ public:
         auto cb = std::bind(&TestUart::fn_cb, this, std::placeholders::_1);
         m_irq_trigger.register_value_changed_cb(cb);
     }
-    void fn_cb(const bool& val) {
+    void fn_cb(const bool& val)
+    {
         std::cout << "the val from irq is: " << val << std::endl;
         if (val) {
             ev.notify();
@@ -70,7 +72,8 @@ public:
     }
 };
 
-TEST_BENCH(TestUart, UartWrite) {
+TEST_BENCH(TestUart, UartWrite)
+{
     std::string str = "Qualcomm";
     //___________ redirect stdout ____________//
 
@@ -123,7 +126,8 @@ TEST_BENCH(TestUart, UartWrite) {
     sc_core::wait(1, sc_core::SC_NS);
     sc_core::sc_stop();
 }
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char* argv[])
+{
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

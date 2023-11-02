@@ -49,7 +49,8 @@ public:
     int m_socket = -1;
     uint8_t m_buf[256];
 
-    void start_of_simulation() {
+    void start_of_simulation()
+    {
         if (type == "tcp") {
             std::string ip = "127.0.0.1";
             std::string port = "4001";
@@ -60,11 +61,11 @@ public:
                 ip = address.substr(0, first);
                 port = address.substr(first + 1);
             } else {
-                SCP_ERR(SCMOD) << "malformed address, expecting IP:PORT (e.g 127.0.0.1:4001)";
+                SCP_ERR(()) << "malformed address, expecting IP:PORT (e.g 127.0.0.1:4001)";
                 return;
             }
 
-            SCP_DEBUG(SCMOD) << "IP: " << ip << ", PORT: " << port;
+            SCP_DEBUG(()) << "IP: " << ip << ", PORT: " << port;
 
             if (m_server) {
                 setup_tcp_server(ip, port);
@@ -72,13 +73,13 @@ public:
                 setup_tcp_client(ip, port);
             }
         } else if (type == "udp") {
-            SCP_ERR(SCMOD) << "udp sockets are not available in this version";
+            SCP_ERR(()) << "udp sockets are not available in this version";
             return;
         } else if (type == "unix") {
-            SCP_ERR(SCMOD) << "unix sockets are not available in this version";
+            SCP_ERR(()) << "unix sockets are not available in this version";
             return;
         } else {
-            SCP_ERR(SCMOD) << "bad value for socket type";
+            SCP_ERR(()) << "bad value for socket type";
             return;
         }
 
@@ -92,21 +93,23 @@ public:
      * @server: type of socket: true if server - false if client
      * @nowait: setting socket in non-blocking mode
      */
-    CharBFBackendSocket(sc_core::sc_module_name name, std::string type, std::string address,
-                        bool server = true, bool nowait = true)
+    CharBFBackendSocket(sc_core::sc_module_name name, std::string type, std::string address, bool server = true,
+                        bool nowait = true)
         : sc_core::sc_module(name)
         , type(type)
         , address(address)
         , m_server(server)
         , m_nowait(nowait)
-        , socket("biflow_socket") {
+        , socket("biflow_socket")
+    {
         SCP_TRACE(()) << "constructor";
         socket.register_b_transport(this, &CharBFBackendSocket::writefn);
     }
 
     void end_of_elaboration() { socket.can_receive_any(); }
 
-    void* rcv_thread() {
+    void* rcv_thread()
+    {
         if (!m_nowait && ((!m_server && m_socket < 0) || (m_server && m_srv_socket < 0))) {
             return NULL;
         }
@@ -125,22 +128,21 @@ public:
 #if 0
                 flag = 1;
                 if(::ioctl(m_socket, FIONBIO, (char *)&flag) < 0) {
-                    SCP_ERR(SCMOD) << "setting socket in blocking mode failed: " << std::strerror(errno);
+                    SCP_ERR(()) << "setting socket in blocking mode failed: " << std::strerror(errno);
                     continue;
                 }
 #endif
 
                 flag = 1;
                 if (::setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag))) {
-                    SCP_WARN(SCMOD)
-                        << "setting up TCP_NODELAY option failed: " << std::strerror(errno);
+                    SCP_WARN(()) << "setting up TCP_NODELAY option failed: " << std::strerror(errno);
                 }
 
                 char str[INET_ADDRSTRLEN];
                 inet_ntop(AF_INET, &(client_addr.sin_addr), str, INET_ADDRSTRLEN);
                 int cport = ntohs(client_addr.sin_port);
 
-                SCP_DEBUG(SCMOD) << "incoming connection from  " << str << ":" << cport;
+                SCP_DEBUG(()) << "incoming connection from  " << str << ":" << cport;
             } else if (m_nowait && !m_server && m_socket < 0) {
                 // TODO
                 continue;
@@ -148,7 +150,7 @@ public:
 
             int ret = ::read(m_socket, &m_buf[0], 256);
             if (ret < 0 && errno != EAGAIN && errno != EINTR) {
-                SCP_ERR(SCMOD) << "read failed: " << std::strerror(errno);
+                SCP_ERR(()) << "read failed: " << std::strerror(errno);
                 abort();
             } else if (ret > 0) {
                 for (int i = 0; i < ret; i++) {
@@ -159,40 +161,42 @@ public:
         }
     }
 
-    void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t) {
+    void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
+    {
         if (!m_nowait && ((!m_server && m_socket < 0) || (m_server && m_srv_socket < 0))) {
             return;
         }
 
         while (m_nowait && m_socket < 0) {
-            SCP_WARN(SCMOD) << "Client waiting for server to start";
+            SCP_WARN(()) << "Client waiting for server to start";
             sleep(1);
         }
 
 #if 0
-        SCP_INFO(SCMOD) << "Got " << int(c) << "(" << c << ")";
+        SCP_INFO(()) << "Got " << int(c) << "(" << c << ")";
 #endif
         uint8_t* data = txn.get_data_ptr();
         for (int i = 0; i < txn.get_data_length(); i++) {
             if ((::write(m_socket, &data[i], 1)) != 1) {
-                SCP_WARN(SCMOD) << "Write did not complete: " << strerror(errno);
+                SCP_WARN(()) << "Write did not complete: " << strerror(errno);
             }
         }
     }
 
-    void setup_tcp_server(std::string ip, std::string port) {
+    void setup_tcp_server(std::string ip, std::string port)
+    {
         int ret;
         struct sockaddr_in addr_in;
         int iport;
         int flag;
 
-        SCP_DEBUG(SCMOD) << "setting up TCP server on " << ip << ":" << port;
+        SCP_DEBUG(()) << "setting up TCP server on " << ip << ":" << port;
 
         socklen_t addr_len = sizeof(struct sockaddr_in);
 
         m_srv_socket = ::socket(AF_INET, SOCK_STREAM, 0);
         if (m_srv_socket < 0) {
-            SCP_ERR(SCMOD) << "socket failed: " << std::strerror(errno);
+            SCP_ERR(()) << "socket failed: " << std::strerror(errno);
             return;
         }
 
@@ -210,7 +214,7 @@ public:
         if (ret < 0) {
             ::close(m_srv_socket);
             m_srv_socket = -1;
-            SCP_ERR(SCMOD) << "bind failed: " << std::strerror(errno);
+            SCP_ERR(()) << "bind failed: " << std::strerror(errno);
             return;
         }
 
@@ -218,7 +222,7 @@ public:
         if (ret < 0) {
             ::close(m_srv_socket);
             m_srv_socket = -1;
-            SCP_ERR(SCMOD) << "listen failed: " << std::strerror(errno);
+            SCP_ERR(()) << "listen failed: " << std::strerror(errno);
             return;
         }
 
@@ -226,14 +230,14 @@ public:
 #if 0
             flag = 1;
             if(::ioctl(m_srv_socket, FIONBIO, (char *)&flag) < 0) {
-                SCP_ERR(SCMOD) << "setting socket in non-blocking mode failed: " << std::strerror(errno);
+                SCP_ERR(()) << "setting socket in non-blocking mode failed: " << std::strerror(errno);
                 return;
             }
 #endif
 
             // accept() will be done later in the SC_THREAD
         } else {
-            SCP_INFO(SCMOD) << "waiting for a connection on " << ip << ":" << port;
+            SCP_INFO(()) << "waiting for a connection on " << ip << ":" << port;
 
             struct sockaddr_in client_addr;
 
@@ -241,42 +245,43 @@ public:
             if (m_socket < 0) {
                 ::close(m_srv_socket);
                 m_srv_socket = -1;
-                SCP_ERR(SCMOD) << "accept failed: " << std::strerror(errno);
+                SCP_ERR(()) << "accept failed: " << std::strerror(errno);
             }
 
 #if 0
             flag = 1;
             if(::ioctl(m_socket, FIONBIO, (char *)&flag) < 0) {
-                SCP_ERR(SCMOD) << "setting socket in blocking mode failed: " << std::strerror(errno);
+                SCP_ERR(()) << "setting socket in blocking mode failed: " << std::strerror(errno);
                 return;
             }
 #endif
 
             flag = 1;
             if (::setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag))) {
-                SCP_WARN(SCMOD) << "setting up TCP_NODELAY option failed: " << std::strerror(errno);
+                SCP_WARN(()) << "setting up TCP_NODELAY option failed: " << std::strerror(errno);
             }
 
             char str[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &(client_addr.sin_addr), str, INET_ADDRSTRLEN);
             int cport = ntohs(client_addr.sin_port);
 
-            SCP_DEBUG(SCMOD) << "incoming connection from  " << str << ":" << cport;
+            SCP_DEBUG(()) << "incoming connection from  " << str << ":" << cport;
         }
     }
 
-    void setup_tcp_client(std::string ip, std::string port) {
+    void setup_tcp_client(std::string ip, std::string port)
+    {
         int flag = 1;
         int status;
         struct addrinfo hints;
         struct addrinfo* servinfo;
 
-        SCP_INFO(SCMOD) << "setting up TCP client connection to " << ip << ":" << port;
+        SCP_INFO(()) << "setting up TCP client connection to " << ip << ":" << port;
 
         m_socket = ::socket(AF_INET, SOCK_STREAM, 0);
 
         if (m_socket == -1) {
-            SCP_ERR(SCMOD) << "socket failed: " << std::strerror(errno);
+            SCP_ERR(()) << "socket failed: " << std::strerror(errno);
             return;
         }
 
@@ -286,22 +291,21 @@ public:
 
         status = getaddrinfo(ip.c_str(), port.c_str(), &hints, &servinfo);
         if (status == -1) {
-            SCP_ERR(SCMOD) << "getaddrinfo failed: " << std::strerror(errno);
+            SCP_ERR(()) << "getaddrinfo failed: " << std::strerror(errno);
             goto close_sock;
         }
 
         if (m_nowait) {
             flag = 1;
             if (::ioctl(m_socket, FIONBIO, (char*)&flag) < 0) {
-                SCP_ERR(SCMOD) << "setting socket in non-blocking mode failed: "
-                               << std::strerror(errno);
+                SCP_ERR(()) << "setting socket in non-blocking mode failed: " << std::strerror(errno);
                 goto close_sock;
             }
 
             // connect() will be done later in the SC_THREAD
         } else {
             if (::connect(m_socket, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
-                SCP_ERR(SCMOD) << "connect failed: " << std::strerror(errno);
+                SCP_ERR(()) << "connect failed: " << std::strerror(errno);
                 freeaddrinfo(servinfo);
                 goto close_sock;
             }
@@ -309,13 +313,12 @@ public:
 
             flag = 1;
             if (::ioctl(m_socket, FIONBIO, (char*)&flag) < 0) {
-                SCP_ERR(SCMOD) << "setting socket in blocking mode failed: "
-                               << std::strerror(errno);
+                SCP_ERR(()) << "setting socket in blocking mode failed: " << std::strerror(errno);
                 return;
             }
 
             if (::setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag))) {
-                SCP_WARN(SCMOD) << "setting up TCP_NODELAY option failed: " << std::strerror(errno);
+                SCP_WARN(()) << "setting up TCP_NODELAY option failed: " << std::strerror(errno);
             }
         }
 

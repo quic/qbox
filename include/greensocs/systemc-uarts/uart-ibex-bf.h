@@ -21,6 +21,8 @@
 
 class IbexUart : public sc_core::sc_module
 {
+    SCP_LOGGER();
+
 public:
     enum Reg {
         REG_ITSTAT = 0x00,
@@ -50,7 +52,8 @@ public:
 
     uint8_t rdata;
 
-    void update_irqs(void) {
+    void update_irqs(void)
+    {
         uint32_t it = it_state & it_enable;
         if (it & FIELD_IT_RXWATERMARK) {
             irq_rxwatermark = true;
@@ -59,19 +62,21 @@ public:
         }
     }
 
-    void recv(uint32_t value) {
+    void recv(uint32_t value)
+    {
         if ((ctrl & FIELD_CTRL_RXENABLE) && (status & FIELD_STATUS_RXEMPTY)) {
             rdata = value;
             status &= ~(FIELD_STATUS_RXEMPTY | FIELD_STATUS_RXIDLE);
             it_state |= FIELD_IT_RXWATERMARK;
             update_event.notify();
         } else {
-            SCP_ERR(SCMOD) << "IbexUart: rx char overflow, ignoring chracter 0x" << (unsigned)value
-                           << " '" << value << "'";
+            SCP_ERR(()) << "IbexUart: rx char overflow, ignoring chracter 0x" << (unsigned)value << " '" << value
+                        << "'";
         }
     }
 
-    void receive(tlm::tlm_generic_payload& txn, sc_core::sc_time& t) {
+    void receive(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
+    {
         uint8_t* data = txn.get_data_ptr();
         for (int i = 0; i < txn.get_data_length(); i++) {
             recv(data[i]);
@@ -87,16 +92,15 @@ public:
 
     SC_HAS_PROCESS(IbexUart);
     IbexUart(sc_core::sc_module_name name)
-        : irq_rxwatermark("irq_rx_watermark")
-        , socket("target_socket")
-        , backend_socket("backend_socket") {
+        : irq_rxwatermark("irq_rx_watermark"), socket("target_socket"), backend_socket("backend_socket")
+    {
         ctrl = 0;
         status = FIELD_STATUS_TXEMPTY | FIELD_STATUS_RXIDLE | FIELD_STATUS_RXEMPTY;
         rdata = 0;
         it_enable = 0;
         it_state = 0;
 
-        SCP_DEBUG(SCMOD) << "IbexUart constructor";
+        SCP_TRACE(()) << "IbexUart constructor";
         socket.register_b_transport(this, &IbexUart::b_transport);
         backend_socket.register_b_transport(this, &IbexUart::receive); // add the recive method
 
@@ -104,7 +108,8 @@ public:
         sensitive << update_event;
     }
 
-    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
+    void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
+    {
         unsigned char* ptr = trans.get_data_ptr();
         uint64_t addr = trans.get_address();
         unsigned int len = trans.get_data_length();
@@ -127,7 +132,7 @@ public:
                 reg_write(addr, *(uint32_t*)ptr);
                 break;
             default:
-                SCP_FATAL(SCMOD) << "Incorrect transaction size";
+                SCP_FATAL(()) << "Incorrect transaction size";
                 break;
             }
             break;
@@ -143,7 +148,7 @@ public:
                 *(uint32_t*)ptr = reg_read(addr);
                 break;
             default:
-                SCP_FATAL(SCMOD) << "Incorrect transaction size";
+                SCP_FATAL(()) << "Incorrect transaction size";
                 break;
             }
             break;
@@ -155,7 +160,8 @@ public:
         trans.set_response_status(tlm::TLM_OK_RESPONSE);
     }
 
-    uint64_t reg_read(uint64_t addr) {
+    uint64_t reg_read(uint64_t addr)
+    {
         uint64_t r = 0;
 
         switch (addr) {
@@ -183,7 +189,8 @@ public:
         return r;
     }
 
-    void reg_write(uint64_t addr, uint32_t data) {
+    void reg_write(uint64_t addr, uint32_t data)
+    {
         switch (addr) {
         case REG_ITSTAT:
             it_state &= ~data;
@@ -205,10 +212,10 @@ public:
         }
     }
 
-    void before_end_of_elaboration() {
+    void before_end_of_elaboration()
+    {
         if (!irq_rxwatermark.get_interface()) {
-            sc_core::sc_signal<bool>* stub = new sc_core::sc_signal<bool>(
-                sc_core::sc_gen_unique_name("stub"));
+            sc_core::sc_signal<bool>* stub = new sc_core::sc_signal<bool>(sc_core::sc_gen_unique_name("stub"));
             irq_rxwatermark.bind(*stub);
         }
     }

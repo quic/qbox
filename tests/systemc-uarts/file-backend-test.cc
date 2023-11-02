@@ -45,18 +45,16 @@ class TestFILE : public TestBench
 public:
     InitiatorTester m_initiator;
     TestFILE(const sc_core::sc_module_name& n)
-        : TestBench(n)
-        , m_uart("uart")
-        , file_backend("backend")
-        , m_irq_trigger("irq_trigger")
-        , m_initiator("initiator") {
+        : TestBench(n), m_uart("uart"), file_backend("backend"), m_irq_trigger("irq_trigger"), m_initiator("initiator")
+    {
         m_uart.backend_socket.bind(file_backend.socket);
         m_initiator.socket.bind(m_uart.socket);
         m_uart.irq.bind(m_irq_trigger);
         auto cb = std::bind(&TestFILE::fn_cb, this, std::placeholders::_1);
         m_irq_trigger.register_value_changed_cb(cb);
     }
-    void fn_cb(const bool& val) {
+    void fn_cb(const bool& val)
+    {
         std::cout << "the val from irq is: " << val << std::endl;
         if (val) {
             ev.notify(sc_core::SC_ZERO_TIME);
@@ -64,7 +62,8 @@ public:
     }
 };
 
-TEST_BENCH(TestFILE, FileReadWrite) {
+TEST_BENCH(TestFILE, FileReadWrite)
+{
     m_initiator.do_write(14 << 2, 0x10); // #define PL011_INT_RX 0x10 - s->int_enabled
     m_initiator.do_write(11 << 2, 0x10); // pl011_set_read_trigger();
     char data;
@@ -90,7 +89,8 @@ TEST_BENCH(TestFILE, FileReadWrite) {
     sc_core::sc_stop();
 }
 
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char* argv[])
+{
     gs::ConfigurableBroker m_broker(argc, argv,
                                     { { "FileReadWrite.backend.read_file", cci::cci_value("/dev/null") },
                                       { "FileReadWrite.backend.write_file", cci::cci_value("/dev/null") },

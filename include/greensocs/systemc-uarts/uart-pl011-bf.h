@@ -81,6 +81,8 @@ typedef Pl011 Uart;
 
 class Pl011 : public sc_core::sc_module
 {
+    SCP_LOGGER();
+
 public:
     PL011State* s;
 
@@ -98,7 +100,7 @@ public:
     Pl011(sc_core::sc_module_name name)
         : irq("irq"), s(nullptr), socket("target_socket"), backend_socket("backend_socket")
     {
-        SCP_DEBUG(SCMOD) << "Pl011 constructor";
+        SCP_TRACE(()) << "Pl011 constructor";
         //        chr = NULL;
 
         socket.register_b_transport(this, &Pl011::b_transport);
@@ -161,7 +163,7 @@ public:
                 pl011_write(addr, *(uint32_t*)ptr);
                 break;
             default:
-                SCP_FATAL(SCMOD) << "Incorrect transaction size";
+                SCP_FATAL(()) << "Incorrect transaction size";
                 break;
             }
             break;
@@ -177,7 +179,7 @@ public:
                 *(uint32_t*)ptr = pl011_read(addr);
                 break;
             default:
-                SCP_FATAL(SCMOD) << "Incorrect transaction size";
+                SCP_FATAL(()) << "Incorrect transaction size";
                 break;
             }
             break;

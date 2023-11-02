@@ -51,7 +51,8 @@ public:
         , b_read_file("read_file", "", "read file path")
         , b_write_file("write_file", "", "write file path")
         , b_baudrate("baudrate", 0, "number of bytes per second")
-        , socket("biflow_socket") {
+        , socket("biflow_socket")
+    {
         SCP_TRACE(()) << "constructor";
 
         SC_THREAD(rcv_thread);
@@ -59,12 +60,12 @@ public:
 
         socket.register_b_transport(this, &CharBFBackendFile::writefn);
     }
-    void start_of_simulation() {
+    void start_of_simulation()
+    {
         if (!b_read_file.get_value().empty()) {
             r_file = fopen(b_read_file.get_value().c_str(), "r");
 
-            if (r_file == NULL)
-                SCP_ERR(()) << "Error opening the file.\n";
+            if (r_file == NULL) SCP_ERR(()) << "Error opening the file.\n";
             update_event.notify(sc_core::SC_ZERO_TIME);
         } else {
             SCP_ERR(()) << "Error reading the path of b_read_file.\n";
@@ -73,8 +74,7 @@ public:
         if (!b_write_file.get_value().empty()) {
             w_file = fopen(b_write_file.get_value().c_str(), "w");
 
-            if (w_file == NULL)
-                SCP_ERR(()) << "Error opening the file.\n";
+            if (w_file == NULL) SCP_ERR(()) << "Error opening the file.\n";
 
             socket.can_receive_any();
         } else {
@@ -83,7 +83,8 @@ public:
     }
     void end_of_elaboration() {}
 
-    void rcv_thread() {
+    void rcv_thread()
+    {
         if (b_baudrate.get_value() == 0)
             delay = 0;
         else
@@ -97,7 +98,8 @@ public:
         fclose(r_file);
     }
 
-    void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t) {
+    void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
+    {
         uint8_t* data = txn.get_data_ptr();
         for (int i = 0; i < txn.get_data_length(); i++) {
             size_t ret = fwrite(&data[i], sizeof(uint8_t), 1, w_file);

@@ -45,7 +45,8 @@ public:
         , server("s_server", "tcp", "127.0.0.1:8000", true, true)   // server=true, nowait=true
         , m_initiator_1("initiator_1")
         , m_irq_trigger("irq_trigger")
-        , m_initiator_2("initiator_2") {
+        , m_initiator_2("initiator_2")
+    {
         m_uart_1.backend_socket.bind(server.socket);
         m_uart_2.backend_socket.bind(client.socket);
 
@@ -58,7 +59,8 @@ public:
         m_irq_trigger.register_value_changed_cb(cb);
     }
 
-    void fn_cb(const bool& val) {
+    void fn_cb(const bool& val)
+    {
         std::cout << "the val from irq_2 is: " << val << std::endl;
         if (val) {
             ev.notify();
@@ -67,7 +69,8 @@ public:
     }
 };
 
-TEST_BENCH(TestUart, UartRead) {
+TEST_BENCH(TestUart, UartRead)
+{
     m_initiator_1.do_write(0, 'H'); // data
     m_initiator_1.do_write(0, 'i'); // data
 
@@ -87,7 +90,8 @@ TEST_BENCH(TestUart, UartRead) {
     sc_core::sc_stop();
 }
 
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char* argv[])
+{
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
