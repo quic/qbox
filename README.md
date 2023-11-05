@@ -306,6 +306,150 @@ It also allows to bind multiple initiators with `add_initiator(socket)` to send 
 
 So there is no need for the bind() method offered by sockets because the add_initiator method already takes care of that.
 
+## The GreenSocs component library PythonBinder
+
+The python binder component is a systemc model used to initiate or react to systemc TLM transactions from the python programming language. The model only exposes the minimum set of systemc/TLM features to python for mainly implementing python based backends for I/O models (e.g., stdio backend for UART) and models which can react to systemc initiated transactions utilising the python awesome language with a rich set of useful packages. The model uses a C++ library called pybind11: https://pybind11.readthedocs.io/en/stable/ to embed a python interpreter within the virtual platform process and expose a set of systemc C++ features to python scripts using pybind11 embedded modules capability: https://pybind11.readthedocs.io/en/stable/advanced/embedding.html. 
+
+The set of modules exposed from C++ to python are:  
+(For more information about systemc/TLM types and functions: https://www.accellera.org/images/downloads/standards/systemc/systemc-2.3.1.tgz):
+* sc_core: (e.g., ```from sc_core import sc_time_unit``` )  
+    * sc_time_unit: maps to C++ sc_core::sc_time_unit enum (SC_FS, SC_PS, SC_NS, SC_US, SC_MS, SC_SEC).
+    * sc_time: maps to C++ sc_core::sc_time:
+        * sc_time(): default constructor.
+        * sc_time(value:float, unit:sc_core.sc_time_unit): constructor.
+        * sc_time(value:float, unit:str): constructor (convert time unit from string: "fs"/"SC_FS"->SC_FS, "ps"/"SC_PS"->SC_PS, "ns"/"SC_NS"->SC_NS, ...)
+        * sc_time(value:float, scale:bool): constructor.
+        * sc_time(value:int, scale:bool): constructor.
+        * from_seconds(value:float) -> sc_core.sc_time
+        * from_value(value:int) -> sc_core.sc_time 
+        * from_string(unit:str) -> sc_core.sc_time
+        * to_default_time_units() -> float
+        * to_double() -> float
+        * to_seconds() -> float
+        * to_string() -> str
+        * value() -> int
+        * A set of overloaded operators:
+            * sc_core.sc_time + sc_core.sc_time -> sc_core.sc_time
+            * sc_core.sc_time - sc_core.sc_time -> sc_core.sc_time
+            * sc_core.sc_time / sc_core.sc_time -> float
+            * sc_core.sc_time / float -> sc_core.sc_time
+            * sc_core.sc_time * float -> sc_core.sc_time
+            * float * sc_core.sc_time -> sc_core.sc_time
+            * sc_core.sc_time % sc_core.sc_time -> sc_core.sc_time
+            * sc_core.sc_time += sc_core.sc_time -> sc_core.sc_time
+            * sc_core.sc_time -= sc_core.sc_time -> sc_core.sc_time
+            * sc_core.sc_time %= sc_core.sc_time -> sc_core.sc_time
+            * sc_core.sc_time *= double() -> sc_core.sc_time
+            * sc_core.sc_time /= double() -> sc_core.sc_time
+            * sc_core.sc_time == sc_core.sc_time -> bool
+            * sc_core.sc_time != sc_core.sc_time -> bool
+            * sc_core.sc_time <= sc_core.sc_time -> bool
+            * sc_core.sc_time >= sc_core.sc_time -> bool
+            * sc_core.sc_time > sc_core.sc_time -> bool
+            * sc_core.sc_time < sc_core.sc_time -> bool
+    * sc_event: maps to C++ sc_core::sc_event:
+        * sc_event(): default constructor.
+        * sc_event(name:str): constructor.
+        * notify() -> None
+        * notify(t:sc_core.sc_time) -> None
+        * notify(value:float, unit:sc_core.sc_time_unit) -> None
+        * notify_delayed() -> None
+        * notify_delayed(sc_core.sc_time) -> None
+        * notify_delayed(value:float, unit:sc_time_unit) -> None
+    * sc_spawn_options: maps to C++ sc_core::sc_spawn_options:
+        * sc_spawn_options(): default constructor.
+        * dont_initialize() -> None
+        * is_method() -> bool
+        * set_stack_size(value:int) -> None
+        * set_sensitivity(gs.async_event) -> None
+        * set_sensitivity(sc_core.sc_event) -> None
+        * spawn_method() -> None
+    * wait(t:sc_core.sc_time) -> None
+    * wait(ev:sc_core.sc_event) -> None
+    * wait(ev:gs.sc_event) -> None
+    * sc_spawn(f:Callable, name:str, opts:sc_spawn_options) -> None
+* gs:
+    * async_event: mpas to C++ gs::async_event:
+        * async_event(start_attached:bool): constructor
+        * async_notify() -> None
+        * notify(delay:sc_core.sc_time) -> None
+        * async_attach_suspending() -> None
+        * async_detach_suspending() -> None
+        * enable_attach_suspending(e:bool) -> None
+* tlm_generic_payload:
+    * tlm_command: maps to C++ tlm::tlm_command enum (TLM_READ_COMMAND, TLM_WRITE_COMMAND, TLM_IGNORE_COMMAND)
+    * tlm_response_status: maps to C++ tlm::tlm_response_status enum (TLM_OK_RESPONSE, TLM_INCOMPLETE_RESPONSE, TLM_GENERIC_ERROR_RESPONSE, TLM_ADDRESS_ERROR_RESPONSE, TLM_COMMAND_ERROR_RESPONSE, TLM_BURST_ERROR_RESPONSE, TLM_BYTE_ENABLE_ERROR_RESPONSE)
+    * tlm_generic_payload: maps to C++ tlm::tlm_generic_payload with most of its C++ member functions:
+        * get_address() -> int
+        * set_address(addr:int) -> None
+        * is_read() -> bool
+        * is_write() -> bool
+        * set_read() -> None
+        * set_write() -> None
+        * get_command() -> tlm_command
+        * set_command(command:tlm_command) -> None
+        * is_response_ok() -> bool
+        * is_response_error() -> bool
+        * get_response_status() -> tlm_response_status
+        * set_response_status(status:tlm_response_status) -> None
+        * get_response_string() -> str
+        * get_streaming_width() -> int
+        * set_streaming_width(width:int) -> None
+        * set_data_length(len:int) -> None
+        * get_data_length() -> int
+        * set_data_ptr(numpy.typing.NDArray[uint8]) -> None: if the transaction will be created in python land.
+        * set_data(numpy.typing.NDArray[uint8]) -> None: if the transaction is created in C++ land and reused from python.
+        * get_data() -> numpy.typing.NDArray[uint8]
+        * set_byte_enable_length(len:int) -> None
+        * get_byte_enable_length() -> int
+        * set_byte_enable_ptr(numpy.typing.NDArray[uint8]) -> None: if the transaction will be created in python land.
+        * set_byte_enable(numpy.typing.NDArray[uint8]) -> None: if the transaction is created in C++ land and reused from python.
+        * get_byte_enable() -> numpy.typing.NDArray[uint8]
+        * __repr__() -> str
+    * cpp_shared_vars: it has these python global variables shared from C++ land:
+        * module_args: a python string which includes the command line arguments passed to the PythonBinder modeule as a CCI parameter named: py_module_args
+    * tlm_do_b_transport:
+        * do_b_transport(id:int, trans:tlm_generic_payload.tlm_generic_payload, delay:sc_core.sc_time) -> None: initiate a b_transport call from python, the function maps to C++ initiator_sockets[id]->b_transport(trans, delay). 
+    * initiator_signal_socket:
+        * write(id:int, value:bool) -> None: write value using C++ initiator_signal_sockets[id].
+
+The input to the model is a sc_vector<tlm_utils::simple_target_socket_tagged_b<...>> target_sockets.  
+A python b_transport(id:int, trans:tlm_generic_payload.tlm_generic_payload, delay:sc_ccore.sc_time) -> None: can be implemented to react to transactions on target_sockets[id].
+
+
+TLM transactions can also be initiated from the python script by calling:  
+tlm_do_b_transport.do_b_transport(id:int, trans:tlm_generic_payload.tlm_generic_payload, delay:sc_core.sc_time) -> None.  
+so the PythonBinder has also an ouptut sc_vector<tlm_utils::simple_target_socket_tagged_b<...>> initiator_sockets, and calls to python tlm_do_b_transport.do_b_transport(id, trans, delay) will be translated to C++ initiator_sockets[id]->b_transport(trans, delay).
+
+
+The model has an input sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets.
+signals can be handled from inside the python script using:  
+target_signal_cb(id: int, value: bool) -> None.
+
+
+Also the python script can initiate signal writes on sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets output signals using:  
+write(id:int, value:bool) -> None  
+this will correspond to C++ initiator_signal_sockets[id]->write(value).
+
+This set of systemc simulation callbacks can also be implemented in python for the PythonBinder model:
+* before_end_of_elaboration() -> None
+* end_of_elaboration() -> None
+* start_of_simulation() -> None
+* end_of_simulation() -> None
+
+PythonBinder uses this set of CCI parameters:
+* py_module_name: name of python script with module implementation (with or without .py suffix).
+* py_module_dir: path of the directory which contains <py_module_name>.py.
+* py_module_args: a string of command line arguments to be passed to the module.
+* tlm_initiator_ports_num: number of tlm initiator ports.
+* tlm_target_ports_num: number of tlm target ports.
+* initiator_signals_num: number of initiator signals.
+* target_signals_num: number of target signals.
+
+For examples of how to use PythonBinder:
+* tests/base-components/python-binder (PythonBinder test bench).
+* py-models/py-uart.py (an example stdio backend for include/greensocs/systemc-uarts/uart-pl011-bf.h UART model).
+
 ## Functionality of the synchronization library
 
 In addition the library contains utilities such as an thread safe event (async_event) and a real time speed limited for SystemC.
