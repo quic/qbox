@@ -327,6 +327,7 @@ The set of modules exposed from C++ to python are:
         * to_double() -> float
         * to_seconds() -> float
         * to_string() -> str
+        * \__repr\__() -> str
         * value() -> int
         * A set of overloaded operators:
             * sc_core.sc_time + sc_core.sc_time -> sc_core.sc_time
@@ -405,7 +406,7 @@ The set of modules exposed from C++ to python are:
         * set_byte_enable_ptr(numpy.typing.NDArray[uint8]) -> None: if the transaction will be created in python land.
         * set_byte_enable(numpy.typing.NDArray[uint8]) -> None: if the transaction is created in C++ land and reused from python.
         * get_byte_enable() -> numpy.typing.NDArray[uint8]
-        * __repr__() -> str
+        * \__repr\__() -> str
     * cpp_shared_vars: it has these python global variables shared from C++ land:
         * module_args: a python string which includes the command line arguments passed to the PythonBinder modeule as a CCI parameter named: py_module_args
     * tlm_do_b_transport:

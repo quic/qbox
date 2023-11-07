@@ -64,6 +64,11 @@ gs_addexpackage("gh:rpclib/rpclib#v2.3.0")
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 gs_addexpackage("gh:pybind/pybind11#v2.11.1")
 
+set(PYBIND11_EMBED "pybind11::embed")
+if (DEFINED GS_ONLY)
+    set(PYBIND11_EMBED "")
+endif()
+
 set(srcs
     src/libgssync/qkmultithread.cc
     src/libgssync/qk_factory.cc
@@ -163,7 +168,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
      ${SDL2_LIBRARIES}
      libqemu
      rpc
-     pybind11::embed
+     ${PYBIND11_EMBED}
      ${CMAKE_DL_LIBS}
 )
 
@@ -224,7 +229,7 @@ else()
         ${TARGET_LIBS}
         ${LIBELF_LIBRARIES}
         rpc
-        pybind11::embed
+        ${PYBIND11_EMBED}
         ${CMAKE_DL_LIBS}
     )
 
