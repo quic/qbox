@@ -241,12 +241,14 @@ protected:
     {
         m_inst.push_qemu_arg("-accel");
 
-        if (p_accel.get_value() == "tcg") {
+        auto& accel = p_accel.get_value();
+
+        if (accel == "tcg") {
             push_tcg_mode_args();
-        } else if (p_accel.get_value() == "hvf") {
-            m_inst.push_qemu_arg(p_accel.get_value().c_str());
+        } else if (accel == "hvf" || accel == "kvm") {
+            m_inst.push_qemu_arg(accel.c_str());
         } else {
-            SCP_FATAL(()) << "Invalid accel property '" << p_accel.get_value() << "'";
+            SCP_FATAL(()) << "Invalid accel property '" << accel << "'";
         }
     }
 
