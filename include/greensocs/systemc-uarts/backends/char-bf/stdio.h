@@ -23,6 +23,9 @@
 
 class CharBFBackendStdio : public sc_core::sc_module
 {
+protected:
+    cci::cci_param<bool> p_read_write;
+
 private:
     bool m_running = true;
     std::thread rcv_thread_id;
@@ -51,8 +54,10 @@ public:
         tcsetattr(fd, TCSANOW, &tty);
     }
 
-    CharBFBackendStdio(sc_core::sc_module_name name, bool read_write = true)
-        : sc_core::sc_module(name), socket("biflow_socket")
+    CharBFBackendStdio(sc_core::sc_module_name name)
+        : sc_core::sc_module(name)
+        , p_read_write("read_write", true, "read_write if true start rcv_thread")
+        , socket("biflow_socket")
     {
         SCP_TRACE(()) << "constructor";
 
@@ -76,7 +81,7 @@ public:
                 socket.enqueue(ch);
             }
         });
-        if (read_write) rcv_thread_id = std::thread(&CharBFBackendStdio::rcv_thread, this);
+        if (p_read_write) rcv_thread_id = std::thread(&CharBFBackendStdio::rcv_thread, this);
 
         socket.register_b_transport(this, &CharBFBackendStdio::writefn);
     }
@@ -127,5 +132,5 @@ public:
         if (rcv_thread_id.joinable()) rcv_thread_id.join();
     }
 };
-GSC_MODULE_REGISTER(CharBFBackendStdio, bool);
+GSC_MODULE_REGISTER(CharBFBackendStdio);
 #endif

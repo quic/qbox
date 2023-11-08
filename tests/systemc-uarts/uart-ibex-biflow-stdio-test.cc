@@ -47,7 +47,7 @@ public:
         : TestBench(n)
         , m_uart_1("uart_1")
         , m_uart_2("uart_2")
-        , u_backend_stdio_1("backend_1", false)
+        , u_backend_stdio_1("backend_1")
         , u_backend_stdio_2("backend_2")
         , m_initiator_1("initiator_1")
         , m_irq_trigger("irq_trigger")
@@ -72,7 +72,7 @@ public:
     }
 };
 
-TEST_BENCH(TestUart, UartWrite)
+TEST_BENCH(TestUart, IbexStdioBackend)
 {
     std::string str = "Qualcomm";
     //___________ redirect stdout ____________//
@@ -128,6 +128,8 @@ TEST_BENCH(TestUart, UartWrite)
 }
 int sc_main(int argc, char* argv[])
 {
+    gs::ConfigurableBroker m_broker(argc, argv, { { "IbexStdioBackend.backend_1.read_write", cci::cci_value(false) } });
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

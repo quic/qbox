@@ -41,8 +41,8 @@ public:
         : TestBench(n)
         , m_uart_1("uart_1")
         , m_uart_2("uart_2")
-        , client("s_client", "tcp", "127.0.0.1:8000", false, false) // server=false, nowait=false
-        , server("s_server", "tcp", "127.0.0.1:8000", true, true)   // server=true, nowait=true
+        , client("s_client")
+        , server("s_server")
         , m_initiator_1("initiator_1")
         , m_irq_trigger("irq_trigger")
         , m_initiator_2("initiator_2")
@@ -69,7 +69,7 @@ public:
     }
 };
 
-TEST_BENCH(TestUart, UartRead)
+TEST_BENCH(TestUart, SocketBackend)
 {
     m_initiator_1.do_write(0, 'H'); // data
     m_initiator_1.do_write(0, 'i'); // data
@@ -92,6 +92,15 @@ TEST_BENCH(TestUart, UartRead)
 
 int sc_main(int argc, char* argv[])
 {
+    gs::ConfigurableBroker m_broker(argc, argv,
+                                    {
+                                        { "SocketBackend.s_client.address", cci::cci_value("127.0.0.1:8000") },
+                                        { "SocketBackend.s_client.server", cci::cci_value(false) },
+                                        { "SocketBackend.s_server.nowait", cci::cci_value(false) },
+                                        { "SocketBackend.s_client.nowait", cci::cci_value(false) },
+                                        { "SocketBackend.s_server.address", cci::cci_value("127.0.0.1:8000") },
+                                    });
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
