@@ -54,8 +54,18 @@ public:
         : QemuArmGicv3(name, *(dynamic_cast<QemuInstance*>(o)))
     {
     }
+
+    static const char* get_gicv3_type(QemuInstance& inst)
+    {
+        if (inst.is_kvm_enabled()) {
+            return "kvm-arm-gicv3";
+        } else {
+            return "arm-gicv3";
+        }
+    }
+
     QemuArmGicv3(const sc_core::sc_module_name& name, QemuInstance& inst, unsigned num_cpus = 0)
-        : QemuDevice(name, inst, "arm-gicv3")
+        : QemuDevice(name, inst, get_gicv3_type(inst))
         , p_num_cpu("num_cpus", num_cpus, "Number of CPU interfaces")
         , p_num_spi("num_spi", 0, "Number of shared peripheral interrupts")
         , p_revision("revision", 3, "Revision of the GIC (3 -> v3, the only supported revision)")
@@ -87,7 +97,9 @@ public:
         m_dev.set_prop_int("num-cpu", p_num_cpu);
         m_dev.set_prop_int("num-irq", p_num_spi + NUM_PPI);
         m_dev.set_prop_int("revision", p_revision);
-        m_dev.set_prop_bool("has-security-extensions", p_has_security_extensions);
+
+        bool has_security_extensions = m_inst.is_kvm_enabled() ? false : p_has_security_extensions.get_value();
+        m_dev.set_prop_bool("has-security-extensions", has_security_extensions);
 
         m_dev.set_prop_int("len-redist-region-count", p_redist_region.get_value().size());
         for (i = 0; i < p_redist_region.get_value().size(); i++) {

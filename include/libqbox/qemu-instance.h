@@ -339,6 +339,8 @@ public:
      */
     TcgMode get_tcg_mode() { return m_tcg_mode; }
 
+    bool is_kvm_enabled() const { return p_accel.get_value() == "kvm"; }
+
     /**
      * @brief Get the TCG mode for this instance
      *
