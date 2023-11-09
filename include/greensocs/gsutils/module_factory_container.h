@@ -23,14 +23,12 @@
 #include <greensocs/libgssync.h>
 
 #ifndef WITHOUT_QEMU
-#include <libqbox/qemu-instance.h>
 #include <libqbox/ports/target.h>
 #include <libqbox/ports/initiator.h>
 #include <libqbox/ports/target-signal-socket.h>
 #include <libqbox/ports/initiator-signal-socket.h>
 #endif
 
-#include <greensocs/systemc-uarts/backends/char-bf/stdio.h>
 #include <greensocs/gsutils/ports/biflow-socket.h>
 #include <greensocs/gsutils/module_factory_registery.h>
 #include <greensocs/base-components/transaction_forwarder_if.h>

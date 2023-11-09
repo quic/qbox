@@ -10,6 +10,7 @@
 
 #include <tlm>
 
+#include "libqbox/qemu-instance.h"
 #include "libqbox/tlm-extensions/qemu-cpu-hint.h"
 #include "libqbox/tlm-extensions/qemu-mr-hint.h"
 #include <greensocs/gsutils/tlm_sockets_buswidth.h>
