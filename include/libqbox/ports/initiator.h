@@ -453,7 +453,7 @@ public:
         ops->set_max_access_size(8);
 
         auto system_memory = inst.get_system_memory();
-        system_memory->init_io(dev, TlmInitiatorSocket::name(), std::numeric_limits<uint64_t>::max(), ops);
+        system_memory->init_io(dev, TlmInitiatorSocket::name(), std::numeric_limits<uint64_t>::max() - 1, ops);
         m_r = new m_mem_obj(std::move(system_memory));
 
         m_as = inst.address_space_get_system_memory();
