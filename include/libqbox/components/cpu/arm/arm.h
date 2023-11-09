@@ -34,13 +34,14 @@ public:
 
     void start_of_simulation() override
     {
-        QemuCpu::start_of_simulation();
-
         // According to qemu/hw/arm/virt.c:
         // virt_cpu_post_init() must be called after the CPUs have been realized
         // and the GIC has been created.
         // I am not sure if this the right place where to call it. I wonder if a
         // `before_start_of_simulation` stage would be a better place for this.
+        // It MUST be called before `QemuCpu::start_of_simulation()`.
         get_cpu_aarch64().post_init();
+
+        QemuCpu::start_of_simulation();
     }
 };
