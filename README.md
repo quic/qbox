@@ -451,6 +451,9 @@ For examples of how to use PythonBinder:
 * tests/base-components/python-binder (PythonBinder test bench).
 * py-models/py-uart.py (an example stdio backend for include/greensocs/systemc-uarts/uart-pl011.h UART model).
 
+Please notice that:
+To build Qbox without including PythonBinder and its pybind11 dependencies, use this cmake option -DWITHOUT_PYTHON_BINDER=ON
+
 ## Functionality of the synchronization library
 
 In addition the library contains utilities such as an thread safe event (async_event) and a real time speed limited for SystemC.
