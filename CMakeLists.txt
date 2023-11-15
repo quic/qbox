@@ -61,15 +61,13 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # Other Dependencies
 gs_addexpackage("gh:rpclib/rpclib#v2.3.0")
 
-option(WITHOUT_PYTHON_BINDER "without python binder model" OFF)
+find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+gs_addexpackage("gh:pybind/pybind11#v2.11.1")
 
-if((NOT WITHOUT_PYTHON_BINDER) AND (NOT GS_ONLY))
-    find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
-    gs_addexpackage("gh:pybind/pybind11#v2.11.1")
-    set(PYBIND11_EMBED "pybind11::embed")
-    set(PYTHON_BINDER_SRC "src/python-utils/python_binder.cc")
+set(PYBIND11_EMBED "pybind11::embed")
+if (DEFINED GS_ONLY)
+    set(PYBIND11_EMBED "")
 endif()
-
 
 set(srcs
     src/libgssync/qkmultithread.cc
@@ -81,7 +79,7 @@ set(srcs
     src/systemc-macs/components/phy.cc
     src/systemc-macs/models/xgmac.cc
     src/gsutils/cciutils.cc
-    ${PYTHON_BINDER_SRC}
+    src/python-utils/python_binder.cc
 )
 
 if (NOT WITHOUT_QEMU)
