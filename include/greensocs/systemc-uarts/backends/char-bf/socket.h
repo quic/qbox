@@ -232,13 +232,13 @@ public:
         status = getaddrinfo(ip.c_str(), port.c_str(), &hints, &servinfo);
         if (status == -1) {
             SCP_ERR(()) << "getaddrinfo failed: " << std::strerror(errno);
-            goto close_sock;
+            close_sock();
         }
 
         if (::connect(m_socket, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
             SCP_ERR(()) << "connect failed: " << std::strerror(errno);
             freeaddrinfo(servinfo);
-            goto close_sock;
+            close_sock();
         }
         freeaddrinfo(servinfo);
 
@@ -253,8 +253,10 @@ public:
         }
 
         return;
+    }
 
-    close_sock:
+    void close_sock()
+    {
         ::close(m_socket);
         m_socket = -1;
     }
