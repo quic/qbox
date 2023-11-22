@@ -23,10 +23,9 @@ public:
 
     void test_write_one_bloc()
     {
-        int tab[0x200];
-        // int tab = 0xFF;
-        int data1[0x200];
-        uint64_t data;
+        int tab[0x200] = { 0 };
+
+        int data1[0x200] = { 0 };
 
         for (int i = 0; i < 0x200; i++) {
             tab[i] = 4;
@@ -39,28 +38,32 @@ public:
             assert(data1[i] == tab[i]);
         }
 
+        uint8_t data_8t = 0;
         m_initiator.do_write<uint8_t>(0x10000, 0xFF);
-        m_initiator.do_read(0x10000, data);
-        assert(0xFF == data);
+        m_initiator.do_read(0x10000, data_8t);
+        assert(0xFF == data_8t);
 
-        m_initiator.do_write<uint16_t>(0x20000, 0xFF);
-        m_initiator.do_read(0x20000, data);
-        assert(0xFF == data);
+        uint16_t data_16t = 0;
+        m_initiator.do_write<uint16_t>(0x20000, 0xABCD);
+        m_initiator.do_read(0x20000, data_16t);
+        assert(0xABCD == data_16t);
 
-        m_initiator.do_write<uint32_t>(0x30000, 0xFF);
-        m_initiator.do_read(0x30000, data);
-        assert(0xFF == data);
+        uint32_t data_32t = 0;
+        m_initiator.do_write<uint32_t>(0x30000, 0xABCDEF);
+        m_initiator.do_read(0x30000, data_32t);
+        assert(0xABCDEF == data_32t);
 
-        m_initiator.do_write<uint64_t>(0x50000, 0xFF);
-        m_initiator.do_read(0x50000, data);
-        assert(0xFF == data);
+        uint64_t data_64t = 0;
+        m_initiator.do_write<uint64_t>(0x50000, 0xABCDEFAF);
+        m_initiator.do_read(0x50000, data_64t);
+        assert(0xABCDEFAF == data_64t);
     }
 
     void test_write_two_blocs()
     {
-        int tab[0x80000];
-        int data1[0x80000];
-        uint8_t data;
+        int tab[0x80000] = { 0 };
+        int data1[0x80000] = { 0 };
+        uint8_t data = 0;
 
         for (int i = 0; i < 0x80000; i++) {
             tab[i] = 4;
@@ -76,16 +79,16 @@ public:
             // SCP_INFO(SCMOD) << "tab = "<< tab[i] << endl;
         }
 
-        m_initiator.do_write<uint8_t>(0x400000000, 0xFF);
+        m_initiator.do_write<uint8_t>(0x400000000, 0x66);
         m_initiator.do_read(0x400000000, data);
-        assert(0xFF == data);
+        assert(0x66 == data);
     }
 
     void test_write_debug_one_bloc()
     {
-        int tab[0x200];
-        int data1[0x200];
-        uint64_t data;
+        int tab[0x200] = { 0 };
+        int data1[0x200] = { 0 };
+        uint64_t data = 0;
 
         for (int i = 0; i < 0x200; i++) {
             tab[i] = 4;
@@ -100,35 +103,39 @@ public:
             assert(data1[i] == tab[i]);
         }
 
-        m_initiator.do_write<uint8_t>(0x200000, 0xFF, true);
+        uint8_t data_8t = 0;
+        m_initiator.do_write<uint8_t>(0x200000, 0x90, true);
         assert(m_initiator.get_last_transport_debug_ret() == sizeof(uint8_t));
-        m_initiator.do_read(0x10000, data, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data));
-        assert(0xFF == data);
+        m_initiator.do_read(0x200000, data_8t, true);
+        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data_8t));
+        assert(0x90 == data_8t);
 
-        m_initiator.do_write<uint16_t>(0x300000, 0xFF, true);
+        uint16_t data_16t = 0;
+        m_initiator.do_write<uint16_t>(0x300000, 0xABCD, true);
         assert(m_initiator.get_last_transport_debug_ret() == sizeof(uint16_t));
-        m_initiator.do_read(0x20000, data, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data));
-        assert(0xFF == data);
+        m_initiator.do_read(0x300000, data_16t, true);
+        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data_16t));
+        assert(0xABCD == data_16t);
 
-        m_initiator.do_write<uint32_t>(0x400000, 0xFF, true);
+        uint32_t data_32t = 0;
+        m_initiator.do_write<uint32_t>(0x400000, 0xFFABEF, true);
         assert(m_initiator.get_last_transport_debug_ret() == sizeof(uint32_t));
-        m_initiator.do_read(0x30000, data, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data));
-        assert(0xFF == data);
+        m_initiator.do_read(0x400000, data_32t, true);
+        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data_32t));
+        assert(0xFFABEF == data_32t);
 
-        m_initiator.do_write<uint64_t>(0x500000, 0xFF, true);
+        uint64_t data_64t = 0;
+        m_initiator.do_write<uint64_t>(0x500000, 0x12345678, true);
         assert(m_initiator.get_last_transport_debug_ret() == sizeof(uint64_t));
-        m_initiator.do_read(0x50000, data, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data));
-        assert(0xFF == data);
+        m_initiator.do_read(0x500000, data_64t, true);
+        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data_64t));
+        assert(0x12345678 == data_64t);
     }
 
     void test_write_debug_two_blocs()
     {
-        int tab[0x200];
-        int data[0x200];
+        int tab[0x200] = { 0 };
+        int data[0x200] = { 0 };
 
         for (int i = 0; i < 0x200; i++) {
             tab[i] = 8;
@@ -189,9 +196,9 @@ public:
     void test_write_with_DMI()
     {
         uint8_t data = 0xFF;
-        uint8_t tab[0x80000];
-        uint8_t data1[0x80000];
-        uint8_t data_read;
+        uint8_t tab[0x80000] = { 0 };
+        uint8_t data1[0x80000] = { 0 };
+        uint8_t data_read = 0;
 
         for (int i = 0; i < 0x80000; i++) {
             tab[i] = 8;

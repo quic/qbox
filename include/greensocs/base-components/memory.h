@@ -526,7 +526,7 @@ public:
                 m_address = 0; // fine for relative addressing
                 SCP_WARN(()) << "Can't find " << ts_name << ".address";
             } else {
-                m_address = m_broker.get_preset_cci_value(ts_name + ".address").get_uint64();
+                m_address = gs::cci_get<uint64_t>(m_broker, ts_name + ".address");
             }
             m_broker.lock_preset_value(ts_name + ".address");
             m_address_valid = true;
