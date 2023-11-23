@@ -54,7 +54,7 @@ def vp_test():
             stderr=subprocess.PIPE,
         )
 
-    child = pexpect.spawn(vp_path.as_posix(), ["--gs_luafile", args.lua], env=env)
+    child = pexpect.spawn(vp_path.as_posix(), ["--gs_luafile", args.lua], env=env, timeout=40)
     child.logfile = stdout.buffer
     child.expect("buildroot")
     child.expect("login:")
