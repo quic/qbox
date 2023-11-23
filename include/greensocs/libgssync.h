@@ -6,6 +6,7 @@
 
 #include "greensocs/libgssync/async_event.h"
 #include "greensocs/libgssync/inlinesync.h"
+#include "greensocs/libgssync/keep_alive.h"
 #include "greensocs/libgssync/runonsysc.h"
 #include "greensocs/libgssync/qkmultithread.h"
 #include "greensocs/libgssync/qkmulti-quantum.h"
