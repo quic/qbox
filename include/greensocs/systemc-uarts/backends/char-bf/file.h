@@ -25,7 +25,7 @@
 #include <queue>
 #include <stdlib.h>
 #include <scp/report.h>
-class CharBFBackendFile : public sc_core::sc_module
+class CharBackendFile : public sc_core::sc_module
 {
 protected:
     cci::cci_param<std::string> p_read_file;
@@ -39,18 +39,18 @@ private:
     SCP_LOGGER();
 
 public:
-    gs::biflow_socket<CharBFBackendFile> socket;
+    gs::biflow_socket<CharBackendFile> socket;
     sc_core::sc_event update_event;
 
 #ifdef WIN32
-#pragma message("CharBFBackendFile not yet implemented for WIN32")
+#pragma message("CharBackendFile not yet implemented for WIN32")
 #endif
     /**
-     * CharBFBackendFile() - Construct the file-backend
+     * CharBackendFile() - Construct the file-backend
      * @name: this backend's name
      * the paramters p_read_file, p_write_file and p_baudrate are CCI paramters
      */
-    CharBFBackendFile(sc_core::sc_module_name name)
+    CharBackendFile(sc_core::sc_module_name name)
         : sc_core::sc_module(name)
         , p_read_file("read_file", "", "read file path")
         , p_write_file("write_file", "", "write file path")
@@ -62,7 +62,7 @@ public:
         SC_THREAD(rcv_thread);
         sensitive << update_event;
 
-        socket.register_b_transport(this, &CharBFBackendFile::writefn);
+        socket.register_b_transport(this, &CharBackendFile::writefn);
     }
     void start_of_simulation()
     {
@@ -114,7 +114,7 @@ public:
         fclose(w_file);
     }
 
-    ~CharBFBackendFile() {}
+    ~CharBackendFile() {}
 };
-GSC_MODULE_REGISTER(CharBFBackendFile);
+GSC_MODULE_REGISTER(CharBackendFile);
 #endif

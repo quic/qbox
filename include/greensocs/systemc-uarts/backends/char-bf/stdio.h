@@ -21,7 +21,7 @@
 #include <signal.h>
 #include <termios.h>
 
-class CharBFBackendStdio : public sc_core::sc_module
+class CharBackendStdio : public sc_core::sc_module
 {
 protected:
     cci::cci_param<bool> p_read_write;
@@ -34,10 +34,10 @@ private:
     SCP_LOGGER();
 
 public:
-    gs::biflow_socket<CharBFBackendStdio> socket;
+    gs::biflow_socket<CharBackendStdio> socket;
 
 #ifdef WIN32
-#pragma message("CharBFBackendStdio not yet implemented for WIN32")
+#pragma message("CharBackendStdio not yet implemented for WIN32")
 #endif
     static void catch_fn(int signo) {}
 
@@ -54,12 +54,12 @@ public:
         tcsetattr(fd, TCSANOW, &tty);
     }
 
-    CharBFBackendStdio(sc_core::sc_module_name name)
+    CharBackendStdio(sc_core::sc_module_name name)
         : sc_core::sc_module(name)
         , p_read_write("read_write", true, "read_write if true start rcv_thread")
         , socket("biflow_socket")
     {
-        SCP_TRACE(()) << "constructor";
+        SCP_TRACE(()) << "CharBackendStdio constructor";
 
         struct termios tty;
 
@@ -81,9 +81,9 @@ public:
                 socket.enqueue(ch);
             }
         });
-        if (p_read_write) rcv_thread_id = std::thread(&CharBFBackendStdio::rcv_thread, this);
+        if (p_read_write) rcv_thread_id = std::thread(&CharBackendStdio::rcv_thread, this);
 
-        socket.register_b_transport(this, &CharBFBackendStdio::writefn);
+        socket.register_b_transport(this, &CharBackendStdio::writefn);
     }
 
     void end_of_elaboration() { socket.can_receive_any(); }
@@ -125,12 +125,12 @@ public:
         fflush(stdout);
     }
 
-    ~CharBFBackendStdio()
+    ~CharBackendStdio()
     {
         m_running = false;
         if (rcv_pthread_id) pthread_kill(rcv_pthread_id, SIGURG);
         if (rcv_thread_id.joinable()) rcv_thread_id.join();
     }
 };
-GSC_MODULE_REGISTER(CharBFBackendStdio);
+GSC_MODULE_REGISTER(CharBackendStdio);
 #endif

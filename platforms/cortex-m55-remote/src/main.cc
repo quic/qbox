@@ -14,15 +14,14 @@
 #include <greensocs/gsutils/cciutils.h>
 #include <greensocs/gsutils/luafile_tool.h>
 #include "remote_cpu.h"
-#include <libqbox/components/uart/pl011.h>
 
 #include <greensocs/base-components/memory.h>
 #include <greensocs/base-components/router.h>
 #include <greensocs/base-components/remote.h>
-#include "greensocs/systemc-uarts/uart-pl011.h"
+#include "greensocs/systemc-uarts/uart-pl011-bf.h"
 #include "greensocs/systemc-uarts/backends/char-backend.h"
-#include <greensocs/systemc-uarts/backends/char/stdio.h>
-#include <greensocs/systemc-uarts/backends/char/socket.h>
+#include <greensocs/systemc-uarts/backends/char-bf/stdio.h>
+#include <greensocs/libgssync/keep_alive.h>
 #include <greensocs/gsutils/module_factory_container.h>
 
 class GreenSocsPlatform : public gs::ModuleFactory::Container

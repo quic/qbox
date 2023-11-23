@@ -17,10 +17,6 @@
 
 #include "greensocs/systemc-uarts/backends/char-backend.h"
 #include <greensocs/systemc-uarts/backends/char-bf/file.h>
-#if 0
-#include <greensocs/systemc-uarts/backends/char/ncurses.h>
-#include <greensocs/systemc-uarts/backends/char/socket.h>
-#endif
 
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/target-tester.h>
@@ -40,7 +36,7 @@ class TestFILE : public TestBench
 {
     Uart m_uart;
     TargetSignalSocket<bool> m_irq_trigger;
-    CharBFBackendFile file_backend;
+    CharBackendFile file_backend;
 
 public:
     InitiatorTester m_initiator;

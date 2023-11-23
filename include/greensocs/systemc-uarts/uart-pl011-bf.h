@@ -86,8 +86,6 @@ class Pl011 : public sc_core::sc_module
 public:
     PL011State* s;
 
-    //    CharBackend* chr;
-
     tlm_utils::simple_target_socket<Pl011, DEFAULT_TLM_BUSWIDTH> socket;
 
     gs::biflow_socket<Pl011> backend_socket;
@@ -101,11 +99,10 @@ public:
         : irq("irq"), s(nullptr), socket("target_socket"), backend_socket("backend_socket")
     {
         SCP_TRACE(()) << "Pl011 constructor";
-        //        chr = NULL;
 
         socket.register_b_transport(this, &Pl011::b_transport);
         backend_socket.register_b_transport(this, &Pl011::pl011_receive);
-        //        backend_socket.can_receive_more(16); // we have 16 slots in the fifo.
+
         s = new PL011State();
 
         s->read_trigger = 1;
@@ -120,12 +117,7 @@ public:
         SC_METHOD(pl011_update_sysc);
         sensitive << update_event;
     }
-/*
-    void set_backend(CharBackend* backend) {
-        chr = backend;
-        chr->register_receive(this, pl011_receive, pl011_can_receive);
-    }
-*/
+
 #if 0
     void write(uint64_t offset, uint32_t value) {
         switch (offset >> 2) {
@@ -298,9 +290,6 @@ public:
             /* ??? Check if transmitter is enabled.  */
             ch = (unsigned char)(value & 0xff);
             backend_socket.enqueue(ch);
-            // if (chr) {
-            //     chr->write(ch);
-            // }
             s->int_level |= PL011_INT_TX;
             pl011_update();
             break;
@@ -353,20 +342,7 @@ public:
             break;
         }
     }
-    /*
-        static int pl011_can_receive(void* opaque) {
-            PL011State* s = ((Pl011*)opaque)->s;
 
-            int r;
-
-            if (s->lcr & 0x10) {
-                r = s->read_count < 16;
-            } else {
-                r = s->read_count < 1;
-            }
-            return r;
-        }
-    */
     void pl011_put_fifo(uint32_t value)
     {
         int slot;
@@ -391,10 +367,6 @@ public:
             pl011_put_fifo(data[i]);
         }
     }
-    //    static void pl011_receive(void* opaque, const uint8_t* buf, int size) {
-    //        Pl011* uart = (Pl011*)opaque;
-    //        uart->pl011_put_fifo(*buf);
-    //    }
 
     ~Pl011() { delete s; }
 };

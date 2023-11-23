@@ -27,10 +27,6 @@
 #include <greensocs/systemc-macs/dwmac.h>
 #include <greensocs/systemc-macs/backends/net/tap.h>
 
-#include "greensocs/systemc-uarts/backends/char-backend.h"
-#include "greensocs/systemc-uarts/uart-pl011.h"
-#include <greensocs/systemc-uarts/backends/char/stdio.h>
-
 #define ARCH_TIMER_VIRT_IRQ   (16 + 11)
 #define ARCH_TIMER_S_EL1_IRQ  (16 + 13)
 #define ARCH_TIMER_NS_EL1_IRQ (16 + 14)

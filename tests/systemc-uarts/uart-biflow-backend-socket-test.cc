@@ -32,7 +32,7 @@ int r = 0;
 class TestUart : public TestBench
 {
     Uart m_uart_1, m_uart_2;
-    CharBFBackendSocket server, client;
+    CharBackendSocket server, client;
     TargetSignalSocket<bool> m_irq_trigger;
 
 public:

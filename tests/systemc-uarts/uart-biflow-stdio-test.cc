@@ -40,7 +40,7 @@ class TestUart : public TestBench
     TargetSignalSocket<bool> m_irq_trigger;
 
 public:
-    CharBFBackendStdio u_backend_stdio_1, u_backend_stdio_2;
+    CharBackendStdio u_backend_stdio_1, u_backend_stdio_2;
     InitiatorTester m_initiator_1, m_initiator_2;
 
     TestUart(const sc_core::sc_module_name& n)

@@ -5,7 +5,7 @@
  */
 
 /**
- * @file keep_alive.h
+ * @class KeepAlive
  * @brief this calss is used to keep the simulation alive by using an async event
  */
 #ifndef _GS_KEEP_ALIVE_H_

@@ -15,28 +15,32 @@ platform = {
     moduletype = "Container";
     quantum_ns = 10000000;
 
-
     router = {
         moduletype="Router";
         log_level=0;
     },
+
     ram_0 = {
             moduletype = "Memory",
             target_socket = {address=0x0, size=0x20000, bind = "&router.initiator_socket"},
             shared_memory=true,
             load={bin_file=top().."fw/cortex-m55/cortex-m55.bin", offset=0},
         },
-    
+
+    keep_alive_0 = {
+        moduletype = "KeepAlive";
+    },
+
     charbackend_stdio_0 = {
        moduletype = "CharBackendStdio";
-       args = {true};
+       read_write = true;
         };
 
-    uart_0 =  {
+        pl011_uart_0 =  {
         moduletype = "Pl011",
-        args = {"&platform.charbackend_stdio_0"},
         target_socket = {address= 0xc0000000, size=0x1000, bind = "&router.initiator_socket"},
         irq = {bind = "&plugin_0.target_signal_socket_0"},
+        backend_socket = { bind = "&charbackend_stdio_0.biflow_socket"  },
         },
 
     plugin_0 = {
