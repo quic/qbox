@@ -3,6 +3,7 @@
 -- verbose 1 - final report
 -- verbose 2 - events as they happen
 --
+log_level=3
 verbose=2
 csvfile="report.csv"
 

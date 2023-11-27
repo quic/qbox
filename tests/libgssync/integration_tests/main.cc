@@ -546,7 +546,8 @@ public:
     void stop() { rtl.disable(); }
 
     cci::cci_param<bool> use;
-    RealTimeClockLimiter(sc_module_name _name, Checker& _checker): Model(_name, _checker), use("use", true)
+    RealTimeClockLimiter(sc_module_name _name, Checker& _checker)
+        : Model(_name, _checker), use("use", true), rtl("rtl", false)
     {
         SCP_DEBUG(SCMOD) << "In the constructor RealTimeClockLimiter";
     }
