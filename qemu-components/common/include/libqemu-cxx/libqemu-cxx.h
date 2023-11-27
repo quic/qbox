@@ -546,6 +546,7 @@ public:
     void set_parent_bus(Bus bus);
 
     void set_prop_chardev(const char* name, Chardev chr);
+    void set_prop_uint_array(const char* name, std::vector<unsigned int> vec);
 };
 
 class SysBusDevice : public Device

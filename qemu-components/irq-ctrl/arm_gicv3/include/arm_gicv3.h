@@ -103,14 +103,7 @@ public:
 
         bool has_security_extensions = m_inst.is_kvm_enabled() ? false : p_has_security_extensions.get_value();
         m_dev.set_prop_bool("has-security-extensions", has_security_extensions);
-
-        m_dev.set_prop_int("len-redist-region-count", p_redist_region.get_value().size());
-        for (i = 0; i < p_redist_region.get_value().size(); i++) {
-            std::stringstream ss;
-
-            ss << "redist-region-count[" << i << "]";
-            m_dev.set_prop_int(ss.str().c_str(), p_redist_region.get_value()[i]);
-        }
+        m_dev.set_prop_uint_array("redist-region-count", p_redist_region.get_value());
     }
 
     void end_of_elaboration()
