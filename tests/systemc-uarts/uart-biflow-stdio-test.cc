@@ -9,10 +9,10 @@
  * @brief this is a test for stdio backend with Pl011 uart
  * the idea of the test is to redirect the stdin and stdout into pipes to test the stdio backend
  */
-#include "greensocs/systemc-uarts/uart-pl011-bf.h"
+#include "greensocs/systemc-uarts/uart-pl011.h"
 
 #include "greensocs/systemc-uarts/backends/char-backend.h"
-#include <greensocs/systemc-uarts/backends/char-bf/stdio.h>
+#include <greensocs/systemc-uarts/backends/char/stdio.h>
 
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/target-tester.h>

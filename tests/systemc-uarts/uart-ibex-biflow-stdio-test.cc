@@ -10,10 +10,10 @@
  * the idea of the test is to redirect the stdin and stdout into pipes to test the stdio backend
  */
 
-#include "greensocs/systemc-uarts/uart-ibex-bf.h"
+#include "greensocs/systemc-uarts/uart-ibex.h"
 
 #include "greensocs/systemc-uarts/backends/char-backend.h"
-#include <greensocs/systemc-uarts/backends/char-bf/stdio.h>
+#include <greensocs/systemc-uarts/backends/char/stdio.h>
 
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/target-tester.h>

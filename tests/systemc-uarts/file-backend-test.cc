@@ -13,10 +13,10 @@
 
 #include <systemc.h>
 
-#include "greensocs/systemc-uarts/uart-pl011-bf.h"
+#include "greensocs/systemc-uarts/uart-pl011.h"
 
 #include "greensocs/systemc-uarts/backends/char-backend.h"
-#include <greensocs/systemc-uarts/backends/char-bf/file.h>
+#include <greensocs/systemc-uarts/backends/char/file.h>
 
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/target-tester.h>

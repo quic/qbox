@@ -14,10 +14,10 @@
  * uart
  */
 
-#include "greensocs/systemc-uarts/uart-pl011-bf.h"
+#include "greensocs/systemc-uarts/uart-pl011.h"
 
 #include "greensocs/systemc-uarts/backends/char-backend.h"
-#include <greensocs/systemc-uarts/backends/char-bf/socket.h>
+#include <greensocs/systemc-uarts/backends/char/socket.h>
 #include <greensocs/gsutils/tests/initiator-tester.h>
 #include <greensocs/gsutils/tests/target-tester.h>
 #include <greensocs/gsutils/tests/test-bench.h>

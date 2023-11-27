@@ -449,7 +449,7 @@ PythonBinder uses this set of CCI parameters:
 
 For examples of how to use PythonBinder:
 * tests/base-components/python-binder (PythonBinder test bench).
-* py-models/py-uart.py (an example stdio backend for include/greensocs/systemc-uarts/uart-pl011-bf.h UART model).
+* py-models/py-uart.py (an example stdio backend for include/greensocs/systemc-uarts/uart-pl011.h UART model).
 
 ## Functionality of the synchronization library
 
