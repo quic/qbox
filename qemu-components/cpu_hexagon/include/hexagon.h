@@ -106,6 +106,12 @@ public:
         cpu.set_prop_int("thread-count", gs::cci_get<uint32_t>(m_broker, parent + ".hexagon_num_threads"));
         cpu.set_prop_bool("isdben-trusted", gs::cci_get<bool>(m_broker, parent + ".isdben_trusted"));
         cpu.set_prop_bool("isdben-secure", gs::cci_get<bool>(m_broker, parent + ".isdben_secure"));
+
+        uint32_t coproc_instances;
+        if (!gs::cci_get<uint32_t>(m_broker, parent + ".num_coproc_instance", coproc_instances)) {
+            coproc_instances = 0;
+        }
+        cpu.set_prop_int("num-coproc-instance", coproc_instances);
     }
 
     void end_of_elaboration() override
