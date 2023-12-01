@@ -13,10 +13,10 @@
 #include <systemc>
 #include <tlm>
 
-#include <greensocs/gsutils/ports/initiator-signal-socket.h>
+#include <ports/initiator-signal-socket.h>
 
 #include "test/test.h"
-#include <greensocs/gsutils/tlm_sockets_buswidth.h>
+#include <tlm_sockets_buswidth.h>
 
 class CpuTesterCallbackIface
 {

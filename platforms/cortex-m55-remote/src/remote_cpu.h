@@ -11,15 +11,15 @@
 #include <systemc>
 #include <tlm>
 #include <cci_configuration>
-#include <greensocs/libgsutils.h>
+#include <libgsutils.h>
 #include <limits>
-#include <libqbox/components/cpu/arm/cortex-m55.h>
-#include <libqbox/qemu-instance.h>
-#include "greensocs/base-components/memory.h"
-#include "greensocs/base-components/router.h"
-#include "greensocs/base-components/remote.h"
-#include "greensocs/base-components/pass.h"
-#include <greensocs/gsutils/module_factory_registery.h>
+#include <cpu_arm/cpu_arm_cortex_m55/include/cortex-m55.h>
+#include <qemu-instance.h>
+#include "memory/include/memory.h"
+#include "router/include/router.h"
+#include "remote.h"
+#include "pass/include/pass.h"
+#include <module_factory_registery.h>
 
 class RemoteCPU : public sc_core::sc_module
 {
@@ -55,7 +55,7 @@ private:
     cci::cci_param<int> m_gdb_port;
     QemuInstance& m_qemu_inst;
     gs::router<> m_router;
-    CpuArmCortexM55 m_cpu;
+    cpu_arm_cortexM55 m_cpu;
 };
 GSC_MODULE_REGISTER(RemoteCPU, sc_core::sc_object*);
 #endif

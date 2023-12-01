@@ -12,8 +12,8 @@
 #include "test/cpu.h"
 #include "test/tester/dmi_soak.h"
 
-#include "libqbox/components/cpu/arm/cortex-a53.h"
-#include "libqbox/qemu-instance.h"
+#include "cortex-a53.h"
+#include "qemu-instance.h"
 
 /*
  * Arm Cortex-A53 DMI async invalidation test.
@@ -28,7 +28,7 @@
  * checks that all dedicated memory areas contain the final value (corresponding
  * to the number of read/modify/write operations the CPUs did).
  */
-class CpuArmCortexA53DmiAsyncInvalTest : public CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterDmiSoak>
+class CpuArmCortexA53DmiAsyncInvalTest : public CpuTestBench<cpu_arm_cortexA53, CpuTesterDmiSoak>
 {
 public:
     static constexpr uint64_t NUM_WRITES = 10000;
@@ -108,7 +108,7 @@ public:
     SC_HAS_PROCESS(CpuArmCortexA53DmiAsyncInvalTest);
 
     CpuArmCortexA53DmiAsyncInvalTest(const sc_core::sc_module_name& n)
-        : CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterDmiSoak>(n)
+        : CpuTestBench<cpu_arm_cortexA53, CpuTesterDmiSoak>(n)
     {
         char buf[2048];
         SCP_DEBUG(SCMOD) << "CpuArmCortexA53DmiAsyncInvalTest constructor";
@@ -181,7 +181,7 @@ public:
 
     virtual void end_of_simulation() override
     {
-        CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterDmiSoak>::end_of_simulation();
+        CpuTestBench<cpu_arm_cortexA53, CpuTesterDmiSoak>::end_of_simulation();
         running = false;
         m_thread.join();
     }

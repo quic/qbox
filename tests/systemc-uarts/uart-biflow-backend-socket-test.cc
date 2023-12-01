@@ -14,15 +14,15 @@
  * uart
  */
 
-#include "greensocs/systemc-uarts/uart-pl011.h"
+#include "uart-pl011.h"
 
-#include "greensocs/systemc-uarts/backends/char-backend.h"
-#include <greensocs/systemc-uarts/backends/char/socket.h>
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/target-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
+#include "backends/char-backend.h"
+#include <char_backend_socket.h>
+#include <tests/initiator-tester.h>
+#include <tests/target-tester.h>
+#include <tests/test-bench.h>
 
-#include <greensocs/gsutils/ports/target-signal-socket.h>
+#include <ports/target-signal-socket.h>
 
 #include <systemc.h>
 
@@ -32,7 +32,7 @@ int r = 0;
 class TestUart : public TestBench
 {
     Uart m_uart_1, m_uart_2;
-    CharBackendSocket server, client;
+    char_backend_socket server, client;
     TargetSignalSocket<bool> m_irq_trigger;
 
 public:

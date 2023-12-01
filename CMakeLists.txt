@@ -67,22 +67,18 @@ if((NOT WITHOUT_PYTHON_BINDER) AND (NOT GS_ONLY))
     find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
     gs_addexpackage("gh:pybind/pybind11#v2.11.1")
     set(PYBIND11_EMBED "pybind11::embed")
-    set(PYTHON_BINDER_SRC "src/python-utils/python_binder.cc")
+    set(PYTHON_BINDER_SRC "systemc-components/python_binder/src/python_binder.cc")
 endif()
 
-
-set(srcs
-    src/libgssync/qkmultithread.cc
-    src/libgssync/qk_factory.cc
-    src/libgssync/pre_suspending_sc_support.cc
-    src/systemc-macs/backends/tap.cc
-    src/systemc-macs/models/dwmac.cc
-    src/systemc-macs/components/mac.cc
-    src/systemc-macs/components/phy.cc
-    src/systemc-macs/models/xgmac.cc
-    src/gsutils/cciutils.cc
-    src/gsutils/luautils.cc
-    ${PYTHON_BINDER_SRC}
+set(systemc_srcs
+    systemc-components/common/src/cciutils.cc
+    systemc-components/common/src/luautils.cc
+    systemc-components/common/src/libgssync/pre_suspending_sc_support.cc
+    systemc-components/common/src/libgssync/qk_factory.cc
+    systemc-components/common/src/libgssync/qkmultithread.cc
+    systemc-components/common/src/macs/backends/tap.cc
+    systemc-components/common/src/macs/components/mac.cc
+    systemc-components/common/src/macs/components/phy.cc
 )
 
 if (NOT WITHOUT_QEMU)
@@ -90,34 +86,38 @@ if (NOT WITHOUT_QEMU)
     # is _not_ a submodule so that FetchContent does not init any submodule.
     # See https://gitlab.kitware.com/cmake/cmake/-/issues/20579
     gs_addpackage(qemu/qemu GIT_SUBMODULES "CMakeLists.txt")
+    if(TARGET libqemu)
+        list(APPEND TARGET_LIBS "libqemu")
+    endif()
 
-    set(LIBQEMU_CXX_SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/libqemu-cxx)
-    set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+    set(LIBQEMU_CXX_SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/qemu-components/common/include/libqemu-cxx)
+    set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX})
     set(LIBQEMU_CXX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqemu-cxx)
 
-    set(qemu_srcs
-        src/libqemu-cxx/callbacks.cc
-        src/libqemu-cxx/console.cc
-        src/libqemu-cxx/cpu.cc
-        src/libqemu-cxx/device.cc
-        src/libqemu-cxx/gpex.cc
-        src/libqemu-cxx/gpio.cc
-        src/libqemu-cxx/libqemu-cxx.cc
-        src/libqemu-cxx/loader.cc
-        src/libqemu-cxx/memory.cc
-        src/libqemu-cxx/object.cc
-        src/libqemu-cxx/rcu-read-lock.cc
-        src/libqemu-cxx/sysbus.cc
-        src/libqemu-cxx/timer.cc
-        src/libqemu-cxx/target/aarch64.cc
-        src/libqemu-cxx/target/riscv.cc
-        src/libqemu-cxx/target/microblaze.cc
-        src/libqemu-cxx/target-info.cc
-        src/libqbox/dmi_utils/dmi_utils.cc
+    set (qemu_srcs
+        qemu-components/common/src/libqemu-cxx/callbacks.cc
+        qemu-components/common/src/libqemu-cxx/console.cc
+        qemu-components/common/src/libqemu-cxx/cpu.cc
+        qemu-components/common/src/libqemu-cxx/device.cc
+        qemu-components/common/src/libqemu-cxx/gpex.cc
+        qemu-components/common/src/libqemu-cxx/gpio.cc
+        qemu-components/common/src/libqemu-cxx/libqemu-cxx.cc
+        qemu-components/common/src/libqemu-cxx/loader.cc
+        qemu-components/common/src/libqemu-cxx/memory.cc
+        qemu-components/common/src/libqemu-cxx/object.cc
+        qemu-components/common/src/libqemu-cxx/rcu-read-lock.cc
+        qemu-components/common/src/libqemu-cxx/sysbus.cc
+        qemu-components/common/src/libqemu-cxx/target-info.cc
+        qemu-components/common/src/libqemu-cxx/timer.cc
+        qemu-components/common/src/libqemu-cxx/target/aarch64.cc
+        qemu-components/common/src/libqemu-cxx/target/riscv.cc
+        qemu-components/common/src/libqemu-cxx/target/microblaze.cc
+        qemu-components/common/src/libqemu-cxx/target-info.cc
+        qemu-components/common/src/dmi_utils.cc
     )
 
     add_library(${PROJECT_NAME} SHARED
-        ${srcs}
+        ${systemc_srcs}
         ${qemu_srcs}
     )
 
@@ -160,11 +160,10 @@ if (NOT WITHOUT_QEMU)
 
     target_include_directories(
         ${PROJECT_NAME} PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/qemu-components/common/include>
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/systemc-components/common/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}>
         ${LIBELF_INCLUDE_DIR}
-        PRIVATE
-             ${CMAKE_CURRENT_SOURCE_DIR}/src
      )
 
     set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -210,43 +209,22 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
                 ${CMAKE_CURRENT_BINARY_DIR}/libqemu-cxxConfigVersion.cmake
                 DESTINATION ${LIBQEMU_CXX_LIB_DIR}/cmake)
 
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox-extra" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libqbox" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/qemu-components" DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/systemc-components" DESTINATION ${CMAKE_INSTALL_PREFIX})
 
-    gs_export(${PROJECT_NAME})
+    set(QBOX_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/qemu-components;${CMAKE_CURRENT_SOURCE_DIR}/systemc-components")
+    gs_export(${PROJECT_NAME} ${QBOX_INCLUDE_DIR})
+
     if (NOT DEFINED GS_ONLY)
         install(TARGETS rpc DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
         add_subdirectory(platforms)
     endif()
-
-    gs_enable_testing()
-else()
-    add_library(${PROJECT_NAME} SHARED
-        ${srcs}
-    )
-
-    gs_lua()
-
-    target_include_directories(${PROJECT_NAME} PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-        ${LIBELF_INCLUDE_DIR}
-    )
-
-    target_link_libraries(${PROJECT_NAME} PUBLIC
-        ${TARGET_LIBS}
-        ${LIBELF_LIBRARIES}
-        rpc
-        ${PYBIND11_EMBED}
-        ${CMAKE_DL_LIBS}
-    )
-
-    gs_export(${PROJECT_NAME})
 endif()
 
-create_library(libqbox-extra)
-create_library(libqbox)
-create_library(greensocs)
+add_subdirectory(qemu-components)
+add_subdirectory(systemc-components)
+
+gs_enable_testing()
 
 if(UNIX AND NOT APPLE)
     target_link_libraries(${PROJECT_NAME} INTERFACE rt)

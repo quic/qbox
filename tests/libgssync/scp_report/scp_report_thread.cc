@@ -6,13 +6,13 @@
 
 #include <gmock/gmock.h>
 #include <unistd.h>
-#include <greensocs/libgsutils.h>
+#include <libgsutils.h>
 #include <gtest/gtest.h>
 #include <scp/helpers.h>
 #include <scp/report.h>
 #include <systemc>
 
-#include "libgssync/async_event.h"
+#include "async_event.h"
 
 class TestA : public sc_core::sc_module
 {

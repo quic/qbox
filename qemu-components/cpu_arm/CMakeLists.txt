@@ -1,0 +1,8 @@
+add_subdirectory(cpu_arm_cortex_a53)
+add_subdirectory(cpu_arm_cortex_a55)
+add_subdirectory(cpu_arm_cortex_a76)
+add_subdirectory(cpu_arm_cortex_m7)
+add_subdirectory(cpu_arm_cortex_m55)
+add_subdirectory(cpu_arm_cortex_r5)
+add_subdirectory(cpu_arm_cortex_r52)
+add_subdirectory(cpu_arm_neoverse_n1)

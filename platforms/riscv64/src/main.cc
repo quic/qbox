@@ -10,18 +10,9 @@
 #include <systemc>
 #include <cci_configuration>
 
-#include <greensocs/gsutils/argparser.h>
-#include <greensocs/gsutils/cciutils.h>
-#include <greensocs/gsutils/module_factory_container.h>
-
-#include "libqbox/components/cpu/riscv64/riscv64.h"
-#include "libqbox/components/irq-ctrl/plic-sifive.h"
-#include "libqbox/components/irq-ctrl/riscv-aclint-swi.h"
-#include "libqbox/components/timer/riscv-aclint-mtimer.h"
-#include "libqbox/components/uart/16550.h"
-
-#include <greensocs/base-components/router.h>
-#include <greensocs/base-components/memory.h>
+#include <cciutils.h>
+#include <argparser.h>
+#include <module_factory_container.h>
 
 #include <stdio.h>
 

@@ -6,9 +6,9 @@
 
 #include "router.h"
 #include "pass.h"
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/target-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
+#include <tests/initiator-tester.h>
+#include <tests/target-tester.h>
+#include <tests/test-bench.h>
 #include <systemc>
 #include <tlm>
 #include <scp/report.h>

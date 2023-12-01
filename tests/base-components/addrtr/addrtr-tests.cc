@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <greensocs/libgsutils.h>
+#include <libgsutils.h>
 #include "addrtr-bench.h"
 
 /*

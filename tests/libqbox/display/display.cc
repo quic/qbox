@@ -7,10 +7,8 @@
 
 #include <iostream>
 
-#include <greensocs/base-components/router.h>
-#include <greensocs/base-components/memory.h>
-#include <libqbox-extra/components/display/display.h>
-#include <libqbox/components/gpu/virtio-mmio-gpugl.h>
+#include <display.h>
+#include <virtio/virtio-mmio-gpugl.h>
 
 #include "test/test.h"
 

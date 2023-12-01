@@ -13,7 +13,7 @@
 #include <scp/report.h>
 
 #include "test/tester/mmio.h"
-#include <greensocs/gsutils/tlm_sockets_buswidth.h>
+#include <tlm_sockets_buswidth.h>
 
 class CpuTesterDmi : public CpuTesterMmio
 {

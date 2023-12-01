@@ -9,13 +9,13 @@
 #include <vector>
 
 #include <cci/utils/broker.h>
-#include <greensocs/libgsutils.h>
+#include <libgsutils.h>
 
 #include "test/cpu.h"
 #include "test/tester/mmio.h"
 
-#include "libqbox/components/cpu/arm/cortex-a53.h"
-#include "libqbox/qemu-instance.h"
+#include "cortex-a53.h"
+#include "qemu-instance.h"
 
 /*
  * Simple ARM Cortex-A53 write test.
@@ -28,7 +28,7 @@
  * On each write, the test bench checks the written value. It also checks the
  * number of write at the end of the simulation.
  */
-class CpuArmCortexA53SimpleWriteTest : public CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterMmio>
+class CpuArmCortexA53SimpleWriteTest : public CpuTestBench<cpu_arm_cortexA53, CpuTesterMmio>
 {
 public:
     static constexpr int NUM_WRITES = 10;
@@ -65,7 +65,7 @@ protected:
 
 public:
     CpuArmCortexA53SimpleWriteTest(const sc_core::sc_module_name& n)
-        : CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterMmio>(n)
+        : CpuTestBench<cpu_arm_cortexA53, CpuTesterMmio>(n)
     {
         char buf[1024];
 
@@ -94,7 +94,7 @@ public:
 
     virtual void end_of_simulation() override
     {
-        CpuTestBench<qemu_cpu_arm_cortexA53, CpuTesterMmio>::end_of_simulation();
+        CpuTestBench<cpu_arm_cortexA53, CpuTesterMmio>::end_of_simulation();
 
         for (int i = 0; i < p_num_cpu; i++) {
             TEST_ASSERT(m_writes[i] == NUM_WRITES);

@@ -58,7 +58,6 @@ platform = {
 
     qemu_inst_mgr = {
         moduletype = "QemuInstanceManager";
-        dylib_path = "qemu-instance.so"
     },
 
     qemu_inst= {
@@ -69,7 +68,7 @@ platform = {
     },
 
     plic_0=   {
-            moduletype = "QemuRiscvSifivePlic",
+            moduletype = "plic_sifive",
             args = {"&platform.qemu_inst"},
             mem    = {address=0x0c000000, size=0x4000000, bind = "&router.initiator_socket"},
             num_sources = 280,
@@ -85,14 +84,14 @@ platform = {
     };
 
     swi_0=    {
-            moduletype = "QemuRiscvAclintSwi",
+            moduletype = "riscv_aclint_swi",
             args = {"&platform.qemu_inst", "&platform.cpu_4"},
             mem    = {address=0x2000000, size=0x4000, bind = "&router.initiator_socket"};
             num_harts = 5
         };
 
     mtimer_0= {
-            moduletype = "QemuRiscvAclintMtimer",
+            moduletype = "riscv_aclint_mtimer",
             args = {"&platform.qemu_inst"},
             mem    =  {address=0x2004000, size=0x8000, bind = "&router.initiator_socket"},
             timecmp_base = 0x0,
@@ -135,7 +134,7 @@ platform = {
         };
     
     uart_0=  {
-            moduletype = "QemuUart16550",
+            moduletype = "uart_16550",
             args = {"&platform.qemu_inst"},
             mem = {address= 0x54000000, size=0x10000, bind = "&router.initiator_socket"},
             irq_out={bind = "&plic_0.irq_in_273"},
@@ -158,7 +157,7 @@ platform = {
 if (RISCV_NUM_CPUS > 0) then
     for i=0,(RISCV_NUM_CPUS-1) do
         local cpu = {
-            moduletype = "qemu_cpu_riscv64";
+            moduletype = "cpu_riscv64";
             args = {"&platform.qemu_inst", i};
             mem = {bind = "&router.target_socket"};
         };

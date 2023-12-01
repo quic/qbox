@@ -40,7 +40,6 @@ platform = {
 
     qemu_inst_mgr = {
         moduletype = "QemuInstanceManager";
-        dylib_path = "qemu-instance.so";
     },
 
     qemu_inst= {
@@ -68,7 +67,7 @@ platform = {
    };
 
     qemu_pl011 = {
-        moduletype = "QemuUartPl011",
+        moduletype = "qemu_pl011",
         args = {"&platform.qemu_inst"};
         mem = {address= 0xc0000000,
                                     size=0x1000, 
@@ -86,7 +85,7 @@ platform = {
 if (ARM_NUM_CPUS > 0) then
     for i=0,(ARM_NUM_CPUS-1) do
         local cpu = {
-            moduletype = "qemu_cpu_arm_cortexA53";
+            moduletype = "cpu_arm_cortexA53";
             args = {"&platform.qemu_inst"};
             mem = {bind = "&router.target_socket"};
             has_el3 = true;

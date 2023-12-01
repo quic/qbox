@@ -14,7 +14,7 @@
 #include <systemc>
 #include <cci/utils/broker.h>
 
-#include <greensocs/gsutils/cciutils.h>
+#include <cciutils.h>
 
 #include <scp/report.h>
 

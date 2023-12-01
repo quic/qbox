@@ -6,8 +6,8 @@
 
 #include <cci_configuration>
 #include <gmock/gmock.h>
-#include <greensocs/libgsutils.h>
-#include <greensocs/gsutils/argparser.h>
+#include <libgsutils.h>
+#include <argparser.h>
 #include <gtest/gtest.h>
 #include <systemc>
 #include <scp/report.h>

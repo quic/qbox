@@ -1,0 +1,2 @@
+add_subdirectory(qemu_kbd)
+add_subdirectory(qemu_tablet)

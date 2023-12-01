@@ -5,7 +5,7 @@
  */
 
 #include <gmock/gmock.h>
-#include <greensocs/libgsutils.h>
+#include <libgsutils.h>
 #include <gtest/gtest.h>
 #include <scp/helpers.h>
 #include <scp/report.h>

@@ -1,0 +1,1 @@
+add_subdirectory(qemu_hexagon_qtimer)

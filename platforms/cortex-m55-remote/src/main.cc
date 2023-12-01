@@ -11,18 +11,18 @@
 #include <cci_configuration>
 #include <systemc>
 
-#include <greensocs/gsutils/cciutils.h>
-#include <greensocs/gsutils/argparser.h>
+#include <cciutils.h>
+#include <argparser.h>
 #include "remote_cpu.h"
 
-#include <greensocs/base-components/memory.h>
-#include <greensocs/base-components/router.h>
-#include <greensocs/base-components/remote.h>
-#include "greensocs/systemc-uarts/uart-pl011.h"
-#include "greensocs/systemc-uarts/backends/char-backend.h"
-#include <greensocs/systemc-uarts/backends/char/stdio.h>
-#include <greensocs/libgssync/keep_alive.h>
-#include <greensocs/gsutils/module_factory_container.h>
+#include <memory/include/memory.h>
+#include <router/include/router.h>
+#include <remote.h>
+#include "uart/uart-pl011/include/uart-pl011.h"
+#include "backends/char-backend.h"
+#include <backends/char_backend_stdio/include/char_backend_stdio.h>
+#include <keep_alive/include/keep_alive.h>
+#include <module_factory_container.h>
 
 class GreenSocsPlatform : public gs::ModuleFactory::Container
 {

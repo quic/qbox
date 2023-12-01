@@ -7,14 +7,14 @@
 #include <systemc>
 #include <cci_configuration>
 
-#include <greensocs/gsutils/luafile_tool.h>
-#include <greensocs/libgsutils.h>
-#include <greensocs/gsutils/argparser.h>
+#include <luafile_tool.h>
+#include <libgsutils.h>
+#include <argparser.h>
 
 #include "memory.h"
 #include "router.h"
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
+#include <tests/initiator-tester.h>
+#include <tests/test-bench.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

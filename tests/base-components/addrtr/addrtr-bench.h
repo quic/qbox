@@ -12,11 +12,11 @@
 #include <systemc>
 #include <tlm>
 
-#include <greensocs/gsutils/tests/test-bench.h>
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/target-tester.h>
+#include <tests/test-bench.h>
+#include <tests/initiator-tester.h>
+#include <tests/target-tester.h>
 
-#include "greensocs/base-components/misc/addrtr.h"
+#include "addrtr.h"
 
 class AddrtrTestBench : public TestBench
 {
@@ -36,7 +36,7 @@ public:
     using TlmDmi = InitiatorTester::TlmDmi;
 
 private:
-    Addrtr m_addrtr;
+    addrtr m_addrtr;
 
     InitiatorTester m_initiator;
     TargetTesterDMIinv m_target;

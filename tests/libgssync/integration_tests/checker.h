@@ -15,7 +15,7 @@
 #include <condition_variable>
 #include <fstream>
 #include <queue>
-#include "greensocs/libgssync.h"
+#include "libgssync.h"
 
 class Checker
 {

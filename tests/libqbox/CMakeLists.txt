@@ -39,9 +39,9 @@ function(qbox_add_cpu_test target timeout_s)
     add_executable(${target} ${ARGN})
     install(TARGETS ${target} DESTINATION bin)
 
-    target_include_directories(${target} PRIVATE ${CMAKE_SOURCE_DIR}/tests/libqbox/include ${keystone_SOURCE_DIR}/include)
+    target_include_directories(${target} PRIVATE ${PROJECT_SOURCE_DIR}/tests/libqbox/include ${keystone_SOURCE_DIR}/include)
 
-    target_link_libraries(${target} PRIVATE ${TARGET_LIBS} keystone)
+    target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 router memory exclusive_monitor display ${TARGET_LIBS} keystone)
 
     foreach(sync_pol ${QBOX_CPU_TEST_SYNC_POLICY_COMBINATION})
         if("${sync_pol}" STREQUAL "tlm2-icount")

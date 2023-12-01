@@ -12,8 +12,8 @@
 
 #include "memory.h"
 #include "loader.h"
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
+#include <tests/initiator-tester.h>
+#include <tests/test-bench.h>
 
 class MemoryTestBench : public TestBench
 {

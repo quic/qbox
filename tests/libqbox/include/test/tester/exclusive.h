@@ -8,10 +8,10 @@
 #ifndef TESTS_INCLUDE_TEST_TESTER_EXCLUSIVE_H
 #define TESTS_INCLUDE_TEST_TESTER_EXCLUSIVE_H
 
-#include <greensocs/gsutils/tlm-extensions/exclusive-access.h>
+#include <tlm-extensions/exclusive-access.h>
 
-#include <greensocs/base-components/misc/exclusive-monitor.h>
-#include <greensocs/base-components/pathid_extension.h>
+#include <exclusive-monitor.h>
+#include <tlm-extensions/pathid_extension.h>
 
 #include "test/tester/mmio.h"
 
@@ -26,7 +26,7 @@ public:
     };
 
 protected:
-    ExclusiveMonitor m_monitor;
+    exclusive_monitor m_monitor;
 
 public:
     TargetSocket socket;

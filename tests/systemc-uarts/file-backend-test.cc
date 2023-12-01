@@ -13,20 +13,20 @@
 
 #include <systemc.h>
 
-#include "greensocs/systemc-uarts/uart-pl011.h"
+#include "uart-pl011.h"
 
-#include "greensocs/systemc-uarts/backends/char-backend.h"
-#include <greensocs/systemc-uarts/backends/char/file.h>
+#include "backends/char-backend.h"
+#include <char_backend_file.h>
 
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/target-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
+#include <tests/initiator-tester.h>
+#include <tests/target-tester.h>
+#include <tests/test-bench.h>
 
-#include <greensocs/gsutils/ports/target-signal-socket.h>
+#include <ports/target-signal-socket.h>
 
 #include <cci_configuration>
 #include <scp/report.h>
-#include <greensocs/libgsutils.h>
+#include <libgsutils.h>
 
 #include <cci/utils/broker.h>
 
@@ -34,7 +34,7 @@ class TestFILE : public TestBench
 {
     Uart m_uart;
     TargetSignalSocket<bool> m_irq_trigger;
-    CharBackendFile file_backend;
+    char_backend_file file_backend;
 
 public:
     sc_event ev;

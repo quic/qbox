@@ -9,14 +9,14 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
 
-#include "dmi-converter.h"
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
+#include "dmi_converter.h"
+#include <tests/initiator-tester.h>
+#include <tests/test-bench.h>
 #include <vector>
 #include <sstream>
 #include <memory>
 #include <cstring>
-#include <greensocs/gsutils/tlm_sockets_buswidth.h>
+#include <tlm_sockets_buswidth.h>
 
 #define MEM_SIZE       4096
 #define MIN_ALLOC_UNIT 8
@@ -214,5 +214,5 @@ public:
 protected:
     InitiatorTester m_initiator;
     ::SimpleMemory<> m_simple_mem;
-    gs::DMIConverter<> m_dmi_converter;
+    gs::dmi_converter<> m_dmi_converter;
 };

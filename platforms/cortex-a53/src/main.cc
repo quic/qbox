@@ -10,11 +10,9 @@
 #include <cci_configuration>
 #include <systemc>
 
-#include <greensocs/gsutils/cciutils.h>
-#include <greensocs/gsutils/argparser.h>
-#include <greensocs/gsutils/module_factory_container.h>
-
-#include <libqbox/components/uart/pl011.h>
+#include <cciutils.h>
+#include <argparser.h>
+#include <module_factory_container.h>
 
 class GreenSocsPlatform : public gs::ModuleFactory::Container
 {

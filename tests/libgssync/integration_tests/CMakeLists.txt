@@ -6,7 +6,5 @@ add_test(
 target_link_libraries(checker
    PRIVATE
       ${TARGET_LIBS}
-)
-target_include_directories(checker
-   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../../include/greensocs/
+      router
 )

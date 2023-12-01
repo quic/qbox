@@ -14,8 +14,8 @@
 #include <systemc>
 #include <cci/utils/broker.h>
 
-#include <greensocs/gsutils/cciutils.h>
-#include <greensocs/gsutils/argparser.h>
+#include <cciutils.h>
+#include <argparser.h>
 
 #include <scp/report.h>
 

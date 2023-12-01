@@ -10,14 +10,14 @@
  * the idea of the test is to redirect the stdin and stdout into pipes to test the stdio backend
  */
 
-#include "greensocs/systemc-uarts/uart-ibex.h"
+#include "uart-ibex.h"
 
-#include "greensocs/systemc-uarts/backends/char-backend.h"
-#include <greensocs/systemc-uarts/backends/char/stdio.h>
+#include "backends/char-backend.h"
+#include <char_backend_stdio.h>
 
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/target-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
+#include <tests/initiator-tester.h>
+#include <tests/target-tester.h>
+#include <tests/test-bench.h>
 
 #include <fcntl.h>
 #include <stdlib.h>
@@ -26,7 +26,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include <greensocs/gsutils/ports/target-signal-socket.h>
+#include <ports/target-signal-socket.h>
 #include <systemc.h>
 
 #define MAX_LEN 4096
@@ -35,8 +35,8 @@ sc_event ev;
 int r = 0;
 class TestUart : public TestBench
 {
-    IbexUart m_uart_1;
-    IbexUart m_uart_2;
+    ibex_uart m_uart_1;
+    ibex_uart m_uart_2;
     TargetSignalSocket<bool> m_irq_trigger;
 
 public:
@@ -90,7 +90,7 @@ TEST_BENCH(TestUart, IbexStdioBackend)
     close(out_pipe[1]);
 
     for (std::string::iterator itr = str.begin(); itr != str.end(); ++itr) {
-        m_initiator_1.do_write(IbexUart::REG_WDATA, *itr); // data
+        m_initiator_1.do_write(ibex_uart::REG_WDATA, *itr); // data
         sc_core::wait(1, sc_core::SC_NS);                  // wait for txn transication
     }
 
@@ -103,8 +103,8 @@ TEST_BENCH(TestUart, IbexStdioBackend)
 
     //___________ redirect stdin ____________//
     char stdout_buffer[9] = "Qualcomm";
-    m_initiator_2.do_write(IbexUart::REG_CTRL, IbexUart::FIELD_CTRL_RXENABLE);
-    m_initiator_2.do_write(IbexUart::REG_ITEN, IbexUart::FIELD_IT_RXWATERMARK);
+    m_initiator_2.do_write(ibex_uart::REG_CTRL, ibex_uart::FIELD_CTRL_RXENABLE);
+    m_initiator_2.do_write(ibex_uart::REG_ITEN, ibex_uart::FIELD_IT_RXWATERMARK);
     sc_core::wait(1, sc_core::SC_NS);
     for (std::string::size_type i = 0; i < std::strlen(stdout_buffer); i++) {
         //  We should write the string to stdin, e.g.
@@ -119,7 +119,7 @@ TEST_BENCH(TestUart, IbexStdioBackend)
     char data;
     for (std::string::size_type i = 0; i < std::strlen(stdout_buffer); i++) {
         sc_core::wait(1, sc_core::SC_NS);
-        ASSERT_EQ(m_initiator_2.do_read(IbexUart::REG_RDATA, data), tlm::TLM_OK_RESPONSE);
+        ASSERT_EQ(m_initiator_2.do_read(ibex_uart::REG_RDATA, data), tlm::TLM_OK_RESPONSE);
         std::cout << "the recived character is: " << data << std::endl;
     }
 

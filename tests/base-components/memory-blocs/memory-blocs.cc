@@ -13,8 +13,8 @@
 
 #include "memory.h"
 #include "loader.h"
-#include <greensocs/gsutils/cciutils.h>
-#include <greensocs/gsutils/tests/initiator-tester.h>
+#include <cciutils.h>
+#include <tests/initiator-tester.h>
 
 class MemoryBlocs : public sc_core::sc_module
 {

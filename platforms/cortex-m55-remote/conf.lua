@@ -28,7 +28,7 @@ platform = {
         },
 
     keep_alive_0 = {
-        moduletype = "KeepAlive";
+        moduletype = "keep_alive";
     },
 
     charbackend_stdio_0 = {
@@ -38,7 +38,7 @@ platform = {
 
         pl011_uart_0 =  {
         moduletype = "Pl011",
-        dylib_path = "uart-pl011.so";
+        dylib_path = "uart-pl011";
         target_socket = {address= 0xc0000000, size=0x1000, bind = "&router.initiator_socket"},
         irq = {bind = "&plugin_0.target_signal_socket_0"},
         backend_socket = { bind = "&charbackend_stdio_0.biflow_socket"  },
@@ -46,7 +46,6 @@ platform = {
 
     plugin_0 = {
         moduletype = "RemotePass", -- can be replaced by 'Container'
-        dylib_path = "remote.so",
         exec_path = top().."../../build/platforms/cortex-m55-remote/remote_cpu",
         remote_argv = {"--param=log_level=4"},
         tlm_initiator_ports_num = 2,
@@ -69,7 +68,6 @@ platform = {
 
         qemu_inst_mgr = {
             moduletype = "QemuInstanceManager",
-            dylib_path = "qemu-instance.so";
         },
 
         qemu_inst = {

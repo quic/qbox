@@ -12,8 +12,8 @@
 #include "memory.h"
 #include "router.h"
 #include "memory_dumper.h"
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
+#include <tests/initiator-tester.h>
+#include <tests/test-bench.h>
 
 static constexpr size_t NB_MEMORY = 4;
 

@@ -7,13 +7,13 @@
 #include <systemc>
 #include <cci_configuration>
 
-#include <greensocs/gsutils/argparser.h>
-#include <greensocs/libgsutils.h>
+#include <argparser.h>
+#include <libgsutils.h>
 
 #include "memory.h"
 #include "router.h"
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
+#include <tests/initiator-tester.h>
+#include <tests/test-bench.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

@@ -24,12 +24,12 @@
 #include <tlm_utils/simple_target_socket.h>
 #include <tlm_utils/tlm_quantumkeeper.h>
 #include <cci/utils/broker.h>
-#include <greensocs/libgsutils.h>
-#include <greensocs/gsutils/argparser.h>
+#include <libgsutils.h>
+#include <argparser.h>
 
 #include "checker.h"
 #include "router.h"
-#include <greensocs/gsutils/tlm_sockets_buswidth.h>
+#include <tlm_sockets_buswidth.h>
 
 using namespace sc_core;
 
@@ -142,7 +142,7 @@ public:
 
 private:
     gs::tlm_quantumkeeper_extended* qk;
-    gs::RunOnSysC m_on_sysc;
+    gs::runonsysc m_on_sysc;
 
     bool running;
     bool active;
@@ -562,9 +562,9 @@ SC_MODULE (tests) {
         Checker& checker;
 
         std::vector<Model*> allModels;
-        std::vector<gs::InLineSync*> inlinesyncs;
+        std::vector<gs::inlinesync*> inlinesyncs;
         std::vector<sc_process_handle> handles;
-        gs::Router<> r;
+        gs::router<> r;
 
     public:
         cci::cci_param<int> ns_run;
@@ -612,7 +612,7 @@ SC_MODULE (tests) {
             for (auto m : allModels) {
                 if (Target* s = dynamic_cast<Target*>(m)) {
                     if (s->requires_systemc()) {
-                        gs::InLineSync* i = new gs::InLineSync((gs::sc_cci_leaf_name(s->name()) + "_ils").c_str());
+                        gs::inlinesync* i = new gs::inlinesync((gs::sc_cci_leaf_name(s->name()) + "_ils").c_str());
                         inlinesyncs.push_back(i);
                         i->initiator_socket(s->target_socket);
                         r.add_target(i->target_socket, s->add_base, s->add_size);

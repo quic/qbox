@@ -12,12 +12,12 @@
 #include <systemc>
 #include <tlm>
 
-#include <greensocs/gsutils/tests/test-bench.h>
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/target-tester.h>
+#include <tests/test-bench.h>
+#include <tests/initiator-tester.h>
+#include <tests/target-tester.h>
 
-#include "greensocs/base-components/misc/exclusive-monitor.h"
-#include <greensocs/base-components/router.h>
+#include "exclusive-monitor.h"
+#include <router.h>
 
 class ExclusiveMonitorTestBench : public TestBench
 {
@@ -29,7 +29,7 @@ public:
     using TlmDmi = InitiatorTester::TlmDmi;
 
 private:
-    ExclusiveMonitor m_monitor;
+    exclusive_monitor m_monitor;
 
     sc_core::sc_vector<InitiatorTester> m_initiators;
     InitiatorTester m_initiator;

@@ -8,7 +8,7 @@ macro(gs_add_test test conf_lua image_dir)
             NAME ${test}
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/neoverse_n1.py
                 -e ${CMAKE_BINARY_DIR}/platforms/neoverse-n1/neoverse-n1-vp
-                -l ${CMAKE_SOURCE_DIR}/platforms/neoverse-n1/${conf_lua}
+                -l ${PROJECT_SOURCE_DIR}/platforms/neoverse-n1/${conf_lua}
                 -i ${test_dir}
         )
         set_tests_properties(${test} PROPERTIES TIMEOUT 60)

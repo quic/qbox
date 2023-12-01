@@ -17,17 +17,17 @@
 #include <cci_configuration>
 #include <cci/utils/broker.h>
 
-#include <greensocs/base-components/memory.h>
-#include <greensocs/base-components/router.h>
+#include <memory.h>
+#include <router.h>
 
-#include <greensocs/gsutils/ports/initiator-signal-socket.h>
+#include <ports/initiator-signal-socket.h>
 
 #include <scp/report.h>
 
-#include "libqbox/qemu-instance.h"
+#include "qemu-instance.h"
 #include "test/test.h"
 #include "test/tester/tester.h"
-#include <greensocs/gsutils/tlm_sockets_buswidth.h>
+#include <tlm_sockets_buswidth.h>
 
 class CpuTestBenchBase : public TestBench, public CpuTesterCallbackIface
 {

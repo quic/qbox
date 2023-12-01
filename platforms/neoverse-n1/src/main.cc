@@ -11,14 +11,11 @@
 #include <systemc>
 #include <cci_configuration>
 
-#include <greensocs/gsutils/argparser.h>
-#include <greensocs/gsutils/cciutils.h>
-#include <greensocs/gsutils/module_factory_container.h>
+#include <cciutils.h>
+#include <argparser.h>
+#include <module_factory_container.h>
 
-#include <libqbox/components/uart/pl011.h>
-
-#include <greensocs/systemc-macs/dwmac.h>
-#include <greensocs/systemc-macs/backends/net/tap.h>
+#include <backends/tap.h>
 
 #define ARCH_TIMER_VIRT_IRQ   (16 + 11)
 #define ARCH_TIMER_S_EL1_IRQ  (16 + 13)

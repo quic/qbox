@@ -1,0 +1,2 @@
+add_subdirectory(cpu_riscv64)
+add_subdirectory(cpu_sifive_x280)

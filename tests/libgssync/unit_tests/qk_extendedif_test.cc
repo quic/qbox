@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "greensocs/libgssync/qk_extendedif.h"
+#include "qk_extendedif.h"
 
 class test_base : public sc_core::sc_module
 {

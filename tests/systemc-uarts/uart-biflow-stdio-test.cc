@@ -9,14 +9,14 @@
  * @brief this is a test for stdio backend with Pl011 uart
  * the idea of the test is to redirect the stdin and stdout into pipes to test the stdio backend
  */
-#include "greensocs/systemc-uarts/uart-pl011.h"
+#include "uart-pl011.h"
 
-#include "greensocs/systemc-uarts/backends/char-backend.h"
-#include <greensocs/systemc-uarts/backends/char/stdio.h>
+#include "backends/char-backend.h"
+#include "char_backend_stdio.h"
 
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/target-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
+#include <tests/initiator-tester.h>
+#include <tests/target-tester.h>
+#include <tests/test-bench.h>
 
 #include <fcntl.h>
 #include <stdlib.h>
@@ -25,7 +25,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include <greensocs/gsutils/ports/target-signal-socket.h>
+#include <ports/target-signal-socket.h>
 #include <systemc.h>
 
 #define MAX_LEN 4096

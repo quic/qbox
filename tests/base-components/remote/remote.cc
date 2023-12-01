@@ -9,13 +9,13 @@
 #include <cci_configuration>
 #include <scp/report.h>
 
-#include <greensocs/libgsutils.h>
+#include <libgsutils.h>
 
 #include "memory.h"
 #include "router.h"
 #include "remote.h"
 #include "pass.h"
-#include <greensocs/gsutils/tests/initiator-tester.h>
+#include <tests/initiator-tester.h>
 
 class RemoteTest : public sc_core::sc_module
 {

@@ -1,0 +1,1 @@
+gs_create_dymod(global_peripheral_initiator)

@@ -7,7 +7,7 @@
  */
 
 #include "remote_cpu.h"
-#include <greensocs/gsutils/module_factory_container.h>
+#include <module_factory_container.h>
 
 class RemotePlatform : public gs::ModuleFactory::ContainerDeferModulesConstruct
 {

@@ -5,10 +5,10 @@
 #include "python_binder.h"
 #include "router.h"
 #include "memory.h"
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
-#include <greensocs/gsutils/ports/initiator-signal-socket.h>
-#include <greensocs/gsutils/ports/target-signal-socket.h>
+#include <tests/initiator-tester.h>
+#include <tests/test-bench.h>
+#include <ports/initiator-signal-socket.h>
+#include <ports/target-signal-socket.h>
 #include <vector>
 #include <sstream>
 #include <memory>
@@ -128,7 +128,7 @@ public:
 
 protected:
     InitiatorTester m_initiator;
-    gs::PythonBinder<> m_python_binder;
+    gs::python_binder<> m_python_binder;
     gs::router<> m_router;
     gs::memory<> m_mem;
     InitiatorSignalSocket<bool> m_test_initiator_signal_socket;

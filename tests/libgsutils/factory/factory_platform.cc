@@ -9,9 +9,9 @@
 #include <memory>
 #include <cci/utils/broker.h>
 
-#include <greensocs/base-components/memory.h>
-#include <greensocs/base-components/router.h>
-#include <greensocs/libgsutils.h>
+#include <memory.h>
+#include <router.h>
+#include <libgsutils.h>
 #include <gtest/gtest.h>
 #include <systemc>
 #include <tlm>
@@ -24,10 +24,10 @@
 #include <tlm_utils/multi_passthrough_initiator_socket.h>
 #include <tlm_utils/multi_passthrough_target_socket.h>
 
-#include <greensocs/gsutils/argparser.h>
-#include "greensocs/gsutils/tests/initiator-tester.h"
-#include "greensocs/gsutils/tests/test-bench.h"
-#include "greensocs/gsutils/module_factory_container.h"
+#include <argparser.h>
+#include "tests/initiator-tester.h"
+#include "tests/test-bench.h"
+#include "module_factory_container.h"
 
 using testing::AnyOf;
 using testing::Eq;
@@ -44,9 +44,6 @@ int sc_main(int argc, char** argv)
     cci::cci_originator orig{ "sc_main" };
     auto broker_h = m_broker.create_broker_handle(orig);
     ArgParser ap{ broker_h, argc, argv };
-
-    typedef gs::memory<> Memory;
-    GSC_MODULE_REGISTER(Memory);
 
     FactoryPlatform platform("platform");
 

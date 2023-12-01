@@ -9,15 +9,15 @@
 #include <cci_configuration>
 #include <scp/report.h>
 
-#include <greensocs/libgsutils.h>
+#include <libgsutils.h>
 
 #include "memory.h"
 #include "router.h"
 #include "remote.h"
 #include "pass.h"
 
-#include <greensocs/gsutils/tests/initiator-tester.h>
-#include <greensocs/gsutils/tests/test-bench.h>
+#include <tests/initiator-tester.h>
+#include <tests/test-bench.h>
 
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>

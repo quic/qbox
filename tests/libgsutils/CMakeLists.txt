@@ -8,7 +8,7 @@ macro(gs_test test)
     set_tests_properties(${test} PROPERTIES TIMEOUT 10)
 endmacro()
 
-gs_systemc()
+# gs_systemc()
 
 
 gs_test(logger_test)
