@@ -295,6 +295,11 @@ void LibQemu::sdl2_gl_switch(DisplayChangeListener* dcl, DisplaySurface* new_sur
     m_int->exports().sdl2_gl_switch(dcl, new_surface);
 }
 
+void LibQemu::dcl_dpy_gfx_replace_surface(DisplayChangeListener* dcl, DisplaySurface* new_surface)
+{
+    m_int->exports().dcl_dpy_gfx_replace_surface(dcl, new_surface);
+}
+
 void LibQemu::sdl2_gl_refresh(DisplayChangeListener* dcl) { m_int->exports().sdl2_gl_refresh(dcl); }
 
 QEMUGLContext LibQemu::sdl2_gl_create_context(DisplayGLCtx* dgc, QEMUGLParams* p)

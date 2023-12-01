@@ -95,7 +95,7 @@ void MainThreadQemuDisplay::gl_switch(DisplayChangeListener* dcl, DisplaySurface
     // its completion. This will prevent the deadlocking situation where SystemC is not running
     // the switch "on_sysc" as it is waiting for QEMU to "finish/yeld", but that does not happen
     // as QEMU is in turn waiting for its switch function to run on SystemC kernel thread.
-    display->m_on_sysc.run_on_sysc([&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); },
+    display->m_on_sysc.run_on_sysc([&lib, dcl, new_surface]() { lib.dcl_dpy_gfx_replace_surface(dcl, new_surface); },
                                    display->m_simulation_started);
     if (display->m_simulation_started) {
         lib.lock_iothread();

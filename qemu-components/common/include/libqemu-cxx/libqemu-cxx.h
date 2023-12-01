@@ -177,6 +177,8 @@ public:
     void sdl2_gl_switch(DisplayChangeListener* dcl, DisplaySurface* new_surface);
     void sdl2_gl_refresh(DisplayChangeListener* dcl);
 
+    void dcl_dpy_gfx_replace_surface(DisplayChangeListener* dcl, DisplaySurface* new_surface);
+
     QEMUGLContext sdl2_gl_create_context(DisplayGLCtx* dgc, QEMUGLParams* p);
     void sdl2_gl_destroy_context(DisplayGLCtx* dgc, QEMUGLContext gl_ctx);
     int sdl2_gl_make_context_current(DisplayGLCtx* dgc, QEMUGLContext gl_ctx);
