@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import argparse, pprint
 import os
 from os import sched_get_priority_max
