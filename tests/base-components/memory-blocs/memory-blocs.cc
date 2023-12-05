@@ -304,15 +304,13 @@ int sc_main(int argc, char* argv[])
 {
     static constexpr size_t MEMORY_SIZE = 0xD00000000;
 
-    auto m_broker = new gs::ConfigurableBroker(
-        argc, argv,
-        {
-            { "test.memory.min_block_size", cci::cci_value(0x1000) },
-            { "test.memory.max_block_size", cci::cci_value(0x10000) },
-            { "test.memory.target_socket.size", cci::cci_value(MEMORY_SIZE) },
-            { "test.memory.target_socket.address", cci::cci_value(0) },
-            { "test.memory.target_socket.relative_addresses", cci::cci_value(true) },
-        });
+    auto m_broker = new gs::ConfigurableBroker({
+        { "test.memory.min_block_size", cci::cci_value(0x1000) },
+        { "test.memory.max_block_size", cci::cci_value(0x10000) },
+        { "test.memory.target_socket.size", cci::cci_value(MEMORY_SIZE) },
+        { "test.memory.target_socket.address", cci::cci_value(0) },
+        { "test.memory.target_socket.relative_addresses", cci::cci_value(true) },
+    });
 
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)

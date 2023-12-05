@@ -7,7 +7,7 @@
 #include <systemc>
 #include <cci_configuration>
 
-#include <greensocs/gsutils/luafile_tool.h>
+#include <greensocs/gsutils/argparser.h>
 #include <greensocs/libgsutils.h>
 
 #include "memory.h"

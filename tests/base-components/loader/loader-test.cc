@@ -81,7 +81,10 @@ TEST_BENCH(LoaderTest, SimpleReadCSVFile)
 
 int sc_main(int argc, char* argv[])
 {
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
+    gs::ConfigurableBroker m_broker{};
+    cci::cci_originator orig{ "sc_main" };
+    auto broker_h = m_broker.create_broker_handle(orig);
+    ArgParser ap{ broker_h, argc, argv };
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

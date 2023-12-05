@@ -17,7 +17,6 @@ platform = {
 
     router = {
         moduletype="Router";
-        log_level=0;
     },
 
     ram_0 = {

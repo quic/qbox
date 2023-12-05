@@ -128,7 +128,7 @@ TEST_BENCH(TestUart, IbexStdioBackend)
 }
 int sc_main(int argc, char* argv[])
 {
-    gs::ConfigurableBroker m_broker(argc, argv, { { "IbexStdioBackend.backend_1.read_write", cci::cci_value(false) } });
+    gs::ConfigurableBroker m_broker({ { "IbexStdioBackend.backend_1.read_write", cci::cci_value(false) } });
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

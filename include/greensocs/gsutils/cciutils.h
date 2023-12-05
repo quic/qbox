@@ -7,12 +7,11 @@
 #ifndef CCIUTILS_H
 #define CCIUTILS_H
 
+#include <scp/report.h>
 #include <iostream>
 #include <list>
 #include <regex>
 #include <unordered_set>
-
-#include "luafile_tool.h"
 #include <cci_configuration>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include <systemc>
@@ -166,7 +165,7 @@ T cci_get(cci::cci_broker_handle broker, std::string name)
     cci_value v = cci_get(broker, name);
 
     if (!v.template try_get<T>(ret)) {
-        SCP_ERR("cciutils.cci_get") << "Unable to get parameter " << name << "\nIs your .lua file up-to-date?";
+        SCP_ERR("cciutils.cci_get") << "Unable to get parameter " << name << "\nIs your config file up-to-date?";
     }
     return ret;
 }
@@ -264,7 +263,6 @@ public:
     // a set of perameters that should be exposed up the broker stack
     HelpSingleton* m_help_helper;
     std::set<std::string> hide;
-    cci_param<std::string> conf_file;
     friend class PrivateConfigurableBroker;
 
 protected:
@@ -471,15 +469,12 @@ public:
  * When constructed with no initialised parameters, it is assumed that ALL
  * parameters are to be treated as private
  * @param name Broker name (Default provided)
- * @param load_conf_file : request that configuration file is loaded (default true)
  */
 #define BROKERNAME "gs::ConfigurableBroker"
-    ConfigurableBroker(const std::string& name = BROKERNAME, bool load_conf_file = true,
+    ConfigurableBroker(const std::string& name = BROKERNAME,
                        std::function<void(std::string)> uninitialized_cb = nullptr)
         : consuming_broker(hierarchical_name() + "." + name)
         , m_help_helper(HelpSingleton::GetInstance())
-        , conf_file("lua_conf", "", cci_broker_handle(get_parent_broker(), get_cci_originator(name.c_str())),
-                    "Local lua configuration file", CCI_RELATIVE_NAME, get_cci_originator(name.c_str()))
         , m_orig_name(hierarchical_name())
         , m_originator(get_cci_originator(name.c_str()))
         , m_parent(get_parent_broker()) // local convenience function
@@ -492,73 +487,21 @@ public:
         }
 
         cci_register_broker(this);
-
-        if (load_conf_file && !(std::string(conf_file).empty())) {
-            LuaFile_Tool lua("lua", std::string(conf_file).c_str(), m_orig_name);
-        }
     }
 
-    /**
-     * @brief Construct a new Configurable Broker object
-     *
-     * @param load_conf_file request that configuration file is loaded
-     */
-    ConfigurableBroker(bool load_conf_file, std::function<void(std::string)> uninitialized_cb = nullptr)
-        : ConfigurableBroker(BROKERNAME, load_conf_file, uninitialized_cb)
-    {
-    }
     /**
      * @brief Construct a new Configurable Broker object from list.
      *  When constructed with a list of initialised parameters, all other params
      *  will be exported to the parent broker
      * @param list
-     * @param load_conf_file
      */
     ConfigurableBroker(std::initializer_list<cci_name_value_pair> list,
                        std::initializer_list<std::pair<std::string, std::string>> alias_list = {},
-                       bool load_conf_file = true, std::function<void(std::string)> uninitialized_cb = nullptr)
-        : ConfigurableBroker(false, uninitialized_cb)
+                       std::function<void(std::string)> uninitialized_cb = nullptr)
+        : ConfigurableBroker(BROKERNAME, uninitialized_cb)
     {
         initialize_params(list);
         alias_params(alias_list);
-        if (load_conf_file && !(std::string(conf_file).empty())) {
-            LuaFile_Tool lua("lua", m_orig_name);
-            lua.config(std::string(conf_file).c_str());
-        }
-    }
-    /**
-     * @brief Construct a new Configurable Broker object, all arguments have default options.
-     * in this case, the expectation is that this is being used at (or near) the
-     * top level of the design, and this broker will act as a global broker. A
-     * list of values will be used to set default values, but will be overwritten
-     * by configuration passed on the command line
-     * @param argc argc and argv provided, such that they can be scanned for configuration commands
-     * @param argv
-     * @param list list of pre-configred values (to be hidden)
-     * @param load_conf_file
-     */
-    ConfigurableBroker(const int argc, char* const argv[], std::initializer_list<cci_name_value_pair> list = {},
-                       bool load_conf_file = true, bool enforce_config_file = false,
-                       std::function<void(std::string)> uninitialized_cb = nullptr)
-        : ConfigurableBroker(false, uninitialized_cb)
-    {
-        for (auto& p : list) {
-            set_preset_cci_value(relname(p.first), p.second, m_originator);
-        }
-
-        m_help_helper->capture_originator("lua");
-        LuaFile_Tool lua("lua", argc, argv, "", enforce_config_file);
-
-        /* check to see if the conf_file was set ! */
-        if (load_conf_file && !(std::string(conf_file).empty())) {
-            LuaFile_Tool lua("lua", std::string(conf_file).c_str(), m_orig_name);
-        }
-    }
-
-    ConfigurableBroker(const int argc, char* const argv[], bool enforce_config_file,
-                       std::function<void(std::string)> uninitialized_cb = nullptr)
-        : ConfigurableBroker(argc, argv, {}, true, enforce_config_file, uninitialized_cb)
-    {
     }
 
     std::string relname(const std::string& n) const

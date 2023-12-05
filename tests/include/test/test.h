@@ -71,12 +71,15 @@ public:
 template <class TESTBENCH>
 int run_testbench(int argc, char* argv[])
 {
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)
                           .logAsync(false)
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
+    gs::ConfigurableBroker m_broker{};
+    cci::cci_originator orig{ "sc_main" };
+    auto broker_h = m_broker.create_broker_handle(orig);
+    ArgParser ap{ broker_h, argc, argv };
 
     TESTBENCH test_bench("test-bench");
 

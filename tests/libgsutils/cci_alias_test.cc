@@ -85,7 +85,7 @@ int sc_main(int argc, char* argv[])
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(10));      // make the msg type column a bit tighter
 
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
+    auto m_broker = new gs::ConfigurableBroker();
     cci::cci_originator m_originator("MyConfigTool");
     m_broker->set_preset_cci_value("top.one.thing", cci::cci_value(cci::cci_value::from_json("30")), m_originator);
     m_broker->set_preset_cci_value("top.two.thing", cci::cci_value(cci::cci_value::from_json("40")), m_originator);

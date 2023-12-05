@@ -7,6 +7,7 @@
 #include <cci_configuration>
 #include <gmock/gmock.h>
 #include <greensocs/libgsutils.h>
+#include <greensocs/gsutils/argparser.h>
 #include <gtest/gtest.h>
 #include <systemc>
 #include <scp/report.h>
@@ -28,7 +29,7 @@ public:
             EXPECT_NE(m_irqs, 99); // the 3rd (99) should be disable on the command line
             SCP_INFO(SCMOD) << "Report test output";
         } else {
-            EXPECT_EQ(m_irqs, 99);
+            EXPECT_EQ(m_irqs, 42);
         }
     }
 };
@@ -94,27 +95,29 @@ int sc_main(int argc, char* argv[])
                           .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
     SCP_INFO("main") << "SCP_INFO(\"main\") between init_logging and broker construction (Causes "
                         "ERROR which is caught)";
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
+    gs::ConfigurableBroker m_broker{};
     SCP_INFO("main") << "SCP_INFO(\"main\") after broker construction";
 
     cci::cci_originator m_originator("MyConfigTool");
-    m_broker->set_preset_cci_value("MyTop.MyCtrl.irqs", cci::cci_value(cci::cci_value::from_json("100")), m_originator);
-    m_broker->set_preset_cci_value("MyTopTwo.MyCtrl.irqs", cci::cci_value(cci::cci_value::from_json("200")),
-                                   m_originator);
-    m_broker->set_preset_cci_value("MyTopThree.MyCtrl.irqs", cci::cci_value(cci::cci_value::from_json("300")),
-                                   m_originator);
+    auto broker_h = m_broker.create_broker_handle(m_originator);
+    ArgParser ap{ broker_h, argc, argv };
+    m_broker.set_preset_cci_value("MyTop.MyCtrl.irqs", cci::cci_value(cci::cci_value::from_json("100")), m_originator);
+    m_broker.set_preset_cci_value("MyTopTwo.MyCtrl.irqs", cci::cci_value(cci::cci_value::from_json("200")),
+                                  m_originator);
+    m_broker.set_preset_cci_value("MyTopThree.MyCtrl.irqs", cci::cci_value(cci::cci_value::from_json("300")),
+                                  m_originator);
 
     testing::InitGoogleTest(&argc, argv);
     int status = RUN_ALL_TESTS();
 
     sc_start(1, sc_core::SC_NS);
 
-    auto params = m_broker->get_param_handles(m_originator);
+    auto params = m_broker.get_param_handles(m_originator);
     for (auto v : params) {
         SCP_INFO("sc_main") << "config value: " << v.name() << " : " << v.get_cci_value();
     }
 
-    auto uncon = m_broker->get_unconsumed_preset_values();
+    auto uncon = m_broker.get_unconsumed_preset_values();
     for (auto v : uncon) {
         SCP_INFO("sc_main") << "Unconsumed config value: " << v.first << " : " << v.second;
     }
@@ -135,5 +138,5 @@ TEST(ccitest, two)
 TEST(ccitest, three)
 {
     top_level3 = new TopLevelThree("MyTopThree");
-    EXPECT_EQ(set_value, 99);
+    EXPECT_EQ(set_value, 42);
 }

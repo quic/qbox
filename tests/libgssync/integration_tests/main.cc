@@ -25,6 +25,7 @@
 #include <tlm_utils/tlm_quantumkeeper.h>
 #include <cci/utils/broker.h>
 #include <greensocs/libgsutils.h>
+#include <greensocs/gsutils/argparser.h>
 
 #include "checker.h"
 #include "router.h"
@@ -708,9 +709,8 @@ int sc_main(int argc, char** argv)
                           .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
 
     auto m_broker = new cci_utils::broker("Global Broker");
-    cci::cci_register_broker(m_broker);
-    LuaFile_Tool lua("lua");
-    lua.parseCommandLine(argc, argv);
+    auto broker_h = cci::cci_register_broker(m_broker);
+    ArgParser ap{ broker_h, argc, argv };
 
     auto uncon = m_broker->get_unconsumed_preset_values();
     for (auto v : uncon) {

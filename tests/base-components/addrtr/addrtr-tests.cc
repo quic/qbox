@@ -16,7 +16,7 @@ TEST_BENCH(AddrtrTestBench, dbgtxn) { do_txn(1, 100, 1); }
 TEST_BENCH(AddrtrTestBench, dmiinv) { do_dmi(2, 100); }
 int sc_main(int argc, char* argv[])
 {
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
+    auto m_broker = new gs::ConfigurableBroker();
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

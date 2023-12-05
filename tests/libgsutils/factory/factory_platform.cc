@@ -24,7 +24,7 @@
 #include <tlm_utils/multi_passthrough_initiator_socket.h>
 #include <tlm_utils/multi_passthrough_target_socket.h>
 
-#include "greensocs/libgsutils.h"
+#include <greensocs/gsutils/argparser.h>
 #include "greensocs/gsutils/tests/initiator-tester.h"
 #include "greensocs/gsutils/tests/test-bench.h"
 #include "greensocs/gsutils/module_factory_container.h"
@@ -40,7 +40,10 @@ public:
 
 int sc_main(int argc, char** argv)
 {
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
+    gs::ConfigurableBroker m_broker{};
+    cci::cci_originator orig{ "sc_main" };
+    auto broker_h = m_broker.create_broker_handle(orig);
+    ArgParser ap{ broker_h, argc, argv };
 
     typedef gs::Memory<> Memory;
     GSC_MODULE_REGISTER(Memory);

@@ -11,7 +11,7 @@
 #include <systemc>
 
 #include <greensocs/gsutils/cciutils.h>
-#include <greensocs/gsutils/luafile_tool.h>
+#include <greensocs/gsutils/argparser.h>
 #include <greensocs/gsutils/module_factory_container.h>
 
 #include <libqbox/components/cpu/arm/cortex-a53.h>
@@ -48,9 +48,11 @@ int sc_main(int argc, char* argv[])
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
 
-    gs::ConfigurableBroker m_broker(argc, argv);
+    gs::ConfigurableBroker m_broker{};
     cci::cci_originator orig("sc_main");
     cci::cci_param<int> p_log_level{ "log_level", 0, "Default log level", cci::CCI_ABSOLUTE_NAME, orig };
+    auto broker_h = m_broker.create_broker_handle(orig);
+    ArgParser ap{ broker_h, argc, argv };
 
     GreenSocsPlatform platform("platform");
 

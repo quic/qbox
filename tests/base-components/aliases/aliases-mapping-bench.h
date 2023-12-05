@@ -9,6 +9,7 @@
 
 #include <greensocs/gsutils/luafile_tool.h>
 #include <greensocs/libgsutils.h>
+#include <greensocs/gsutils/argparser.h>
 
 #include "memory.h"
 #include "router.h"

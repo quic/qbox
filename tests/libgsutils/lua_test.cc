@@ -6,6 +6,7 @@
 
 #include <gmock/gmock.h>
 #include <greensocs/libgsutils.h>
+#include <greensocs/gsutils/argparser.h>
 #include <gtest/gtest.h>
 #include <systemc>
 #include <scp/report.h>
@@ -45,7 +46,10 @@ int sc_main(int argc, char** argv)
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(10));      // make the msg type column a bit tighter
 
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
+    gs::ConfigurableBroker m_broker{};
+    cci::cci_originator orig{ "sc_main" };
+    auto broker_h = m_broker.create_broker_handle(orig);
+    ArgParser ap{ broker_h, argc, argv };
 
     testA t1("top");
 

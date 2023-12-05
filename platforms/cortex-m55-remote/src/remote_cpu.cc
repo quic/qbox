@@ -19,7 +19,7 @@ protected:
 public:
     RemotePlatform(const sc_core::sc_module_name& n)
         : gs::ModuleFactory::ContainerDeferModulesConstruct(n)
-        , p_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
+        , p_quantum_ns("quantum_ns", 1'000'000, "TLM-2.0 global quantum in ns")
     {
         using tlm_utils::tlm_quantumkeeper;
 
@@ -43,12 +43,10 @@ int sc_main(int argc, char* argv[])
     std::cout << "RemoteCPU started\n";
     std::cout << "Passed arguments: " << std::endl;
     for (int i = 0; i < 2; i++) std::cout << "argv[" << i << "] = " << argv[i] << std::endl;
-    auto m_broker = new gs::ConfigurableBroker(
-        argc, argv,
-        {
-            { "remote_platform.moduletype", cci::cci_value("ContainerDeferModulesConstruct") },
-            { "remote_platform.quantum_ns", cci::cci_value(10000000) },
-        });
+    auto m_broker = new gs::ConfigurableBroker({
+        { "remote_platform.moduletype", cci::cci_value("ContainerDeferModulesConstruct") },
+        { "remote_platform.quantum_ns", cci::cci_value(10'000'000) },
+    });
 
     RemotePlatform remote("remote_platform");
     try {

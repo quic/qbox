@@ -92,14 +92,13 @@ TEST_BENCH(TestUart, SocketBackend)
 
 int sc_main(int argc, char* argv[])
 {
-    gs::ConfigurableBroker m_broker(argc, argv,
-                                    {
-                                        { "SocketBackend.s_client.address", cci::cci_value("127.0.0.1:8000") },
-                                        { "SocketBackend.s_client.server", cci::cci_value(false) },
-                                        { "SocketBackend.s_server.nowait", cci::cci_value(false) },
-                                        { "SocketBackend.s_client.nowait", cci::cci_value(false) },
-                                        { "SocketBackend.s_server.address", cci::cci_value("127.0.0.1:8000") },
-                                    });
+    gs::ConfigurableBroker m_broker({
+        { "SocketBackend.s_client.address", cci::cci_value("127.0.0.1:8000") },
+        { "SocketBackend.s_client.server", cci::cci_value(false) },
+        { "SocketBackend.s_server.nowait", cci::cci_value(false) },
+        { "SocketBackend.s_client.nowait", cci::cci_value(false) },
+        { "SocketBackend.s_server.address", cci::cci_value("127.0.0.1:8000") },
+    });
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

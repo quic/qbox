@@ -116,7 +116,7 @@ int sc_main(int argc, char** argv)
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(10));      // make the msg type column a bit tighter
 
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
+    auto m_broker = new gs::ConfigurableBroker();
 
     testA t1("testA");
     testB t2("testB");

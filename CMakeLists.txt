@@ -81,6 +81,7 @@ set(srcs
     src/systemc-macs/components/phy.cc
     src/systemc-macs/models/xgmac.cc
     src/gsutils/cciutils.cc
+    src/gsutils/luautils.cc
     ${PYTHON_BINDER_SRC}
 )
 

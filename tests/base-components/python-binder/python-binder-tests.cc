@@ -37,24 +37,22 @@ TEST_BENCH(PythonBinderTestBench, test_bench)
 
 int sc_main(int argc, char* argv[])
 {
-    gs::ConfigurableBroker m_broker(
-        argc, argv,
-        {
-            { "test_bench.mem.target_socket.address", cci::cci_value(0x1000) },
-            { "test_bench.mem.target_socket.size", cci::cci_value(0x1000) },
-            { "test_bench.mem.verbose", cci::cci_value(true) },
+    gs::ConfigurableBroker m_broker({
+        { "test_bench.mem.target_socket.address", cci::cci_value(0x1000) },
+        { "test_bench.mem.target_socket.size", cci::cci_value(0x1000) },
+        { "test_bench.mem.verbose", cci::cci_value(true) },
 
-            { "test_bench.python-binder.tlm_initiator_ports_num", cci::cci_value(1) },
-            { "test_bench.python-binder.tlm_target_ports_num", cci::cci_value(1) },
-            { "test_bench.python-binder.initiator_signals_num", cci::cci_value(1) },
-            { "test_bench.python-binder.target_signals_num", cci::cci_value(1) },
-            { "test_bench.python-binder.target_socket_0.address", cci::cci_value(0x2000) },
-            { "test_bench.python-binder.target_socket_0.size", cci::cci_value(0x1000) },
-            { "test_bench.python-binder.target_socket_0.relative_addresses", cci::cci_value(false) },
-            { "test_bench.python-binder.py_module_dir", cci::cci_value(getexepath()) },
-            { "test_bench.python-binder.py_module_name", cci::cci_value("python-binder-test") },
-            { "test_bench.python-binder.py_module_args", cci::cci_value("--debug") },
-        });
+        { "test_bench.python-binder.tlm_initiator_ports_num", cci::cci_value(1) },
+        { "test_bench.python-binder.tlm_target_ports_num", cci::cci_value(1) },
+        { "test_bench.python-binder.initiator_signals_num", cci::cci_value(1) },
+        { "test_bench.python-binder.target_signals_num", cci::cci_value(1) },
+        { "test_bench.python-binder.target_socket_0.address", cci::cci_value(0x2000) },
+        { "test_bench.python-binder.target_socket_0.size", cci::cci_value(0x1000) },
+        { "test_bench.python-binder.target_socket_0.relative_addresses", cci::cci_value(false) },
+        { "test_bench.python-binder.py_module_dir", cci::cci_value(getexepath()) },
+        { "test_bench.python-binder.py_module_name", cci::cci_value("python-binder-test") },
+        { "test_bench.python-binder.py_module_args", cci::cci_value("--debug") },
+    });
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

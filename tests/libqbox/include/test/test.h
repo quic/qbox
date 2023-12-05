@@ -15,6 +15,7 @@
 #include <cci/utils/broker.h>
 
 #include <greensocs/gsutils/cciutils.h>
+#include <greensocs/gsutils/argparser.h>
 
 #include <scp/report.h>
 
@@ -71,12 +72,15 @@ public:
 template <class TESTBENCH>
 int run_testbench(int argc, char* argv[])
 {
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)
                           .logAsync(false)
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
+    gs::ConfigurableBroker m_broker{};
+    cci::cci_originator orig{ "sc_main" };
+    auto broker_h = m_broker.create_broker_handle(orig);
+    ArgParser ap{ broker_h, argc, argv };
 
     SCP_INFO("test.h") << "Start Test";
     TESTBENCH test_bench("test-bench");

@@ -12,7 +12,7 @@
 #include <systemc>
 
 #include <greensocs/gsutils/cciutils.h>
-#include <greensocs/gsutils/luafile_tool.h>
+#include <greensocs/gsutils/argparser.h>
 #include "remote_cpu.h"
 
 #include <greensocs/base-components/memory.h>
@@ -48,7 +48,10 @@ public:
 
 int sc_main(int argc, char* argv[])
 {
-    auto m_broker = new gs::ConfigurableBroker(argc, argv);
+    gs::ConfigurableBroker m_broker{};
+    cci::cci_originator orig{ "sc_main" };
+    auto broker_h = m_broker.create_broker_handle(orig);
+    ArgParser ap{ broker_h, argc, argv };
 
     GreenSocsPlatform platform("platform");
 
