@@ -53,7 +53,6 @@ protected:
     std::mutex m_signaled_lock;
     std::condition_variable m_signaled_cond;
 
-    int64_t m_last_vclock = 0;
 
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
     bool m_finished = false;
@@ -149,7 +148,12 @@ protected:
      * Called by the QEMU iothread when the deadline timer expires. We kick the
      * CPU out of its execution loop for it to call the end_of_loop_cb callback.
      */
-    void deadline_timer_cb() { m_cpu.kick(); }
+    void deadline_timer_cb()
+    {
+        SCP_TRACE(())("QEMU deadline timer callback");
+        if (!m_finished) m_cpu.kick();
+        rearm_deadline_timer();
+    }
 
     /*
      * The CPU does not have work anymore. Pause the CPU thread until we have
@@ -162,6 +166,7 @@ protected:
      */
     void wait_for_work()
     {
+        SCP_TRACE(())("Wait for work");
         m_qk->stop();
         if (m_finished) return;
 
@@ -179,6 +184,7 @@ protected:
             }
         }
         if (m_finished) return;
+        SCP_TRACE(())("Have work, running CPU");
         m_qk->start();
     }
 
@@ -194,10 +200,13 @@ protected:
 
         budget_ns = int64_t(run_budget.to_seconds() * 1e9);
 
-        m_last_vclock = m_inst.get().get_virtual_clock();
-        next_dl_ns = m_last_vclock + budget_ns;
+        next_dl_ns = m_inst.get().get_virtual_clock() + budget_ns;
 
-        m_deadline_timer->mod(next_dl_ns);
+        if (budget_ns > 0) {
+            m_deadline_timer->mod(next_dl_ns);
+        } else {
+            SCP_DEBUG(())("No budget to rearm timer");
+        }
     }
 
     /*
@@ -213,6 +222,7 @@ protected:
          */
         m_inst.get().lock_iothread();
 
+        SCP_TRACE(())("Prepare run");
         if (m_inst.get_tcg_mode() == QemuInstance::TCG_SINGLE) {
             while (!m_inst.can_run() && !m_finished) {
                 m_inst.get().unlock_iothread();
@@ -239,13 +249,13 @@ protected:
      */
     void run_cpu_loop()
     {
+        auto last_vclock = m_inst.get().get_virtual_clock();
         m_cpu.loop();
-
         /*
          * Workaround in icount mode: sometimes, the CPU does not execute
          * on the first call of run_loop(). Give it a second chance.
          */
-        if ((m_inst.get().get_virtual_clock() == m_last_vclock) && (m_cpu.can_run())) {
+        if ((m_inst.get().get_virtual_clock() == last_vclock) && (m_cpu.can_run())) {
             m_cpu.loop();
         }
     }
@@ -263,11 +273,7 @@ protected:
 
         m_inst.get().unlock_iothread();
 
-        if (now < m_last_vclock) {
-            m_last_vclock = now;
-        }
-        elapsed = sc_core::sc_time(now - m_last_vclock, sc_core::SC_NS);
-        m_qk->inc(elapsed);
+        m_qk->set(sc_core::sc_time(now, sc_core::SC_NS) - sc_core::sc_time_stamp());
 
         m_qk->sync();
     }
@@ -279,6 +285,7 @@ protected:
      */
     void end_of_loop_cb()
     {
+        SCP_TRACE(())("End of loop");
         if (m_finished) return;
         if (m_coroutines) {
             m_inst.get().coroutine_yield();
@@ -384,7 +391,8 @@ public:
         socket.cancel_all();
 
         /* Wait for QEMU to terminate the CPU thread */
-        if (m_inst.get_tcg_mode() == QemuInstance::TCG_MULTI) {
+        if (m_inst.get_tcg_mode() == QemuInstance::TCG_MULTI && m_inst.is_tcg_enabled()) {
+            // in HVF/KVM this could hang, so only do it for tcg.
             m_cpu.remove_sync();
         } else { // Handle non multi- non coroutine mode (SINGLE mode)
             m_cpu.set_unplug(true);
@@ -424,13 +432,14 @@ public:
 
     void halt_cb(const bool& val)
     {
+        SCP_TRACE(())("Halt : {}", val);
         if (!m_finished) {
             if (val) {
                 m_deadline_timer->del();
                 m_qk->stop();
             } else {
-                rearm_deadline_timer();
                 m_qk->start();
+                rearm_deadline_timer();
             }
             m_inst.get().lock_iothread();
             m_cpu.halt(val);
@@ -440,6 +449,7 @@ public:
     }
     void reset_cb(const bool& val)
     {
+        SCP_TRACE(())("Reset : {}", val);
         if (!m_finished && val) {
             m_qk->start();
             SCP_WARN(())("calling reset");
@@ -467,14 +477,18 @@ public:
     virtual void start_of_simulation() override
     {
         QemuDevice::start_of_simulation();
+        m_inst.get().lock_iothread();
+        // Reset CPU at start of simulation
+        m_cpu.reset();
+        m_inst.get().unlock_iothread();
+        if (m_inst.can_run()) {
+            m_qk->start();
+        }
         if (!m_coroutines) {
             /* Prepare the CPU for its first run and release it */
             m_cpu.set_soft_stopped(false);
             rearm_deadline_timer();
             m_cpu.kick();
-        }
-        if (m_inst.can_run()) {
-            m_qk->start();
         }
 
         // Have not managed to figure out the root cause of the issue, but the
@@ -503,12 +517,10 @@ public:
         using sc_core::SC_NS;
 
         int64_t vclock_now;
-        sc_time vclock_delta;
 
         vclock_now = m_inst.get().get_virtual_clock();
-        vclock_delta = sc_time(vclock_now - m_last_vclock, SC_NS);
+        m_qk->set(sc_time(vclock_now, SC_NS) - sc_core::sc_time_stamp());
 
-        m_qk->inc(vclock_delta);
         return m_qk->get_local_time();
     }
 
@@ -525,7 +537,6 @@ public:
              * Kick the CPU out of its execution loop so that we can sync with
              * the kernel.
              */
-            m_last_vclock = m_inst.get().get_virtual_clock();
             m_cpu.kick();
         } else {
             /*
@@ -541,8 +552,6 @@ public:
 #if 0
             /* Update the deadline timer with this new local time */
             rearm_deadline_timer();
-#else
-            m_last_vclock = m_inst.get().get_virtual_clock();
 #endif
         }
     }

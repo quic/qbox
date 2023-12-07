@@ -133,8 +133,10 @@ void tlm_quantumkeeper_multithread::inc(const sc_core::sc_time& t)
 void tlm_quantumkeeper_multithread::set(const sc_core::sc_time& t)
 {
     std::lock_guard<std::mutex> lock(mutex);
-    m_local_time = t + sc_core::sc_time_stamp(); // NB, we store the
-    // absolute time.
+    // quietly refuse to move time backwards
+    if (t + sc_core::sc_time_stamp() >= m_local_time) {
+        m_local_time = t + sc_core::sc_time_stamp(); // NB, we store the absolute time.
+    }
 }
 
 void tlm_quantumkeeper_multithread::sync()
