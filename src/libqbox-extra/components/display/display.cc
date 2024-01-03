@@ -1,6 +1,6 @@
 /*
  *  This file is part of libqbox
- *  Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ *  Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -73,13 +73,10 @@ void MainThreadQemuDisplay::instantiate()
 
     inst->get().enable_opengl();
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        SCP_WARN() << "Skipping Display module: Failed to initialize SDL: " << SDL_GetError();
+    if (inst->get().sdl2_init() < 0) {
+        SCP_WARN() << "Skipping Display module: Failed to initialize SDL: " << inst->get().sdl2_get_error();
         return;
     }
-
-    // Prefer loading ANGLE GLES driver
-    SDL_SetHint(SDL_HINT_OPENGL_ES_DRIVER, "1");
 
     m_instantiated = true;
 }
@@ -98,9 +95,8 @@ void MainThreadQemuDisplay::gl_switch(DisplayChangeListener* dcl, DisplaySurface
     // its completion. This will prevent the deadlocking situation where SystemC is not running
     // the switch "on_sysc" as it is waiting for QEMU to "finish/yeld", but that does not happen
     // as QEMU is in turn waiting for its switch function to run on SystemC kernel thread.
-    display->m_on_sysc.run_on_sysc(
-            [&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); },
-            display->m_simulation_started);
+    display->m_on_sysc.run_on_sysc([&lib, dcl, new_surface]() { lib.sdl2_gl_switch(dcl, new_surface); },
+                                   display->m_simulation_started);
     if (display->m_simulation_started) {
         lib.lock_iothread();
     }
@@ -122,8 +118,7 @@ void MainThreadQemuDisplay::gl_refresh(DisplayChangeListener* dcl)
     }
 
     // SDL2 GL refresh should run on main kernel thread as it polls events
-    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_gl_refresh(dcl); },
-                                       display->m_simulation_started);
+    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_gl_refresh(dcl); }, display->m_simulation_started);
 
     if (display->m_simulation_started) {
         lib.lock_iothread();
@@ -184,11 +179,7 @@ void MainThreadQemuDisplay::realize()
         cons.set_display_gl_ctx(sdl2_console.get_dgc());
         sdl2_console.register_dcl();
 
-#ifdef __APPLE__
-        SDL_SysWMinfo info;
-        SDL_GetWindowWMInfo(sdl2_console.get_real_window(), &info);
-        cons.set_window_id((uintptr_t)info.info.cocoa.window);
-#endif
+        sdl2_console.set_window_id(cons);
     }
 
     m_realized = true;
@@ -198,7 +189,7 @@ QemuDisplay::QemuDisplay(const sc_core::sc_module_name& name, sc_core::sc_object
     : sc_module(name)
 #ifdef __APPLE__
     // On MacOS use libqbox's QemuDisplay SystemC module.
-    ,m_main_display(o)
+    , m_main_display(o)
 #endif
 {
 #ifndef __APPLE__

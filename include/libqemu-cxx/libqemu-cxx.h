@@ -1,6 +1,7 @@
 /*
  *  This file is part of libqemu-cxx
  *  Copyright (C) 2015-2019  GreenSocs
+ *  Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -162,6 +163,9 @@ public:
     DisplayGLCtxOps display_gl_ctx_ops_new(LibQemuIsCompatibleDclFn);
     Dcl dcl_new(DisplayChangeListener* dcl);
     DclOps dcl_ops_new();
+
+    int sdl2_init() const;
+    const char* sdl2_get_error() const;
 
     std::vector<SDL2Console> sdl2_create_consoles(int num);
     void sdl2_cleanup();
@@ -490,6 +494,8 @@ public:
     DisplayGLCtx* get_dgc() const;
 
     void register_dcl() const;
+
+    void set_window_id(Console& con) const;
 };
 
 class Dcl

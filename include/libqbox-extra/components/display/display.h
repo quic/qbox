@@ -1,6 +1,6 @@
 /*
  *  This file is part of libqbox
- *  Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ *  Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -18,9 +18,6 @@
 #include <libqbox/qemu-instance.h>
 #include <libqbox/components/gpu/virtio-mmio-gpugl.h>
 #include <libqbox-extra/components/pci/virtio-gpu-gl-pci.h>
-
-#include <SDL.h>
-#include <SDL_syswm.h>
 
 /**
  * @class MainThreadQemuDisplay

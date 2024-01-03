@@ -1,6 +1,6 @@
 /*
  *  This file is part of libqemu-cxx
- *  Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ *  Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -59,6 +59,8 @@ DisplayChangeListener* SDL2Console::get_dcl() const { return m_int->exports().sd
 DisplayGLCtx* SDL2Console::get_dgc() const { return m_int->exports().sdl2_console_get_dgc(m_cons); }
 
 void SDL2Console::register_dcl() const { m_int->exports().dcl_register(get_dcl()); }
+
+void SDL2Console::set_window_id(Console& con) const { m_int->exports().sdl2_console_set_window_id(m_cons, con.m_cons); }
 
 DisplayGLCtxOps::DisplayGLCtxOps(::DisplayGLCtxOps* ops, std::shared_ptr<LibQemuInternals>& internals)
     : m_ops(ops), m_int(internals)

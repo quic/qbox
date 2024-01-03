@@ -1,6 +1,7 @@
 /*
  *  This file is part of libqemu-cxx
  *  Copyright (C) 2015-2019 GreenSocs
+ *  Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -236,6 +237,10 @@ std::vector<Console> LibQemu::get_all_consoles()
     }
     return consoles;
 }
+
+int LibQemu::sdl2_init() const { return m_int->exports().sdl2_init(); }
+
+const char* LibQemu::sdl2_get_error() const { return m_int->exports().sdl2_get_error(); }
 
 std::vector<SDL2Console> LibQemu::sdl2_create_consoles(int num)
 {

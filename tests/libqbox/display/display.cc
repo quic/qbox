@@ -1,6 +1,6 @@
 /*
  *  This file is part of libqbox
- *  Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ *  Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  *  SPDX-License-Identifier: BSD-3-Clause
  */
@@ -26,9 +26,9 @@ public:
     MainThreadDisplayTest(const sc_core::sc_module_name& n)
         : TestBench(n), m_inst("inst", &m_inst_manager, qemu::Target::AARCH64)
     {
-        if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        if (m_inst.get().sdl2_init() < 0) {
             // Skip this test on platforms with no video device available
-            SCP_WARN(SCMOD) << "Skipping Display test: Failed to initialize SDL: " << SDL_GetError();
+            SCP_WARN(SCMOD) << "Skipping Display test: Failed to initialize SDL: " << m_inst.get().sdl2_get_error();
             return;
         }
 
