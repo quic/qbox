@@ -453,6 +453,8 @@ public:
      */
     QemuInstanceDmiManager& get_dmi_manager() { return m_dmi_mgr; }
 
+    int number_devices() { return devices.size(); }
+
 private:
     void start_of_simulation(void) { get().finish_qemu_init(); }
 };

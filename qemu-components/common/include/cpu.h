@@ -255,8 +255,11 @@ protected:
          * Workaround in icount mode: sometimes, the CPU does not execute
          * on the first call of run_loop(). Give it a second chance.
          */
-        if ((m_inst.get().get_virtual_clock() == last_vclock) && (m_cpu.can_run())) {
-            m_cpu.loop();
+        for (int i = 0; i < m_inst.number_devices(); i++) {
+            if ((m_inst.get().get_virtual_clock() == last_vclock) && (m_cpu.can_run())) {
+                m_cpu.loop();
+            } else
+                break;
         }
     }
 
