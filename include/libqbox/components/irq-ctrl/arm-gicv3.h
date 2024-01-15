@@ -13,6 +13,9 @@
 #include <systemc>
 #include <cci_configuration>
 
+#include <libqbox-extra/components/meta/global_peripheral_initiator.h>
+#include <libqemu-cxx/libqemu-cxx.h>
+
 #include "libqbox/components/device.h"
 #include "libqbox/ports/target.h"
 #include "libqbox/ports/initiator-signal-socket.h"
@@ -143,6 +146,24 @@ public:
             fiq_out[cpu].init_sbd(sbd, p_num_cpu * 1 + cpu);
             virq_out[cpu].init_sbd(sbd, p_num_cpu * 2 + cpu);
             vfiq_out[cpu].init_sbd(sbd, p_num_cpu * 3 + cpu);
+        }
+
+        if (m_inst.is_kvm_enabled()) {
+            uint64_t val;
+            qemu::MemoryRegionOps::MemTxAttrs attrs = {};
+            sc_core::sc_object* init_obj = gs::find_sc_obj(nullptr, "platform.global_peripheral_initiator_arm_0");
+            auto init = dynamic_cast<GlobalPeripheralInitiator*>(init_obj);
+            assert(init && "Failed to find global peripheral initiator");
+
+            m_inst.get().lock_iothread();
+            uint64_t addr;
+            addr = gs::cci_get<uint64_t>(cci::cci_get_broker(), std::string(dist_iface.name()) + ".address");
+            init->m_initiator.qemu_io_read(addr, &val, sizeof(val), attrs);
+            for (i = 0; i < p_redist_region.get_value().size(); i++) {
+                addr = gs::cci_get<uint64_t>(cci::cci_get_broker(), std::string(redist_iface[i].name()) + ".address");
+                init->m_initiator.qemu_io_read(addr, &val, sizeof(val), attrs);
+            }
+            m_inst.get().unlock_iothread();
         }
     }
 };
