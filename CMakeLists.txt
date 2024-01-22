@@ -145,6 +145,17 @@ if (NOT WITHOUT_QEMU)
 
     if (APPLE)
         set(CMAKE_MACOSX_RPATH ON)
+
+        # Since dlopen does not automatically look into `brew --prefix`/lib, we
+        # add this path to both CMAKE_BUILD_RPATH and CMAKE_INSTALL_RPATH, so
+        # the user won't need to set the DYLD_LIBRARY_PATH env variable.
+        find_program(BREW_BIN brew)
+        execute_process(COMMAND ${BREW_BIN} --prefix
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            OUTPUT_VARIABLE BREW_PREFIX)
+        set(BREW_LIB ${BREW_PREFIX}/lib)
+        list(APPEND CMAKE_BUILD_RPATH ${BREW_LIB})
+        list(APPEND CMAKE_INSTALL_RPATH ${BREW_LIB})
     endif (APPLE)
     # using main branch as it has fixes for cmake
     gs_addexpackage("gh:google/googletest#main")
