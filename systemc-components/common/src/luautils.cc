@@ -142,7 +142,7 @@ int gs::LuaFile_Tool::config(cci::cci_broker_handle a_broker, const char* a_conf
 
     // run
     if (luaL_dostring(L, config_loader.get())) {
-        SCP_INFO(()) << lua_tostring(L, -1);
+        SCP_ERR(()) << lua_tostring(L, -1);
         lua_pop(L, 1); /* pop error message from the stack */
     }
 
