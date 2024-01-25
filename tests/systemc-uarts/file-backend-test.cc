@@ -30,8 +30,6 @@
 
 #include <cci/utils/broker.h>
 
-sc_event ev;
-
 class TestFILE : public TestBench
 {
     Uart m_uart;
@@ -39,6 +37,7 @@ class TestFILE : public TestBench
     CharBackendFile file_backend;
 
 public:
+    sc_event ev;
     InitiatorTester m_initiator;
     TestFILE(const sc_core::sc_module_name& n)
         : TestBench(n), m_uart("uart"), file_backend("backend"), m_irq_trigger("irq_trigger"), m_initiator("initiator")
@@ -62,7 +61,7 @@ TEST_BENCH(TestFILE, FileReadWrite)
 {
     m_initiator.do_write(14 << 2, 0x10); // #define PL011_INT_RX 0x10 - s->int_enabled
     m_initiator.do_write(11 << 2, 0x10); // pl011_set_read_trigger();
-    char data;
+    char data = 0;
     // read test
     while (data != EOF) {
         wait(ev);
