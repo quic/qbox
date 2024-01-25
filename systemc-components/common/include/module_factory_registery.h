@@ -78,9 +78,10 @@ struct cci::cci_value_converter<gs::cci_constructor_vl> {
     static struct gs::ModuleFactory::ModuleRegistrationWrapper&                                                        \
         GS_MODULEFACTORY_moduleReg_inst_##__NAME__ = GS_MODULEFACTORY_moduleReg_##__NAME__::get()
 
-#define GSC_MODULE_REGISTER_C(__NAME__, ...)                                                                \
-    static cci::cci_param<gs::cci_constructor_vl> module_construct_param##__NAME__(                         \
-        CCI_GS_MF_NAME #__NAME__, gs::cci_constructor_vl::FactoryMaker<__NAME__, ##__VA_ARGS__>(#__NAME__), \
+// This will create a memory leak to all the constructors parameters behond the lifetime of the dynamic library
+#define GSC_MODULE_REGISTER_C(__NAME__, ...)                                                                     \
+    cci::cci_param<gs::cci_constructor_vl>* module_construct_param##__NAME__ = new cci::cci_param<gs::cci_constructor_vl>( \
+        CCI_GS_MF_NAME #__NAME__, gs::cci_constructor_vl::FactoryMaker<__NAME__, ##__VA_ARGS__>(#__NAME__),      \
         "default constructor", cci::CCI_ABSOLUTE_NAME)
 
 #endif

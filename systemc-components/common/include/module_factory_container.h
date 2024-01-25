@@ -338,8 +338,6 @@ public:
 
     void ModulesConstruct(void)
 {
-    std::list<sc_core::sc_module*> allModules;
-
     for (auto name : PriorityConstruct()) {
         auto mod_type_name = std::string(sc_module::name()) + "." + name + ".moduletype";
         if (m_broker.has_preset_value(mod_type_name)) {
@@ -352,7 +350,7 @@ public:
                     SCP_FATAL(()) << "The object " << std::string(sc_module::name()) + "." + name
                                   << " is not yet constructed";
                 }
-                allModules.push_back(no_construct_mod);
+                m_allModules.push_back(no_construct_mod);
             } else {
                 gs::cci_clear_unused(m_broker, mod_type_name);
                 cci::cci_value cci_type = gs::cci_get(m_broker, mod_type_name);
@@ -368,7 +366,7 @@ public:
                                         ("Can't automatically handle argument list for module: " + mod_type).c_str());
                     }
 
-                    allModules.push_back(m);
+                    m_allModules.push_back(m);
                     if (!m_local_pass) {
                         m_local_pass = dynamic_cast<transaction_forwarder_if<PASS>*>(m);
                     }
@@ -380,7 +378,7 @@ public:
         } // else it's some other config
     }
     // bind everything
-    for (auto mod : allModules) {
+    for (auto mod : m_allModules) {
         name_bind(mod);
     }
 }
@@ -392,6 +390,7 @@ public:
 
 private:
 bool m_defer_modules_construct;
+std::list<sc_core::sc_module*> m_allModules;
 
 std::set<void *>m_dls;
 
@@ -408,19 +407,21 @@ sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets;
 sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
 transaction_forwarder_if<PASS>* m_local_pass;
 
-/**
- * @brief construct a Container, and all modules within it, and perform binding
- *
- * @param _n name to give the container
- */
 std::vector<cci::cci_param<gs::cci_constructor_vl>*> registered_mods;
 
 ~ContainerBase() {
+    m_allModules.clear();
     for (auto l: m_dls) {
         dlclose(l);
     }
     m_dls.clear();
 }
+
+/**
+ * @brief construct a Container, and all modules within it, and perform binding
+ *
+ * @param _n name to give the container
+ */
 
 ContainerBase(const sc_core::sc_module_name _n, bool defer_modules_construct)
     : m_defer_modules_construct(defer_modules_construct)
