@@ -34,24 +34,24 @@
 namespace gs {
 
 /**
- * @class Memory
+ * @class gs_memory
  *
- * @brief A memory component that can add memory to a virtual platform project
+ * @brief A gs_memory component that can add memory to a virtual platform project
  *
  * @details This component models a memory. It has a simple target socket so any other component
  * with an initiator socket can connect to this component. It behaves as follows:
- *    - The memory does not manage time in any way
+ *    - The gs_memory does not manage time in any way
  *    - It is only an LT model, and does not handle AT transactions
  *    - It does not manage exclusive accesses
  *    - You can manage the size of the memory during the initialization of the component
- *    - Memory does not allocate individual "pages" but a single large block
+ *    - gs_memory does not allocate individual "pages" but a single large block
  *    - It supports DMI requests with the method `get_direct_mem_ptr`
  *    - DMI invalidates are not issued.
  */
 #define ALIGNEDBITS 12
 
 template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
-class memory : public sc_core::sc_module
+class gs_memory : public sc_core::sc_module
 {
     uint64_t m_size = 0;
     uint64_t m_address;
@@ -68,7 +68,7 @@ class memory : public sc_core::sc_module
         uint64_t m_len;     // size of the bloc
         uint64_t m_address; // this is an absolute address and this is the
                             // beginning of the bloc/Memory
-        memory<BUSWIDTH>& m_mem;
+        gs_memory<BUSWIDTH>& m_mem;
 
         uint8_t* m_ptr = nullptr;
         std::array<std::unique_ptr<SubBlock>, (1 << N)> m_sub_blocks;
@@ -78,7 +78,7 @@ class memory : public sc_core::sc_module
         ShmemIDExtension m_shmemID;
 
     public:
-        SubBlock(uint64_t address, uint64_t len, memory& mem): m_len(len), m_address(address), m_mem(mem)
+        SubBlock(uint64_t address, uint64_t len, gs_memory& mem): m_len(len), m_address(address), m_mem(mem)
         {
             SCP_TRACE(())("Init");
         }
@@ -200,7 +200,7 @@ class memory : public sc_core::sc_module
     };
 
 private:
-    std::unique_ptr<memory<BUSWIDTH>::SubBlock<>> m_sub_block;
+    std::unique_ptr<gs_memory<BUSWIDTH>::SubBlock<>> m_sub_block;
     cci::cci_broker_handle m_broker;
 
 protected:
@@ -384,7 +384,7 @@ protected:
     }
 
 public:
-    tlm_utils::multi_passthrough_target_socket<memory<BUSWIDTH>, BUSWIDTH> socket;
+    tlm_utils::multi_passthrough_target_socket<gs_memory<BUSWIDTH>, BUSWIDTH> socket;
     TargetSignalSocket<bool> reset;
     cci::cci_param<bool> p_rom;
     cci::cci_param<bool> p_dmi;
@@ -403,12 +403,12 @@ public:
     // A size set on the constructor will take precedence over
     // the size given on an e.g. 'add_target' in the router
 
-    memory(sc_core::sc_module_name name, uint64_t _size = 0)
+    gs_memory(sc_core::sc_module_name name, uint64_t _size = 0)
         : m_sub_block(nullptr)
         , m_broker(cci::cci_get_broker())
         , socket("target_socket")
         , reset("reset")
-        , p_rom("read_only", false, "Read Only Memory (default false)")
+        , p_rom("read_only", false, "Read Only memory (default false)")
         , p_dmi("dmi_allow", true, "DMI allowed (default true)")
         , p_latency("latency", sc_core::sc_time(10, sc_core::SC_NS), "Latency reported for DMI access")
         , p_mapfile("map_file", "", "(optional) file to map this memory")
@@ -432,9 +432,9 @@ public:
             }
         }
 
-        socket.register_b_transport(this, &memory::b_transport);
-        socket.register_transport_dbg(this, &memory::transport_dbg);
-        socket.register_get_direct_mem_ptr(this, &memory::get_direct_mem_ptr);
+        socket.register_b_transport(this, &gs_memory::b_transport);
+        socket.register_transport_dbg(this, &gs_memory::transport_dbg);
+        socket.register_get_direct_mem_ptr(this, &gs_memory::get_direct_mem_ptr);
 
         reset.register_value_changed_cb([&](bool value) {
             if (value) {
@@ -456,7 +456,7 @@ public:
         m_address = base();
         m_size = size();
 
-        m_sub_block = std::make_unique<memory<BUSWIDTH>::SubBlock<>>(0, m_size, *this);
+        m_sub_block = std::make_unique<gs_memory<BUSWIDTH>::SubBlock<>>(0, m_size, *this);
 
         SCP_DEBUG(()) << "m_address: " << m_address;
         SCP_DEBUG(()) << "m_size: " << m_size;
@@ -467,10 +467,10 @@ public:
         }
     }
 
-    memory() = delete;
-    memory(const memory&) = delete;
+    gs_memory() = delete;
+    gs_memory(const gs_memory&) = delete;
 
-    ~memory() {}
+    ~gs_memory() {}
 
     /**
      * @brief this function returns the size of the memory

@@ -1,7 +1,7 @@
 gs_addexpackage("gh:google/googletest#main")
 macro(gs_add_test test)
     add_executable(${test} ${test}.cc)
-    target_link_libraries(${test} PRIVATE gtest gmock router memory ${TARGET_LIBS} python_binder)
+    target_link_libraries(${test} PRIVATE gtest gmock router gs_memory ${TARGET_LIBS} python_binder)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/python-binder-test.py ${CMAKE_CURRENT_BINARY_DIR}/python-binder-test.py COPYONLY)
     add_test(NAME ${test} COMMAND ${test})
     set_tests_properties(${test} PROPERTIES TIMEOUT 10)

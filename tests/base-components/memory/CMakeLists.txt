@@ -1,7 +1,7 @@
 gs_addexpackage("gh:google/googletest#main")
 macro(gs_add_test test)
     add_executable(${test} ${test}.cc)
-    target_link_libraries(${test} PRIVATE gtest gmock memory ${TARGET_LIBS})
+    target_link_libraries(${test} PRIVATE gtest gmock gs_memory ${TARGET_LIBS})
     add_test(NAME ${test} COMMAND ${test})
     set_tests_properties(${test} PROPERTIES TIMEOUT 10)
 endmacro()

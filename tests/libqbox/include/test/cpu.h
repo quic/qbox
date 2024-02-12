@@ -17,7 +17,7 @@
 #include <cci_configuration>
 #include <cci/utils/broker.h>
 
-#include <memory.h>
+#include <gs_memory.h>
 #include <router.h>
 
 #include <ports/initiator-signal-socket.h>
@@ -58,8 +58,8 @@ protected:
     cci::cci_param<int> p_quantum_ns;
 
     gs::router<> m_router;
-    gs::memory<> m_mem;
-    gs::memory<> m_bulkmem;
+    gs::gs_memory<> m_mem;
+    gs::gs_memory<> m_bulkmem;
 
     static constexpr const char* EXCEPTION_FW = R"(
         _start:

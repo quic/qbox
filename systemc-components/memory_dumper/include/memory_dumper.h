@@ -14,7 +14,7 @@
 
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
-#include <memory.h>
+#include <gs_memory.h>
 #include <cciutils.h>
 #include <module_factory_registery.h>
 #include <tlm_sockets_buswidth.h>
@@ -69,7 +69,7 @@ protected:
 #define LINESIZE 16
     void dump()
     {
-        for (std::string m : gs::find_object_of_type<memory<BUSWIDTH>>()) {
+        for (std::string m : gs::find_object_of_type<gs::gs_memory<BUSWIDTH>>()) {
             uint64_t addr = gs::cci_get<uint64_t>(m_broker, m + ".target_socket.address");
             uint64_t size = gs::cci_get<uint64_t>(m_broker, m + ".target_socket.size");
             tlm::tlm_generic_payload trans;

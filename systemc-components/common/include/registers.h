@@ -173,9 +173,11 @@ class proxy_data_array
     }
 
 public:
-    cci::cci_param<uint64_t> p_offset;
+    std::string m_path_name;
     cci::cci_param<uint64_t> p_number;
-    cci::cci_param<std::string> p_path_name;
+    cci::cci_param<uint64_t> p_offset;
+    cci::cci_param<uint64_t> p_size;
+    cci::cci_param<bool> p_relative_addresses;
 
     tlm_utils::simple_initiator_socket<proxy_data_array, DEFAULT_TLM_BUSWIDTH> initiator_socket;
 
@@ -240,10 +242,14 @@ public:
     proxy_data_array(scp::scp_logger_cache& logger, std::string name, std::string path_name, uint64_t _offset = 0,
                      uint64_t number = 1)
         : SCP_LOGGER_NAME()(logger)
-        , p_path_name(name + ".path_name", path_name, "path name for this register")
+        , m_path_name(path_name)
+        , p_number(path_name + ".number", number, "number of elements in this register")
         , initiator_socket((name + "_initiator_socket").c_str())
         , p_offset(path_name + ".target_socket.address", _offset, "Offset of this register")
-        , p_number(path_name + ".number", number, "number of elements in this register")
+        , p_size(path_name + ".target_socket.size", sizeof(TYPE) * number, "size of this register")
+        , p_relative_addresses(path_name + ".target_socket.relative_addresses", true,
+                               "allow relative_addresses for this register")
+
     {
         m_txn.set_byte_enable_length(0);
         m_txn.set_dmi_allowed(false);
@@ -275,8 +281,8 @@ public:
     void operator=(TYPE value) { set(value); }
 
     proxy_data(scp::scp_logger_cache& logger, std::string name, std::string path_name, uint64_t offset = 0,
-               uint64_t start = 0, uint64_t length = sizeof(TYPE) * 8)
-        : proxy_data_array<TYPE>(logger, name, path_name, offset, 1), SCP_LOGGER_NAME()(logger)
+               uint64_t number = 1, uint64_t start = 0, uint64_t length = sizeof(TYPE) * 8)
+        : proxy_data_array<TYPE>(logger, name, path_name, offset, number), SCP_LOGGER_NAME()(logger)
     {
         static_assert(std::is_unsigned<TYPE>::value, "Register types must be unsigned");
     }
@@ -297,10 +303,17 @@ class gs_register : public port_fnct, public proxy_data<TYPE>
 {
     SCP_LOGGER();
 
+private:
+    std::string m_regname;
+    std::string m_path;
+
 public:
     gs_register() = delete;
-    gs_register(std::string _name, std::string path = "")
-        : port_fnct(_name, path), proxy_data<TYPE>(SCP_LOGGER_NAME(), _name, path)
+    gs_register(std::string _name, std::string path = "", uint64_t offset = 0, uint64_t number = 1)
+        : m_regname(_name)
+        , m_path(path)
+        , port_fnct(_name, path)
+        , proxy_data<TYPE>(SCP_LOGGER_NAME(), _name, path, offset, number)
     {
         std::string n(name());
         n = n.substr(0, n.length() - strlen("_target_socket")); // get rid of last part of string
@@ -320,6 +333,8 @@ public:
     TYPE& operator[](int idx) { return proxy_data_array<TYPE>::operator[](idx); }
 
     gs_bitfield<TYPE> operator[](gs_field<TYPE>& f) { return gs_bitfield<TYPE>(*this, f); }
+    std::string get_regname() const { return m_regname; }
+    std::string get_path() const { return m_path.substr(strlen("M.")); }
 };
 
 /**
@@ -356,19 +371,16 @@ class gs_field
 {
     SCP_LOGGER();
     gs_register<TYPE>& m_reg;
-    cci::cci_param<uint32_t> p_bit_start;
-    cci::cci_param<uint32_t> p_bit_length;
+    uint32_t m_bit_start;
+    uint32_t m_bit_length;
     gs_bitfield<TYPE> m_bitfield;
 
 public:
-    gs_field(gs_register<TYPE>& reg, std::string name)
-        : m_reg(reg)
-        , p_bit_start(reg.p_path_name.get_value() + "." + name + ".bit_start", 0, "Start bit of field")
-        , p_bit_length(reg.p_path_name.get_value() + "." + name + ".bit_length", 0, "length of field")
-        , m_bitfield(reg, p_bit_start, p_bit_length)
+    gs_field(gs_register<TYPE>& reg, std::string name, uint32_t bit_start = 0, uint32_t bit_length = sizeof(TYPE) * 8)
+        : m_reg(reg), m_bit_start(bit_start), m_bit_length(bit_length), m_bitfield(reg, m_bit_start, m_bit_length)
     {
-        SCP_TRACE(())("constructor");
-        if (p_bit_length == 0) SCP_FATAL(())("Can't find bit length for {}", name);
+        SCP_TRACE(())("gs_field constructor");
+        if (m_bit_length == 0) SCP_FATAL(())("Can't find bit length for {}", name);
     }
 
     void operator=(TYPE value) { m_bitfield = value; }

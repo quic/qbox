@@ -30,58 +30,29 @@
 
 #include <tlm-extensions/pathid_extension.h>
 #include <cciutils.h>
-
+#include <router_if.h>
 #include <module_factory_registery.h>
 #include <tlm_sockets_buswidth.h>
 
 namespace gs {
 
 template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
-class router : public sc_core::sc_module
+class router : public sc_core::sc_module, public gs::router_if<BUSWIDTH>
 {
-    using TargetSocket = tlm::tlm_base_target_socket_b<BUSWIDTH, tlm::tlm_fw_transport_if<>,
-                                                       tlm::tlm_bw_transport_if<>>;
-    using InitiatorSocket = tlm::tlm_base_initiator_socket_b<BUSWIDTH, tlm::tlm_fw_transport_if<>,
-                                                             tlm::tlm_bw_transport_if<>>;
     SCP_LOGGER_VECTOR(D);
     SCP_LOGGER(());
     SCP_LOGGER((DMI), "dmi");
 
+    using TargetSocket = tlm::tlm_base_target_socket_b<BUSWIDTH, tlm::tlm_fw_transport_if<>,
+                                                       tlm::tlm_bw_transport_if<>>;
+    using InitiatorSocket = tlm::tlm_base_initiator_socket_b<BUSWIDTH, tlm::tlm_fw_transport_if<>,
+                                                             tlm::tlm_bw_transport_if<>>;
+    using typename gs::router_if<BUSWIDTH>::target_info;
+    using initiator_socket_type = typename gs::router_if<BUSWIDTH>::template multi_passthrough_initiator_socket_spying<
+        router<BUSWIDTH>>;
+    using gs::router_if<BUSWIDTH>::bound_targets;
+
 private:
-    template <typename MOD>
-    class multi_passthrough_initiator_socket_spying
-        : public tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>
-    {
-        using typename tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>::base_target_socket_type;
-
-        const std::function<void(std::string)> register_cb;
-
-    public:
-        multi_passthrough_initiator_socket_spying(const char* name, const std::function<void(std::string)>& f)
-            : tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>::multi_passthrough_initiator_socket(name)
-            , register_cb(f)
-        {
-        }
-
-        void bind(base_target_socket_type& socket)
-        {
-            tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>::bind(socket);
-            register_cb(socket.get_base_export().name());
-        }
-    };
-
-    struct target_info {
-        size_t index;
-        std::string name;
-        sc_dt::uint64 address;
-        sc_dt::uint64 size;
-        bool use_offset;
-        bool is_callback;
-        bool chained;
-        std::string shortname;
-    };
-    std::string parent(std::string name) { return name.substr(0, name.find_last_of('.')); }
-
     std::mutex m_dmi_mutex;
     struct dmi_info {
         std::set<int> initiators;
@@ -116,12 +87,10 @@ private:
         dinfo->initiators.insert(id);
     }
 
-    /* NB use the EXPORT name, so as not to be hassled by the _port_0*/
-    std::string nameFromSocket(std::string s) { return s; }
     void register_boundto(std::string s)
     {
-        s = nameFromSocket(s);
-        struct target_info ti = { 0 };
+        s = gs::router_if<BUSWIDTH>::nameFromSocket(s);
+        target_info ti = { 0 };
         ti.name = s;
         ti.index = bound_targets.size();
         SCP_LOGGER_VECTOR_PUSH_BACK(D, ti.name);
@@ -136,7 +105,7 @@ private:
         bound_targets.push_back(ti);
     }
     std::map<uint64_t, std::string> name_map;
-    std::string txn_tostring(struct target_info* ti, tlm::tlm_generic_payload& trans)
+    std::string txn_tostring(target_info* ti, tlm::tlm_generic_payload& trans)
     {
         std::stringstream info;
         const char* cmd = "UNKOWN";
@@ -152,47 +121,6 @@ private:
             break;
         }
 
-        if (ti->size > trans.get_data_length()) {
-            sc_dt::uint64 addr = trans.get_address();
-            sc_dt::uint64 len = trans.get_data_length();
-
-            bool found = false;
-            for (auto cbti : cb_targets) {
-                if (addr >= cbti->address && (addr - cbti->address) < cbti->size) {
-                    info << cbti->shortname;
-                    found = true;
-                }
-            }
-            if (!found) {
-                if (name_map.empty()) {
-                    uint64_t maxa;
-                    for (auto nn : gs::sc_cci_children(parent(name()).c_str())) {
-                        std::string fn = parent(name()) + "." + nn;
-                        uint64_t n_size = gs::cci_get_d<uint64_t>(m_broker, fn + ".target_socket.size", 0);
-                        if (n_size) {
-                            uint64_t n_addr = gs::cci_get_d<uint64_t>(m_broker, fn + ".target_socket.address", 0);
-                            uint64_t n_num = gs::cci_get_d<uint64_t>(m_broker, fn + ".number", 0);
-                            name_map[n_addr] = nn + " " + name_map[n_addr];
-                            if (n_addr + (n_num ? n_num * n_size : n_size) > maxa) {
-                                maxa = n_addr + (n_num ? n_num * n_size : n_size);
-                            }
-                        }
-                    }
-                    name_map[maxa + 1] = "END"; // this will never be used.
-                }
-                auto it = name_map.upper_bound(addr);
-                if (it != name_map.end() && it != name_map.begin()) {
-                    it--;
-                    if (it->first == addr) {
-                        info << it->second;
-                    } else {
-                        info << it->second << "[0x" << std::hex << addr - it->first << "]";
-                    }
-                } else {
-                    info << "No Info for " + parent(name());
-                }
-            }
-        }
         info << " address:"
              << "0x" << std::hex << trans.get_address();
         info << " len:" << trans.get_data_length();
@@ -215,21 +143,13 @@ private:
     }
 
 public:
-    void rename_last(std::string s)
-    {
-        target_info& ti = bound_targets.back();
-        ti.name = s;
-    }
     // make the sockets public for binding
-    typedef multi_passthrough_initiator_socket_spying<router<BUSWIDTH>> initiator_socket_type;
     initiator_socket_type initiator_socket;
     tlm_utils::multi_passthrough_target_socket<router<BUSWIDTH>, BUSWIDTH> target_socket;
 
 private:
-    std::vector<target_info> bound_targets;
     std::vector<target_info> alias_targets;
     std::vector<target_info*> targets;
-    std::vector<target_info*> cb_targets;
     std::vector<target_info*> id_targets;
     std::vector<target_info*> dynamic_targets;
 
@@ -292,20 +212,13 @@ private:
 
         stamp_txn(id, trans);
         if (!ti->chained) SCP_TRACE((D[ti->index]), ti->name) << "calling b_transport : " << txn_tostring(ti, trans);
-        do_callbacks(trans, delay);
         if (trans.get_response_status() >= tlm::TLM_INCOMPLETE_RESPONSE) {
             if (ti->use_offset) trans.set_address(addr - ti->address);
             initiator_socket[ti->index]->b_transport(trans, delay);
             if (ti->use_offset) trans.set_address(addr);
         }
-        if (trans.get_response_status() >= tlm::TLM_OK_RESPONSE) {
-            do_callbacks(trans, delay);
-        }
         if (!ti->chained) SCP_TRACE((D[ti->index]), ti->name) << "b_transport returned : " << txn_tostring(ti, trans);
         unstamp_txn(id, trans);
-        if (cb_targets.size() != 0) { /* If ANY callbacks are registered we deny ALL DMI access ! */
-            trans.set_dmi_allowed(false);
-        }
     }
 
     unsigned int transport_dbg(int id, tlm::tlm_generic_payload& trans)
@@ -415,21 +328,6 @@ private:
         }
     }
 
-    void do_callbacks(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
-    {
-        sc_dt::uint64 addr = trans.get_address();
-        sc_dt::uint64 len = trans.get_data_length();
-
-        for (auto ti : cb_targets) {
-            if (addr >= ti->address && (addr - ti->address) < ti->size) {
-                if (ti->use_offset) trans.set_address(addr - ti->address);
-                initiator_socket[ti->index]->b_transport(trans, delay);
-                if (ti->use_offset) trans.set_address(addr);
-                if (trans.get_response_status() <= tlm::TLM_GENERIC_ERROR_RESPONSE) break;
-            }
-        }
-    }
-
     target_info* decode_address(tlm::tlm_generic_payload& trans)
     {
         lazy_initialize();
@@ -484,41 +382,35 @@ private:
             ti.address = gs::cci_get<uint64_t>(m_broker, name + ".address");
             ti.size = gs::cci_get<uint64_t>(m_broker, name + ".size");
             ti.use_offset = gs::cci_get_d<bool>(m_broker, name + ".relative_addresses", true);
-            ti.is_callback = gs::cci_get_d<bool>(m_broker, name + ".is_callback", false);
             ti.chained = gs::cci_get_d<bool>(m_broker, name + ".chained", false);
 
             SCP_INFO((D[ti.index]), ti.name)
                 << "Address map " << ti.name + " at"
                 << " address "
                 << "0x" << std::hex << ti.address << " size "
-                << "0x" << std::hex << ti.size << (ti.use_offset ? " (with relative address) " : "")
-                << (ti.is_callback ? " (callback) " : "");
+                << "0x" << std::hex << ti.size << (ti.use_offset ? " (with relative address) " : "");
             if (ti.chained) SCP_DEBUG(())("{} is chained so debug will be suppressed", ti.name);
 
-            if (ti.is_callback) {
-                cb_targets.push_back(&ti);
-            } else {
-                for (auto tti : targets) {
-                    if (tti->address >= ti.address && (ti.address - tti->address) < tti->size) {
-                        SCP_WARN((D[ti.index]), ti.name)("{} overlaps with {}", ti.name, tti->name);
-                    }
+            for (auto tti : targets) {
+                if (tti->address >= ti.address && (ti.address - tti->address) < tti->size) {
+                    SCP_WARN((D[ti.index]), ti.name)("{} overlaps with {}", ti.name, tti->name);
                 }
-
-                targets.push_back(&ti);
-
-                for (std::string n : gs::sc_cci_children((ti.name + ".aliases").c_str())) {
-                    std::string name = ti.name + ".aliases." + n;
-                    uint64_t address = gs::cci_get<uint64_t>(m_broker, name + ".address");
-                    uint64_t size = gs::cci_get<uint64_t>(m_broker, name + ".size");
-                    SCP_INFO((D[ti.index]), ti.name)("Adding alias {} {:#x} (size: {})", name, address, size);
-                    struct target_info ati = ti;
-                    ati.address = address;
-                    ati.size = size;
-                    ati.name = name;
-                    alias_targets.push_back(ati);
-                }
-                id_targets.push_back(&ti);
             }
+
+            targets.push_back(&ti);
+
+            for (std::string n : gs::sc_cci_children((ti.name + ".aliases").c_str())) {
+                std::string name = ti.name + ".aliases." + n;
+                uint64_t address = gs::cci_get<uint64_t>(m_broker, name + ".address");
+                uint64_t size = gs::cci_get<uint64_t>(m_broker, name + ".size");
+                SCP_INFO((D[ti.index]), ti.name)("Adding alias {} {:#x} (size: {})", name, address, size);
+                target_info ati = ti;
+                ati.address = address;
+                ati.size = size;
+                ati.name = name;
+                alias_targets.push_back(ati);
+            }
+            id_targets.push_back(&ti);
         }
         for (auto& ati : alias_targets) {
             targets.push_back(&ati);
@@ -537,13 +429,13 @@ public:
         , m_broker(broker)
         , lazy_init("lazy_init", false, "Initialize the router lazily (eg. during simulation rather than BEOL)")
     {
-        SCP_DEBUG(()) << "Router constructed";
+        SCP_DEBUG(()) << "router constructed";
 
         target_socket.register_b_transport(this, &router::b_transport);
         target_socket.register_transport_dbg(this, &router::transport_dbg);
         target_socket.register_get_direct_mem_ptr(this, &router::get_direct_mem_ptr);
         initiator_socket.register_invalidate_direct_mem_ptr(this, &router::invalidate_direct_mem_ptr);
-        SCP_DEBUG((DMI)) << "Router Initializing DMI SCP reporting";
+        SCP_DEBUG((DMI)) << "router Initializing DMI SCP reporting";
     }
 
     router() = delete;
@@ -560,7 +452,7 @@ public:
 
     void add_target(TargetSocket& t, const uint64_t address, uint64_t size, bool masked = true)
     {
-        std::string s = nameFromSocket(t.get_base_export().name());
+        std::string s = gs::router_if<BUSWIDTH>::nameFromSocket(t.get_base_export().name());
         if (!m_broker.has_preset_value(s + ".address")) {
             m_broker.set_preset_cci_value(s + ".address", cci::cci_value(address));
         }

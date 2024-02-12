@@ -10,7 +10,7 @@
 #include <argparser.h>
 #include <libgsutils.h>
 
-#include "memory.h"
+#include "gs_memory.h"
 #include "router.h"
 #include <tests/initiator-tester.h>
 #include <tests/test-bench.h>
@@ -23,9 +23,9 @@ class LoaderTest : public TestBench
 protected:
     InitiatorTester m_initiator;
     gs::router<> m_router;
-    gs::memory<> m_rom1;
-    gs::memory<> m_rom2;
-    gs::memory<> m_rom3;
+    gs::gs_memory<> m_rom1;
+    gs::gs_memory<> m_rom2;
+    gs::gs_memory<> m_rom3;
 
     gs::loader<> m_loader;
 

@@ -11,7 +11,7 @@
 #include <libgsutils.h>
 #include <argparser.h>
 
-#include "memory.h"
+#include "gs_memory.h"
 #include "router.h"
 #include <tests/initiator-tester.h>
 #include <tests/test-bench.h>
@@ -24,9 +24,9 @@ class AliasesMappingTest : public TestBench
 protected:
     InitiatorTester m_initiator;
     gs::router<> m_router;
-    gs::memory<> m_memory;
-    gs::memory<> m_ram;
-    gs::memory<> m_rom;
+    gs::gs_memory<> m_memory;
+    gs::gs_memory<> m_ram;
+    gs::gs_memory<> m_rom;
 
     void do_good_dmi_request_and_check(uint64_t addr, int64_t exp_start, uint64_t exp_end)
     {

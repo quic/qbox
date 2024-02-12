@@ -53,6 +53,8 @@ mark_as_advanced(LIBELF_INCLUDE_DIR LIBELF_LIBRARIES)
 
 find_package(Threads REQUIRED)
 
+gs_addexpackage("gh:nih-at/libzip#v1.10.1")
+
 gs_systemc()
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -84,6 +86,38 @@ set(systemc_srcs
 )
 
 if (NOT WITHOUT_QEMU)
+    set (qemu_srcs
+            qemu-components/common/src/libqemu-cxx/callbacks.cc
+            qemu-components/common/src/libqemu-cxx/console.cc
+            qemu-components/common/src/libqemu-cxx/cpu.cc
+            qemu-components/common/src/libqemu-cxx/device.cc
+            qemu-components/common/src/libqemu-cxx/gpex.cc
+            qemu-components/common/src/libqemu-cxx/gpio.cc
+            qemu-components/common/src/libqemu-cxx/libqemu-cxx.cc
+            qemu-components/common/src/libqemu-cxx/loader.cc
+            qemu-components/common/src/libqemu-cxx/memory.cc
+            qemu-components/common/src/libqemu-cxx/object.cc
+            qemu-components/common/src/libqemu-cxx/rcu-read-lock.cc
+            qemu-components/common/src/libqemu-cxx/sysbus.cc
+            qemu-components/common/src/libqemu-cxx/target-info.cc
+            qemu-components/common/src/libqemu-cxx/timer.cc
+            qemu-components/common/src/libqemu-cxx/target/aarch64.cc
+            qemu-components/common/src/libqemu-cxx/target/riscv.cc
+            qemu-components/common/src/libqemu-cxx/target/microblaze.cc
+            qemu-components/common/src/libqemu-cxx/target-info.cc
+            qemu-components/common/src/dmi_utils.cc
+        )
+endif()
+
+add_library(${PROJECT_NAME} SHARED
+        ${systemc_srcs}
+        # qemu_srcs should be empty if WITHOUT_QEMU is set
+        ${qemu_srcs}
+)
+
+gs_lua()
+
+if (NOT WITHOUT_QEMU)
     # This is a hack to workaround a CMake issue. We specify an existing file which
     # is _not_ a submodule so that FetchContent does not init any submodule.
     # See https://gitlab.kitware.com/cmake/cmake/-/issues/20579
@@ -96,35 +130,6 @@ if (NOT WITHOUT_QEMU)
     set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX})
     set(LIBQEMU_CXX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqemu-cxx)
 
-    set (qemu_srcs
-        qemu-components/common/src/libqemu-cxx/callbacks.cc
-        qemu-components/common/src/libqemu-cxx/console.cc
-        qemu-components/common/src/libqemu-cxx/cpu.cc
-        qemu-components/common/src/libqemu-cxx/device.cc
-        qemu-components/common/src/libqemu-cxx/gpex.cc
-        qemu-components/common/src/libqemu-cxx/gpio.cc
-        qemu-components/common/src/libqemu-cxx/libqemu-cxx.cc
-        qemu-components/common/src/libqemu-cxx/loader.cc
-        qemu-components/common/src/libqemu-cxx/memory.cc
-        qemu-components/common/src/libqemu-cxx/object.cc
-        qemu-components/common/src/libqemu-cxx/rcu-read-lock.cc
-        qemu-components/common/src/libqemu-cxx/sysbus.cc
-        qemu-components/common/src/libqemu-cxx/target-info.cc
-        qemu-components/common/src/libqemu-cxx/timer.cc
-        qemu-components/common/src/libqemu-cxx/target/aarch64.cc
-        qemu-components/common/src/libqemu-cxx/target/riscv.cc
-        qemu-components/common/src/libqemu-cxx/target/microblaze.cc
-        qemu-components/common/src/libqemu-cxx/target-info.cc
-        qemu-components/common/src/dmi_utils.cc
-    )
-
-    add_library(${PROJECT_NAME} SHARED
-        ${systemc_srcs}
-        ${qemu_srcs}
-    )
-
-    gs_lua()
-
     foreach(target ${LIBQEMU_TARGETS})
         # The quite complex generator expressions does the followings:
         #   - fetch the library name through the INTERFACE_LINK_LIBRARIES property
@@ -136,50 +141,15 @@ if (NOT WITHOUT_QEMU)
                 LIBQEMU_TARGET_${target}_LIBRARY="$<JOIN:$<GENEX_EVAL:$<TARGET_PROPERTY:libqemu-${target},INTERFACE_LINK_LIBRARIES>>,>")
     endforeach()
 
-    if(CMAKE_COMPILER_IS_GNUCC)
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            -Wall -Wextra -Wno-unused-parameter
-            "$<$<CONFIG:Debug>:-O0;-g3;-ggdb>"
-            )
-    endif()
-
-    if (APPLE)
-        set(CMAKE_MACOSX_RPATH ON)
-
-        # Since dlopen does not automatically look into `brew --prefix`/lib, we
-        # add this path to both CMAKE_BUILD_RPATH and CMAKE_INSTALL_RPATH, so
-        # the user won't need to set the DYLD_LIBRARY_PATH env variable.
-        find_program(BREW_BIN brew)
-        execute_process(COMMAND ${BREW_BIN} --prefix
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            OUTPUT_VARIABLE BREW_PREFIX)
-        set(BREW_LIB ${BREW_PREFIX}/lib)
-        list(APPEND CMAKE_BUILD_RPATH ${BREW_LIB})
-        list(APPEND CMAKE_INSTALL_RPATH ${BREW_LIB})
-    endif (APPLE)
-    # using main branch as it has fixes for cmake
-    gs_addexpackage("gh:google/googletest#main")
-
     target_include_directories(
         ${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/qemu-components/common/include>
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/systemc-components/common/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}>
-        ${LIBELF_INCLUDE_DIR}
-     )
+    )
 
-    set(THREADS_PREFER_PTHREAD_FLAG ON)
-    find_package(Threads REQUIRED)
-
-target_link_libraries(${PROJECT_NAME} PUBLIC
-     ${TARGET_LIBS}
-     ${LIBELF_LIBRARIES}
-     Threads::Threads
-     libqemu
-     rpc
-     ${PYBIND11_EMBED}
-     ${CMAKE_DL_LIBS}
-)
+    target_link_libraries(${PROJECT_NAME} PUBLIC
+        libqemu
+    )
 
     install(DIRECTORY ${LIBQEMU_CXX_SRC_INCLUDE_DIR}
         DESTINATION ${LIBQEMU_CXX_INCLUDE_DIR})
@@ -189,11 +159,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     else ()
         install(TARGETS ${PROJECT_NAME} EXPORT libqemu-cxx-targets)
     endif ()
-
-    # install(EXPORT libqemu-cxx-targets DESTINATION ${LIBQEMU_CXX_LIB_DIR}/cmake)
-
-    # export(EXPORT libqemu-cxx-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/libqemu-cxx-targets.cmake)
-    # export(PACKAGE qbox)
 
     include(CMakePackageConfigHelpers)
 
@@ -212,18 +177,71 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
                 DESTINATION ${LIBQEMU_CXX_LIB_DIR}/cmake)
 
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/qemu-components" DESTINATION ${CMAKE_INSTALL_PREFIX})
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/systemc-components" DESTINATION ${CMAKE_INSTALL_PREFIX})
+    set(QEMU_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/qemu-components")
+   
+endif() # WITHOUT_QEMU
 
-    set(QBOX_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/qemu-components;${CMAKE_CURRENT_SOURCE_DIR}/systemc-components")
-    gs_export(${PROJECT_NAME} ${QBOX_INCLUDE_DIR})
-
-    if (NOT DEFINED GS_ONLY)
-        install(TARGETS rpc DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-        add_subdirectory(platforms)
-    endif()
+if(CMAKE_COMPILER_IS_GNUCC)
+        target_compile_options(${PROJECT_NAME} PRIVATE
+            -Wall -Wextra -Wno-unused-parameter
+            "$<$<CONFIG:Debug>:-O0;-g3;-ggdb>"
+            )
 endif()
 
-add_subdirectory(qemu-components)
+if (APPLE)
+    set(CMAKE_MACOSX_RPATH ON)
+
+    # Since dlopen does not automatically look into `brew --prefix`/lib, we
+    # add this path to both CMAKE_BUILD_RPATH and CMAKE_INSTALL_RPATH, so
+    # the user won't need to set the DYLD_LIBRARY_PATH env variable.
+    find_program(BREW_BIN brew)
+    execute_process(COMMAND ${BREW_BIN} --prefix
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE BREW_PREFIX)
+    set(BREW_LIB ${BREW_PREFIX}/lib)
+    list(APPEND CMAKE_BUILD_RPATH ${BREW_LIB})
+    list(APPEND CMAKE_INSTALL_RPATH ${BREW_LIB})
+endif (APPLE)
+
+# using main branch as it has fixes for cmake
+gs_addexpackage("gh:google/googletest#main")
+
+target_include_directories(
+    ${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/systemc-components/common/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}>
+    ${LIBELF_INCLUDE_DIR}
+    )
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
+target_link_libraries(${PROJECT_NAME} PUBLIC
+        ${TARGET_LIBS}
+        ${LIBELF_LIBRARIES}
+        Threads::Threads
+        rpc
+        zip
+        ${PYBIND11_EMBED}
+        ${CMAKE_DL_LIBS}  
+)
+
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/systemc-components" DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+set(QBOX_INCLUDE_DIR "${QEMU_INCLUDE_DIR};${CMAKE_CURRENT_SOURCE_DIR}/systemc-components")
+gs_export(${PROJECT_NAME} ${QBOX_INCLUDE_DIR})
+
+if (NOT DEFINED GS_ONLY)
+    install(TARGETS rpc zip DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+    add_subdirectory(platforms)
+endif()
+    
+list(APPEND TARGET_LIBS ${PROJECT_NAME})
+
+if(NOT WITHOUT_QEMU)
+    add_subdirectory(qemu-components)
+endif()
+
 add_subdirectory(systemc-components)
 
 gs_enable_testing()

@@ -9,7 +9,7 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
 
-#include "memory.h"
+#include "gs_memory.h"
 #include "router.h"
 #include "memory_dumper.h"
 #include <tests/initiator-tester.h>
@@ -27,7 +27,7 @@ public:
 protected:
     InitiatorTester m_initiator;
     gs::router<> m_router;
-    std::vector<gs::memory<>*> m_memory;
+    std::vector<gs::gs_memory<>*> m_memory;
     gs::memory_dumper<> m_dumper;
 
     /* Initiator callback */
@@ -80,7 +80,7 @@ public:
         for (int i = 0; i < NB_MEMORY; i++) {
             char txt[20];
             snprintf(txt, 20, "Memory_%d", i);
-            m_memory.push_back(new gs::memory<>(txt, size[i]));
+            m_memory.push_back(new gs::gs_memory<>(txt, size[i]));
             memory_size.push_back(address[i] + size[i]);
         }
 

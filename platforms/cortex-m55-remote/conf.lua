@@ -21,7 +21,7 @@ platform = {
     },
 
     ram_0 = {
-            moduletype = "memory",
+            moduletype = "gs_memory",
             target_socket = {address=0x0, size=0x20000, bind = "&router.initiator_socket"},
             shared_memory=true,
             load={bin_file=top().."fw/cortex-m55/cortex-m55.bin", offset=0},

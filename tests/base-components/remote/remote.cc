@@ -11,7 +11,7 @@
 
 #include <libgsutils.h>
 
-#include "memory.h"
+#include "gs_memory.h"
 #include "router.h"
 #include "remote.h"
 #include "pass.h"
@@ -23,8 +23,8 @@ class RemoteTest : public sc_core::sc_module
     gs::pass<> m_loopback;
 
     gs::router<> m_router;
-    gs::memory<> m_mem2;
-    gs::memory<> m_mem3;
+    gs::gs_memory<> m_mem2;
+    gs::gs_memory<> m_mem3;
     InitiatorTester* m_initiator;
 
 public:

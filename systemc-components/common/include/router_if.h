@@ -1,0 +1,82 @@
+/*
+ * Copyright (c) 2024 GreenSocs
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#ifndef _GREENSOCS_BASE_COMPONENTS_ROUTER_IF_H
+#define _GREENSOCS_BASE_COMPONENTS_ROUTER_IF_H
+
+#include <systemc>
+#include <tlm>
+#include <scp/report.h>
+#include <scp/helpers.h>
+#include <tlm_utils/multi_passthrough_initiator_socket.h>
+#include <tlm_utils/multi_passthrough_target_socket.h>
+#include <tlm_sockets_buswidth.h>
+#include <string>
+
+namespace gs {
+template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
+class router_if
+{
+protected:
+    template <typename MOD>
+    class multi_passthrough_initiator_socket_spying
+        : public tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>
+    {
+        using typename tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>::base_target_socket_type;
+
+        const std::function<void(std::string)> register_cb;
+
+    public:
+        multi_passthrough_initiator_socket_spying(const char* name, const std::function<void(std::string)>& f)
+            : tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>::multi_passthrough_initiator_socket(name)
+            , register_cb(f)
+        {
+        }
+
+        void bind(base_target_socket_type& socket)
+        {
+            tlm_utils::multi_passthrough_initiator_socket<MOD, BUSWIDTH>::bind(socket);
+            register_cb(socket.get_base_export().name());
+        }
+    };
+
+public:
+    struct target_info {
+        size_t index;
+        std::string name;
+        sc_dt::uint64 address;
+        sc_dt::uint64 size;
+        bool use_offset;
+        bool is_callback;
+        bool chained;
+        std::string shortname;
+    };
+
+    void rename_last(std::string s)
+    {
+        target_info& ti = bound_targets.back();
+        ti.name = s;
+    }
+
+    virtual ~router_if() = default;
+
+protected:
+    std::string parent(std::string name) { return name.substr(0, name.find_last_of('.')); }
+
+    /* NB use the EXPORT name, so as not to be hassled by the _port_0*/
+    std::string nameFromSocket(std::string s) { return s; }
+
+    virtual void register_boundto(std::string s) = 0;
+
+    virtual target_info* decode_address(tlm::tlm_generic_payload& trans) = 0;
+
+    virtual void lazy_initialize() = 0;
+
+    std::vector<target_info> bound_targets;
+};
+} // namespace gs
+
+#endif

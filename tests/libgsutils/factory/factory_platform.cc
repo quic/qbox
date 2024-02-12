@@ -9,7 +9,7 @@
 #include <memory>
 #include <cci/utils/broker.h>
 
-#include <memory.h>
+#include <gs_memory.h>
 #include <router.h>
 #include <libgsutils.h>
 #include <gtest/gtest.h>

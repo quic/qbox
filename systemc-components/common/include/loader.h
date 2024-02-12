@@ -25,12 +25,16 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
+#include <limits>
+#include <zip.h>
 
 #ifndef _WIN32
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #endif
+
+#define BINFILE_READ_CHUNK_SIZE 1024
 
 namespace gs {
 
@@ -214,8 +218,36 @@ protected:
             }
             std::string file;
             if (gs::cci_get<std::string>(m_broker, name + ".bin_file", file)) {
-                SCP_INFO(())("Loading binary file {} to {:#x}", file, addr);
-                file_load(file, addr);
+                uint64_t file_offset = 0, file_data_len = std::numeric_limits<uint64_t>::max();
+                if (!((gs::cci_get<uint64_t>(m_broker, name + ".bin_file_offset", file_offset) &&
+                       gs::cci_get<uint64_t>(m_broker, name + ".bin_file_size", file_data_len)))) {
+                    struct stat file_stat;
+                    if (stat(file.c_str(), &file_stat) < 0) {
+                        SCP_FATAL(()) << "can't stat file " << file;
+                    }
+                    file_data_len = file_stat.st_size;
+                    file_offset = 0;
+                }
+                SCP_INFO(()) << "Loading binary file: " << file << " starting at offset: " << file_offset
+                             << " with size: " << file_data_len << " to addr: " << addr;
+                file_load(file, addr, file_offset, file_data_len);
+                read = true;
+            }
+            if (gs::cci_get<std::string>(m_broker, name + ".zip_archive", file)) {
+                uint64_t file_offset = 0, file_data_len = 0;
+                if (!((gs::cci_get<uint64_t>(m_broker, name + ".archived_file_offset", file_offset) &&
+                       gs::cci_get<uint64_t>(m_broker, name + ".archived_file_size", file_data_len)))) {
+                    // can't stat file size here, as the actual file inside archive is accessed inside zip_file_load()
+                    file_data_len = 0;
+                    file_offset = 0;
+                }
+                std::string archived_file_name;
+                if (!gs::cci_get<std::string>(m_broker, name + ".archived_file_name", archived_file_name))
+                    archived_file_name = "";
+                SCP_INFO(()) << "Loading " << archived_file_name << " from zip file: " << file
+                             << " starting at offset: " << file_offset << " with size: " << file_data_len
+                             << " to addr: " << addr;
+                zip_file_load(nullptr, file, addr, archived_file_name, file_offset, file_data_len);
                 read = true;
             }
             if (gs::cci_get<std::string>(m_broker, name + ".csv_file", file)) {
@@ -272,22 +304,87 @@ public:
      * @param addr the address where the memory file is to be read
      * @return size_t
      */
-    void file_load(std::string filename, uint64_t addr)
+    void file_load(std::string filename, uint64_t addr, uint64_t file_offset = 0,
+                   uint64_t file_data_len = std::numeric_limits<uint64_t>::max())
     {
         std::ifstream fin(filename, std::ios::in | std::ios::binary);
         if (!fin.good()) {
             SCP_FATAL(()) << "Memory::load(): error file not found (" << filename << ")";
         }
-
-        uint8_t buffer[1024];
+        uint64_t rem_len = file_data_len;
+        uint64_t read_len = 0;
+        fin.seekg(file_offset, std::ios::beg);
+        uint8_t buffer[BINFILE_READ_CHUNK_SIZE];
         uint64_t c = 0;
-        while (!fin.eof()) {
-            fin.read(reinterpret_cast<char*>(&buffer[0]), 1024);
+        while (!fin.eof() && (rem_len > 0)) {
+            read_len = std::min(rem_len, static_cast<uint64_t>(BINFILE_READ_CHUNK_SIZE));
+            fin.read(reinterpret_cast<char*>(&buffer[0]), read_len);
             size_t r = fin.gcount();
             send(addr + c, buffer, r);
             c += r;
+            rem_len = ((rem_len >= r) ? rem_len - r : 0);
         }
         fin.close();
+    }
+
+    /*
+     - p_archive: pointer to a zip_t struct if the zip archive is opened outside this function.
+     - archive_name: the name of the zip archive.
+     - file_name: name of the file to be extracted from archive_name.
+    */
+    void zip_file_load(zip_t* p_archive, const std::string& archive_name, uint64_t addr, std::string file_name = "",
+                       uint64_t file_offset = 0, uint64_t file_data_len = 0)
+    {
+        if (archive_name.empty()) SCP_FATAL(()) << "Missing zip archive name!";
+        zip_t* z_archive = p_archive;
+        if (!z_archive) {
+            z_archive = zip_open(archive_name.c_str(), 0, nullptr);
+            if (!z_archive) SCP_FATAL(()) << "Can't open zip archive: " << archive_name;
+        }
+        zip_int64_t num_entries = zip_get_num_entries(z_archive, ZIP_FL_UNCHANGED);
+        if (num_entries < 0)
+            SCP_FATAL(()) << "Can't get the number of the entries in zip archive: " << archive_name
+                          << " may be the archive file is corrupted!";
+        if (num_entries == 0) SCP_FATAL(()) << "There is no files in the zip archive: " << archive_name;
+        zip_stat_t z_stat;
+        if (num_entries > 1) {
+            if (file_name.empty())
+                SCP_FATAL(()) << "many files exist in zip arcive: " << archive_name
+                              << " but file name is not specified";
+            if (zip_stat(z_archive, file_name.c_str(), ZIP_FL_NOCASE, &z_stat) < 0)
+                SCP_FATAL(()) << "Can't find any file named: " << file_name << " in the zip archive: " << archive_name;
+        } else { // num of entries = 1
+            if (zip_stat_index(z_archive, 0, ZIP_FL_NOCASE, &z_stat) < 0)
+                SCP_FATAL(()) << "Can't get status os the file inside zip archive: " << archive_name;
+        }
+
+        std::vector<uint8_t> bin_info(z_stat.size);
+        uint8_t* bin_info_t = &bin_info[0];
+        zip_file_t* fd = zip_fopen(z_archive, z_stat.name, ZIP_FL_NOCASE);
+        if (!fd) SCP_FATAL(()) << "Can't open file: " << z_stat.name << "in zip archive: " << archive_name;
+        zip_int64_t used_file_data_len = 0;
+        if (file_data_len == 0)
+            used_file_data_len = z_stat.size;
+        else if ((file_offset < z_stat.size) && ((file_data_len + file_offset) > z_stat.size))
+            used_file_data_len = z_stat.size - file_offset;
+        else if (file_offset > z_stat.size)
+            SCP_FATAL(()) << "file offset (" << file_offset << " )is bigger than the size (" << z_stat.size << ") of "
+                          << z_stat.name << "in zip archive: " << archive_name;
+        else
+            used_file_data_len = file_data_len;
+
+        zip_int64_t read_bytes_num = 0, rem = z_stat.size;
+        while (rem > 0) {
+            read_bytes_num = zip_fread(fd, reinterpret_cast<uint8_t*>(bin_info_t), rem);
+            if (read_bytes_num < 0) {
+                SCP_FATAL(()) << "Can't read " << used_file_data_len << " from " << z_stat.name
+                              << " in zip archive: " << archive_name;
+            }
+            bin_info_t += read_bytes_num;
+            rem -= read_bytes_num;
+        }
+        send(addr, reinterpret_cast<uint8_t*>(&bin_info[0]) + file_offset, used_file_data_len);
+        zip_fclose(fd);
     }
 
     void csv_load(std::string filename, uint64_t offset, std::string addr_str, std::string value_str, bool byte_swap)

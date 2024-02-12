@@ -62,7 +62,7 @@ platform = {
         num_spi=64};
 
     ram_0 = {
-        moduletype="memory";
+        moduletype="gs_memory";
         target_socket = {address=0x00000000, size=0x10000000, bind= "&router.initiator_socket"},
     };
 

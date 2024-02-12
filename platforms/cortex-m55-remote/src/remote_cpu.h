@@ -15,7 +15,7 @@
 #include <limits>
 #include <cpu_arm/cpu_arm_cortex_m55/include/cortex-m55.h>
 #include <qemu-instance.h>
-#include "memory/include/memory.h"
+#include "gs_memory.h"
 #include "router/include/router.h"
 #include "remote.h"
 #include "pass/include/pass.h"

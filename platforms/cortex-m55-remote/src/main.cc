@@ -15,7 +15,7 @@
 #include <argparser.h>
 #include "remote_cpu.h"
 
-#include <memory/include/memory.h>
+#include "gs_memory.h"
 #include <router/include/router.h>
 #include <remote.h>
 #include "uart/uart-pl011/include/uart-pl011.h"

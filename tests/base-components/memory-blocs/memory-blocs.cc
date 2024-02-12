@@ -11,7 +11,7 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
 
-#include "memory.h"
+#include "gs_memory.h"
 #include "loader.h"
 #include <cciutils.h>
 #include <tests/initiator-tester.h>
@@ -288,7 +288,7 @@ public:
 protected:
     gs::ConfigurableBroker m_broker;
     InitiatorTester m_initiator;
-    gs::memory<> m_memory;
+    gs::gs_memory<> m_memory;
 
 public:
     MemoryBlocs(const sc_core::sc_module_name& n)

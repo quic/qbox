@@ -11,7 +11,7 @@
 
 #include <libgsutils.h>
 
-#include "memory.h"
+#include "gs_memory.h"
 #include "router.h"
 #include "remote.h"
 #include "pass.h"
@@ -48,7 +48,7 @@ private:
     InitiatorTester m_initiator;
     InitiatorTester m_initiator_dma;
     gs::router<> m_router;
-    gs::memory<> m_mem1;
+    gs::gs_memory<> m_mem1;
     gs::pass<> m_log;
 
 public:

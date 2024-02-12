@@ -102,33 +102,33 @@ platform = {
         };
     
     resetvec_rom_0= {
-            moduletype = "memory",
+            moduletype = "gs_memory",
             target_socket  = {address=0x00001000, size=0x1000, bind = "&router.initiator_socket"},
             load={data={0x0400f06f}, offset=0}
         };
     
     rom_0=   {
-            moduletype = "memory",
+            moduletype = "gs_memory",
             target_socket  = {address=0x10000, size=64 * 1024, bind = "&router.initiator_socket"}
         };
     
     sram_0=   {
-            moduletype = "memory",
+            moduletype = "gs_memory",
             target_socket  = {address=0x60000000, size=128 * 1024, bind = "&router.initiator_socket"}
         };
     
     dram_0=   {
-            moduletype = "memory",
+            moduletype = "gs_memory",
             target_socket  = {address=0x1000000000, size=256 * 1024 * 1024, bind = "&router.initiator_socket"}
         };
     
     qspi_0=   {
-            moduletype = "memory",
+            moduletype = "gs_memory",
             target_socket  = {address=0x70000000, size=256 * 1024 * 1024, bind = "&router.initiator_socket"}
         };
     
     boot_gpio_0={
-            moduletype = "memory",
+            moduletype = "gs_memory",
             target_socket  = {address=0xa0000010, size=0x08, bind = "&router.initiator_socket"},
             load= {data={2},offset=0}
         };

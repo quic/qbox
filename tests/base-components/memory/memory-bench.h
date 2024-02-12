@@ -10,7 +10,7 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
 
-#include "memory.h"
+#include "gs_memory.h"
 #include "loader.h"
 #include <tests/initiator-tester.h>
 #include <tests/test-bench.h>
@@ -22,7 +22,7 @@ public:
 
 protected:
     InitiatorTester m_initiator;
-    gs::memory<> m_target;
+    gs::gs_memory<> m_target;
 
     /* Initiator callback */
     void invalidate_direct_mem_ptr(uint64_t start_range, uint64_t end_range)

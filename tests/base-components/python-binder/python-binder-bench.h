@@ -4,7 +4,7 @@
 #include <scp/report.h>
 #include "python_binder.h"
 #include "router.h"
-#include "memory.h"
+#include "gs_memory.h"
 #include <tests/initiator-tester.h>
 #include <tests/test-bench.h>
 #include <ports/initiator-signal-socket.h>
@@ -130,7 +130,7 @@ protected:
     InitiatorTester m_initiator;
     gs::python_binder<> m_python_binder;
     gs::router<> m_router;
-    gs::memory<> m_mem;
+    gs::gs_memory<> m_mem;
     InitiatorSignalSocket<bool> m_test_initiator_signal_socket;
     TargetSignalSocket<bool> m_test_target_signal_socket;
     std::vector<bool> m_signal_write_values;
