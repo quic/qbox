@@ -1,4 +1,4 @@
-#include "router_reg.h"
+#include "reg_router.h"
 
 typedef gs::reg_router<> reg_router;
 
