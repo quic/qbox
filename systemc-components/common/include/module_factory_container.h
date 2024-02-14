@@ -67,7 +67,7 @@ public:
         } else {
             SC_REPORT_ERROR("ModuleFactory", ("Can't find module type: " + moduletype).c_str());
         }
-        assert(false);
+        __builtin_unreachable();
     }
 
     /**
@@ -303,7 +303,7 @@ public:
                                       .get_preset_cci_value(std::string(sc_module::name()) + "." + std::string(name) +
                                                             ".dylib_path")
                                       .get_string();
-                libname += ".dylib";                    
+                libname += ".dylib";
             }
         #else
             if (m_broker.has_preset_value(std::string(sc_module::name()) + "." + std::string(name) + ".moduletype")) {
@@ -318,7 +318,7 @@ public:
                                       .get_preset_cci_value(std::string(sc_module::name()) + "." + std::string(name) +
                                                             ".dylib_path")
                                       .get_string();
-                libname += ".so";                    
+                libname += ".so";
             }
         #endif
         std::cout << "libname =" << libname << std::endl;
