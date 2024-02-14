@@ -59,7 +59,7 @@ int sc_main(int argc, char* argv[])
 {
     try {
         SCP_INFO("RemoteMain") << "Remote started";
-        gs::ConfigurableBroker m_broker();
+        gs::ConfigurableBroker m_broker;
         RemoteTest remote("remote");
         SCP_INFO("RemoteMain") << "END OF ELAB for remote";
         sc_core::sc_start();
