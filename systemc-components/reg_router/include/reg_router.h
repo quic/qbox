@@ -19,7 +19,6 @@
 #include <cciutils.h>
 #include <module_factory_registery.h>
 #include <tlm_sockets_buswidth.h>
-#include <gs_memory.h>
 #include <router_if.h>
 #include <vector>
 #include <memory>
@@ -167,13 +166,15 @@ public:
             if ((addr - search.first->first) < search.first->second->size) {
                 ti = search.first->second;
             }
-        } else {
+        } else if (search.second != cb_targets.begin()) {
             auto expected_node = std::prev(search.second);
             if ((addr - expected_node->first) < expected_node->second->size) {
                 ti = expected_node->second;
             } else {
                 return false;
             }
+        } else {
+            return false;
         }
         SCP_TRACE(()) << "call b_transport: " << txn_to_str(trans, true, true);
         if (ti->use_offset) trans.set_address(addr - ti->address);
@@ -234,11 +235,16 @@ protected:
                 if (!insertion_pair.second)
                     SCP_FATAL(()) << "a CB register with the same adress: 0x" << std::hex << ti.address
                                   << " was already bound!";
-            } else if (dynamic_cast<gs::gs_memory<>*>(
-                           gs::find_sc_obj(get_parent_object(), gs::router_if<BUSWIDTH>::parent(ti.name)))) {
-                mem_targets.push_back(&ti);
             } else {
-                SCP_FATAL(()) << "Expected memory model as a backing store for reg_router" << this->name();
+                if (!mem_targets.empty()) {
+                    for (const auto& mem : mem_targets) {
+                        if (((ti.address >= mem->address) && ((ti.address - mem->address) < mem->size)) ||
+                            ((ti.address < mem->address) && ((ti.address + ti.size) > mem->address))) {
+                            SCP_WARN(()) << ti.name << " overlaps with " << mem->name;
+                        }
+                    }
+                }
+                mem_targets.push_back(&ti);
             }
         }
     }

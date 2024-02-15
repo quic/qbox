@@ -150,13 +150,14 @@ template <class TYPE>
 class proxy_data_array
 {
     scp::scp_logger_cache& SCP_LOGGER_NAME();
-
-    tlm::tlm_generic_payload m_txn;
     TYPE* m_dmi = nullptr;
 
     void check_dmi()
     {
+        tlm::tlm_generic_payload m_txn;
         tlm::tlm_dmi m_dmi_data;
+        m_txn.set_byte_enable_length(0);
+        m_txn.set_dmi_allowed(false);
         m_txn.set_command(tlm::TLM_IGNORE_COMMAND);
         m_txn.set_data_ptr(nullptr);
         m_txn.set_address(p_offset);
@@ -188,7 +189,10 @@ public:
             memcpy(dst, &m_dmi[idx], sizeof(TYPE) * length);
             SCP_TRACE(())("Got value (DMI) : [{:#x}]", fmt::join(std::vector<TYPE>(&dst[0], &dst[length]), ","));
         } else {
+            tlm::tlm_generic_payload m_txn;
             sc_core::sc_time dummy;
+            m_txn.set_byte_enable_length(0);
+            m_txn.set_dmi_allowed(false);
             m_txn.set_command(tlm::TLM_READ_COMMAND);
             m_txn.set_data_ptr(reinterpret_cast<unsigned char*>(dst));
             m_txn.set_address(p_offset + (sizeof(TYPE) * idx));
@@ -211,7 +215,10 @@ public:
             SCP_TRACE(())("Set value (DMI) : [{:#x}]", fmt::join(std::vector<TYPE>(&src[0], &src[length]), ","));
             memcpy(&m_dmi[idx], src, sizeof(TYPE) * length);
         } else {
+            tlm::tlm_generic_payload m_txn;
             sc_core::sc_time dummy;
+            m_txn.set_byte_enable_length(0);
+            m_txn.set_dmi_allowed(false);
             m_txn.set_command(tlm::TLM_WRITE_COMMAND);
             m_txn.set_data_ptr(reinterpret_cast<unsigned char*>(src));
             m_txn.set_address(p_offset + (sizeof(TYPE) * idx));
@@ -251,9 +258,6 @@ public:
                                "allow relative_addresses for this register")
 
     {
-        m_txn.set_byte_enable_length(0);
-        m_txn.set_dmi_allowed(false);
-        m_txn.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
         initiator_socket.register_invalidate_direct_mem_ptr(this,
                                                             &gs::proxy_data_array<TYPE>::invalidate_direct_mem_ptr);
     }
