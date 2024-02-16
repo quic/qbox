@@ -17,7 +17,11 @@
 #include <pre_suspending_sc_support.h>
 
 namespace gs {
+#if SYSTEMC_VERSION < 20231124
 class async_event : public sc_core::sc_prim_channel, public sc_core::sc_event
+#else
+class async_event : public sc_core::sc_prim_channel, public sc_core::sc_event, public sc_core::sc_stage_callback_if
+#endif
 {
 private:
     sc_core::sc_time m_delay;
@@ -28,7 +32,12 @@ private:
 public:
     async_event(bool start_attached = true): outstanding(0)
     {
+#if SYSTEMC_VERSION < 20231124
         register_simulation_phase_callback(sc_core::SC_PAUSED | sc_core::SC_START_OF_SIMULATION);
+#else
+        sc_core::sc_register_stage_callback(*this, sc_core::SC_PRE_PAUSE | sc_core::SC_PRE_SUSPEND |
+                                                       sc_core::SC_POST_SUSPEND | sc_core::SC_START_OF_SIMULATION);
+#endif
         tid = std::this_thread::get_id();
         outstanding = 0;
         enable_attach_suspending(start_attached);
@@ -89,7 +98,9 @@ private:
         }
         mutex.unlock();
     }
-
+#if SYSTEMC_VERSION >= 20231124
+    void stage_callback(const sc_core::sc_stage& stage) { simulation_phase_callback(); }
+#endif
     void simulation_phase_callback()
     {
         mutex.lock();
