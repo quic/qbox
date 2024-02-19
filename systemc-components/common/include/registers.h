@@ -338,7 +338,7 @@ public:
 
     gs_bitfield<TYPE> operator[](gs_field<TYPE>& f) { return gs_bitfield<TYPE>(*this, f); }
     std::string get_regname() const { return m_regname; }
-    std::string get_path() const { return m_path.substr(strlen("M.")); }
+    std::string get_path() const { return m_path; }
 };
 
 /**
