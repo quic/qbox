@@ -33,6 +33,7 @@ BraceWrapping:
 
 SpaceBeforeCtorInitializerColon: false
 SpacesBeforeTrailingComments: 1
+AlignTrailingComments: true
 
 SortIncludes: false
 SortUsingDeclarations: false
