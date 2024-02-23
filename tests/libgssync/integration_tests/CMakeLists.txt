@@ -7,4 +7,5 @@ target_link_libraries(checker
    PRIVATE
       ${TARGET_LIBS}
       router
+      realtimelimiter
 )

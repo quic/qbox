@@ -21,12 +21,12 @@
 
 namespace gs {
 /**
- * @brief realtimeLimiter: sc_module which suspends SystemC if SystemC time drifts ahead of realtime
+ * @brief realtimelimiter: sc_module which suspends SystemC if SystemC time drifts ahead of realtime
  * @param @RTquantum_ms : realtime tick rate between checks.
  * @param @SCTimeout_ms : If SystemC time is behind by more than this value, then generate a fatal abort (0 disables)
  *
  */
-SC_MODULE (realtimeLimiter) {
+SC_MODULE (realtimelimiter) {
     SCP_LOGGER();
     cci::cci_param<double> RTquantum_ms;
     cci::cci_param<double> SCTimeout_ms;
@@ -100,7 +100,7 @@ public:
         runto = sc_core::sc_time(RTquantum_ms, sc_core::SC_MS) + sc_core::sc_time_stamp();
         tick.notify(sc_core::sc_time(RTquantum_ms, sc_core::SC_MS));
 
-        m_tick_thread = std::thread(&realtimeLimiter::RTticker, this);
+        m_tick_thread = std::thread(&realtimelimiter::RTticker, this);
     }
 
     void disable()
@@ -110,14 +110,14 @@ public:
             m_tick_thread.join();
         }
     }
-    realtimeLimiter(const sc_core::sc_module_name& name): realtimeLimiter(name, true) {}
-    realtimeLimiter(const sc_core::sc_module_name& name, bool autostart)
+    realtimelimiter(const sc_core::sc_module_name& name): realtimelimiter(name, true) {}
+    realtimelimiter(const sc_core::sc_module_name& name, bool autostart)
         : sc_module(name)
         , RTquantum_ms("RTquantum_ms", 100, "Real time quantum in milliseconds")
         , SCTimeout_ms("SCTimeout_ms", 0, "Timeout for SystemC in milliseconds")
         , tick(false) // handle attach manually
     {
-        SC_HAS_PROCESS(realtimeLimiter);
+        SC_HAS_PROCESS(realtimelimiter);
         SC_METHOD(SCticker);
         SCP_TRACE(())("realtimelimiter constructor");
         dont_initialize();

@@ -29,6 +29,7 @@
 
 #include "checker.h"
 #include "router.h"
+#include "realtimelimiter.h"
 #include <tlm_sockets_buswidth.h>
 
 using namespace sc_core;
@@ -536,7 +537,7 @@ GSC_MODULE_REGISTER_ORIG_1(Clock, Checker&);
 
 class RealTimeClockLimiter : public Model
 {
-    gs::realtimeLimiter rtl;
+    gs::realtimelimiter rtl;
 
 public:
     void entry()
