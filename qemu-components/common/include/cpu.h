@@ -152,6 +152,7 @@ protected:
     {
         SCP_TRACE(())("QEMU deadline timer callback");
         if (!m_finished) m_cpu.kick();
+        (void)initiator_get_local_time();
         rearm_deadline_timer();
     }
 

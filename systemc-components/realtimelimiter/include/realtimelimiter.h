@@ -131,4 +131,6 @@ public:
 };
 } // namespace gs
 
+extern "C" void module_register();
+
 #endif // REALTIMLIMITER_H
