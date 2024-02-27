@@ -20,6 +20,7 @@
 #include <queue>
 #include <signal.h>
 #include <termios.h>
+#include <poll.h>
 
 class char_backend_stdio : public sc_core::sc_module
 {
@@ -30,7 +31,7 @@ private:
     bool m_running = true;
     std::thread rcv_thread_id;
     pthread_t rcv_pthread_id = 0;
-
+    std::atomic<bool> c_flag;
     SCP_LOGGER();
 
 public:
@@ -58,6 +59,7 @@ public:
         : sc_core::sc_module(name)
         , p_read_write("read_write", true, "read_write if true start rcv_thread")
         , socket("biflow_socket")
+        , c_flag(false)
     {
         SCP_TRACE(()) << "CharBackendStdio constructor";
 
@@ -77,8 +79,7 @@ public:
         gs::SigHandler::get().add_sig_handler(SIGINT, gs::SigHandler::Handler_CB::PASS);
         gs::SigHandler::get().register_handler([&](int signo) {
             if (signo == SIGINT) {
-                char ch = '\x03';
-                socket.enqueue(ch);
+                c_flag = true;
             }
         });
         if (p_read_write) rcv_thread_id = std::thread(&char_backend_stdio::rcv_thread, this);
@@ -102,14 +103,30 @@ public:
         pthread_sigmask(SIG_UNBLOCK, &set, NULL);
 
         int fd = 0;
-        char c;
+
+        struct pollfd self_pipe_monitor;
+        self_pipe_monitor.fd = fd;
+        self_pipe_monitor.events = POLLIN;
+
         while (m_running) {
-            int r = read(fd, &c, 1);
-            if (r == 1) {
-                enqueue(c);
-            }
-            if (r == 0) {
+            int ret = poll(&self_pipe_monitor, 1, 300);
+            if ((ret == -1 && errno == EINTR) || (ret == 0) /*timeout*/) {
+                if (c_flag) {
+                    c_flag = false;
+                    enqueue('\x03');
+                }
+                continue;
+            } else if (self_pipe_monitor.revents & (POLLHUP | POLLERR | POLLNVAL)) {
                 break;
+            } else if (self_pipe_monitor.revents & POLLIN) {
+                char c;
+                int r = read(fd, &c, 1);
+                if (r == 1) {
+                    enqueue(c);
+                }
+                if (r == 0) {
+                    break;
+                }
             }
         }
 
