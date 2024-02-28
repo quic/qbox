@@ -147,7 +147,9 @@ void tlm_quantumkeeper_multithread::sync()
         assert(m_local_time >= sc_core::sc_time_stamp());
         sc_core::sc_time t = m_local_time - sc_core::sc_time_stamp();
         m_tick.notify();
-        sc_core::wait(t);
+        if (status != STOPPED) {
+            sc_core::wait(t);
+        }
     } else {
         std::unique_lock<std::mutex> lock(mutex);
         /* Wake up the SystemC thread if it's waiting for us to keep up */

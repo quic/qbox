@@ -59,6 +59,8 @@ protected:
     std::mutex m_can_delete;
     QemuCpuHintTlmExtension m_cpu_hint_ext;
 
+    uint64_t m_quantum_ns; // For convenience
+
     /*
      * Request quantum keeper from instance
      */
@@ -151,9 +153,10 @@ protected:
     void deadline_timer_cb()
     {
         SCP_TRACE(())("QEMU deadline timer callback");
-        if (!m_finished) m_cpu.kick();
-        (void)initiator_get_local_time();
-        rearm_deadline_timer();
+        // All syncing will be done in end_of_loop_cb
+        m_cpu.kick();
+        // Rearm timer for next time ....
+        if (!m_finished) rearm_deadline_timer();
     }
 
     /*
@@ -194,20 +197,9 @@ protected:
      */
     void rearm_deadline_timer()
     {
-        sc_core::sc_time run_budget;
-        int64_t budget_ns, next_dl_ns;
-
-        run_budget = m_qk->time_to_sync();
-
-        budget_ns = int64_t(run_budget.to_seconds() * 1e9);
-
-        next_dl_ns = m_inst.get().get_virtual_clock() + budget_ns;
-
-        if (budget_ns > 0) {
-            m_deadline_timer->mod(next_dl_ns);
-        } else {
-            SCP_DEBUG(())("No budget to rearm timer");
-        }
+        // This is a simple "every quantum" tick. Whether the QK makes use of it or not
+        // is down to the sync policy
+        m_deadline_timer->mod(m_inst.get().get_virtual_clock() + m_quantum_ns);
     }
 
     /*
@@ -242,7 +234,6 @@ protected:
         if (m_cpu.can_run()) {
             m_cpu.set_soft_stopped(false);
         }
-        rearm_deadline_timer();
     }
 
     /*
@@ -272,13 +263,13 @@ protected:
         sc_core::sc_time elapsed;
         int64_t now = m_inst.get().get_virtual_clock();
 
-        m_deadline_timer->del();
         m_cpu.set_soft_stopped(true);
 
         m_inst.get().unlock_iothread();
 
         m_qk->set(sc_core::sc_time(now, sc_core::SC_NS) - sc_core::sc_time_stamp());
 
+        // Important to allow QK to notify itself if it's waiting.
         m_qk->sync();
     }
 
@@ -475,11 +466,12 @@ public:
             ss << "tcp::" << p_gdb_port;
             m_inst.get().start_gdb_server(ss.str());
         }
-
     }
 
     virtual void start_of_simulation() override
     {
+        m_quantum_ns = int64_t(tlm_utils::tlm_quantumkeeper::get_global_quantum().to_seconds() * 1e9);
+
         QemuDevice::start_of_simulation();
         m_inst.get().lock_iothread();
         // Reset CPU at start of simulation
@@ -542,21 +534,6 @@ public:
              * the kernel.
              */
             m_cpu.kick();
-        } else {
-            /*
-             * FIXME: We should in theory update the deadline timer here to
-             * account for time that has passed during the memory transaction.
-             * Unfortunatly this is quite costly in icount mode and makes the
-             * simulation somewhat unresponsive in certain conditions. It could
-             * be worth investigate to know where this performance penalty is
-             * comming from and see if it is fixable. For now we just ignore
-             * the time that passed in the transaction w.r.t. the last deadline
-             * we setup in QEMU.
-             */
-#if 0
-            /* Update the deadline timer with this new local time */
-            rearm_deadline_timer();
-#endif
         }
     }
 
