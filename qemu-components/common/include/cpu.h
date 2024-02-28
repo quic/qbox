@@ -473,10 +473,6 @@ public:
         m_quantum_ns = int64_t(tlm_utils::tlm_quantumkeeper::get_global_quantum().to_seconds() * 1e9);
 
         QemuDevice::start_of_simulation();
-        m_inst.get().lock_iothread();
-        // Reset CPU at start of simulation
-        m_cpu.reset();
-        m_inst.get().unlock_iothread();
         if (m_inst.can_run()) {
             m_qk->start();
         }
