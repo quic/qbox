@@ -116,8 +116,11 @@ class gs_memory : public sc_core::sc_module
                 }
                 if (m_mem.p_shmem) {
                     std::stringstream shmname_stream;
-                    shmname_stream << "/" << std::hex << getpid() << "-" << std::hex
-                                   << MemoryServices::get().get_shmem_seg_num();
+                    if (m_mem.p_shmem_prefix.get_value() != "")
+                        shmname_stream << "/" << m_mem.p_shmem_prefix.get_value() << std::hex << getpid();
+                    else
+                        shmname_stream << "/" << std::hex << getpid() << "-" << std::hex
+                                       << MemoryServices::get().get_shmem_seg_num();
                     if (shmname_stream.str().size() > 31) { /*PSHMNAMLEN in Mac OS*/
                         size_t hash = std::hash<std::string>{}(
                             shmname_stream.str()); // hash length is 16 hex digits in 64 bit machines.
@@ -393,6 +396,7 @@ public:
     cci::cci_param<uint64_t> p_max_block_size;
     cci::cci_param<uint64_t> p_min_block_size;
     cci::cci_param<bool> p_shmem;
+    cci::cci_param<std::string> p_shmem_prefix;
     cci::cci_param<bool> p_init_mem;
     cci::cci_param<int> p_init_mem_val; // to match the signature of memset
 
@@ -415,6 +419,7 @@ public:
         , p_max_block_size("max_block_size", 0x100000000, "Maximum size of the sub bloc")
         , p_min_block_size("min_block_size", sysconf(_SC_PAGE_SIZE), "Minimum size of the sub bloc")
         , p_shmem("shared_memory", false, "Allocate using shared memory")
+        , p_shmem_prefix("shared_memory_prefix", "", "(optional) prefix_for shared memory file")
         , p_init_mem("init_mem", false, "Initialize allocated memory")
         , p_init_mem_val("init_mem_val", 0, "Value to initialize memory to")
         , load("load", [&](const uint8_t* data, uint64_t offset, uint64_t len) -> void {
