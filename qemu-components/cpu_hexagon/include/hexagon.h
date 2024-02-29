@@ -103,6 +103,7 @@ public:
         cpu.set_prop_bool("paranoid-commit-state", p_paranoid);
 
         std::string parent = gs::get_parent_name(name());
+        cpu.set_prop_int("cluster-id", gs::cci_get<uint32_t>(m_broker, parent + ".cluster_id"));
         cpu.set_prop_int("thread-count", gs::cci_get<uint32_t>(m_broker, parent + ".hexagon_num_threads"));
         cpu.set_prop_bool("isdben-trusted", gs::cci_get<bool>(m_broker, parent + ".isdben_trusted"));
         cpu.set_prop_bool("isdben-secure", gs::cci_get<bool>(m_broker, parent + ".isdben_secure"));
