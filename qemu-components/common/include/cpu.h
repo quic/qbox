@@ -231,9 +231,7 @@ protected:
         }
         if (m_finished) return;
 
-        if (m_cpu.can_run()) {
-            m_cpu.set_soft_stopped(false);
-        }
+        m_cpu.set_soft_stopped(false);
     }
 
     /*
@@ -473,8 +471,10 @@ public:
         m_quantum_ns = int64_t(tlm_utils::tlm_quantumkeeper::get_global_quantum().to_seconds() * 1e9);
 
         QemuDevice::start_of_simulation();
-        if (m_inst.can_run()) {
-            m_qk->start();
+        if (m_inst.get_tcg_mode() == QemuInstance::TCG_SINGLE) {
+            if (m_inst.can_run()) {
+                m_qk->start();
+            }
         }
         if (!m_coroutines) {
             /* Prepare the CPU for its first run and release it */

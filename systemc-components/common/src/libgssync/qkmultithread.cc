@@ -109,7 +109,6 @@ void tlm_quantumkeeper_multithread::stop()
 /* return the time remaining till the next sync point*/
 sc_core::sc_time tlm_quantumkeeper_multithread::time_to_sync()
 {
-    if (status != RUNNING) return sc_core::SC_ZERO_TIME;
     sc_core::sc_time m_quantum = tlm_utils::tlm_quantumkeeper::get_global_quantum();
     sc_core::sc_time q = sc_core::sc_time_stamp() + (m_quantum * 2);
     if (q >= get_current_time()) {
