@@ -108,6 +108,18 @@ public:
         cpu.set_prop_bool("isdben-trusted", gs::cci_get<bool>(m_broker, parent + ".isdben_trusted"));
         cpu.set_prop_bool("isdben-secure", gs::cci_get<bool>(m_broker, parent + ".isdben_secure"));
 
+        uint64_t vtcm_base_addr;
+        if (!gs::cci_get<uint64_t>(m_broker, parent + ".vtcm_base_addr", vtcm_base_addr)) {
+            vtcm_base_addr = 0;
+        }
+        cpu.set_prop_int("vtcm-base-addr", vtcm_base_addr);
+
+        uint32_t vtcm_size_kb;
+        if (!gs::cci_get<uint32_t>(m_broker, parent + ".vtcm_size_kb", vtcm_size_kb)) {
+            vtcm_size_kb = 0;
+        }
+        cpu.set_prop_int("vtcm-size-kb", vtcm_size_kb);
+
         uint32_t coproc_instances;
         if (!gs::cci_get<uint32_t>(m_broker, parent + ".num_coproc_instance", coproc_instances)) {
             coproc_instances = 0;
