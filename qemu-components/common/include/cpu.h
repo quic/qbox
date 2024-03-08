@@ -223,7 +223,7 @@ protected:
                 m_inst.get().lock_iothread();
             }
         } else {
-            while (!m_cpu.can_run() && !m_finished) {
+            if (!m_cpu.can_run() && !m_finished) {
                 m_inst.get().unlock_iothread();
                 wait_for_work();
                 m_inst.get().lock_iothread();
