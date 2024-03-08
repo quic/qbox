@@ -223,10 +223,14 @@ protected:
                 m_inst.get().lock_iothread();
             }
         } else {
-            if (!m_cpu.can_run() && !m_finished) {
+            while (!m_cpu.can_run() && !m_finished) {
                 m_inst.get().unlock_iothread();
                 wait_for_work();
                 m_inst.get().lock_iothread();
+
+                // In HVF/KVM modes we should come up for air more often
+                // because ...
+                if (!m_inst.is_tcg_enabled()) { break; }
             }
         }
         if (m_finished) return;
