@@ -15,12 +15,6 @@
 #include <argparser.h>
 #include "remote_cpu.h"
 
-#include "gs_memory/include/gs_memory.h"
-#include <router/include/router.h>
-#include <remote.h>
-#include "uart/uart-pl011/include/uart-pl011.h"
-#include "backends/char-backend.h"
-#include <backends/char_backend_stdio/include/char_backend_stdio.h>
 #include <keep_alive/include/keep_alive.h>
 #include <module_factory_container.h>
 

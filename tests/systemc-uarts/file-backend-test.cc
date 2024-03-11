@@ -15,7 +15,6 @@
 
 #include "uart-pl011.h"
 
-#include "backends/char-backend.h"
 #include <char_backend_file.h>
 
 #include <tests/initiator-tester.h>

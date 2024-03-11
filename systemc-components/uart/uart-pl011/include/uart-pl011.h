@@ -13,8 +13,6 @@
 #include "tlm_utils/simple_target_socket.h"
 #include <systemc>
 
-#include "backends/char-backend.h"
-
 #include <ports/initiator-signal-socket.h>
 #include <async_event.h>
 #include <ports/biflow-socket.h>

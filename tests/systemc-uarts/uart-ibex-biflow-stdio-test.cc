@@ -12,7 +12,6 @@
 
 #include "uart-ibex.h"
 
-#include "backends/char-backend.h"
 #include <char_backend_stdio.h>
 
 #include <tests/initiator-tester.h>

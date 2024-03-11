@@ -16,7 +16,6 @@
 
 #include "uart-pl011.h"
 
-#include "backends/char-backend.h"
 #include <char_backend_socket.h>
 #include <tests/initiator-tester.h>
 #include <tests/target-tester.h>
