@@ -53,7 +53,6 @@ protected:
     std::mutex m_signaled_lock;
     std::condition_variable m_signaled_cond;
 
-
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
     bool m_finished = false;
     std::mutex m_can_delete;
@@ -139,6 +138,7 @@ protected:
      */
     void kick_cb()
     {
+        SCP_TRACE(())("QEMU deadline KICK callback");
         if (m_coroutines) {
             if (!m_finished) m_qemu_kick_ev.async_notify();
         } else {
@@ -224,13 +224,13 @@ protected:
             }
         } else {
             while (!m_cpu.can_run() && !m_finished) {
+                if (m_inst.is_kvm_enabled()) { // In KVM mode, we halt in the kernel, not here.
+                    m_qk->stop();              // Stop the QK, it will be enabled when we next see work to do.
+                    break;
+                }
                 m_inst.get().unlock_iothread();
                 wait_for_work();
                 m_inst.get().lock_iothread();
-
-                // In HVF/KVM modes we should come up for air more often
-                // because ...
-                if (!m_inst.is_tcg_enabled()) { break; }
             }
         }
         if (m_finished) return;
@@ -268,6 +268,10 @@ protected:
         m_cpu.set_soft_stopped(true);
 
         m_inst.get().unlock_iothread();
+
+        if (m_inst.is_kvm_enabled()) {
+            m_qk->start(); // In kvm mode, we may have switched the QK off, so switch it on before setting
+        }
 
         m_qk->set(sc_core::sc_time(now, sc_core::SC_NS) - sc_core::sc_time_stamp());
 
