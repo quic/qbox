@@ -26,6 +26,7 @@ class char_backend_stdio : public sc_core::sc_module
 {
 protected:
     cci::cci_param<bool> p_read_write;
+    cci::cci_param<std::string> p_expect;
 
 private:
     bool m_running = true;
@@ -33,6 +34,10 @@ private:
     pthread_t rcv_pthread_id = 0;
     std::atomic<bool> c_flag;
     SCP_LOGGER();
+    std::string line;
+    std::string ecmd;
+    sc_core::sc_event ecmdev;
+    bool processing = false;
 
 public:
     gs::biflow_socket<char_backend_stdio> socket;
@@ -54,14 +59,96 @@ public:
 
         tcsetattr(fd, TCSANOW, &tty);
     }
+    // trim from end of string (right)
+    std::string& rtrim(std::string& s)
+    {
+        const char* t = "\n\r\f\v";
+        s.erase(s.find_last_not_of(t) + 1);
+        return s;
+    }
+    std::string getecmdstr(const std::string& cmd)
+    {
+        return ecmd.substr(cmd.length(), ecmd.find_first_of("\n") - cmd.length());
+    }
+    void process()
+    {
+        processing = true;
+        expect_process();
+    }
+    void expect_process()
+    {
+        if (!processing) return;
+        const std::string expectstr = "expect ";
+        const std::string sendstr = "send ";
+        const std::string waitstr = "wait ";
+        const std::string exitstr = "exit";
+        std::string l = rtrim(line);
+        do {
+            if (ecmd.substr(0, expectstr.length()) == expectstr) {
+                std::string str = getecmdstr(expectstr);
+                if (l == str) {
+                    SCP_WARN(())("Found expect string {}", l);
+                    l = "";
+                    ecmd.erase(0, ecmd.find_first_of("\n"));
+                    if (ecmd != "") ecmd.erase(0, 1);
+                    continue;
+                }
+            }
+            if (ecmd.substr(0, sendstr.length()) == sendstr) {
+                SCP_WARN(())("Sending expect string {}", getecmdstr(sendstr));
+                for (char c : getecmdstr(sendstr)) {
+                    enqueue(c);
+                }
+                enqueue('\n');
+                ecmd.erase(0, ecmd.find_first_of("\n"));
+                if (ecmd != "") ecmd.erase(0, 1);
+                continue;
+            }
+            if (ecmd.substr(0, waitstr.length()) == waitstr) {
+                SCP_WARN(())("Expect waiting {}s", getecmdstr(waitstr));
+                processing = false;
+                ecmdev.notify(stod(getecmdstr(waitstr)), sc_core::SC_SEC);
+                ecmd.erase(0, ecmd.find_first_of("\n"));
+                if (ecmd != "") ecmd.erase(0, 1);
+                break;
+            }
+            if (ecmd.substr(0, exitstr.length()) == exitstr) {
+                SCP_WARN(())("Expect caused exit");
+                sc_core::sc_stop();
+            }
+            break;
+        } while (true);
+    }
 
+    /*
+     * char_backend_stdio constructor
+     * Parameters:
+     *   \param read_write bool : when set to true, accept input from STDIO
+     *   \param expect String : An 'expect' like string of commands, each command should be separated by \n
+     *  The acceptable commands are:
+     *      expect [string] : dont process any more commands until the "string" is seen on the output (STDIO)
+     *      send [string]   : send "string" to the input buffer (NB this will happen whether of not read_write is set)
+     *      wait [float]    : Wait for "float" (simulated) seconds, until processing continues.
+     *      exit            : Cause the simulation to terminate normally.
+     */
+    SC_HAS_PROCESS(char_backend_stdio);
     char_backend_stdio(sc_core::sc_module_name name)
         : sc_core::sc_module(name)
         , p_read_write("read_write", true, "read_write if true start rcv_thread")
+        , p_expect("expect", "", "string of expect commands")
         , socket("biflow_socket")
         , c_flag(false)
     {
         SCP_TRACE(()) << "CharBackendStdio constructor";
+
+        ecmd = p_expect;
+        SC_METHOD(process);
+        sensitive << ecmdev;
+        if (p_expect.get_value() != "") {
+            ecmd = p_expect;
+            processing = true;
+            SCP_WARN(())("Processing expect string {}", ecmd);
+        }
 
         struct termios tty;
 
@@ -138,6 +225,12 @@ public:
         uint8_t* data = txn.get_data_ptr();
         for (int i = 0; i < txn.get_data_length(); i++) {
             putchar(data[i]);
+            if ((char)data[i] == '\n') {
+                expect_process();
+                line = "";
+            } else {
+                line = line + (char)data[i];
+            }
         }
         fflush(stdout);
     }
