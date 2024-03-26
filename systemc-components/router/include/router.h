@@ -383,6 +383,7 @@ private:
             ti.size = gs::cci_get<uint64_t>(m_broker, name + ".size");
             ti.use_offset = gs::cci_get_d<bool>(m_broker, name + ".relative_addresses", true);
             ti.chained = gs::cci_get_d<bool>(m_broker, name + ".chained", false);
+            ti.priority = gs::cci_get_d<uint32_t>(m_broker, name + ".priority", 0);
 
             SCP_INFO((D[ti.index]), ti.name)
                 << "Address map " << ti.name + " at"
@@ -415,6 +416,10 @@ private:
         for (auto& ati : alias_targets) {
             targets.push_back(&ati);
         }
+        if (!targets.empty())
+            std::stable_sort(targets.begin(), targets.end(), [](const target_info* first, const target_info* second) {
+                return first->priority < second->priority;
+            });
     }
 
     cci::cci_broker_handle m_broker;
