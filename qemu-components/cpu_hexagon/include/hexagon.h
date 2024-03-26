@@ -107,6 +107,11 @@ public:
         cpu.set_prop_int("thread-count", gs::cci_get<uint32_t>(m_broker, parent + ".hexagon_num_threads"));
         cpu.set_prop_bool("isdben-trusted", gs::cci_get<bool>(m_broker, parent + ".isdben_trusted"));
         cpu.set_prop_bool("isdben-secure", gs::cci_get<bool>(m_broker, parent + ".isdben_secure"));
+        std::string coproc_path;
+        if (!gs::cci_get<std::string>(m_broker, parent + ".coproc", coproc_path)) {
+            coproc_path.clear();
+        }
+        cpu.set_prop_str("coproc", coproc_path.data());
 
         uint64_t vtcm_base_addr;
         if (!gs::cci_get<uint64_t>(m_broker, parent + ".vtcm_base_addr", vtcm_base_addr)) {
