@@ -592,9 +592,11 @@ A QemuManager is required in order to instantiate a Qemu instance. A QemuManager
 
 To create a new instance you can do this:
 
-```c++
+```lua
 
-    QemuInstanceManager m_inst_mgr;
+    qemu_inst_mgr = {
+        moduletype = "QemuInstanceManager"
+    },
 
 ```
 
@@ -602,13 +604,36 @@ To create a new instance you can do this:
 
 In order to add a CPU device to an instance they can be constructed as follows:
 
-```c++
+```lua
 
-    sc_core::sc_vector<QemuCpuArmCortexA53> m_cpus
+if (ARM_NUM_CPUS > 0) then
+    for i=0,(ARM_NUM_CPUS-1) do
+        local cpu = {
+            moduletype = "cpu_arm_cortexA53";
+            args = {"&platform.qemu_inst"};
+            mem = {bind = "&router.target_socket"};
+            has_el3 = true;
+            has_el3 = false;
+            irq_timer_phys_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_NS_EL1_IRQ},
+            irq_timer_virt_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_VIRT_IRQ},
+            irq_timer_hyp_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_NS_EL2_IRQ},
+            irq_timer_sec_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_S_EL1_IRQ},
+            psci_conduit = "hvc";
+            mp_affinity = (math.floor(i / 8) << 8) | (i % 8);
+            start_powered_off = true;
+        };
+        if (i==0) then
+            cpu["rvbar"] = 0x00000000;
+            cpu["start_powered_off"] = false;
+        end
+        platform["cpu_"..tostring(i)]=cpu;
 
- 
-
-    m_cpus("cpu", 32, [this] (const char *n, size_t i) { return new QemuCpuArmCortexA53(n, m_qemu_inst); })
+        platform["gic_0"]["irq_out_" .. i] = {bind="&cpu_"..i..".irq_in"}
+        platform["gic_0"]["fiq_out_" .. i] = {bind="&cpu_"..i..".fiq_in"}
+        platform["gic_0"]["virq_out_" .. i] = {bind="&cpu_"..i..".virq_in"}
+        platform["gic_0"]["vfiq_out_" .. i] = {bind="&cpu_"..i..".vfiq_in"}
+    end
+end
 
 ```
 
@@ -618,9 +643,26 @@ Interrupt Controllers and others devices also need a QEMU instance and can be se
 
 ```c++
 
-    QemuArmGicv3 m_gic("gic", m_qemu_inst);
+    gic_0=  {
+        moduletype = "arm_gicv3",
+        args = {"&platform.qemu_inst"},
+        dist_iface    = {address=0xc8000000, size= 0x10000, bind = "&router.initiator_socket"};
+        redist_iface_0= {address=0xc8010000, size=0x20000, bind = "&router.initiator_socket"};
+        num_cpus = ARM_NUM_CPUS,
+        -- 64 seems reasonable, but can be up to
+        -- 960 or 987 depending on how the gic
+        -- is used MUST be a multiple of 32
+        redist_region = {ARM_NUM_CPUS / NUM_REDISTS};
+        num_spi=64};
 
-    QemuUartPl011 m_uart("uart", m_qemu_inst)
+    qemu_pl011 = {
+        moduletype = "qemu_pl011",
+        args = {"&platform.qemu_inst"};
+        mem = {address= 0xc0000000,
+                                    size=0x1000, 
+                                    bind = "&router.initiator_socket"},
+        irq_out = {bind = "&gic_0.spi_in_1"},
+    };
 
 ```
 
@@ -678,7 +720,46 @@ Finally, it has 2 uarts:
 
 The library also provides socket initiators and targets for Qemu
 
- 
+# Ubuntu image
+
+You can build a customized Ubuntu OS (jammy) rootfs image with a script called `build_ubuntu_image.sh`.
+(Tested on Ubuntu 20.04.5 LTS host machine)
+
+You can test this script with a virtual platform in `platforms/ubuntu/`.
+The script is in `platforms/ubuntu/fw/`.
+
+build_ubuntu_image.sh is used to build the Ubuntu OS artifacts.
+The output build artifacts are:
+- Image.bin (uncompressed AARch64 Linux kernel image with efi stub)
+- image_ext4_vmlinuz.bin (gzip compressed AARch64 Linux kernel image)
+- image_ext4.img (ext4 root file system image)
+- image_ext4_initrd.img (initramfs to bring up the root file system)
+- image.ext4.manifest (list of all packages included in the image.ext4)
+- ubuntu.dts (device tree source file to build ubuntu.dtb)
+- ubuntu.dtb (device tree blob passed to the kernel Image by boot loader)
+
+So if you want to test this platform, you should go in `platforms/ubuntu/fw/`and generate the ubuntu images
+like that:
+
+```
+./build_ubuntu_image.sh -s 4G -p xorg,openbox,mesa-utils,pciutils
+```
+
+It will create a `Artifacts` directory with all of the thing needed inside it.
+If you want to run and test this ubuntu platform, you should go back at the top level 
+of the repository and build the project.
+
+And then run the platform in your build directory:
+```
+./platforms/platforms-vp -l ../platforms/ubuntu/conf.lua
+```
+
+You will need to use these login info:
+
+```
+username: root
+password: root
+```
 
 [//]: # (SECTION 100)
 
