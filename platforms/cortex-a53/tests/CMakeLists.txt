@@ -7,7 +7,7 @@ macro(gs_add_test test conf_lua image_dir)
         add_test(
             NAME ${test}
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/cortex_a53.py
-                -e ${CMAKE_BINARY_DIR}/platforms/cortex-a53/cortex-a53-vp
+                -e ${CMAKE_BINARY_DIR}/platforms/platforms-vp
                 -l ${CMAKE_SOURCE_DIR}/platforms/cortex-a53/${conf_lua}
                 -i ${test_dir}
         )
