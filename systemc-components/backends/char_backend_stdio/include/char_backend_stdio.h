@@ -223,6 +223,7 @@ public:
     void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
     {
         uint8_t* data = txn.get_data_ptr();
+        printf("\x1B[97m");
         for (int i = 0; i < txn.get_data_length(); i++) {
             putchar(data[i]);
             if ((char)data[i] == '\n') {
@@ -232,6 +233,7 @@ public:
                 line = line + (char)data[i];
             }
         }
+        printf("\x1B[0m");
         fflush(stdout);
     }
 
