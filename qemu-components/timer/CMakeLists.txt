@@ -1,1 +1,2 @@
 add_subdirectory(qemu_hexagon_qtimer)
+add_subdirectory(riscv_aclint_mtimer)

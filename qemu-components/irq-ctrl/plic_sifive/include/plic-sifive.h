@@ -20,7 +20,7 @@
 #include <ports/target.h>
 #include <ports/qemu-target-signal-socket.h>
 
-class riscv_sifive_plic : public QemuDevice
+class plic_sifive : public QemuDevice
 {
 public:
     cci::cci_param<unsigned int> p_num_sources;
@@ -37,11 +37,11 @@ public:
     QemuTargetSocket<> socket;
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
 
-    riscv_sifive_plic(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : riscv_sifive_plic(name, *(dynamic_cast<QemuInstance*>(o)))
+    plic_sifive(const sc_core::sc_module_name& name, sc_core::sc_object* o)
+        : plic_sifive(name, *(dynamic_cast<QemuInstance*>(o)))
     {
     }
-    riscv_sifive_plic(sc_core::sc_module_name nm, QemuInstance& inst)
+    plic_sifive(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuDevice(nm, inst, "riscv.sifive.plic")
         , p_num_sources("num_sources", 0, "Number of input IRQ lines")
         , p_num_priorities("num_priorities", 0, "Number of priorities")
