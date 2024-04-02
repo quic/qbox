@@ -130,11 +130,25 @@ public:
                 continue;
             }
 
-            int ret = ::read(m_socket, &m_buf[0], 256);
-            if (ret < 0 && errno != EAGAIN && errno != EINTR) {
-                SCP_ERR(()) << "read failed: " << std::strerror(errno);
-                abort();
-            } else if (ret > 0) {
+            struct pollfd fd;
+            int ret;
+            fd.fd = m_socket;
+            fd.events = POLLIN;
+            if (poll(&fd, 1, 1000) == 0) {
+                continue;
+            }
+            if (fd.revents > 0x4) {
+                close(m_socket);
+                m_socket = -1;
+                if (!p_nowait) {
+                    SCP_FATAL(())("Socket closed");
+                } else {
+                    SCP_WARN(())("Socket closed");
+                }
+                continue;
+            }
+            ret = ::read(m_socket, &m_buf[0], 256);
+            if (ret > 0) {
                 for (int i = 0; i < ret; i++) {
                     unsigned char c = m_buf[i];
                     socket.enqueue(c);
