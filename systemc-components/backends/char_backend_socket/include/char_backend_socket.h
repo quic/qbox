@@ -125,6 +125,7 @@ public:
 
                 SCP_DEBUG(()) << "incoming connection from  " << str << ":" << cport;
             } else if (!p_server && m_socket < 0) {
+                SCP_DEBUG(())("Waiting for connection");
                 sleep(1);
                 setup_tcp_client(ip, port);
                 continue;
@@ -141,13 +142,13 @@ public:
                 close(m_socket);
                 m_socket = -1;
                 if (!p_nowait) {
-                    SCP_FATAL(())("Socket closed");
+                    SCP_FATAL(())("Non waiting Socket closed");
                 } else {
-                    SCP_WARN(())("Socket closed");
+                    SCP_WARN(())("Socket closed, will wait for new connection");
                 }
                 continue;
             }
-            ret = ::read(m_socket, &m_buf[0], 256);
+            ret = ::read(m_socket, m_buf, sizeof(m_buf));
             if (ret > 0) {
                 for (int i = 0; i < ret; i++) {
                     unsigned char c = m_buf[i];

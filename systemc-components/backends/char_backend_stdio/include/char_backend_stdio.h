@@ -27,6 +27,7 @@ class char_backend_stdio : public sc_core::sc_module
 protected:
     cci::cci_param<bool> p_read_write;
     cci::cci_param<std::string> p_expect;
+    cci::cci_param<std::string> p_highlight;
 
 private:
     bool m_running = true;
@@ -136,6 +137,8 @@ public:
         : sc_core::sc_module(name)
         , p_read_write("read_write", true, "read_write if true start rcv_thread")
         , p_expect("expect", "", "string of expect commands")
+        , p_highlight("ansi_highlight", isatty(STDIN_FILENO) ? "\x1B[1m" : "",
+                      "ANSI highlight code to use for output, default bold")
         , socket("biflow_socket")
         , c_flag(false)
     {
@@ -223,7 +226,7 @@ public:
     void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
     {
         uint8_t* data = txn.get_data_ptr();
-        printf("\x1B[97m");
+        if (!p_highlight.get_value().empty()) std::cout << p_highlight.get_value();
         for (int i = 0; i < txn.get_data_length(); i++) {
             putchar(data[i]);
             if ((char)data[i] == '\n') {
@@ -233,7 +236,7 @@ public:
                 line = line + (char)data[i];
             }
         }
-        printf("\x1B[0m");
+        if (!p_highlight.get_value().empty()) std::cout << "\x1B[0m"; // ANSI color reset.
         fflush(stdout);
     }
 

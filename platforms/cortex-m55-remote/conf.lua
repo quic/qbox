@@ -34,6 +34,7 @@ platform = {
     charbackend_stdio_0 = {
        moduletype = "char_backend_stdio";
        read_write = true;
+       ansi_highlight = "";
     };
 
         pl011_uart_0 =  {
