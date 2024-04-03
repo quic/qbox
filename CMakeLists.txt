@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.14)
-project(qbox  VERSION 1.0)
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
+project(qbox VERSION 2.0)
 
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
@@ -18,16 +18,67 @@ if ("${GREENSOCS_GIT}" STREQUAL "")
     set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
 endif()
 
-if (NOT gs-cmake_SOURCE_DIR)
-   include(FetchContent)
-   FetchContent_Declare(gs-cmake
-        GIT_REPOSITORY ${GREENSOCS_GIT}cmake-boilerplate.git
-        GIT_TAG master
-   )
-   FetchContent_MakeAvailable(gs-cmake)
+include(FetchContent)
+include(CTest)
+
+if(EXISTS "${PROJECT_PATH}/Packages/CPM.cmake/cmake/CPM.cmake")
+  include(${PROJECT_PATH}/Packages/CPM.cmake/cmake/CPM.cmake)
+else()
+  FetchContent_Declare(
+    cpm-cmake
+    GIT_REPOSITORY https://github.com/cpm-cmake/CPM.cmake.git
+    GIT_TAG v0.31.1)
+  FetchContent_MakeAvailable(cpm-cmake)
+  include(${cpm-cmake_SOURCE_DIR}/cmake/CPM.cmake)
 endif()
-include(${gs-cmake_SOURCE_DIR}/cmake/gs-boilerplate.cmake)
-##############################################
+
+# Allow using package-lock.cmake files in projects using this boilerplate to pin repos, etc.
+set(PKG_LOCK "package-lock.cmake" CACHE STRING "Package lock which will be used by the user")
+CPMUsePackageLock(${PKG_LOCK})
+# ##############################################
+
+include(${PROJECT_SOURCE_DIR}/cmake/boilerplate.cmake)
+
+if(APPLE)
+  set(CMAKE_BUILD_RPATH "\@executable_path/../lib;\@executable_path/../lib/libqemu")
+  set(CMAKE_INSTALL_RPATH "\@executable_path/../lib;\@executable_path/../lib/libqemu")
+else()
+  set(CMAKE_BUILD_RPATH "\$ORIGIN/../lib;\$ORIGIN/../lib/libqemu")
+  set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib;\$ORIGIN/../lib/libqemu")
+endif()
+
+set(CMAKE_BUILD_RPATH
+    "${CMAKE_BINARY_DIR}/_deps/libqemu-build/qemu-prefix/lib/"
+    "${CMAKE_BINARY_DIR}"
+)
+
+if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "" OR "${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local")
+    set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install)
+    message(STATUS "CMAKE PREFIX PATH = ${CMAKE_INSTALL_PREFIX}")
+endif()
+
+# This block allow to retrieves the name of the binary directory which is used to ignore SystemC tests
+# ----------------------------------------------------------------------------------------
+string(REPLACE "${PROJECT_SOURCE_DIR}/" "" CMAKE_BINARY_NAME "${CMAKE_BINARY_DIR}")
+message(STATUS "CMAKE_BINARY_NAME = ${CMAKE_BINARY_NAME}")
+message(STATUS "PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
+
+configure_file(${PROJECT_SOURCE_DIR}/cmake/CTestCustom.cmake ${CMAKE_BINARY_DIR} @ONLY)
+# ----------------------------------------------------------------------------------------
+
+set(CMAKE_CXX_STANDARD
+    14
+    CACHE STRING "C++ standard to build all targets.")
+set(CMAKE_CXX_STANDARD_REQUIRED
+    ON
+    CACHE BOOL
+          "The with CMAKE_CXX_STANDARD selected C++ standard is a requirement.")
+mark_as_advanced(CMAKE_CXX_STANDARD_REQUIRED)
+
+include(GNUInstallDirs)
+
+#This is an exclusive define for the SCP library which allow to switch ON/OFF if we want thread local or not.
+add_compile_definitions(DISABLE_REPORT_THREAD_LOCAL)
 
 find_path(LIBELF_INCLUDE_DIR NAMES "libelf.h" "libelf/libelf.h"
           HINTS $ENV{LIBELF_HOME}/include /usr/include /usr/local/include
@@ -115,7 +166,7 @@ add_library(${PROJECT_NAME} SHARED
         ${qemu_srcs}
 )
 
-gs_lua()
+build_lua()
 
 if (NOT WITHOUT_QEMU)
     # This is a hack to workaround a CMake issue. We specify an existing file which
@@ -144,6 +195,7 @@ if (NOT WITHOUT_QEMU)
     target_include_directories(
         ${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/qemu-components/common/include>
+        $<BUILD_INTERFACE:${RAPIDJSON_INCLUDE_DIRS}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}>
     )
 

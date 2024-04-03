@@ -725,6 +725,8 @@ The library also provides socket initiators and targets for Qemu
 You can build a customized Ubuntu OS (jammy) rootfs image with a script called `build_ubuntu_image.sh`.
 (Tested on Ubuntu 20.04.5 LTS host machine)
 
+## Run it by hand
+
 You can test this script with a virtual platform in `platforms/ubuntu/`.
 The script is in `platforms/ubuntu/fw/`.
 
@@ -752,6 +754,15 @@ of the repository and build the project.
 And then run the platform in your build directory:
 ```
 ./platforms/platforms-vp -l ../platforms/ubuntu/conf.lua
+```
+
+## Run the custom target 'ubuntu'
+
+More simple, you can just run the custom target 'ubuntu' to build and run a customized ubuntu platform.
+
+You should just go in your build directory and run:
+```
+make ubuntu
 ```
 
 You will need to use these login info:
