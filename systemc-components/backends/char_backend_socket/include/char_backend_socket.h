@@ -57,6 +57,20 @@ public:
     int m_socket = -1;
     uint8_t m_buf[256];
 
+    void sock_setup()
+    {
+        int flags = fcntl(m_socket, F_GETFL, 0);
+        flags |= O_NONBLOCK;
+        if (::fcntl(m_socket, F_SETFL, flags) != 0) {
+            SCP_ERR(()) << "setting socket in non-blocking mode failed: " << std::strerror(errno);
+        }
+
+        flags = 1;
+        if (::setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(flags))) {
+            SCP_WARN(()) << "setting up TCP_NODELAY option failed: " << std::strerror(errno);
+        }
+    }
+
     void start_of_simulation()
     {
         size_t count = std::count(p_address.get_value().begin(), p_address.get_value().end(), ':');
@@ -105,19 +119,7 @@ public:
                 if (m_socket < 0) {
                     continue;
                 }
-
-#if 0
-                flag = 1;
-                if(::ioctl(m_socket, FIONBIO, (char *)&flag) < 0) {
-                    SCP_ERR(()) << "setting socket in blocking mode failed: " << std::strerror(errno);
-                    continue;
-                }
-#endif
-
-                flag = 1;
-                if (::setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag))) {
-                    SCP_WARN(()) << "setting up TCP_NODELAY option failed: " << std::strerror(errno);
-                }
+                sock_setup();
 
                 char str[INET_ADDRSTRLEN];
                 inet_ntop(AF_INET, &(client_addr.sin_addr), str, INET_ADDRSTRLEN);
@@ -148,7 +150,7 @@ public:
                 }
                 continue;
             }
-            ret = ::read(m_socket, m_buf, sizeof(m_buf));
+            ret = ::read(m_socket, m_buf, 1); // We can only guarantee 1 read will work
             if (ret > 0) {
                 for (int i = 0; i < ret; i++) {
                     unsigned char c = m_buf[i];
@@ -168,14 +170,25 @@ public:
             sleep(1);
         }
 
-#if 0
-        SCP_INFO(()) << "Got " << int(c) << "(" << c << ")";
-#endif
         uint8_t* data = txn.get_data_ptr();
         for (int i = 0; i < txn.get_data_length(); i++) {
-            if ((::write(m_socket, &data[i], 1)) != 1) {
-                SCP_WARN(()) << "Write did not complete: " << strerror(errno);
-            }
+            do {
+                if ((::write(m_socket, &data[i], 1)) != 1) {
+                    if (errno == EAGAIN) {
+                        SCP_WARN(())("(Blocking) write did not complete (EAGAIN)");
+                        sleep(1);
+                    } else {
+                        if (p_nowait) {
+                            SCP_WARN(())("(Non blocking) socket closed");
+                            return;
+                        } else {
+                            SCP_FATAL(())("(Blocking) socket closed.");
+                        }
+                    }
+                } else {
+                    break; // Write completed normally
+                }
+            } while (true);
         }
     }
 
@@ -257,15 +270,7 @@ public:
         }
         freeaddrinfo(servinfo);
 
-        flag = 1;
-        if (::ioctl(m_socket, FIONBIO, (char*)&flag) < 0) {
-            SCP_ERR(()) << "setting socket in blocking mode failed: " << std::strerror(errno);
-            return;
-        }
-
-        if (::setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag))) {
-            SCP_WARN(()) << "setting up TCP_NODELAY option failed: " << std::strerror(errno);
-        }
+        sock_setup();
 
         return;
     }
