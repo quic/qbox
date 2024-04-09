@@ -53,6 +53,8 @@ class QemuInitiatorSocket
       public tlm::tlm_bw_transport_if<>
 {
 public:
+    SCP_LOGGER(());
+
     using TlmInitiatorSocket = tlm::tlm_initiator_socket<BUSWIDTH, tlm::tlm_base_protocol_types, 1,
                                                          sc_core::SC_ZERO_OR_MORE_BOUND>;
     using TlmPayload = tlm::tlm_generic_payload;
@@ -103,7 +105,7 @@ protected:
 
     void add_dmi_mr_alias(DmiRegionAlias::Ptr alias)
     {
-        SCP_INFO(SCMOD) << "Adding " << *alias;
+        SCP_INFO(()) << "Adding " << *alias;
         qemu::MemoryRegion alias_mr = alias->get_alias_mr();
         m_r->m_root->add_subregion(alias_mr, alias->get_start());
         alias->set_installed();
@@ -114,7 +116,7 @@ protected:
         if (!alias->is_installed()) {
             return;
         }
-        SCP_INFO(SCMOD) << "Removing " << *alias;
+        SCP_INFO(()) << "Removing " << *alias;
         m_r->m_root->del_subregion(alias->get_alias_mr());
     }
 
@@ -163,7 +165,7 @@ protected:
         assert(trans.is_dmi_allowed());
         tlm::tlm_dmi dmi_data;
 
-        SCP_INFO(SCMOD) << "DMI request for address 0x" << std::hex << trans.get_address();
+        SCP_INFO(()) << "DMI request for address 0x" << std::hex << trans.get_address();
 
         // It is 'safer' from the SystemC perspective to  m_on_sysc.run_on_sysc([this,
         // &trans]{...}).
@@ -172,7 +174,7 @@ protected:
             return dmi_data;
         }
 
-        SCP_INFO(SCMOD) << "DMI Adding for address 0x" << std::hex << trans.get_address();
+        SCP_INFO(()) << "DMI Adding for address 0x" << std::hex << trans.get_address();
 
         // The upper limit is set within QEMU by the TBU
         // e.g. 1k small pages for ARM.
@@ -192,7 +194,7 @@ protected:
         while (m_dmi_aliases.size() > MAX_MAP) {
             auto d = m_dmi_aliases.begin();
             std::advance(d, std::rand() % m_dmi_aliases.size());
-            SCP_INFO(SCMOD) << "KULLING 0x" << std::hex << d->first;
+            SCP_INFO(()) << "KULLING 0x" << std::hex << d->first;
             d = remove_alias(d);
         }
 
@@ -208,12 +210,12 @@ protected:
                     // already have the DMI
                     assert(end <= dmi->get_end());
                     assert(dmi_data.get_dmi_ptr() == dmi->get_dmi_ptr());
-                    SCP_INFO(SCMOD) << "Already have region";
+                    SCP_INFO(()) << "Already have region";
                     return dmi_data;
                 }
                 uint64_t sz = dmi->get_size();
                 if (dmi->get_end() + 1 == start && dmi->get_dmi_ptr() + sz == dmi_data.get_dmi_ptr()) {
-                    SCP_INFO(SCMOD) << "Merge with previous";
+                    SCP_INFO(()) << "Merge with previous";
                     start = dmi->get_start();
                     dmi_data.set_start_address(start);
                     dmi_data.set_dmi_ptr(dmi->get_dmi_ptr());
@@ -227,11 +229,11 @@ protected:
                     // already have the DMI
                     assert(end <= dmi->get_end());
                     assert(dmi_data.get_dmi_ptr() == dmi->get_dmi_ptr());
-                    SCP_INFO(SCMOD) << "Already have region(2)";
+                    SCP_INFO(()) << "Already have region(2)";
                     return dmi_data;
                 }
                 if (dmi->get_start() == end + 1 && dmi_data.get_dmi_ptr() + sz == dmi->get_dmi_ptr()) {
-                    SCP_INFO(SCMOD) << "Merge with next";
+                    SCP_INFO(()) << "Merge with next";
                     end = dmi->get_end();
                     dmi_data.set_end_address(end);
 
@@ -240,8 +242,8 @@ protected:
             }
         }
 
-        SCP_INFO(SCMOD) << "Adding DMI for range [0x" << std::hex << dmi_data.get_start_address() << "-0x" << std::hex
-                        << dmi_data.get_end_address() << "]";
+        SCP_INFO(()) << "Adding DMI for range [0x" << std::hex << dmi_data.get_start_address() << "-0x" << std::hex
+                     << dmi_data.get_end_address() << "]";
 
         DmiRegionAlias::Ptr alias = m_inst.get_dmi_manager().get_new_region_alias(dmi_data);
 
@@ -370,7 +372,7 @@ public:
         , m_initiator(initiator)
         , m_on_sysc(sc_core::sc_gen_unique_name("initiator_run_on_sysc"))
     {
-        SCP_DEBUG(SCMOD) << "QemuInitiatorSocket constructor";
+        SCP_DEBUG(()) << "QemuInitiatorSocket constructor";
         TlmInitiatorSocket::bind(*static_cast<tlm::tlm_bw_transport_if<>*>(this));
     }
 
@@ -415,7 +417,7 @@ public:
     {
         if (m_finished) return;
 
-        SCP_INFO(SCMOD) << "Mapping request for address [0x" << std::hex << addr << "-0x" << addr + len - 1 << "]";
+        SCP_DEBUG(()) << "Mapping request for address [0x" << std::hex << addr << "-0x" << addr + len - 1 << "]";
 
         TlmPayload trans;
         uint64_t current_addr = addr;
@@ -429,8 +431,8 @@ public:
             // Current addr is an absolute address while the dmi range might be relative
             // hence not necesseraly current_addr falls withing dmi_range address boundaries
             // TODO: is there a way to retrieve the dmi range block offset?
-            SCP_INFO(SCMOD) << "0x" << std::hex << current_addr << " mapped [0x" << dmi_data.get_start_address()
-                            << "-0x" << dmi_data.get_end_address() << "]";
+            SCP_INFO(()) << "0x" << std::hex << current_addr << " mapped [0x" << dmi_data.get_start_address() << "-0x"
+                         << dmi_data.get_end_address() << "]";
 
             // The allocated range may not span the whole length required for mapping
             current_addr += dmi_data.get_end_address() - dmi_data.get_start_address() + 1;
@@ -552,8 +554,8 @@ private:
 
             it = remove_alias(it);
 
-            SCP_INFO(SCMOD) << "Invalidated region [0x" << std::hex << r->get_start() << ", 0x" << std::hex
-                            << r->get_end() << "]";
+            SCP_INFO(()) << "Invalidated region [0x" << std::hex << r->get_start() << ", 0x" << std::hex << r->get_end()
+                         << "]";
         }
     }
 
@@ -564,7 +566,7 @@ private:
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
-        SCP_INFO(SCMOD) << "Invalidating " << m_ranges.size() << " ranges";
+        SCP_INFO(()) << "Invalidating " << m_ranges.size() << " ranges";
         auto rit = m_ranges.begin();
         while (rit != m_ranges.end()) {
             invalidate_single_range(rit->first, rit->second);
@@ -579,8 +581,7 @@ public:
 
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            SCP_INFO(SCMOD) << "DMI invalidate [0x" << std::hex << start_range << ", 0x" << std::hex << end_range
-                            << "]";
+            SCP_INFO(()) << "DMI invalidate [0x" << std::hex << start_range << ", 0x" << std::hex << end_range << "]";
             m_ranges.push_back(std::make_pair(start_range, end_range));
         }
 
