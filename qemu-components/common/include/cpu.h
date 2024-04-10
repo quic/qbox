@@ -55,6 +55,7 @@ protected:
 
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
     bool m_finished = false;
+    bool m_started = false;
     std::mutex m_can_delete;
     QemuCpuHintTlmExtension m_cpu_hint_ext;
 
@@ -235,7 +236,9 @@ protected:
         }
         if (m_finished) return;
 
-        m_cpu.set_soft_stopped(false);
+        if (m_started) {
+            m_cpu.set_soft_stopped(false);
+        }
     }
 
     /*
@@ -496,6 +499,8 @@ public:
         // 0 by some routine. By setting the vcpu as dirty, we trigger pushing
         // registers to KVM just before running it.
         m_cpu.set_vcpu_dirty(true);
+
+        m_started = true;
     }
 
     /* QemuInitiatorIface  */
