@@ -105,7 +105,7 @@ public:
     void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
     {
         uint8_t* data = txn.get_data_ptr();
-        for (int i = 0; i < txn.get_data_length(); i++) {
+        for (int i = 0; i < txn.get_streaming_width(); i++) {
             size_t ret = fwrite(&data[i], sizeof(uint8_t), 1, w_file);
             if (ret != 1) {
                 SCP_ERR(()) << "Error writing to the file.\n";

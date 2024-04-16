@@ -227,7 +227,7 @@ public:
     {
         uint8_t* data = txn.get_data_ptr();
         if (!p_highlight.get_value().empty()) std::cout << p_highlight.get_value();
-        for (int i = 0; i < txn.get_data_length(); i++) {
+        for (int i = 0; i < txn.get_streaming_width(); i++) {
             putchar(data[i]);
             if ((char)data[i] == '\n') {
                 expect_process();

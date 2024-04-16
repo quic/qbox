@@ -171,7 +171,7 @@ public:
         }
 
         uint8_t* data = txn.get_data_ptr();
-        for (int i = 0; i < txn.get_data_length(); i++) {
+        for (int i = 0; i < txn.get_streaming_width(); i++) {
             do {
                 if ((::write(m_socket, &data[i], 1)) != 1) {
                     if (errno == EAGAIN) {

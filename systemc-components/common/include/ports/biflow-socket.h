@@ -42,6 +42,7 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_sockets_buswidth.h>
 #include <async_event.h>
+#include <memory>
 
 namespace gs {
 struct biflow_bindable {
@@ -58,15 +59,16 @@ class biflow_socket : public sc_core::sc_module, public biflow_bindable
 {
     SCP_LOGGER();
 
-    uint64_t m_can_send = 0;
+    uint32_t m_can_send = 0;
     bool infinite = false;
     std::vector<T> m_queue;
     gs::async_event m_send_event;
     std::mutex m_mutex;
+    std::unique_ptr<tlm::tlm_generic_payload> m_txn;
 
     struct ctrl {
         enum { DELTA_CHANGE, ABSOLUTE_VALUE, INFINITE } cmd;
-        uint64_t can_send;
+        uint32_t can_send;
     };
 
     void sendall()
@@ -76,10 +78,13 @@ class biflow_socket : public sc_core::sc_module, public biflow_bindable
 
         uint64_t sending = (infinite || (m_can_send > m_queue.size())) ? m_queue.size() : m_can_send;
         if (sending > 0) {
-            txn.set_data_length(sending);
+            if (m_txn)
+                txn.deep_copy_from(*m_txn);
+            else
+                txn.set_data_length(sending);
+            txn.set_streaming_width(sending);
             txn.set_data_ptr(&(m_queue[0]));
-            txn.set_command(tlm::TLM_IGNORE_COMMAND);
-            sc_core::sc_time delay;
+            sc_core::sc_time delay = sc_core::SC_ZERO_TIME;
             initiator_socket->b_transport(txn, delay);
             m_queue.erase(m_queue.begin(), m_queue.begin() + sending);
             m_can_send -= sending;
@@ -146,6 +151,7 @@ public:
         , initiator_socket((std::string(name) + "_initiator_socket").c_str())
         , target_control_socket((std::string(name) + "_target_socket_control").c_str())
         , initiator_control_socket((std::string(name) + "_initiator_socket_control").c_str())
+        , m_txn(nullptr)
     {
         SCP_TRACE(()) << "constructor";
 
@@ -240,6 +246,28 @@ public:
         std::lock_guard<std::mutex> guard(m_mutex);
         m_queue.push_back(data);
         m_send_event.notify();
+    }
+
+    /**
+     * @brief set_default_txn
+     * set transaction parameters (command, address and data_length)
+     * @param txn
+     */
+    void set_default_txn(tlm::tlm_generic_payload& txn)
+    {
+        if (!m_txn) m_txn = std::make_unique<tlm::tlm_generic_payload>();
+        m_txn->deep_copy_from(txn);
+    }
+
+    /**
+     * @brief force_send
+     * force send a transaction
+     * @param txn
+     */
+    void force_send(tlm::tlm_generic_payload& txn)
+    {
+        sc_core::sc_time delay;
+        initiator_socket->b_transport(txn, delay);
     }
 
     /**

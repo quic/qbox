@@ -361,7 +361,7 @@ public:
     void pl011_receive(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
     {
         uint8_t* data = txn.get_data_ptr();
-        for (int i = 0; i < txn.get_data_length(); i++) {
+        for (int i = 0; i < txn.get_streaming_width(); i++) {
             pl011_put_fifo(data[i]);
         }
     }

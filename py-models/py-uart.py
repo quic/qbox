@@ -239,7 +239,7 @@ def b_transport(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
     try:
         if id == 0:
             data = trans.get_data()
-            data_len = trans.get_data_length()
+            data_len = trans.get_streaming_width()
             for i in range(0, data_len):
                 os.write(sys.stdout.fileno(), data[i])
             sys.stdout.flush()
