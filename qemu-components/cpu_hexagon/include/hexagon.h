@@ -35,6 +35,7 @@ public:
         v68_rev = 0x8d68,
         v69_rev = 0x8c69,
         v73_rev = 0x8c73,
+        v79_rev = 0x8c79,
     } Rev_t;
 
     const std::map<std::string, Rev_t> DSP_REVS = {
@@ -42,6 +43,7 @@ public:
         DSP_REV(v68),
         DSP_REV(v69),
         DSP_REV(v73),
+        DSP_REV(v79),
     };
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
 
