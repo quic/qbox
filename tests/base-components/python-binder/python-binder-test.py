@@ -1,6 +1,14 @@
 from tlm_generic_payload import tlm_command, tlm_response_status, tlm_generic_payload
 import initiator_signal_socket
-from sc_core import sc_time, sc_time_unit, sc_spawn, sc_spawn_options, wait, sc_event
+from sc_core import (
+    sc_time,
+    sc_time_unit,
+    sc_spawn,
+    sc_spawn_options,
+    wait,
+    sc_event,
+    sc_time_stamp,
+)
 import tlm_do_b_transport
 import cpp_shared_vars
 import functools
@@ -8,9 +16,11 @@ import numpy as np
 from typing import List, Callable
 import argparse
 import shlex
+import inspect
 
 signal_write_values: List[bool] = []
 signal_writer_event = sc_event()
+dummy_event = sc_event()
 
 
 def parse_args(args_str: str) -> argparse.Namespace:
@@ -31,6 +41,19 @@ args = parse_args(cpp_shared_vars.module_args)
 def log(msg: str) -> None:
     if args.debug:
         print(f"[python] {msg}")
+
+
+def sc_thread(func):
+    """decorator to convert a function to systemc thread"""
+
+    def wrapper(*args, **kwargs):
+        if not inspect.isgeneratorfunction(func):
+            return func()
+        if not hasattr(wrapper, "g"):
+            wrapper.g = func()
+        return next(wrapper.g)
+
+    return functools.update_wrapper(wrapper, func)
 
 
 def to_uint8_nparray(func):
@@ -89,26 +112,69 @@ def start_of_simulation() -> None:
     signal_writer_event.notify(sc_time(0, sc_time_unit.SC_NS))
 
 
-def signal_writer() -> None:
+@sc_thread
+def signal_writer():
+    dummy_event.notify(sc_time(10, sc_time_unit.SC_NS))
     for _ in range(0, 2):
         initiator_signal_socket.write(0, False)
-        wait(sc_time(10, sc_time_unit.SC_NS))
+        yield sc_time(10, sc_time_unit.SC_NS)
         initiator_signal_socket.write(0, True)
-        wait(sc_time(10, sc_time_unit.SC_NS))
+        yield sc_time(10, sc_time_unit.SC_NS)
 
 
-def spawn_sc_thread(thread: Callable, thread_name: str, event: sc_event) -> None:
+@sc_thread
+def dummy_thread1():
+    yield (sc_time(10, sc_time_unit.SC_NS), dummy_event)
+    log(f"after execute systemc wait event, simulation time: {sc_time_stamp()}")
+    yield sc_time(100, sc_time_unit.SC_MS)
+    log(f"after execute systemc wait time 100 ms, simulation time: {sc_time_stamp()}")
+    yield sc_time(100, sc_time_unit.SC_MS)
+    log(f"after execute systemc wait time 100 ms, simulation time: {sc_time_stamp()}")
+    yield sc_time(100, sc_time_unit.SC_MS)
+    log(f"after execute systemc wait time 100 ms, simulation time: {sc_time_stamp()}")
+
+
+@sc_thread
+def dummy_thread2():
+    log(f"log a msg and exit thread, simulation time: {sc_time_stamp()}")
+
+
+@sc_thread
+def dummy_thread3():
+    yield sc_time(200, sc_time_unit.SC_MS)
+    log(f"after execute systemc wait time 200 ms, simulation time: {sc_time_stamp()}")
+    yield sc_time(200, sc_time_unit.SC_MS)
+    log(f"after execute systemc wait time 200 ms, simulation time: {sc_time_stamp()}")
+    yield sc_time(200, sc_time_unit.SC_MS)
+    log(f"after execute systemc wait time 200 ms, simulation time: {sc_time_stamp()}")
+    log(f"Simulation time: {sc_time_stamp()}")
+    assert sc_time_stamp() == sc_time(600, sc_time_unit.SC_MS)
+
+
+def spawn_sc_thread(
+    thread: Callable, thread_name: str, event: sc_event = None, donot_init: bool = False
+) -> None:
     try:
         options = sc_spawn_options()
-        options.set_sensitivity(event)
-        options.dont_initialize()
+        if event:
+            options.set_sensitivity(event)
+        if donot_init:
+            options.dont_initialize()
         sc_spawn(thread, thread_name, options)
     except Exception as e:
         log(f"spawn_sc_thread error: {e}")
 
 
 def end_of_elaboration() -> None:
-    spawn_sc_thread(signal_writer, "signal_writer", signal_writer_event)
+    spawn_sc_thread(
+        thread=signal_writer,
+        thread_name="signal_writer",
+        event=signal_writer_event,
+        donot_init=True,
+    )
+    spawn_sc_thread(thread=dummy_thread1, thread_name="dummy_thread1")
+    spawn_sc_thread(thread=dummy_thread2, thread_name="dummy_thread2")
+    spawn_sc_thread(thread=dummy_thread3, thread_name="dummy_thread3")
 
 
 def target_signal_cb(id: int, value: bool) -> None:

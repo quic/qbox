@@ -13,35 +13,29 @@ from/to the pl011 uart systemc C++ model.
 to connect the model to QQVP please configure it like that in your conf.lua:
 
 python_backend_stdio_0 = {
-        moduletype = "PythonBinder";
+        moduletype = "python_binder";
         py_module_name = "py-uart";
         py_module_dir = "/path/to/py-models";
         py_module_args = "--enable_input --baudrate 115200";
-        tlm_initiator_ports_num = 2;
-        tlm_target_ports_num = 2;
-        initiator_socket_0 = {bind = "&pl011_uart_0.backend_socket.backend_socket_target_socket"};
-        initiator_socket_1 = {bind = "&pl011_uart_0.backend_socket.backend_socket_initiator_socket_control"};
-        target_socket_0 = {bind = "&pl011_uart_0.backend_socket.backend_socket_initiator_socket"};
-        target_socket_1 = {bind = "&pl011_uart_0.backend_socket.backend_socket_target_socket_control"};
+        biflow_socket_num = 1;
     };
 
-   pl011_uart_0 = {
-       moduletype = "Pl011",
-       -- args = {"&platform.charbackend_stdio_0"};
-       target_socket = {address= UART0,
-                                 size=0x1000, 
-                                 bind = "&router.initiator_socket"},
-       irq = {bind = "&gic_0.spi_in_379"},
-   };
+    pl011_uart_0 = {
+        moduletype = "Pl011",
+        dylib_path = "uart-pl011",
+        target_socket = {address= UART0,
+                                    size=0x1000,
+                                    bind = "&router.initiator_socket"},
+        irq = {bind = "&gic_0.spi_in_379"},
+        backend_socket = {bind = "&python_backend_stdio_0.biflow_socket_0"},
+    };
 """
 
-from tlm_generic_payload import tlm_command, tlm_generic_payload
-from sc_core import sc_time, sc_spawn, sc_spawn_options, sc_time_unit, wait
-from gs import async_event
-import tlm_do_b_transport
+from tlm_generic_payload import tlm_generic_payload
+import biflow_socket
+from sc_core import sc_time, sc_spawn, sc_spawn_options, sc_time_unit, sc_event
 import cpp_shared_vars
 import numpy as np
-import numpy.typing as npt
 import argparse
 import shlex
 from typing import Optional, Callable, List, Any
@@ -54,12 +48,8 @@ import termios
 import select
 import atexit
 import signal
-
-DELTA_CHANGE = 0x0
-ABSOLUTE_VALUE = 0x1
-INFINITE = 0x2
-EXIT_SUCCESS = 0x0
-EXIT_FAILURE = 0x1
+import functools
+import inspect
 
 
 def sigint_handler(signno: int, frame: Optional[FrameType]) -> None:
@@ -67,6 +57,19 @@ def sigint_handler(signno: int, frame: Optional[FrameType]) -> None:
     ch = b"\x03"
     receiver.queue.put(ch)
     receiver.send_event.notify(sc_time(0, sc_time_unit.SC_NS))
+
+
+def sc_thread(func):
+    """decorator to convert a function to systemc thread"""
+
+    def wrapper(*args, **kwargs):
+        if not inspect.isgeneratorfunction(func):
+            return func()
+        if not hasattr(wrapper, "g"):
+            wrapper.g = func()
+        return next(wrapper.g)
+
+    return functools.update_wrapper(wrapper, func)
 
 
 def module_init() -> None:
@@ -103,21 +106,8 @@ args = parse_args(cpp_shared_vars.module_args)
 
 
 @dataclasses.dataclass
-class ctrl:
-    cmd: np.uint64
-    can_send: np.uint64
-
-    def serialize(self) -> npt.NDArray[np.uint8]:
-        cmd_arr = np.frombuffer(self.cmd.to_bytes(8, "little"), dtype=np.uint8)
-        can_send_arr = np.frombuffer(
-            self.can_send.to_bytes(8, "little"), dtype=np.uint8
-        )
-        return np.concatenate([cmd_arr, can_send_arr])
-
-
-@dataclasses.dataclass
 class stdin_receiver:
-    send_event: async_event
+    send_event: sc_event
     queue: Queue
     ifd: int
 
@@ -136,44 +126,31 @@ class stdin_receiver:
         termios.tcsetattr(self.ifd, termios.TCSANOW, self._old_flags)
 
 
-receiver = stdin_receiver(
-    send_event=async_event(True), queue=Queue(), ifd=sys.stdin.fileno()
-)
+receiver = stdin_receiver(send_event=sc_event(), queue=Queue(), ifd=sys.stdin.fileno())
 
 
-def notifier() -> None:
+@sc_thread
+def notifier():
     """systemc thread to check for input and notifies the sendall method whenever a stdin byte is available, called by systemc simulation kernel"""
     while True:
-        try:
-            if receiver.ifd in select.select([receiver.ifd], [], [], 0)[0]:
-                ch = os.read(receiver.ifd, 1)
-                receiver.queue.put(ch)
-                # let's do the processing in the sendall systemc method by notifying a systemc event
-                receiver.send_event.notify(sc_time(0, sc_time_unit.SC_NS))
-            wait(sc_time(1 / args.baudrate, sc_time_unit.SC_US))
-        except SystemExit:
-            break
-        except Exception as e:
-            raise Exception(f"notifier sc thread error: {e}")
+        if receiver.ifd in select.select([receiver.ifd], [], [], 0)[0]:
+            ch = os.read(receiver.ifd, 1)
+            receiver.queue.put(ch)
+            # let's do the processing in the sendall systemc method by notifying a systemc event
+            receiver.send_event.notify(sc_time(0, sc_time_unit.SC_NS))
+        yield sc_time(100, sc_time_unit.SC_US)
 
 
 def sendall() -> None:
     """systemc method to send all bytes read from stdin to pl011, called by systemc simulation kernel"""
-    try:
-        txn = tlm_generic_payload()
+    if not receiver.queue.empty():
         data = np.frombuffer(receiver.queue.get(), dtype=np.uint8)
-        txn.set_data_length(data.size)
-        txn.set_data_ptr(data)
-        txn.set_command(tlm_command.TLM_IGNORE_COMMAND)
-        delay = sc_time(1 / args.baudrate, sc_time_unit.SC_US)
-        tlm_do_b_transport.do_b_transport(0, txn, delay)
-    except SystemExit:
-        return
-    except Exception as e:
-        raise Exception(f"sendall sc method error: {e}")
+        biflow_socket.enqueue(data)
+    if not receiver.queue.empty():
+        receiver.send_event.notify(sc_time(1 / args.baudrate, sc_time_unit.SC_SEC))
 
 
-def spawn_sc_method(method: Callable, method_name: str, event: async_event) -> None:
+def spawn_sc_method(method: Callable, method_name: str, event: sc_event) -> None:
     """spawn new systemc method, sc_spawn and options methods calls C++ sc_core::[sc_spawn() & sc_spawn_options]"""
     try:
         options = sc_spawn_options()
@@ -201,16 +178,7 @@ def spawn_sc_thread(thread: Callable, thread_name: str) -> None:
 def set_send_limit_to_inf() -> None:
     """send the ctrl struct with cmd set to INFINITE to pl011"""
     try:
-        trans = tlm_generic_payload()
-        trans.set_data_length(16)
-        trans.set_streaming_width(16)
-        # biflow_socket ctrl struct
-        ctrl_lst = ctrl(cmd=INFINITE, can_send=0x0)
-        data = ctrl_lst.serialize()
-        trans.set_data_ptr(data)
-        trans.set_command(tlm_command.TLM_IGNORE_COMMAND)
-        delay = sc_time()  # control trans, no need to set delay
-        tlm_do_b_transport.do_b_transport(1, trans, delay)
+        biflow_socket.can_receive_any()
     except SystemExit:
         return
     except Exception as e:
@@ -221,7 +189,6 @@ def before_end_of_elaboration() -> None:
     """called by the C++ systemc kernel before end of elaboration"""
     try:
         receiver.set_termios_attr()
-        receiver.send_event.async_detach_suspending()
         if args.enable_input:
             spawn_sc_method(
                 method=sendall, method_name="sendall", event=receiver.send_event
@@ -234,14 +201,13 @@ def before_end_of_elaboration() -> None:
         raise Exception(f"before_end_of_elaboration error: {e}")
 
 
-def b_transport(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
-    """called from C++ side (PythonBinder model) when a txn happens on initiator port id"""
+def bf_b_transport(trans: tlm_generic_payload, delay: sc_time) -> None:
+    """called from C++ side (PythonBinder model)"""
     try:
-        if id == 0:
-            data = trans.get_data()
-            data_len = trans.get_streaming_width()
-            for i in range(0, data_len):
-                os.write(sys.stdout.fileno(), data[i])
+        data = trans.get_data()
+        data_len = trans.get_streaming_width()
+        for i in range(0, data_len):
+            os.write(sys.stdout.fileno(), data[i])
             sys.stdout.flush()
     except SystemExit:
         return

@@ -30,14 +30,97 @@ unsigned char* get_pybind11_buffer_info_ptr(const py_char_array& bytes)
     return ret;
 }
 
+enum class py_wait_type { SC_TIME, SC_EVENT, GS_ASYNC_EVENT, TIMED_SC_EVENT };
+
+/**
+ * FIXME: This is a work around to mitigate a problem happening in python implemented systemc thread functions,
+ * now pybind11 will fail to switch from a python function context after a systemc sc_core::wait() call and
+ * generates this exception: "loader_life_support: internal error", the current solution assumes that python systemc
+ * thread function which includes a sc_core::wait() call is implemented as a generator and yield is used instead
+ * of sc_core::wait(), and each time the python systemc thread function yields, a check for the yield value is done to
+ * execute the appropriate sc_core::wait() function. So, the actual systemc thread context switch will happen in C++
+ * side not in python side.
+ */
+bool sc_thread_try_wait(const pybind11::object& ret, py_wait_type type)
+{
+    try {
+        switch (type) {
+        case py_wait_type::SC_TIME:
+            sc_core::wait(ret.cast<const sc_core::sc_time&>());
+            break;
+        case py_wait_type::SC_EVENT:
+            sc_core::wait(ret.cast<const sc_core::sc_event&>());
+            break;
+        case py_wait_type::GS_ASYNC_EVENT:
+            sc_core::wait(ret.cast<const gs::async_event&>());
+            break;
+        case py_wait_type::TIMED_SC_EVENT: {
+            pybind11::tuple t = ret.cast<pybind11::tuple>();
+            sc_core::wait(t[0].cast<const sc_core::sc_time&>(), t[1].cast<const sc_core::sc_event&>());
+            break;
+        }
+        default:
+            return false;
+        }
+        return true;
+    } catch (const pybind11::reference_cast_error&) {
+        return false;
+    } catch (const pybind11::cast_error&) {
+        return false;
+    } catch (pybind11::error_already_set& e) {
+        if (!e.matches(PyExc_TypeError)) {
+            throw;
+        } else {
+            return false;
+        }
+    } catch (...) {
+        throw;
+    }
+}
+
 PYBIND11_EMBEDDED_MODULE(sc_core, m)
 {
+    m.def("sc_time_stamp", &sc_core::sc_time_stamp);
     m.def("wait", [](const sc_core::sc_time& t) { sc_core::wait(t); });
     m.def("wait", [](const sc_core::sc_event& t) { sc_core::wait(t); });
     m.def("wait", [](const gs::async_event& t) { sc_core::wait(t); });
-    m.def("sc_spawn", [](std::function<void()> f, const char* name, const sc_core::sc_spawn_options* opts) {
-        sc_core::sc_spawn(f, name, opts);
-    });
+    m.def("sc_spawn",
+          [](std::function<pybind11::object(void)> f, const char* name, const sc_core::sc_spawn_options* opts) {
+              sc_core::sc_spawn(
+                  [=]() {
+                      while (1) {
+                          try {
+                              pybind11::object ret = f();
+                              if (!sc_thread_try_wait(ret, py_wait_type::SC_EVENT) &&
+                                  !sc_thread_try_wait(ret, py_wait_type::SC_TIME) &&
+                                  !sc_thread_try_wait(ret, py_wait_type::GS_ASYNC_EVENT) &&
+                                  !sc_thread_try_wait(ret, py_wait_type::TIMED_SC_EVENT)) {
+                                  if (pybind11::str(ret).cast<std::string>() != std::string("None")) {
+                                      std::cerr << "Error: unkown sc_core::wait() arguments {" << pybind11::str(ret)
+                                                << "}" << std::endl;
+                                      abort();
+                                  }
+                                  return;
+                              } else {
+                                  continue;
+                              }
+                          } catch (pybind11::error_already_set& e) {
+                              if (!e.matches(PyExc_StopIteration)) {
+                                  std::cerr << "Python Exception: " << e.what() << std::endl;
+                                  throw;
+                              } else {
+                                  // No more sc_core::wait(). so the next(thread_generator) will raise StopIteration
+                                  // exception.
+                                  return;
+                              }
+                          } catch (const std::exception& ex) {
+                              std::cerr << "C++ Exception: " << ex.what() << std::endl;
+                              throw;
+                          }
+                      }
+                  },
+                  name, opts);
+          });
 
     pybind11::enum_<sc_core::sc_time_unit>(m, "sc_time_unit")
         .value("SC_FS", sc_core::sc_time_unit::SC_FS)
@@ -204,6 +287,8 @@ PYBIND11_EMBEDDED_MODULE(tlm_do_b_transport, m) {}
 
 PYBIND11_EMBEDDED_MODULE(initiator_signal_socket, m) {}
 
+PYBIND11_EMBEDDED_MODULE(biflow_socket, m) {}
+
 PyInterpreterManager::PyInterpreterManager() { pybind11::initialize_interpreter(); }
 
 void PyInterpreterManager::init()
@@ -224,26 +309,31 @@ python_binder<BUSWIDTH>::python_binder(const sc_core::sc_module_name& nm)
     , p_tlm_target_ports_num("tlm_target_ports_num", 0, "number of tlm target ports")
     , p_initiator_signals_num("initiator_signals_num", 0, "number of initiator signals")
     , p_target_signals_num("target_signals_num", 0, "number of target signals")
+    , p_bf_socket_num("biflow_socket_num", 0, "number of biflow sockets, maximum 1 socket is supported")
     , initiator_sockets("initiator_socket")
     , target_sockets("target_socket")
     , initiator_signal_sockets("initiator_signal_socket")
     , target_signal_sockets("target_signal_socket")
+    , bf_socket("biflow_socket")
 {
     SCP_DEBUG(()) << "python_binder constructor";
+    assert(p_bf_socket_num.get_value() == 0 || p_bf_socket_num.get_value() == 1);
     initiator_sockets.init(p_tlm_initiator_ports_num.get_value(),
                            [this](const char* n, int i) { return new tlm_initiator_socket_t(n); });
     target_sockets.init(p_tlm_target_ports_num.get_value(),
                         [this](const char* n, int i) { return new tlm_target_socket_t(n); });
+    bf_socket.init(p_bf_socket_num.get_value(),
+                   [this](const char* n, int i) { return new gs::biflow_socket<python_binder<BUSWIDTH>>(n); });
     initiator_signal_sockets.init(p_initiator_signals_num.get_value(),
                                   [this](const char* n, int i) { return new InitiatorSignalSocket<bool>(n); });
     target_signal_sockets.init(p_target_signals_num.get_value(),
                                [this](const char* n, int i) { return new TargetSignalSocket<bool>(n); });
-
     for (uint32_t i = 0; i < p_tlm_target_ports_num.get_value(); i++) {
         target_sockets[i].register_b_transport(this, &python_binder::b_transport, i);
         target_sockets[i].register_transport_dbg(this, &python_binder::transport_dbg, i);
         target_sockets[i].register_get_direct_mem_ptr(this, &python_binder::get_direct_mem_ptr, i);
     }
+    if (p_bf_socket_num.get_value() == 1) bf_socket[0].register_b_transport(this, &python_binder::bf_b_transport);
     for (uint32_t i = 0; i < p_tlm_initiator_ports_num.get_value(); i++) {
         initiator_sockets[i].register_invalidate_direct_mem_ptr(this, &python_binder::invalidate_direct_mem_ptr);
     }
@@ -277,6 +367,8 @@ void python_binder<BUSWIDTH>::init_binder()
                 do_b_transport(id, py_trans, delay);
             });
 
+        setup_biflow_socket();
+
         m_initiator_signal_socket_mod = pybind11::module_::import("initiator_signal_socket");
         m_initiator_signal_socket_mod.attr("write") = pybind11::cpp_function(
             [this](int id, bool value) { initiator_signal_sockets[id]->write(value); });
@@ -294,6 +386,27 @@ void python_binder<BUSWIDTH>::init_binder()
     } catch (const std::exception& e) {
         SCP_FATAL(()) << e.what() << std::endl;
     }
+}
+
+template <unsigned int BUSWIDTH>
+void python_binder<BUSWIDTH>::setup_biflow_socket()
+{
+    m_biflow_socket_mod = pybind11::module_::import("biflow_socket");
+    m_biflow_socket_mod.attr("can_receive_more") = pybind11::cpp_function(
+        [this](int i) { bf_socket[0].can_receive_more(i); });
+    m_biflow_socket_mod.attr("can_receive_set") = pybind11::cpp_function(
+        [this](int i) { bf_socket[0].can_receive_set(i); });
+    m_biflow_socket_mod.attr("can_receive_any") = pybind11::cpp_function([this]() { bf_socket[0].can_receive_any(); });
+    m_biflow_socket_mod.attr("enqueue") = pybind11::cpp_function([this](uint8_t data) { bf_socket[0].enqueue(data); });
+    m_biflow_socket_mod.attr("set_default_txn") = pybind11::cpp_function([this](pybind11::object& py_trans) {
+        tlm::tlm_generic_payload* trans = py_trans.cast<tlm::tlm_generic_payload*>();
+        bf_socket[0].set_default_txn(*trans);
+    });
+    m_biflow_socket_mod.attr("force_send") = pybind11::cpp_function([this](pybind11::object& py_trans) {
+        tlm::tlm_generic_payload* trans = py_trans.cast<tlm::tlm_generic_payload*>();
+        bf_socket[0].force_send(*trans);
+    });
+    m_biflow_socket_mod.attr("reset") = pybind11::cpp_function([this]() { bf_socket[0].reset(); });
 }
 
 template <unsigned int BUSWIDTH>
@@ -317,6 +430,22 @@ void python_binder<BUSWIDTH>::b_transport(int id, tlm::tlm_generic_payload& tran
         SCP_FATAL(()) << e.what();
     }
     SCP_DEBUG(()) << "after b_transport on target_socket_" << id << " trans: " << scp::scp_txn_tostring(trans);
+}
+
+template <unsigned int BUSWIDTH>
+void python_binder<BUSWIDTH>::bf_b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
+{
+    SCP_DEBUG(()) << "before bf_b_transport"
+                  << " trans: " << scp::scp_txn_tostring(trans);
+    tlm::tlm_generic_payload* ptrans = &trans;
+    sc_core::sc_time* pdelay = &delay;
+    try {
+        m_main_mod.attr("bf_b_transport")(pybind11::cast(ptrans), pybind11::cast(pdelay));
+    } catch (const std::exception& e) {
+        SCP_FATAL(()) << e.what();
+    }
+    SCP_DEBUG(()) << "after bf_b_transport "
+                  << " trans: " << scp::scp_txn_tostring(trans);
 }
 
 template <unsigned int BUSWIDTH>
@@ -399,7 +528,4 @@ template class python_binder<64>;
 } // namespace gs
 typedef gs::python_binder<32> python_binder;
 
-void module_register()
-{
-    GSC_MODULE_REGISTER_C(python_binder);
-}
+void module_register() { GSC_MODULE_REGISTER_C(python_binder); }

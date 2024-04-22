@@ -24,6 +24,7 @@
 #include <tlm_utils/simple_target_socket.h>
 #include <ports/initiator-signal-socket.h>
 #include <ports/target-signal-socket.h>
+#include <ports/biflow-socket.h>
 #include <tlm_sockets_buswidth.h>
 #include <libgssync.h>
 #include <pybind11/pybind11.h>
@@ -64,9 +65,13 @@ public:
 private:
     void init_binder();
 
+    void setup_biflow_socket();
+
     void do_b_transport(int id, pybind11::object& py_trans, pybind11::object& py_delay);
 
     void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay);
+
+    void bf_b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay);
 
     unsigned int transport_dbg(int id, tlm::tlm_generic_payload& trans);
 
@@ -94,14 +99,17 @@ public:
     cci::cci_param<uint32_t> p_tlm_target_ports_num;
     cci::cci_param<uint32_t> p_initiator_signals_num;
     cci::cci_param<uint32_t> p_target_signals_num;
+    cci::cci_param<uint32_t> p_bf_socket_num;
     sc_core::sc_vector<tlm_initiator_socket_t> initiator_sockets;
     sc_core::sc_vector<tlm_target_socket_t> target_sockets;
     sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets;
     sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
+    sc_core::sc_vector<gs::biflow_socket<python_binder<BUSWIDTH>>> bf_socket;
 
 private:
     pybind11::module_ m_main_mod;
     pybind11::module_ m_tlm_do_b_transport_mod;
+    pybind11::module_ m_biflow_socket_mod;
     pybind11::module_ m_initiator_signal_socket_mod;
     pybind11::module_ m_cpp_shared_vars_mod;
 };
