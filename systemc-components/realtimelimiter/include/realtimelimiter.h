@@ -71,9 +71,11 @@ SC_MODULE (realtimelimiter) {
                                      sc_core::SC_US) +
                     startSC;
             if (last > sc_core::SC_ZERO_TIME && sc_core::sc_time_stamp() == last) {
+                RTquantum_ms.set_value(RTquantum_ms.get_value()+100);
                 SCP_WARN(())
-                ("Stalled ? (runto is {}s ahead, systemc time has not changed)",
-                 (runto - sc_core::sc_time_stamp()).to_seconds());
+                ("Stalled ? (runto is {}s ahead, systemc time has not changed, new limit {}ms)",
+                 (runto - sc_core::sc_time_stamp()).to_seconds(),
+                 RTquantum_ms.get_value());
             } else {
                 last = sc_core::sc_time_stamp();
             }
