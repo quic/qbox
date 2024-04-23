@@ -26,11 +26,6 @@ from types import FrameType
 from queue import Queue
 import sys
 import dataclasses
-import os
-import termios
-import select
-import atexit
-import signa
 
 
 DELTA_CHANGE = 0x0
