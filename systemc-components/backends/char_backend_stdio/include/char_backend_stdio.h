@@ -137,8 +137,7 @@ public:
         : sc_core::sc_module(name)
         , p_read_write("read_write", true, "read_write if true start rcv_thread")
         , p_expect("expect", "", "string of expect commands")
-        , p_highlight("ansi_highlight", isatty(STDIN_FILENO) ? "\x1B[1m" : "",
-                      "ANSI highlight code to use for output, default bold")
+        , p_highlight("ansi_highlight", "", "ANSI highlight code to use for output, default bold")
         , socket("biflow_socket")
         , c_flag(false)
     {
