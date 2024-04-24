@@ -13,16 +13,12 @@ from/to the i2c systemc C++ model.
 this backend is being used by "qupv3_qupv3_se_wrapper_se0_i2c-test.cc".
 """
 from tlm_generic_payload import tlm_command, tlm_generic_payload
-from sc_core import sc_time, sc_spawn, sc_spawn_options, sc_time_unit, wait, sc_event
-from gs import async_event
+from sc_core import sc_time, sc_time_unit
 import tlm_do_b_transport
 import cpp_shared_vars
 import numpy as np
-import numpy.typing as npt
 import argparse
 import shlex
-from typing import Optional, Callable, List, Any
-from types import FrameType
 from queue import Queue
 import sys
 import dataclasses
@@ -40,14 +36,14 @@ class ctrl:
     cmd: np.uint32
     can_send: np.uint32
 
-    def serialize(self) -> npt.NDArray[np.uint8]:
+    def serialize(self):
         cmd_arr = np.frombuffer(self.cmd.to_bytes(4, "little"), dtype=np.uint8)
         can_send_arr = np.frombuffer(
             self.can_send.to_bytes(4, "little"), dtype=np.uint8
         )
         return np.concatenate([cmd_arr, can_send_arr])
 
-    def deserialize(self, byte_data: np.ndarray[np.uint8]) -> None:
+    def deserialize(self, byte_data) -> None:
         cmd_arr = byte_data[:4]
         can_send_arr = byte_data[4:]
         self.cmd = int.from_bytes(cmd_arr.tobytes(), byteorder="little")
@@ -131,7 +127,6 @@ def i2c_read(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
 
 def i2c_write(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
     log("i2c_write -> Master sending data to slave")
-    # systemc wait
     # read data from master and write it to slave queue
     data = trans.get_data()
     data_len = trans.get_streaming_width()
