@@ -13,55 +13,15 @@ from/to the i2c systemc C++ model.
 this backend is being used by "qupv3_qupv3_se_wrapper_se0_i2c-test.cc".
 """
 from tlm_generic_payload import tlm_command, tlm_generic_payload
+import biflow_socket
 from sc_core import sc_time, sc_time_unit
-import tlm_do_b_transport
 import cpp_shared_vars
-import numpy as np
 import argparse
 import shlex
 from queue import Queue
 import sys
-import dataclasses
-
-
-DELTA_CHANGE = 0x0
-ABSOLUTE_VALUE = 0x1
-INFINITE = 0x2
 
 q = Queue()
-
-
-@dataclasses.dataclass
-class ctrl:
-    cmd: np.uint32
-    can_send: np.uint32
-
-    def serialize(self):
-        cmd_arr = np.frombuffer(self.cmd.to_bytes(4, "little"), dtype=np.uint8)
-        can_send_arr = np.frombuffer(
-            self.can_send.to_bytes(4, "little"), dtype=np.uint8
-        )
-        return np.concatenate([cmd_arr, can_send_arr])
-
-    def deserialize(self, byte_data) -> None:
-        cmd_arr = byte_data[:4]
-        can_send_arr = byte_data[4:]
-        self.cmd = int.from_bytes(cmd_arr.tobytes(), byteorder="little")
-        i = int.from_bytes(can_send_arr.tobytes(), byteorder="little")
-        if self.cmd == INFINITE:
-            self.can_send = sys.maxint
-        if self.cmd == ABSOLUTE_VALUE:
-            self.can_send = i
-        if self.cmd == DELTA_CHANGE:
-            self.can_send = self.can_send + i
-
-    def sent(self, i):
-        if self.cmd != INFINITE:
-            self.can_send = self.can_send - i
-            assert self.can_send >= 0
-
-
-m_ctrl = ctrl(can_send=0, cmd=0)
 
 
 def log(msg: str) -> None:
@@ -101,24 +61,17 @@ def i2c_read(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
             raise RuntimeError(
                 f"command: {trans.get_data_length()} requested data size is bigger than the slave-queue size, please adjust the requested data size "
             )
+        requested_len = trans.get_data_length()
         txn = tlm_generic_payload()
-        txn.set_address(
-            args.address
-        )  # set to slave address to notify the master where the txn is comming from
-        i = 0
-        data = []
-        while i < trans.get_data_length():
-            data.append((q.get()))
-            i = i + 1
-        log(f"i2c_slvae, requested data: {data}")
-        log(f"i2c_slvae, data_len: {len(data)}")
-        txn.set_data_ptr(data)
-        txn.set_data_length(len(data))
-        txn.set_streaming_width(len(data))
+        # set to slave address to notify the master where the txn is comming from
+        txn.set_address(args.address)
+        txn.set_data_length(requested_len)
         txn.set_command(tlm_command.TLM_WRITE_COMMAND)
-        delay = sc_time(0, sc_time_unit.SC_NS)
-        tlm_do_b_transport.do_b_transport(0, txn, delay)
-        m_ctrl.sent(len(data))
+        biflow_socket.set_default_txn(txn)
+        i = 0
+        while i < trans.get_data_length():
+            biflow_socket.enqueue(q.get())
+            i = i + 1
     except SystemExit:
         return
     except Exception as e:
@@ -141,16 +94,7 @@ def i2c_write(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
 def set_send_limit_to_inf() -> None:
     """send the ctrl struct with cmd set to INFINITE to i2c qup"""
     try:
-        trans = tlm_generic_payload()
-        trans.set_data_length(8)
-        trans.set_streaming_width(8)
-        # biflow_socket ctrl struct
-        ctrl_lst = ctrl(cmd=INFINITE, can_send=0x0)
-        data = ctrl_lst.serialize()
-        trans.set_data_ptr(data)
-        trans.set_command(tlm_command.TLM_IGNORE_COMMAND)
-        delay = sc_time()  # control trans, no need to set delay
-        tlm_do_b_transport.do_b_transport(1, trans, delay)
+        biflow_socket.can_receive_any()
     except SystemExit:
         return
     except Exception as e:
@@ -168,23 +112,20 @@ def before_end_of_elaboration() -> None:
 
 
 # Entry point of the script, this function will be called from the PythonBinder module.
-def b_transport(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
+def bf_b_transport(trans: tlm_generic_payload, delay: sc_time) -> None:
     log(f"transaction: {trans}")
     log(f"transaction id: {id}")
     """Make sure the trans and slave addresses are identical"""
     try:
-        if id == 0:
-            assert trans.get_address() == args.address
-            if trans.get_command() == tlm_command.TLM_READ_COMMAND:
-                i2c_read(id, trans, delay)
-            elif trans.get_command() == tlm_command.TLM_WRITE_COMMAND:
-                i2c_write(id, trans, delay)
-            else:
-                raise RuntimeError(
-                    f"command: {trans.get_command()} is not supported: command has to be read/write"
-                )
-        if id == 1:
-            m_ctrl.deserialize(trans.get_data())
+        assert trans.get_address() == args.address
+        if trans.get_command() == tlm_command.TLM_READ_COMMAND:
+            i2c_read(id, trans, delay)
+        elif trans.get_command() == tlm_command.TLM_WRITE_COMMAND:
+            i2c_write(id, trans, delay)
+        else:
+            raise RuntimeError(
+                f"command: {trans.get_command()} is not supported: command has to be read/write"
+            )
     except SystemExit:
         return
     except Exception as e:
