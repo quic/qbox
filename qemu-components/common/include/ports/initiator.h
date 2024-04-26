@@ -23,6 +23,7 @@
 
 #include <qemu-instance.h>
 #include <tlm-extensions/qemu-mr-hint.h>
+#include <tlm-extensions/exclusive-access.h>
 #include <tlm_sockets_buswidth.h>
 
 class QemuInitiatorIface
@@ -70,6 +71,7 @@ protected:
     QemuInitiatorIface& m_initiator;
     qemu::Device m_dev;
     gs::runonsysc m_on_sysc;
+    int reentrancy = 0;
 
     bool m_finished = false;
 
@@ -253,25 +255,6 @@ protected:
         return dmi_data;
     }
 
-    /**
-     * @brief Check for the presence of the DMI hint in the transaction. If found,
-     * request a DMI region, ask the QEMU instance DMI manager for a DMI region
-     * alias for it and map it on the CPU address space.
-     *
-     * @returns The DMI descriptor for the corresponding DMI region
-     */
-    tlm::tlm_dmi check_dmi_hint(TlmPayload& trans)
-    {
-        tlm::tlm_dmi ret;
-        if (!trans.is_dmi_allowed()) {
-            return ret;
-        }
-        m_inst.get().lock_iothread();
-        ret = check_dmi_hint_locked(trans);
-        m_inst.get().unlock_iothread();
-        return ret;
-    }
-
     void check_qemu_mr_hint(TlmPayload& trans)
     {
         QemuMrHintTlmExtension* ext = nullptr;
@@ -304,23 +287,33 @@ protected:
         uint64_t addr = trans.get_address();
         sc_time now = m_initiator.initiator_get_local_time();
 
+        m_inst.get().unlock_iothread();
         m_on_sysc.run_on_sysc([this, &trans, &now] { (*this)->b_transport(trans, now); });
-
+        m_inst.get().lock_iothread();
         /*
          * Reset transaction address before dmi check (could be altered by
          * b_transport).
          */
         trans.set_address(addr);
-
         check_qemu_mr_hint(trans);
-        check_dmi_hint(trans);
+        if (trans.is_dmi_allowed()) {
+            check_dmi_hint_locked(trans);
+        }
 
         m_initiator.initiator_set_local_time(now);
     }
 
     void do_debug_access(TlmPayload& trans)
     {
+        m_inst.get().unlock_iothread();
         m_on_sysc.run_on_sysc([this, &trans] { (*this)->transport_dbg(trans); });
+        m_inst.get().lock_iothread();
+    }
+
+    void do_direct_access(TlmPayload& trans)
+    {
+        sc_core::sc_time now = m_initiator.initiator_get_local_time();
+        (*this)->b_transport(trans, now);
     }
 
     MemTxResult qemu_io_access(tlm::tlm_command command, uint64_t addr, uint64_t* val, unsigned int size,
@@ -329,19 +322,39 @@ protected:
         TlmPayload trans;
         if (m_finished) return qemu::MemoryRegionOps::MemTxError;
 
-        m_inst.get().unlock_iothread();
-
         init_payload(trans, command, addr, val, size);
 
-        if (attrs.debug) {
-            do_debug_access(trans);
+        if (trans.get_extension<ExclusiveAccessTlmExtension>()) {
+            /* in the case of an exclusive access keep the iolock (and assume NO side-effects)
+             * clearly dangerous, but exclusives are not guaranteed to work on IO space anyway
+             */
+            do_direct_access(trans);
         } else {
-            do_regular_access(trans);
+            if (!m_inst.g_rec_qemu_io_lock.try_lock()) {
+                /* Allow only a single access, but handle re-entrant code,
+                 * while allowing side-effects in SystemC (e.g. calling wait)
+                 * [NB re-entrant code caused via memory listeners to
+                 * creation of memory regions (due to DMI) in some models]
+                 */
+                m_inst.get().unlock_iothread();
+                m_inst.g_rec_qemu_io_lock.lock();
+                m_inst.get().lock_iothread();
+            }
+            reentrancy++;
+
+            /* Force re-entrant code to use a direct access (safe for reentrancy with no side effects) */
+            if (reentrancy > 1) {
+                do_direct_access(trans);
+            } else if (attrs.debug) {
+                do_debug_access(trans);
+            } else {
+                do_regular_access(trans);
+            }
+
+            reentrancy--;
+            m_inst.g_rec_qemu_io_lock.unlock();
         }
-
         m_initiator.initiator_tidy_tlm_payload(trans);
-
-        m_inst.get().lock_iothread();
 
         switch (trans.get_response_status()) {
         case tlm::TLM_OK_RESPONSE:

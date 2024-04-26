@@ -214,31 +214,33 @@ protected:
          * It is then unlocked when we come back from the CPU loop, in
          * sync_with_kernel().
          */
-        m_inst.get().lock_iothread();
 
         SCP_TRACE(())("Prepare run");
         if (m_inst.get_tcg_mode() == QemuInstance::TCG_SINGLE) {
             while (!m_inst.can_run() && !m_finished) {
-                m_inst.get().unlock_iothread();
                 wait_for_work();
-                m_inst.get().lock_iothread();
             }
         } else {
             while (!m_cpu.can_run() && !m_finished) {
-                if (m_inst.is_kvm_enabled()) { // In KVM mode, we halt in the kernel, not here.
+                if (m_inst.is_kvm_enabled() || m_inst.is_hvf_enabled()) {
+                    // In the case of accelerators, allow them to handle signals etc.
+                    SCP_TRACE(())("Stopping QK");
                     m_qk->stop();              // Stop the QK, it will be enabled when we next see work to do.
                     break;
                 }
-                m_inst.get().unlock_iothread();
                 wait_for_work();
-                m_inst.get().lock_iothread();
             }
         }
-        if (m_finished) return;
 
         if (m_started) {
             m_cpu.set_soft_stopped(false);
         }
+        /*
+         * The QEMU CPU loop expect us to enter it with the iothread mutex locked.
+         * It is then unlocked when we come back from the CPU loop, in
+         * sync_with_kernel().
+         */
+        m_inst.get().lock_iothread();
     }
 
     /*
@@ -272,8 +274,8 @@ protected:
 
         m_inst.get().unlock_iothread();
 
-        if (m_inst.is_kvm_enabled()) {
-            m_qk->start(); // In kvm mode, we may have switched the QK off, so switch it on before setting
+        if (m_inst.is_kvm_enabled() || m_inst.is_hvf_enabled()) {
+            m_qk->start(); // we may have switched the QK off, so switch it on before setting
         }
 
         m_qk->set(sc_core::sc_time(now, sc_core::SC_NS) - sc_core::sc_time_stamp());

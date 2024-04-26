@@ -102,6 +102,7 @@ public:
     std::mutex g_signaled_lock;
     std::condition_variable g_signaled_cond;
     bool g_signaled = false;
+    std::recursive_mutex g_rec_qemu_io_lock;
 
     void add_dev(QemuDeviceBaseIF* d)
     {
@@ -358,6 +359,7 @@ public:
         } else {
             qk = gs::tlm_quantumkeeper_factory(p_sync_policy);
         }
+        if (!qk) SCP_FATAL(())("No quantum keeper found with name : {}", p_sync_policy.get_value());
         if (!m_first_qk) m_first_qk = qk;
         if (qk->get_thread_type() == gs::SyncPolicy::SYSTEMC_THREAD) {
             assert(m_tcg_mode == TCG_COROUTINE);
