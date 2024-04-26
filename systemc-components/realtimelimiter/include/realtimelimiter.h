@@ -28,8 +28,9 @@ namespace gs {
  */
 SC_MODULE (realtimelimiter) {
     SCP_LOGGER();
-    cci::cci_param<double> RTquantum_ms;
-    cci::cci_param<double> SCTimeout_ms;
+    cci::cci_param<double> p_RTquantum_ms;
+    cci::cci_param<double> p_SCTimeout_ms;
+    cci::cci_param<double> p_MaxTime_ms;
 
     std::chrono::high_resolution_clock::time_point startRT;
     sc_core::sc_time startSC;
@@ -47,13 +48,17 @@ SC_MODULE (realtimelimiter) {
             return;
         }
 
+        if (p_MaxTime_ms && sc_core::sc_time_stamp() > sc_core::sc_time(p_MaxTime_ms, sc_core::SC_MS)) {
+            sc_core::sc_stop();
+        }
+
         if (sc_core::sc_time_stamp() >= runto) {
             tick.async_attach_suspending();
             sc_core::sc_suspend_all(); // Dont starve while we're waiting
                                        // for realtime.
         } else {
             // lets go with +=1/2 a RTquantum
-            tick.notify((runto + sc_core::sc_time(RTquantum_ms, sc_core::SC_MS) / 2) - sc_core::sc_time_stamp());
+            tick.notify((runto + sc_core::sc_time(p_RTquantum_ms, sc_core::SC_MS) / 2) - sc_core::sc_time_stamp());
             tick.async_detach_suspending(); // We could even starve !
             sc_core::sc_unsuspend_all();
         }
@@ -63,7 +68,7 @@ SC_MODULE (realtimelimiter) {
     {
         sc_core::sc_time last = sc_core::SC_ZERO_TIME;
         while (running) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(RTquantum_ms));
+            std::this_thread::sleep_for(std::chrono::milliseconds(p_RTquantum_ms));
 
             runto = sc_core::sc_time(std::chrono::duration_cast<std::chrono::microseconds>(
                                          std::chrono::high_resolution_clock::now() - startRT)
@@ -71,18 +76,18 @@ SC_MODULE (realtimelimiter) {
                                      sc_core::SC_US) +
                     startSC;
             if (last > sc_core::SC_ZERO_TIME && sc_core::sc_time_stamp() == last) {
-                RTquantum_ms.set_value(RTquantum_ms.get_value()+100);
+                p_RTquantum_ms.set_value(p_RTquantum_ms.get_value() + 100);
                 SCP_WARN(())
                 ("Stalled ? (runto is {}s ahead, systemc time has not changed, new limit {}ms)",
-                 (runto - sc_core::sc_time_stamp()).to_seconds(),
-                 RTquantum_ms.get_value());
+                 (runto - sc_core::sc_time_stamp()).to_seconds(), p_RTquantum_ms.get_value());
             } else {
                 last = sc_core::sc_time_stamp();
             }
-            if (SCTimeout_ms && (runto > sc_core::sc_time_stamp() + sc_core::sc_time(SCTimeout_ms, sc_core::SC_MS))) {
+            if (p_SCTimeout_ms &&
+                (runto > sc_core::sc_time_stamp() + sc_core::sc_time(p_SCTimeout_ms, sc_core::SC_MS))) {
                 SCP_FATAL(())
                 ("Requested runto is {}s ahead (SCTimeout_ms set to {}s)",
-                 (runto - sc_core::sc_time_stamp()).to_seconds(), SCTimeout_ms / 1000);
+                 (runto - sc_core::sc_time_stamp()).to_seconds(), p_SCTimeout_ms / 1000);
             }
 
             tick.notify();
@@ -99,8 +104,8 @@ public:
 
         startRT = std::chrono::high_resolution_clock::now();
         startSC = sc_core::sc_time_stamp();
-        runto = sc_core::sc_time(RTquantum_ms, sc_core::SC_MS) + sc_core::sc_time_stamp();
-        tick.notify(sc_core::sc_time(RTquantum_ms, sc_core::SC_MS));
+        runto = sc_core::sc_time(p_RTquantum_ms, sc_core::SC_MS) + sc_core::sc_time_stamp();
+        tick.notify(sc_core::sc_time(p_RTquantum_ms, sc_core::SC_MS));
 
         m_tick_thread = std::thread(&realtimelimiter::RTticker, this);
     }
@@ -115,8 +120,9 @@ public:
     realtimelimiter(const sc_core::sc_module_name& name): realtimelimiter(name, true) {}
     realtimelimiter(const sc_core::sc_module_name& name, bool autostart)
         : sc_module(name)
-        , RTquantum_ms("RTquantum_ms", 100, "Real time quantum in milliseconds")
-        , SCTimeout_ms("SCTimeout_ms", 0, "Timeout for SystemC in milliseconds")
+        , p_RTquantum_ms("RTquantum_ms", 100, "Real time quantum in milliseconds")
+        , p_SCTimeout_ms("SCTimeout_ms", 0, "Timeout for SystemC in milliseconds")
+        , p_MaxTime_ms("MaxTime_ms", 0, "Maximum run time in ms (0=no limit)")
         , tick(false) // handle attach manually
     {
         SC_HAS_PROCESS(realtimelimiter);
