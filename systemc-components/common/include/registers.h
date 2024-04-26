@@ -17,8 +17,6 @@
 #include <tlm_utils/multi_passthrough_target_socket.h>
 #include <scp/report.h>
 #include <cciutils.h>
-#include "rapidjson/document.h"
-// #include <memory/include/memory.h>
 #include <tlm_sockets_buswidth.h>
 
 namespace gs {
