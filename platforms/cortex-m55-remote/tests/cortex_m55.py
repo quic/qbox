@@ -8,7 +8,6 @@ from sys import exit, stdout
 import pexpect
 from pexpect import *
 import getpass
-from truth.truth import AssertThat
 import subprocess
 from subprocess import Popen, PIPE
 import signal
@@ -53,4 +52,4 @@ def vp_test():
     return test
 
 
-AssertThat(vp_test()).IsTrue()
+assert(vp_test())
