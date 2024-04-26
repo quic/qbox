@@ -21,6 +21,7 @@
 #include <signal.h>
 #include <termios.h>
 #include <poll.h>
+#include <regex>
 
 class char_backend_stdio : public sc_core::sc_module
 {
@@ -83,15 +84,15 @@ public:
         const std::string sendstr = "send ";
         const std::string waitstr = "wait ";
         const std::string exitstr = "exit";
-        std::string l = rtrim(line);
         do {
             if (ecmd.substr(0, expectstr.length()) == expectstr) {
                 std::string str = getecmdstr(expectstr);
-                if (l == str) {
-                    SCP_WARN(())("Found expect string {}", l);
-                    l = "";
+                std::regex restr(str);
+                if (std::regex_search(line, restr)) {
+                    SCP_WARN(())("Found expect string {}", rtrim(line));
                     ecmd.erase(0, ecmd.find_first_of("\n"));
                     if (ecmd != "") ecmd.erase(0, 1);
+                    if (ecmd.substr(0, expectstr.length()) == expectstr) break;
                     continue;
                 }
             }
