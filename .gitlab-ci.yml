@@ -4,12 +4,9 @@ include:
 
 .build_job_template:
     extends:
-    - .clone_firmware_images_repo
     - .general_build_job_template
     variables:
       REPO_CMAKE_ARGS: -DLIBQEMU_TARGETS=aarch64
-      FIRMWARE_REPO_VAR_NAME: QBOX_FIRMWARE_REPO_DIR
-      FIRMWARE_REPO_SHA_FILE: ./platforms/fw/firmware-repo-sha.txt
 
 qqvp-trigger:
   extends: .base-trigger

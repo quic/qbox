@@ -195,7 +195,6 @@ if (NOT WITHOUT_QEMU)
     target_include_directories(
         ${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/qemu-components/common/include>
-        $<BUILD_INTERFACE:${RAPIDJSON_INCLUDE_DIRS}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}>
     )
 

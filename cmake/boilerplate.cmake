@@ -112,18 +112,6 @@ endif()
 
 set(CMAKE_FIND_USE_PACKAGE_REGISTRY FALSE)
 
-# # gcc 7.5.0 comes with Ubuntu 18.04 and will incorrectly reject
-# # the example program. gcc 9.4.0 will not reject the program, the
-# # fix may have arrived between these releases. None of the clang versions
-# # tested encountered this error.
-# if ("${PROJECT_NAME}" STREQUAL "${CMAKE_PROJECT_NAME}")
-#   try_compile(NO_CAPTURE_BUG ${CMAKE_BINARY_DIR}
-#         ${gs-cmake_SOURCE_DIR}/checks/lambda_capture.cpp)
-#   if (NOT NO_CAPTURE_BUG)
-#       message(FATAL_ERROR "Your host toolchain has a bug that prevents us from building, please update your toolchain.\n"
-#           "See 'lambda_capture.cpp' for a concise example")
-#   endif()
-# endif()
 # # ##############################################################################
 
 # ##############################################################################
