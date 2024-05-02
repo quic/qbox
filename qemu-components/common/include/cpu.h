@@ -277,9 +277,10 @@ protected:
         if (m_inst.is_kvm_enabled() || m_inst.is_hvf_enabled()) {
             m_qk->start(); // we may have switched the QK off, so switch it on before setting
         }
-
-        m_qk->set(sc_core::sc_time(now, sc_core::SC_NS) - sc_core::sc_time_stamp());
-
+        sc_core::sc_time sc_t = sc_core::sc_time_stamp();
+        if (sc_core::sc_time(now, sc_core::SC_NS) > sc_t) {
+            m_qk->set(sc_core::sc_time(now, sc_core::SC_NS) - sc_t);
+        }
         // Important to allow QK to notify itself if it's waiting.
         m_qk->sync();
     }
@@ -526,9 +527,13 @@ public:
         int64_t vclock_now;
 
         vclock_now = m_inst.get().get_virtual_clock();
-        m_qk->set(sc_time(vclock_now, SC_NS) - sc_core::sc_time_stamp());
-
-        return m_qk->get_local_time();
+        sc_core::sc_time sc_t = sc_core::sc_time_stamp();
+        if (sc_time(vclock_now, SC_NS) > sc_t) {
+            m_qk->set(sc_time(vclock_now, SC_NS) - sc_t);
+            return m_qk->get_local_time();
+        } else {
+            return sc_core::SC_ZERO_TIME;
+        }
     }
 
     /*
