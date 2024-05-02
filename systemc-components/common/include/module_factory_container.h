@@ -80,6 +80,17 @@ public:
         return construct_module(moduletype, name, emptyargs);
     }
 
+    std::string get_parent_name(const std::string& module_name){
+        return module_name.substr(0, module_name.find_last_of("."));
+    }
+
+    bool is_container_arg_mod_name(const std::string& name){
+        if(!this->container_mod_arg) return false;
+        std::string arg_mod_full_name_str = std::string(this->container_mod_arg->name());
+        std::string arg_mod_name_str = arg_mod_full_name_str.substr(get_parent_name(arg_mod_full_name_str).size() + 1);
+        return name == arg_mod_name_str;
+    }
+
     /**
      * @brief Get the module args helper to find argument list for a module constructor
      *
@@ -95,7 +106,7 @@ public:
             gs::cci_clear_unused(m_broker, modulename + ".args." + std::to_string(i));
             auto arg = cci::cci_get_broker().get_preset_cci_value(modulename + ".args." + std::to_string(i));
             if (arg.is_string() && std::string(arg.get_string())[0] == '&') {
-                std::string parent = std::string(modulename).substr(0, modulename.find_last_of("."));
+                std::string parent = is_container_arg_mod_name(std::string(arg.get_string()).erase(0,1)) ? get_parent_name(std::string(this->container_mod_arg->name())) : get_parent_name(modulename);
                 if (std::string(arg.get_string()).find(parent, 1) == std::string::npos)
                     arg.set_string("&" + parent + "." + std::string(arg.get_string()).erase(0, 1));
             }
@@ -408,6 +419,7 @@ sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
 transaction_forwarder_if<PASS>* m_local_pass;
 
 std::vector<cci::cci_param<gs::cci_constructor_vl>*> registered_mods;
+sc_core::sc_object* container_mod_arg;
 
 ~ContainerBase() {
     m_allModules.clear();
@@ -423,7 +435,7 @@ std::vector<cci::cci_param<gs::cci_constructor_vl>*> registered_mods;
  * @param _n name to give the container
  */
 
-ContainerBase(const sc_core::sc_module_name _n, bool defer_modules_construct)
+ContainerBase(const sc_core::sc_module_name _n, bool defer_modules_construct, sc_core::sc_object* p_container_mod_arg = nullptr)
     : m_defer_modules_construct(defer_modules_construct)
     , m_broker(cci::cci_get_broker())
     , moduletype("moduletype", "", "Module type for the TLM container, must be \"Container\"")
@@ -436,6 +448,7 @@ ContainerBase(const sc_core::sc_module_name _n, bool defer_modules_construct)
     , initiator_signal_sockets("initiator_signal_socket")
     , target_signal_sockets("target_signal_socket")
     , m_local_pass(nullptr)
+    , container_mod_arg(p_container_mod_arg)
 {
     SCP_DEBUG(()) << "ContainerBase Constructor";
 
@@ -554,13 +567,29 @@ class Container : public ContainerBase
 {
 public:
     SCP_LOGGER(());
-    Container(const sc_core::sc_module_name& n): ContainerBase(n, false)
+    Container(const sc_core::sc_module_name& n): ContainerBase(n, false, nullptr)
     {
         SCP_DEBUG(()) << "Container constructor";
         assert(std::string(moduletype.get_value()) == "Container");
     }
 
     virtual ~Container() = default;
+};
+/**
+ * ModulesConstruct() function is called at Container constructor.
+ * p_container_mod_arg has to be passed as a constructor arg.
+ */
+class ContainerWithArgs : public ContainerBase
+{
+public:
+    SCP_LOGGER(());
+    ContainerWithArgs(const sc_core::sc_module_name& n, sc_core::sc_object* p_container_mod_arg): ContainerBase(n, false, p_container_mod_arg)
+    {
+        SCP_DEBUG(()) << "ContainerWithArgs constructor";
+        assert(std::string(moduletype.get_value()) == "ContainerWithArgs");
+    }
+
+    virtual ~ContainerWithArgs() = default;
 };
 /**
  * ModulesConstruct() function should be called explicitly by the user of the class.
@@ -570,7 +599,7 @@ class ContainerDeferModulesConstruct : public ContainerBase
 {
 public:
     SCP_LOGGER(());
-    ContainerDeferModulesConstruct(const sc_core::sc_module_name& n): ContainerBase(n, true)
+    ContainerDeferModulesConstruct(const sc_core::sc_module_name& n): ContainerBase(n, true, nullptr)
     {
         SCP_DEBUG(()) << "ContainerDeferModulesConstruct constructor";
         assert(std::string(moduletype.get_value()) == "ContainerDeferModulesConstruct");
@@ -584,6 +613,8 @@ public:
 
 typedef gs::ModuleFactory::Container Container;
 typedef gs::ModuleFactory::ContainerDeferModulesConstruct ContainerDeferModulesConstruct;
+typedef gs::ModuleFactory::ContainerWithArgs ContainerWithArgs;
 GSC_MODULE_REGISTER(Container);
 GSC_MODULE_REGISTER(ContainerDeferModulesConstruct);
+GSC_MODULE_REGISTER(ContainerWithArgs, sc_core::sc_object*);
 #endif
