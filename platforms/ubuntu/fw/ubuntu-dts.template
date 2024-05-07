@@ -41,11 +41,11 @@
 		 				0x1800 0x00 0x00 0x03 0x8001 0x00 0x00 0x00 0x21e 0x04
 		 				0x1800 0x00 0x00 0x04 0x8001 0x00 0x00 0x00 0x21f 0x04>;
 		#interrupt-cells = <0x01>;
-		ranges = <0x1000000 0x00 0x50000000   0x00 0x50000000   0x00 0x100000 
-				  0x2000000 0x00 0x50100000   0x00 0x50100000   0x00 0xFF00000
+		ranges = <0x1000000 0x00 0x60200000   0x00 0x60200000   0x00 0x0000100000 
+				  0x2000000 0x00 0x60300000   0x00 0x60300000   0x00 0x001fd00000
 				  0x3000000 0x04 0x00000000   0x04 0x00000000   0x02 0x00000000>;
 
-		reg = <0x00 0x40000000 0x00 0x10000000>;
+		reg = <0x00 0x43B50000 0x00 0x0010000000>;
 		dma-coherent;
 		bus-range = <0x00 0xff>;
 		linux,pci-domain = <0x00>;
@@ -117,65 +117,65 @@
 	};
 
 	cpus {
-		#size-cells = <0x0>;
-		#address-cells = <0x1>;
+			#size-cells = <0x00>;
+			#address-cells = <0x01>;
 
-		cpu@0 {
-			reg = <0x0>;
-			enable-method = "psci";
-			compatible = "arm,cortex-a57";
-			device_type = "cpu";
-		};
+			cpu@0 {
+				reg = <0x00>;
+				enable-method = "psci";
+				compatible = "arm,cortex-a57";
+				device_type = "cpu";
+			};
 
-		cpu@1 {
-			reg = <0x1>;
-			enable-method = "psci";
-			compatible = "arm,cortex-a57";
-			device_type = "cpu";
-		};
+			cpu@100 {
+				reg = <0x0100>;
+				enable-method = "psci";
+				compatible = "arm,cortex-a57";
+				device_type = "cpu";
+			};
 
-		cpu@2 {
-			reg = <0x2>;
-			enable-method = "psci";
-			compatible = "arm,cortex-a57";
-			device_type = "cpu";
-		};
+			cpu@200 {
+				reg = <0x0200>;
+				enable-method = "psci";
+				compatible = "arm,cortex-a57";
+				device_type = "cpu";
+			};
 
-		cpu@3 {
-			reg = <0x3>;
-			enable-method = "psci";
-			compatible = "arm,cortex-a57";
-			device_type = "cpu";
-		};
+			cpu@300 {
+				reg = <0x0300>;
+				enable-method = "psci";
+				compatible = "arm,cortex-a57";
+				device_type = "cpu";
+			};
 
-		cpu@4 {
-			reg = <0x4>;
-			enable-method = "psci";
-			compatible = "arm,cortex-a57";
-			device_type = "cpu";
-		};
+			cpu@10000 {
+				reg = <0x010000>;
+				enable-method = "psci";
+				compatible = "arm,cortex-a57";
+				device_type = "cpu";
+			};
 
-		cpu@5 {
-			reg = <0x5>;
-			enable-method = "psci";
-			compatible = "arm,cortex-a57";
-			device_type = "cpu";
-		};
+			cpu@10100 {
+				reg = <0x010100>;
+				enable-method = "psci";
+				compatible = "arm,cortex-a57";
+				device_type = "cpu";
+			};
 
-		cpu@6 {
-			reg = <0x6>;
-			enable-method = "psci";
-			compatible = "arm,cortex-a57";
-			device_type = "cpu";
-		};
+			cpu@10200 {
+				reg = <0x010200>;
+				enable-method = "psci";
+				compatible = "arm,cortex-a57";
+				device_type = "cpu";
+			};
 
-		cpu@7 {
-			reg = <0x7>;
-			enable-method = "psci";
-			compatible = "arm,cortex-a57";
-			device_type = "cpu";
+			cpu@10300 {
+				reg = <0x010300>;
+				enable-method = "psci";
+				compatible = "arm,cortex-a57";
+				device_type = "cpu";
+			};
 		};
-	};
 
 	apb-pclk {
 		phandle = <0x8000>;

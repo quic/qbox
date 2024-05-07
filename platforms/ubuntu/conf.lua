@@ -77,6 +77,20 @@ platform = {
         sync_policy = "multithread-unconstrained"
     },
 
+    gpex_0 ={
+        moduletype = "qemu_gpex";
+        args = {"&platform.qemu_inst"};
+        bus_master = {bind = "&router.target_socket"};
+        pio_iface = { address = 0x60200000, size = 0x0000100000, bind= "&router.initiator_socket"};
+        mmio_iface = { address = 0x60300000, size = 0x001fd00000, bind= "&router.initiator_socket" };
+        ecam_iface = { address = 0x43B50000, size = 0x0010000000, bind= "&router.initiator_socket" };
+        mmio_iface_high = { address = 0x400000000, size = 0x200000000, bind= "&router.initiator_socket" },
+        irq_out_0 = {bind = "&gic_0.spi_in_541"};
+        irq_out_1 = {bind = "&gic_0.spi_in_542"};
+        irq_out_2 = {bind = "&gic_0.spi_in_543"};
+        irq_out_3 = {bind = "&gic_0.spi_in_544"};
+    };
+
     gic_0 =  {
         moduletype = "arm_gicv3",
         args = {"&platform.qemu_inst"},
@@ -163,7 +177,7 @@ if (ARM_NUM_CPUS > 0) then
             gicv3_maintenance_interrupt = {bind = "&gic_0.ppi_in_cpu_"..i.."_25"},
             pmu_interrupt = {bind = "&gic_0.ppi_in_cpu_"..i.."_23"},
             psci_conduit = psci_conduit,
-            mp_affinity = (math.floor(i / 8) << 8) | (i % 8);
+            mp_affinity = (math.floor(i / 4) << 16) | ((i % 4)<<8);
             -- reset = { bind = "&reset.reset" },
             start_powered_off = true;
             rvbar = INITIAL_DDR_SPACE;

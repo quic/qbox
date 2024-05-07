@@ -260,7 +260,7 @@ patch_mkosi() {
 # $2: systemd boot target
 # $3: rootfs image size
 do_mkosi_build() {
-    local base_deb_packages="udev,dmsetup,networkd-dispatcher,systemd-timesyncd,libnss-systemd,systemd-hwe-hwdb,linux-image-generic,iproute2,iputils-ping,network-manager,gpg,vim,wget,openssh-server,ssh-client,net-tools"
+    local base_deb_packages="udev,dmsetup,networkd-dispatcher,systemd-timesyncd,libnss-systemd,systemd-hwe-hwdb,linux-image-generic,iproute2,iputils-ping,network-manager,gpg,vim,wget,openssh-server,ssh-client,net-tools,dhcpcd5"
     local extra_deb_packages=$( [ ! -z "$1" ] && printf ",$1" || printf "" )
     local graphical_packages=$( [[ "$2" == "graphical.target" ]] && printf ",ubuntu-desktop" || printf "" )
     local deb_packages="--package=${base_deb_packages}${extra_deb_packages}${graphical_packages}"
