@@ -84,7 +84,7 @@ public:
     void before_end_of_elaboration() override
     {
         const std::string dsp_arch = p_dsp_arch.get_value();
-        set_qom_type(dsp_arch + "-cpu");
+        set_qom_type(dsp_arch + "-hexagon-cpu");
         // set the parameter config-table-addr 195 hexagon_testboard
         QemuCpu::before_end_of_elaboration();
         qemu::CpuHexagon cpu(get_qemu_dev());
