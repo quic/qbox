@@ -83,6 +83,8 @@ public:
 
     virtual void end_of_elaboration() override { realize(); }
 
+    void set_qom_type(std::string const& qom_type) { m_qom_type = qom_type; }
+
     const char* get_qom_type() const { return m_qom_type.c_str(); }
 
     qemu::Device get_qemu_dev() { return m_dev; }
