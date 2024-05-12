@@ -40,6 +40,7 @@ protected:
     cci::cci_param<std::string> p_address;
     cci::cci_param<bool> p_server;
     cci::cci_param<bool> p_nowait;
+    cci::cci_param<bool> p_sigquit;
 
 private:
     SCP_LOGGER();
@@ -99,6 +100,7 @@ public:
         , p_address("address", "127.0.0.1:4001", "socket address IP:Port")
         , p_server("server", true, "type of socket: true if server - false if client")
         , p_nowait("nowait", true, "setting socket in non-blocking mode")
+        , p_sigquit("sigquit", false, "Interpret 0x1c in the data stream as a sigquit")
         , socket("biflow_socket")
     {
         SCP_TRACE(()) << "char_backend_socket constructor";
@@ -154,6 +156,9 @@ public:
             if (ret > 0) {
                 for (int i = 0; i < ret; i++) {
                     unsigned char c = m_buf[i];
+                    if (c == 0x1c) {
+                        sc_core::sc_stop();
+                    }
                     socket.enqueue(c);
                 }
             }
