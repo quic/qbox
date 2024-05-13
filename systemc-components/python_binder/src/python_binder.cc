@@ -200,6 +200,28 @@ PYBIND11_EMBEDDED_MODULE(gs, m)
         .def("async_attach_suspending", &gs::async_event::async_attach_suspending)
         .def("async_detach_suspending", &gs::async_event::async_detach_suspending)
         .def("enable_attach_suspending", &gs::async_event::enable_attach_suspending);
+
+    pybind11::enum_<gs::tlm_quantumkeeper_multithread::jobstates>(m, "qk_jobstatus")
+        .value("IDLE", gs::tlm_quantumkeeper_multithread::jobstates::NONE)
+        .value("IDLE", gs::tlm_quantumkeeper_multithread::jobstates::RUNNING)
+        .value("IDLE", gs::tlm_quantumkeeper_multithread::jobstates::STOPPED)
+        .value("IDLE", gs::tlm_quantumkeeper_multithread::jobstates::SYSC_WAITING)
+        .value("IDLE", gs::tlm_quantumkeeper_multithread::jobstates::EXT_WAITING)
+        .value("IDLE", gs::tlm_quantumkeeper_multithread::jobstates::ILLEGAL)
+        .export_values();
+
+    m.def("find_all_tlm_quantumkeeper_multithread", &gs::find_all_tlm_quantumkeeper_multithread);
+
+    pybind11::class_<gs::tlm_quantumkeeper_multithread>(m, "qkmultithread")
+        .def(pybind11::init<>())
+        .def("start", &gs::tlm_quantumkeeper_multithread::start)
+        .def("stop", &gs::tlm_quantumkeeper_multithread::stop)
+        .def("set", &gs::tlm_quantumkeeper_multithread::set)
+        .def("sync", &gs::tlm_quantumkeeper_multithread::sync)
+        .def("reset", &gs::tlm_quantumkeeper_multithread::reset)
+        .def("get_current_time", &gs::tlm_quantumkeeper_multithread::get_current_time)
+        .def("get_local_time", &gs::tlm_quantumkeeper_multithread::get_local_time)
+        .def("get_status", &gs::tlm_quantumkeeper_multithread::get_status);
 }
 
 PYBIND11_EMBEDDED_MODULE(tlm_generic_payload, m)

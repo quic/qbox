@@ -12,6 +12,7 @@
 #include <condition_variable>
 #include <systemc>
 #include <tlm>
+#include <scp/report.h>
 #include <tlm_utils/tlm_quantumkeeper.h>
 #include <async_event.h>
 #include <qk_extendedif.h>
@@ -20,13 +21,15 @@ namespace gs {
 // somewhat tuned multiple threaded QK
 class tlm_quantumkeeper_multithread : public gs::tlm_quantumkeeper_extended
 {
+    SCP_LOGGER();
     std::thread::id m_systemc_thread_id;
     std::mutex mutex;
     std::condition_variable cond;
     std::thread m_worker_thread;
 
 protected:
-    enum jobstates { NONE, RUNNING, STOPPED } status;
+    bool m_systemc_waiting;
+    bool m_extern_waiting;
     async_event m_tick;
 
     virtual bool is_sysc_thread() const;
@@ -57,6 +60,17 @@ public:
 
     /* non-const need_sync */
     virtual bool need_sync() override;
+
+    // only NONE, RUNNING and STOPPED will be used by the model, the rest are for debug
+    enum jobstates { NONE = 0, RUNNING = 1, STOPPED = 2, SYSC_WAITING = 4, EXT_WAITING = 8, ILLEGAL = 12 } status;
+    // this function provided only for debug.
+    jobstates get_status() { return (jobstates)(status | (m_systemc_waiting << 2) | (m_extern_waiting << 3)); }
 };
+
+static std::vector<gs::tlm_quantumkeeper_multithread*> find_all_tlm_quantumkeeper_multithread()
+{
+    return find_sc_objects<gs::tlm_quantumkeeper_multithread>();
+}
+
 } // namespace gs
 #endif // QKMULTITHREAD_H

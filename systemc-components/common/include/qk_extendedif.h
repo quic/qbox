@@ -29,10 +29,10 @@ namespace SyncPolicy {
 enum Type { SYSTEMC_THREAD, OS_THREAD };
 }
 
-class tlm_quantumkeeper_extended : public tlm_utils::tlm_quantumkeeper
+class tlm_quantumkeeper_extended : public tlm_utils::tlm_quantumkeeper, public sc_core::sc_object
 {
 public:
-    tlm_quantumkeeper_extended() {}
+    tlm_quantumkeeper_extended(): sc_object("qk") {}
 
     /*
      * Additional functions

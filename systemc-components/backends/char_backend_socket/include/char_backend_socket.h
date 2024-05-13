@@ -156,7 +156,7 @@ public:
             if (ret > 0) {
                 for (int i = 0; i < ret; i++) {
                     unsigned char c = m_buf[i];
-                    if (c == 0x1c) {
+                    if (p_sigquit && c == 0x1c) {
                         sc_core::sc_stop();
                     }
                     socket.enqueue(c);
