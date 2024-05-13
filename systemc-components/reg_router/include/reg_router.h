@@ -67,11 +67,11 @@ public:
 
         bool found_cb = do_callbacks(trans, delay);
         if (trans.get_response_status() >= tlm::TLM_INCOMPLETE_RESPONSE) {
-            SCP_TRACE(()) << "call b_transport: " << txn_to_str(trans, false, found_cb);
+            SCP_TRACEALL(()) << "call b_transport: " << txn_to_str(trans, false, found_cb);
             if (ti->use_offset) trans.set_address(addr - ti->address);
             initiator_socket[ti->index]->b_transport(trans, delay);
             if (ti->use_offset) trans.set_address(addr);
-            SCP_TRACE(()) << "b_transport returned: " << txn_to_str(trans, false, found_cb);
+            SCP_TRACEALL(()) << "b_transport returned: " << txn_to_str(trans, false, found_cb);
         }
         if (trans.get_response_status() >= tlm::TLM_OK_RESPONSE) {
             do_callbacks(trans, delay);
@@ -93,7 +93,7 @@ public:
             return 0;
         }
         if (ti->use_offset) trans.set_address(addr - ti->address);
-        SCP_TRACE(()) << "[REG-MEM] call transport_dbg [txn]: " << scp::scp_txn_tostring(trans);
+        SCP_TRACEALL(()) << "[REG-MEM] call transport_dbg [txn]: " << scp::scp_txn_tostring(trans);
         unsigned int ret = initiator_socket[ti->index]->transport_dbg(trans);
         if (ti->use_offset) trans.set_address(addr);
         return ret;
@@ -110,7 +110,7 @@ public:
             return false;
         }
         if (ti->use_offset) trans.set_address(addr - ti->address);
-        SCP_TRACE(()) << "[REG-MEM] call get_direct_mem_ptr [txn]: " << scp::scp_txn_tostring(trans);
+        SCP_TRACEALL(()) << "[REG-MEM] call get_direct_mem_ptr [txn]: " << scp::scp_txn_tostring(trans);
         bool ret = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
         if (ti->use_offset) trans.set_address(addr);
         return ret;
@@ -176,11 +176,11 @@ public:
         } else {
             return false;
         }
-        SCP_TRACE(()) << "call b_transport: " << txn_to_str(trans, true, true);
+        SCP_TRACEALL(()) << "call b_transport: " << txn_to_str(trans, true, true);
         if (ti->use_offset) trans.set_address(addr - ti->address);
         initiator_socket[ti->index]->b_transport(trans, delay);
         if (ti->use_offset) trans.set_address(addr);
-        SCP_TRACE(()) << "b_transport returned : " << txn_to_str(trans, true, true);
+        SCP_TRACEALL(()) << "b_transport returned : " << txn_to_str(trans, true, true);
         if (trans.get_response_status() <= tlm::TLM_GENERIC_ERROR_RESPONSE) {
             SCP_WARN(()) << "Accesing register callback at addr: " << std::hex << addr
                          << " returned with: " << trans.get_response_string();
