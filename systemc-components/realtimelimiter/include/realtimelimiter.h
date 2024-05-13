@@ -38,7 +38,8 @@ SC_MODULE (realtimelimiter) {
     sc_core::sc_time runto;
     std::thread m_tick_thread;
     bool running = false;
-
+    bool suspended = false;
+    sc_core::sc_time suspend_at = sc_core::SC_ZERO_TIME;
     async_event tick;
 
     void SCticker()
@@ -48,16 +49,26 @@ SC_MODULE (realtimelimiter) {
             sc_core::sc_unsuspend_all();
             return;
         }
-
-        if (p_MaxTime_ms && sc_core::sc_time_stamp() > sc_core::sc_time(p_MaxTime_ms, sc_core::SC_MS)) {
-            sc_core::sc_stop();
+        if (suspended == true && (sc_core::sc_time_stamp() > suspend_at)) {
+            /* If we were suspended, and time has drifted, then account for it here. */
+            sc_core::sc_time drift = sc_core::sc_time_stamp() - suspend_at;
+            startSC += drift;
+            SCP_WARN(())("Time drift of {}s", drift.to_seconds());
+        }
+        if (p_MaxTime_ms && sc_core::sc_time_stamp() > (sc_core::sc_time(p_MaxTime_ms, sc_core::SC_MS) + startSC)) {
+            SCP_FATAL(())("Max timeout expired");
         }
 
         if (sc_core::sc_time_stamp() >= runto) {
+            SCP_TRACE(())("Suspending");
             tick.async_attach_suspending();
             sc_core::sc_suspend_all(); // Dont starve while we're waiting
                                        // for realtime.
+            suspend_at = sc_core::sc_time_stamp();
+            suspended = true;
         } else {
+            SCP_TRACE(())("Resuming");
+            suspended = false;
             // lets go with +=1/2 a RTquantum
             tick.notify((runto + sc_core::sc_time(p_RTquantum_ms, sc_core::SC_MS) / 2) - sc_core::sc_time_stamp());
             tick.async_detach_suspending(); // We could even starve !
@@ -79,16 +90,17 @@ SC_MODULE (realtimelimiter) {
             if (last > sc_core::SC_ZERO_TIME && sc_core::sc_time_stamp() == last) {
                 p_RTquantum_ms.set_value(p_RTquantum_ms.get_value() + 100);
                 SCP_WARN(())
-                ("Stalled ? (runto is {}s ahead, systemc time has not changed, new limit {}ms)",
-                 (runto - sc_core::sc_time_stamp()).to_seconds(), p_RTquantum_ms.get_value());
+                ("Stalled ? (runto is {}s ahead, systemc time has not changed, new limit {}ms {}s)",
+                 (runto - sc_core::sc_time_stamp()).to_seconds(), p_RTquantum_ms.get_value(), runto.to_seconds());
+                /* Only check for exsessive runto's if we're stalled */
+                if (p_SCTimeout_ms &&
+                    (runto > sc_core::sc_time_stamp() + sc_core::sc_time(p_SCTimeout_ms, sc_core::SC_MS))) {
+                    SCP_FATAL(())
+                    ("Requested runto is {}s ahead (SCTimeout_ms set to {}s)",
+                     (runto - sc_core::sc_time_stamp()).to_seconds(), p_SCTimeout_ms / 1000);
+                }
             } else {
                 last = sc_core::sc_time_stamp();
-            }
-            if (p_SCTimeout_ms &&
-                (runto > sc_core::sc_time_stamp() + sc_core::sc_time(p_SCTimeout_ms, sc_core::SC_MS))) {
-                SCP_FATAL(())
-                ("Requested runto is {}s ahead (SCTimeout_ms set to {}s)",
-                 (runto - sc_core::sc_time_stamp()).to_seconds(), p_SCTimeout_ms / 1000);
             }
 
             tick.notify();
@@ -126,9 +138,9 @@ public:
         , p_MaxTime_ms("MaxTime_ms", 0, "Maximum run time in ms (0=no limit)")
         , tick(false) // handle attach manually
     {
+        SCP_TRACE(())("realtimelimiter constructor");
         SC_HAS_PROCESS(realtimelimiter);
         SC_METHOD(SCticker);
-        SCP_TRACE(())("realtimelimiter constructor");
         dont_initialize();
         sensitive << tick;
         if (autostart) {
