@@ -244,7 +244,8 @@ public:
                 SCP_FATAL(())("Operator[] can only be used for DMI'able registers");
             }
         }
-        return m_dmi[sizeof(TYPE) * idx];
+        SCP_TRACE(())("Access value (DMI) using operator [] at idx {}", idx);
+        return m_dmi[idx];
     }
     void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) { m_dmi = nullptr; }
 
