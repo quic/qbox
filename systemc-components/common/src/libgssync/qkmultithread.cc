@@ -29,19 +29,23 @@ void tlm_quantumkeeper_multithread::timehandler()
     if (status == STOPPED) {
         // NB must be handled from within timehandler SC_METHOD process
         // Otherwise the sc_unsuspend wont be in the right process
+        m_systemc_waiting = false;
+        SCP_TRACE(())("Unsuspending");
         sc_core::sc_unsuspend_all();
         return;
     }
     if ((get_current_time() > sc_core::sc_time_stamp())) {
         // UnSuspend SystemC if local time is ahead of systemc time
-        m_systemc_waiting = true;
+        m_systemc_waiting = false;
+        SCP_TRACE(())("Unsuspending");
         sc_core::sc_unsuspend_all();
         sc_core::sc_time m_quantum = tlm_utils::tlm_quantumkeeper::get_global_quantum();
         m_tick.notify(std::min(get_current_time() - sc_core::sc_time_stamp(), m_quantum));
     } else {
         // Suspend SystemC if SystemC has caught up with our
         // local_time
-        m_systemc_waiting = false;
+        m_systemc_waiting = true;
+        SCP_TRACE(())("Suspending");
         sc_core::sc_suspend_all();
     }
 
@@ -82,7 +86,6 @@ bool tlm_quantumkeeper_multithread::is_sysc_thread() const
 void tlm_quantumkeeper_multithread::start(std::function<void()> job)
 {
     SCP_TRACE(())("Start");
-    std::lock_guard<std::mutex> lock(mutex);
     status = RUNNING;
     m_tick.async_attach_suspending();
     m_tick.notify(sc_core::SC_ZERO_TIME);
@@ -96,7 +99,6 @@ void tlm_quantumkeeper_multithread::stop()
 {
     if (status == RUNNING) {
         SCP_TRACE(())("Stop");
-        std::lock_guard<std::mutex> lock(mutex);
         status = STOPPED;
 
         m_tick.notify(sc_core::SC_ZERO_TIME);
@@ -137,7 +139,6 @@ void tlm_quantumkeeper_multithread::inc(const sc_core::sc_time& t)
 void tlm_quantumkeeper_multithread::set(const sc_core::sc_time& t)
 {
     SCP_TRACE(())("Set {}s", t.to_seconds());
-    std::lock_guard<std::mutex> lock(mutex);
     // quietly refuse to move time backwards
     if (t + sc_core::sc_time_stamp() >= m_local_time) {
         m_local_time = t + sc_core::sc_time_stamp(); // NB, we store the absolute time.
