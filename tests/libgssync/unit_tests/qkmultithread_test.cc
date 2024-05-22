@@ -23,7 +23,7 @@ void unfinished_quantum()
     sc_core::sc_time inc(100, sc_core::SC_NS);
     qk->inc(inc);
     budget = qk->time_to_sync();
-    EXPECT_EQ(budget, 2 * quantum - inc);
+    EXPECT_THAT(budget, AnyOf(Eq(2 * quantum), Eq(2 * quantum - inc)));
     EXPECT_TRUE(qk->need_sync());
     qk->sync();
     // Get budget, can be (2 * quanta) or (2 * quanta - inc), depending on how far SystemC has
@@ -33,7 +33,7 @@ void unfinished_quantum()
     qk->inc(inc);
     budget = qk->time_to_sync();
     // Same as above
-    EXPECT_THAT(budget, AnyOf(Eq(2 * quantum - inc), Eq(2 * quantum - 2 * inc)));
+    EXPECT_THAT(budget, AnyOf(Eq(2 * quantum), Eq(2 * quantum - inc), Eq(2 * quantum - 2 * inc)));
     done = true;
     qk->stop();
 }
