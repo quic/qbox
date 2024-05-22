@@ -27,7 +27,7 @@ private:
     sc_core::sc_time m_delay;
     std::thread::id tid;
     std::mutex mutex; // Belt and braces
-    int outstanding;
+    bool outstanding;
 
 public:
     async_event(bool start_attached = true): outstanding(0)
@@ -35,11 +35,10 @@ public:
 #if SYSTEMC_VERSION < 20231124
         register_simulation_phase_callback(sc_core::SC_PAUSED | sc_core::SC_START_OF_SIMULATION);
 #else
-        sc_core::sc_register_stage_callback(*this, sc_core::SC_PRE_PAUSE | sc_core::SC_PRE_SUSPEND |
-                                                       sc_core::SC_POST_SUSPEND | sc_core::SC_START_OF_SIMULATION);
+        sc_core::sc_register_stage_callback(*this, sc_core::SC_START_OF_SIMULATION);
 #endif
         tid = std::this_thread::get_id();
-        outstanding = 0;
+        outstanding = false;
         enable_attach_suspending(start_attached);
     }
 
@@ -52,9 +51,9 @@ public:
         } else {
             mutex.lock();
             m_delay = delay;
-            outstanding++;
-            mutex.unlock();
+            outstanding = true;
             async_request_update();
+            mutex.unlock();
 #ifndef SC_HAS_SUSPENDING
             sc_core::sc_internal_async_wakeup();
 #endif
@@ -81,9 +80,7 @@ public:
 
     void enable_attach_suspending(bool e)
     {
-        mutex.lock();
         e ? this->async_attach_suspending() : this->async_detach_suspending();
-        mutex.unlock();
     }
 
 private:
@@ -93,8 +90,7 @@ private:
         // we should be in SystemC thread
         if (outstanding) {
             sc_event::notify(m_delay);
-            outstanding--;
-            if (outstanding) request_update();
+            outstanding = false;
         }
         mutex.unlock();
     }
@@ -103,9 +99,10 @@ private:
 #endif
     void simulation_phase_callback()
     {
-        mutex.lock();
-        if (outstanding) request_update();
-        mutex.unlock();
+        // we should be in SystemC thread
+        if (outstanding) {
+            request_update();
+        }
     }
 };
 } // namespace gs

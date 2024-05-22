@@ -25,12 +25,11 @@ namespace gs {
    local_time - this is the tlm2.0 rule (h) */
 void tlm_quantumkeeper_multithread::timehandler()
 {
-    if (!mutex.try_lock()) return m_tick.notify(sc_core::SC_ZERO_TIME);
     if (status == STOPPED) {
         // NB must be handled from within timehandler SC_METHOD process
         // Otherwise the sc_unsuspend wont be in the right process
-        mutex.unlock();
-        return sc_core::sc_unsuspend_all();
+        sc_core::sc_unsuspend_all();
+        return;
     }
     if ((get_current_time() > sc_core::sc_time_stamp())) {
         // UnSuspend SystemC if local time is ahead of systemc time
@@ -43,7 +42,6 @@ void tlm_quantumkeeper_multithread::timehandler()
         sc_core::sc_suspend_all();
     }
 
-    mutex.unlock();
     cond.notify_all(); // nudge the sync thread, in case it's waiting for us
 }
 
@@ -79,7 +77,6 @@ bool tlm_quantumkeeper_multithread::is_sysc_thread() const
 
 void tlm_quantumkeeper_multithread::start(std::function<void()> job)
 {
-    std::lock_guard<std::mutex> lock(mutex);
     status = RUNNING;
     m_tick.async_attach_suspending();
     m_tick.notify(sc_core::SC_ZERO_TIME);
@@ -92,7 +89,6 @@ void tlm_quantumkeeper_multithread::start(std::function<void()> job)
 void tlm_quantumkeeper_multithread::stop()
 {
     if (status == RUNNING) {
-        std::lock_guard<std::mutex> lock(mutex);
         status = STOPPED;
 
         m_tick.notify(sc_core::SC_ZERO_TIME);
@@ -132,7 +128,6 @@ void tlm_quantumkeeper_multithread::inc(const sc_core::sc_time& t)
 /* NB, if used outside SystemC, SystemC time may vary */
 void tlm_quantumkeeper_multithread::set(const sc_core::sc_time& t)
 {
-    std::lock_guard<std::mutex> lock(mutex);
     // quietly refuse to move time backwards
     if (t + sc_core::sc_time_stamp() >= m_local_time) {
         m_local_time = t + sc_core::sc_time_stamp(); // NB, we store the absolute time.
@@ -145,14 +140,14 @@ void tlm_quantumkeeper_multithread::sync()
     if (is_sysc_thread()) {
         assert(m_local_time >= sc_core::sc_time_stamp());
         sc_core::sc_time t = m_local_time - sc_core::sc_time_stamp();
-        m_tick.notify();
+        m_tick.notify(sc_core::SC_ZERO_TIME);
         if (status != STOPPED) {
             sc_core::wait(t);
         }
     } else {
         std::unique_lock<std::mutex> lock(mutex);
         /* Wake up the SystemC thread if it's waiting for us to keep up */
-        m_tick.notify();
+        m_tick.notify(sc_core::SC_ZERO_TIME);
         /* Wait for some run budget */
         cond.wait(lock, [this] { return status == STOPPED || time_to_sync() != sc_core::SC_ZERO_TIME; });
     }
@@ -160,7 +155,6 @@ void tlm_quantumkeeper_multithread::sync()
 
 void tlm_quantumkeeper_multithread::reset()
 {
-    std::lock_guard<std::mutex> lock(mutex);
     // As we use absolute time, we reset to the current sc_time
     m_local_time = sc_core::sc_time_stamp();
 }
