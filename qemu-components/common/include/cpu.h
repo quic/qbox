@@ -223,7 +223,7 @@ protected:
             }
         } else {
             while (!m_cpu.can_run() && !m_finished) {
-                if (m_inst.is_kvm_enabled() || m_inst.is_hvf_enabled()) {
+                if (!m_coroutines) {
                     // In the case of accelerators, allow them to handle signals etc.
                     SCP_TRACE(())("Stopping QK");
                     m_qk->stop();              // Stop the QK, it will be enabled when we next see work to do.
@@ -274,8 +274,7 @@ protected:
         m_cpu.set_soft_stopped(true);
 
         m_inst.get().unlock_iothread();
-
-        if (m_inst.is_kvm_enabled() || m_inst.is_hvf_enabled()) {
+        if (!m_coroutines) {
             m_qk->start(); // we may have switched the QK off, so switch it on before setting
         }
         sc_core::sc_time sc_t = sc_core::sc_time_stamp();
@@ -399,13 +398,14 @@ public:
         socket.cancel_all();
 
         /* Wait for QEMU to terminate the CPU thread */
-        if (m_inst.get_tcg_mode() == QemuInstance::TCG_MULTI && m_inst.is_tcg_enabled()) {
-            // in HVF/KVM this could hang, so only do it for tcg.
-            m_cpu.remove_sync();
-        } else { // Handle non multi- non coroutine mode (SINGLE mode)
-            m_cpu.set_unplug(true);
-            m_cpu.halt(true);
-        }
+        /*
+         * Theoretically we should m_cpu.remove_sync(); here, however if QEMU is in the process of an io operation or an
+         * exclusive cpu region, it will end up waiting for the io operation to finish (effectively waiting for the
+         * SystemC thread, or potentially another CPU that wont get the chance to exit)
+         */
+        m_cpu.set_unplug(true);
+        m_cpu.halt(true);
+
         m_inst.get().unlock_iothread();
         m_cpu.kick(); // Just in case the CPU is currently in the big lock waiting
     }
