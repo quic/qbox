@@ -26,7 +26,7 @@ namespace gs {
    local_time - this is the tlm2.0 rule (h) */
 void tlm_quantumkeeper_multithread::timehandler()
 {
-    if (status == STOPPED) {
+    if (status != RUNNING) {
         // NB must be handled from within timehandler SC_METHOD process
         // Otherwise the sc_unsuspend wont be in the right process
         m_systemc_waiting = false;
@@ -97,7 +97,7 @@ void tlm_quantumkeeper_multithread::start(std::function<void()> job)
 
 void tlm_quantumkeeper_multithread::stop()
 {
-    if (status == RUNNING) {
+    if (status != STOPPED) {
         SCP_TRACE(())("Stop");
         status = STOPPED;
 
@@ -128,12 +128,7 @@ sc_core::sc_time tlm_quantumkeeper_multithread::time_to_sync()
  * Overloaded Functions
  */
 
-void tlm_quantumkeeper_multithread::inc(const sc_core::sc_time& t)
-{
-    std::lock_guard<std::mutex> lock(mutex);
-    m_local_time += t;
-    m_tick.notify(sc_core::SC_ZERO_TIME);
-}
+void tlm_quantumkeeper_multithread::inc(const sc_core::sc_time& t) { m_local_time += t; }
 
 /* NB, if used outside SystemC, SystemC time may vary */
 void tlm_quantumkeeper_multithread::set(const sc_core::sc_time& t)
@@ -161,7 +156,7 @@ void tlm_quantumkeeper_multithread::sync()
         m_tick.notify(sc_core::SC_ZERO_TIME);
         /* Wait for some run budget */
         m_extern_waiting = true;
-        cond.wait(lock, [this] { return status == STOPPED || time_to_sync() != sc_core::SC_ZERO_TIME; });
+        cond.wait(lock, [this] { return status != RUNNING || time_to_sync() != sc_core::SC_ZERO_TIME; });
         m_extern_waiting = false;
     }
 }
@@ -170,6 +165,7 @@ void tlm_quantumkeeper_multithread::reset()
 {
     // As we use absolute time, we reset to the current sc_time
     m_local_time = sc_core::sc_time_stamp();
+    m_tick.notify(sc_core::SC_ZERO_TIME);
 }
 
 sc_core::sc_time tlm_quantumkeeper_multithread::get_current_time() const { return m_local_time; }
