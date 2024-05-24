@@ -313,12 +313,16 @@ class gs_register : public port_fnct, public proxy_data<TYPE>
 private:
     std::string m_regname;
     std::string m_path;
+    uint64_t m_offset;
+    uint64_t m_size;
 
 public:
     gs_register() = delete;
     gs_register(std::string _name, std::string path = "", uint64_t offset = 0, uint64_t number = 1)
         : m_regname(_name)
         , m_path(path)
+        , m_offset(offset)
+        , m_size(sizeof(TYPE) * number)
         , port_fnct(_name, path)
         , proxy_data<TYPE>(SCP_LOGGER_NAME(), _name, path, offset, number)
     {
@@ -343,6 +347,8 @@ public:
     gs_bitfield<TYPE> operator[](gs_field<TYPE>& f) { return gs_bitfield<TYPE>(*this, f); }
     std::string get_regname() const { return m_regname; }
     std::string get_path() const { return m_path; }
+    uint64_t get_offset() const { return m_offset; }
+    uint64_t get_size() const { return m_size; }
 };
 
 /**

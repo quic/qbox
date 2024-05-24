@@ -39,7 +39,7 @@
 namespace gs {
 namespace ModuleFactory {
 
-class ContainerBase : public sc_core::sc_module, public transaction_forwarder_if<CONTAINER>
+class ContainerBase : public virtual sc_core::sc_module, public transaction_forwarder_if<CONTAINER>
 {
     /**
      * @brief construct a module using the pre-register CCI functor, with typed arguments from a CCI

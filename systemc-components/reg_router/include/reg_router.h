@@ -18,12 +18,14 @@
 #include <tlm_utils/multi_passthrough_target_socket.h>
 #include <cciutils.h>
 #include <module_factory_registery.h>
+#include <module_factory_container.h>
 #include <tlm_sockets_buswidth.h>
 #include <router_if.h>
 #include <vector>
 #include <memory>
 #include <map>
 
+#define ENABLE_MODULE_NAME_DBG_INFO 1
 namespace gs {
 
 template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
@@ -65,6 +67,11 @@ public:
             return;
         }
 
+#ifdef ENABLE_MODULE_NAME_DBG_INFO
+        std::string mod_name = get_module_name(trans);
+        if (!mod_name.empty()) SCP_DEBUG(()) << "b_transport: " << mod_name;
+#endif
+
         bool found_cb = do_callbacks(trans, delay);
         if (trans.get_response_status() >= tlm::TLM_INCOMPLETE_RESPONSE) {
             SCP_TRACEALL(()) << "call b_transport: " << txn_to_str(trans, false, found_cb);
@@ -92,6 +99,12 @@ public:
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return 0;
         }
+
+#ifdef ENABLE_MODULE_NAME_DBG_INFO
+        std::string mod_name = get_module_name(trans);
+        if (!mod_name.empty()) SCP_DEBUG(()) << "transport_dbg: " << mod_name;
+#endif
+
         if (ti->use_offset) trans.set_address(addr - ti->address);
         SCP_TRACEALL(()) << "[REG-MEM] call transport_dbg [txn]: " << scp::scp_txn_tostring(trans);
         unsigned int ret = initiator_socket[ti->index]->transport_dbg(trans);
@@ -101,39 +114,14 @@ public:
 
     bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
-        sc_dt::uint64 addr = trans.get_address();
-        // DMI transactions should only be handled by register memory
-        auto ti = decode_address(trans);
-        if (!ti) {
-            SCP_WARN(())
-            ("get_direct_mem_ptr: Attempt to access unknown location in register memory at offset 0x{:x}", addr);
-            return false;
-        }
-        if (ti->use_offset) trans.set_address(addr - ti->address);
-        SCP_TRACEALL(()) << "[REG-MEM] call get_direct_mem_ptr [txn]: " << scp::scp_txn_tostring(trans);
-        bool ret = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
-        if (ti->use_offset) trans.set_address(addr);
-        return ret;
+        SCP_TRACE(()) << "[REG-MEM] call get_direct_mem_ptr (not allowed) [txn]: " << scp::scp_txn_tostring(trans);
+        return false;
     }
 
     std::string txn_to_str(tlm::tlm_generic_payload& trans, bool is_callback = false, bool found_callback = false)
     {
         std::stringstream ss;
-        std::string cmd;
-        switch (trans.get_command()) {
-        case tlm::TLM_READ_COMMAND:
-            cmd = "READ";
-            break;
-        case tlm::TLM_WRITE_COMMAND:
-            cmd = "WRITE";
-            break;
-        case tlm::TLM_IGNORE_COMMAND:
-            cmd = "IGNORE";
-            break;
-        default:
-            cmd = "UNKNOWN";
-            break;
-        }
+        std::string cmd = txn_command_str(trans);
         if (is_callback && found_callback) {
             if (cmd != "IGNORE" && cmd != "UNKNOWN") {
                 if ((trans.get_response_status() == tlm::TLM_INCOMPLETE_RESPONSE))
@@ -150,6 +138,57 @@ public:
         ss << scp::scp_txn_tostring(trans);
         return ss.str();
     }
+
+    std::string txn_command_str(const tlm::tlm_generic_payload& trans)
+    {
+        std::string cmd;
+        switch (trans.get_command()) {
+        case tlm::TLM_READ_COMMAND:
+            cmd = "READ";
+            break;
+        case tlm::TLM_WRITE_COMMAND:
+            cmd = "WRITE";
+            break;
+        case tlm::TLM_IGNORE_COMMAND:
+            cmd = "IGNORE";
+            break;
+        default:
+            cmd = "UNKNOWN";
+            break;
+        }
+        return cmd;
+    }
+
+#ifdef ENABLE_MODULE_NAME_DBG_INFO
+    std::string get_module_name(const tlm::tlm_generic_payload& trans)
+    {
+        if (mod_addr_name_map.empty()) {
+            return "";
+        }
+        uint64_t addr = trans.get_address();
+        std::string cmd = txn_command_str(trans);
+        std::string mod_name = "";
+        std::stringstream ret;
+        auto search = mod_addr_name_map.equal_range(addr);
+        if (search.first != mod_addr_name_map.end() && search.first->first == addr) {
+            if ((addr - search.first->first) < search.first->second.first) {
+                mod_name = search.first->second.second;
+            }
+        } else if (search.second != mod_addr_name_map.begin()) {
+            auto expected_node = std::prev(search.second);
+            if ((addr - expected_node->first) < expected_node->second.first) {
+                mod_name = expected_node->second.second;
+            } else {
+                return "";
+            }
+        } else {
+            return "";
+        }
+        ret << cmd << " to Register at address: 0x" << std::hex << addr << " which belongs to Unimplemented Module: ["
+            << mod_name << "]";
+        return ret.str();
+    }
+#endif
 
     bool do_callbacks(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
     {
@@ -250,12 +289,15 @@ protected:
     }
 
 public:
-    explicit reg_router(const sc_core::sc_module_name& nm, cci::cci_broker_handle broker = cci::cci_get_broker())
+    explicit reg_router(const sc_core::sc_module_name& nm,
+                        const std::map<uint64_t, std::pair<uint64_t, std::string>>& p_mod_addr_name_map = {},
+                        cci::cci_broker_handle broker = cci::cci_get_broker())
         : sc_core::sc_module(nm)
         , initiator_socket("initiator_socket", [&](std::string s) -> void { register_boundto(s); })
         , target_socket("target_socket")
         , m_broker(broker)
         , lazy_init("lazy_init", false, "Initialize the reg_router lazily (eg. during simulation rather than BEOL)")
+        , mod_addr_name_map(p_mod_addr_name_map)
     {
         SCP_DEBUG(()) << "reg_router constructed";
 
@@ -282,6 +324,7 @@ public:
 private:
     std::vector<target_info*> mem_targets;
     std::map<sc_dt::uint64, target_info*> cb_targets;
+    std::map<uint64_t, std::pair<uint64_t, std::string>> mod_addr_name_map;
     bool initialized = false;
 };
 } // namespace gs

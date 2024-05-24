@@ -245,8 +245,7 @@ protected:
                 if (!gs::cci_get<std::string>(m_broker, name + ".archived_file_name", archived_file_name))
                     archived_file_name = "";
                 SCP_INFO(()) << "Loading " << archived_file_name << " from zip file: " << file
-                             << " starting at offset: " << file_offset << " with size: " << file_data_len
-                             << " to addr: " << addr;
+                             << " starting at offset: " << file_offset << " to addr: " << addr;
                 zip_file_load(nullptr, file, addr, archived_file_name, file_offset, file_data_len);
                 read = true;
             }
@@ -383,6 +382,8 @@ public:
             bin_info_t += read_bytes_num;
             rem -= read_bytes_num;
         }
+        SCP_DEBUG(()) << "load data from zip archive " << archive_name << " to addr: 0x" << std::hex << addr
+                      << " len: 0x" << std::hex << used_file_data_len;
         send(addr, reinterpret_cast<uint8_t*>(&bin_info[0]) + file_offset, used_file_data_len);
         zip_fclose(fd);
     }
