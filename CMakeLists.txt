@@ -284,13 +284,13 @@ gs_export(${PROJECT_NAME} ${QBOX_INCLUDE_DIR})
 
 if (NOT DEFINED GS_ONLY)
     install(TARGETS rpc zip DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-    add_subdirectory(platforms)
 endif()
     
 list(APPEND TARGET_LIBS ${PROJECT_NAME})
 
 if(NOT WITHOUT_QEMU)
     add_subdirectory(qemu-components)
+    add_subdirectory(platforms)
 endif()
 
 add_subdirectory(systemc-components)
