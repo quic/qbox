@@ -1,6 +1,6 @@
 /*
  * This file is part of libqbox
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -25,5 +25,9 @@ public:
     {
     }
 
-    void before_end_of_elaboration() override { QemuVirtioMMIO::before_end_of_elaboration(); }
+    void before_end_of_elaboration() override
+    {
+        QemuVirtioMMIO::before_end_of_elaboration();
+        virtio_mmio_device.get_qemu_dev().set_prop_bool("force-legacy", false);
+    }
 };
