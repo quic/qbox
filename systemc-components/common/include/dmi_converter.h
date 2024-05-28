@@ -309,8 +309,6 @@ private:
     std::map<uint64_t, tlm::tlm_dmi> m_dmi_cache;
 };
 } // namespace gs
-// typedef gs::dmi_converter<> dmi_converter;
-// GSC_MODULE_REGISTER(dmi_converter);
 
 extern "C" void module_register();
 
