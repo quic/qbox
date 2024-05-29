@@ -10,12 +10,10 @@ add_executable(remote_cpu
 
 target_link_libraries(cortex-m55-vp
     ${TARGET_LIBS}
-    GreenSocs::qbox
 )
 
 target_link_libraries(remote_cpu
     ${TARGET_LIBS}
-    GreenSocs::qbox
 )
 
 target_include_directories(

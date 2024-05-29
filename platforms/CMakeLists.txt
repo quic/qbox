@@ -11,7 +11,6 @@ endif()
 
 target_link_libraries(platforms-vp
     ${TARGET_LIBS}
-    GreenSocs::qbox
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/lsb-release")
