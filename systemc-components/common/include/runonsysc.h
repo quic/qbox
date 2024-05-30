@@ -171,7 +171,7 @@ public:
      */
     bool run_on_sysc(std::function<void()> job_entry, bool wait = true)
     {
-        if (std::this_thread::get_id() == m_thread_id) {
+        if (is_on_sysc()) {
             job_entry();
             return true;
         } else {
@@ -192,6 +192,13 @@ public:
 
             return true;
         }
+    }
+
+    /**
+     * @return Whether we are on SystemC thread
+    */
+    bool is_on_sysc() const {
+        return std::this_thread::get_id() == m_thread_id;
     }
 };
 } // namespace gs

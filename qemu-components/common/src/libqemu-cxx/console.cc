@@ -92,4 +92,24 @@ void DclOps::set_gfx_switch(LibQemuGfxSwitchFn gfx_switch_fn)
 
 void DclOps::set_refresh(LibQemuRefreshFn refresh_fn) { m_int->exports().dcl_ops_set_refresh(m_ops, refresh_fn); }
 
+void DclOps::set_window_create(LibQemuWindowCreateFn window_create_fn)
+{
+    m_int->exports().dcl_ops_set_window_create(m_ops, window_create_fn);
+}
+
+void DclOps::set_window_destroy(LibQemuWindowDestroyFn window_destroy_fn)
+{
+    m_int->exports().dcl_ops_set_window_destroy(m_ops, window_destroy_fn);
+}
+
+void DclOps::set_window_resize(LibQemuWindowResizeFn window_resize_fn)
+{
+    m_int->exports().dcl_ops_set_window_resize(m_ops, window_resize_fn);
+}
+
+void DclOps::set_poll_events(LibQemuPollEventsFn poll_events_fn)
+{
+    m_int->exports().dcl_ops_set_poll_events(m_ops, poll_events_fn);
+}
+
 } // namespace qemu

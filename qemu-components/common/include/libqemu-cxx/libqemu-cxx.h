@@ -43,6 +43,10 @@ struct QEMUGLParams;
 typedef void (*LibQemuGfxUpdateFn)(DisplayChangeListener*, int, int, int, int);
 typedef void (*LibQemuGfxSwitchFn)(DisplayChangeListener*, DisplaySurface*);
 typedef void (*LibQemuRefreshFn)(DisplayChangeListener*);
+typedef void (*LibQemuWindowCreateFn)(DisplayChangeListener*);
+typedef void (*LibQemuWindowDestroyFn)(DisplayChangeListener*);
+typedef void (*LibQemuWindowResizeFn)(DisplayChangeListener*);
+typedef void (*LibQemuPollEventsFn)(DisplayChangeListener*);
 typedef void (*LibQemuMouseSetFn)(DisplayChangeListener*, int, int, int);
 typedef void (*LibQemuCursorDefineFn)(DisplayChangeListener*, QEMUCursor*);
 typedef void (*LibQemuGLScanoutDisableFn)(DisplayChangeListener*);
@@ -176,6 +180,11 @@ public:
     void sdl2_gl_update(DisplayChangeListener* dcl, int x, int y, int w, int h);
     void sdl2_gl_switch(DisplayChangeListener* dcl, DisplaySurface* new_surface);
     void sdl2_gl_refresh(DisplayChangeListener* dcl);
+
+    void sdl2_window_create(DisplayChangeListener* dcl);
+    void sdl2_window_destroy(DisplayChangeListener* dcl);
+    void sdl2_window_resize(DisplayChangeListener* dcl);
+    void sdl2_poll_events(DisplayChangeListener* dcl);
 
     void dcl_dpy_gfx_replace_surface(DisplayChangeListener* dcl, DisplaySurface* new_surface);
 
@@ -526,6 +535,11 @@ public:
     void set_gfx_update(LibQemuGfxUpdateFn gfx_update_fn);
     void set_gfx_switch(LibQemuGfxSwitchFn gfx_switch_fn);
     void set_refresh(LibQemuRefreshFn refresh_fn);
+
+    void set_window_create(LibQemuWindowCreateFn window_create_fn);
+    void set_window_destroy(LibQemuWindowDestroyFn window_destroy_fn);
+    void set_window_resize(LibQemuWindowResizeFn window_resize_fn);
+    void set_poll_events(LibQemuPollEventsFn poll_events_fn);
 };
 
 class Device : public Object

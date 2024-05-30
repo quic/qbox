@@ -302,6 +302,27 @@ void LibQemu::dcl_dpy_gfx_replace_surface(DisplayChangeListener* dcl, DisplaySur
 
 void LibQemu::sdl2_gl_refresh(DisplayChangeListener* dcl) { m_int->exports().sdl2_gl_refresh(dcl); }
 
+void LibQemu::sdl2_window_create(DisplayChangeListener* dcl)
+{
+    m_int->exports().sdl2_window_create(dcl);
+}
+
+void LibQemu::sdl2_window_destroy(DisplayChangeListener* dcl)
+{
+    m_int->exports().sdl2_window_destroy(dcl);
+}
+
+void LibQemu::sdl2_window_resize(DisplayChangeListener* dcl)
+{
+    m_int->exports().sdl2_window_resize(dcl);
+}
+
+void LibQemu::sdl2_poll_events(DisplayChangeListener* dcl)
+{
+    m_int->exports().sdl2_poll_events(dcl);
+}
+
+
 QEMUGLContext LibQemu::sdl2_gl_create_context(DisplayGLCtx* dgc, QEMUGLParams* p)
 {
     return m_int->exports().sdl2_gl_create_context(dgc, p);

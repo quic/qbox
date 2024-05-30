@@ -86,30 +86,19 @@ void MainThreadQemuDisplay::gl_switch(DisplayChangeListener* dcl, DisplaySurface
     qemu::LibQemu& lib = inst->get();
     MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
 
-    if (display->m_simulation_started) {
-        lib.unlock_iothread();
-    }
-
-    // SDL2 GL switch should run on main kernel thread as it may resize the window. At
-    // initialization time, it is scheduled to run on SystemC kernel thread without waiting for
-    // its completion. This will prevent the deadlocking situation where SystemC is not running
-    // the switch "on_sysc" as it is waiting for QEMU to "finish/yeld", but that does not happen
-    // as QEMU is in turn waiting for its switch function to run on SystemC kernel thread.
-    display->m_on_sysc.run_on_sysc([&lib, dcl, new_surface]() { lib.dcl_dpy_gfx_replace_surface(dcl, new_surface); },
-                                   display->m_simulation_started);
-    if (display->m_simulation_started) {
-        lib.lock_iothread();
+    // Let's switch only after simulation is started, and make sure we are NOT on SystemC
+    // thread as GL API should be called from QEMU's thread.
+    if (display->m_simulation_started && !display->m_on_sysc.is_on_sysc()) {
+        lib.sdl2_gl_switch(dcl, new_surface);
     }
 }
 
-void MainThreadQemuDisplay::gl_update(DisplayChangeListener* dcl, int x, int y, int w, int h)
-{
-    // Luckily for us the GL update interacts only with the Graphics API without touching the
-    // window hence no need to run it on main thread.
-    inst->get().sdl2_gl_update(dcl, x, y, w, h);
-}
-
-void MainThreadQemuDisplay::gl_refresh(DisplayChangeListener* dcl)
+// SDL2 window functions should run on main kernel thread as it is a MacOS requirement. At
+// initialization time, it is scheduled to run on SystemC kernel thread without waiting for
+// its completion. This will prevent the deadlocking situation where SystemC is not running
+// the switch "on_sysc" as it is waiting for QEMU to "finish/yeld", but that does not happen
+// as QEMU is in turn waiting for its switch function to run on SystemC kernel thread.
+void MainThreadQemuDisplay::window_create(DisplayChangeListener* dcl)
 {
     qemu::LibQemu& lib = inst->get();
     MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
@@ -117,8 +106,56 @@ void MainThreadQemuDisplay::gl_refresh(DisplayChangeListener* dcl)
         lib.unlock_iothread();
     }
 
-    // SDL2 GL refresh should run on main kernel thread as it polls events
-    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_gl_refresh(dcl); }, display->m_simulation_started);
+    // SDL2 window create should run on main-thread
+    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_window_create(dcl); }, display->m_simulation_started);
+
+    if (display->m_simulation_started) {
+        lib.lock_iothread();
+    }
+}
+
+void MainThreadQemuDisplay::window_destroy(DisplayChangeListener* dcl)
+{
+    qemu::LibQemu& lib = inst->get();
+    MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
+    if (display->m_simulation_started) {
+        lib.unlock_iothread();
+    }
+
+    // SDL2 window destroy should run on main-thread
+    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_window_destroy(dcl); }, display->m_simulation_started);
+
+    if (display->m_simulation_started) {
+        lib.lock_iothread();
+    }
+}
+
+void MainThreadQemuDisplay::window_resize(DisplayChangeListener* dcl)
+{
+    qemu::LibQemu& lib = inst->get();
+    MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
+    if (display->m_simulation_started) {
+        lib.unlock_iothread();
+    }
+
+    // SDL2 window resize should run on main-thread
+    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_window_resize(dcl); }, display->m_simulation_started);
+
+    if (display->m_simulation_started) {
+        lib.lock_iothread();
+    }
+}
+
+void MainThreadQemuDisplay::poll_events(DisplayChangeListener* dcl)
+{
+    qemu::LibQemu& lib = inst->get();
+    MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
+    if (display->m_simulation_started) {
+        lib.unlock_iothread();
+    }
+
+    // SDL2 poll events should run on main-thread
+    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_poll_events(dcl); }, display->m_simulation_started);
 
     if (display->m_simulation_started) {
         lib.lock_iothread();
@@ -168,9 +205,12 @@ void MainThreadQemuDisplay::realize()
 
         m_ops = lib.dcl_ops_new();
         m_ops.set_name("sc");
+        // Register our own callback to make sure it's called only when simulation starts
         m_ops.set_gfx_switch(&gl_switch);
-        m_ops.set_gfx_update(&gl_update);
-        m_ops.set_refresh(&gl_refresh);
+        m_ops.set_window_create(&window_create);
+        m_ops.set_window_destroy(&window_destroy);
+        m_ops.set_window_resize(&window_resize);
+        m_ops.set_poll_events(&poll_events);
         sdl2_console.set_dcl_ops(m_ops);
 
         m_gl_ctx_ops = lib.display_gl_ctx_ops_new(&is_compatible_dcl);
@@ -189,7 +229,7 @@ display::display(const sc_core::sc_module_name& name, sc_core::sc_object* o)
     : sc_module(name)
 #ifdef __APPLE__
     // On MacOS use libqbox's display SystemC module.
-    ,m_main_display(o)
+    , m_main_display(o)
 #endif
 {
 #ifndef __APPLE__
@@ -272,7 +312,4 @@ const std::vector<qemu::SDL2Console>* display::get_sdl2_consoles() const
 #endif
 }
 
-void module_register()
-{
-    GSC_MODULE_REGISTER_C(display, sc_core::sc_object*);
-}
+void module_register() { GSC_MODULE_REGISTER_C(display, sc_core::sc_object*); }

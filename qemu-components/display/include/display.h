@@ -52,6 +52,11 @@ public:
 
     static void gl_refresh(DisplayChangeListener* dcl);
 
+    static void window_create(DisplayChangeListener* dcl);
+    static void window_destroy(DisplayChangeListener* dcl);
+    static void window_resize(DisplayChangeListener* dcl);
+    static void poll_events(DisplayChangeListener* dcl);
+
     static bool is_compatible_dcl(DisplayGLCtx* ctx, DisplayChangeListener* dcl);
 
     void realize();
