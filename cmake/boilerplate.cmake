@@ -144,6 +144,14 @@ else()
         set(SystemCLanguage_FOUND TRUE)
     endif()
 
+    # upstream set INSTALL_NAME_DIR wrong !
+    if (APPLE)
+      set_target_properties(
+        systemc
+        PROPERTIES
+        INSTALL_NAME_DIR "@rpath"
+      )
+    endif()
     message(STATUS "Using SystemC ${SystemCLanguage_VERSION} (${SystemCLanguage_SOURCE_DIR})")
 endif()
 
@@ -179,7 +187,14 @@ gs_addexpackage(
 if(SystemCCCI_ADDED)
   set(SystemCCCI_FOUND TRUE)
 endif()
-
+# upstream set INSTALL_NAME_DIR wrong !
+if (APPLE)
+  set_target_properties(
+    cci
+    PROPERTIES
+    INSTALL_NAME_DIR "@rpath"
+  )
+endif()
 message(STATUS "Using SystemCCI ${SystemCCCI_VERSION} (${SystemCCCI_SOURCE_DIR})")
 
 set(SYSTEMC_PROJECT TRUE)
@@ -260,31 +275,6 @@ macro(build_lua)
       list(APPEND TARGET_LIBS "lua")
       install(TARGETS lua EXPORT ${PROJECT_NAME}Targets)
   endif()
-endmacro()
-################################################################################
-
-# ##############################################################################
-# ----- SET RPATH
-# ##############################################################################
-macro(set_rpath)
-  if(APPLE)
-    set(CMAKE_BUILD_RPATH "\@executable_path/../lib;\@executable_path/../lib/libqemu")
-    set(CMAKE_INSTALL_RPATH "\@executable_path/../lib;\@executable_path/../lib/libqemu")
-  else()
-    set(CMAKE_BUILD_RPATH "\$ORIGIN/../lib;\$ORIGIN/../lib/libqemu")
-    set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib;\$ORIGIN/../lib/libqemu")
-  endif()
-
-  set(CMAKE_BUILD_RPATH
-      "${CMAKE_BINARY_DIR}/_deps/libqemu-build/qemu-prefix/lib/"
-      "${CMAKE_BINARY_DIR}"
-  )
-
-  if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "" OR "${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local")
-      set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install)
-      message(STATUS "CMAKE PREFIX PATH = ${CMAKE_INSTALL_PREFIX}")
-  endif()
-
 endmacro()
 ################################################################################
 

@@ -47,7 +47,7 @@ else()
   set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib;\$ORIGIN/../lib/libqemu")
 endif()
 
-set(CMAKE_BUILD_RPATH
+list(APPEND CMAKE_BUILD_RPATH
     "${CMAKE_BINARY_DIR}/_deps/libqemu-build/qemu-prefix/lib/"
     "${CMAKE_BINARY_DIR}"
 )
