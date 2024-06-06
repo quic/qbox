@@ -1,8 +1,9 @@
 /*
- * Copyright (c) 2022 GreenSocs
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+
 #include <systemc>
 #include <cci_configuration>
 #include <scp/report.h>

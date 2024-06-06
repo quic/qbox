@@ -1,6 +1,6 @@
 /*
- *  This file is part of libqbox
- *  Copyright (c) 2021 Greensocs
+ * This file is part of libqbox
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */

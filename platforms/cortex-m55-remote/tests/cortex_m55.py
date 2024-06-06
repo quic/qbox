@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
 import argparse, pprint
 import os
 from os import sched_get_priority_max

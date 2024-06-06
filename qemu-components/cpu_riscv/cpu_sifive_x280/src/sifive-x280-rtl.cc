@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #include <sifive-x280-rtl.h>
 
 void module_register()

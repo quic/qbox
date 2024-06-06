@@ -1,8 +1,5 @@
-#
-# Copyright (c) 2022 Qualcomm Innovation Center, Inc. All Rights Reserved.
-#
+# Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-3-Clause
-#
 
 """
 This is a proof of concept python-systemc uart backend model which uses 

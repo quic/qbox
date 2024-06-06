@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #ifndef NVIC_H
 #define NVIC_H

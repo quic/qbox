@@ -1,3 +1,6 @@
+# Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
 from tlm_generic_payload import tlm_command, tlm_response_status, tlm_generic_payload
 import initiator_signal_socket
 from sc_core import (

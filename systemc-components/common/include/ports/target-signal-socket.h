@@ -1,6 +1,7 @@
 /*
- *  This file is part of libgsutils
- * Copyright (c) 2022 GreenSocs
+ * This file is part of libgsutils
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * Author: GreenSocs 2022
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */

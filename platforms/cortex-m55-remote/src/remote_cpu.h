@@ -1,10 +1,10 @@
 /*
- * Quic Module Cortex-M55
- *
  * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+
+/* Quic Module Cortex-M55 */
 #ifndef __REMOTE_CORTEX_M55__
 #define __REMOTE_CORTEX_M55__
 

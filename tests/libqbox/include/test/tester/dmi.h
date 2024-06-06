@@ -1,8 +1,9 @@
 /*
- *  This file is part of libqbox
- *  Copyright (c) 2021 GreenSocs SAS
+ * This file is part of libqbox
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * Author: GreenSocs 2021
  *
- *  SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef TESTS_INCLUDE_TEST_TESTER_DMI_H

@@ -1,7 +1,7 @@
 /*
- *  This file is part of libqemu-cxx
- *  Copyright (C) 2015-2019  GreenSocs
- *  Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * This file is part of libqemu-cxx
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * Author: GreenSocs 2015-2019
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */

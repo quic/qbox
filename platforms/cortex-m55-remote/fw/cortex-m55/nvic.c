@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #include <nvic.h>
 
 volatile unsigned int* const nvic = (unsigned int*)0xE000E000;

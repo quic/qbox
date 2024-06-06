@@ -1,8 +1,10 @@
 /*
- * Copyright (c) 2022 GreenSocs
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * Author: GreenSocs 2022
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+
 #ifndef _GREENSOCS_BASE_COMPONENTS_PASS_H
 #define _GREENSOCS_BASE_COMPONENTS_PASS_H
 
