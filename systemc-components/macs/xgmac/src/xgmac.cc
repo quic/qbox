@@ -306,7 +306,4 @@ void xgmac::enet_write(uint64_t addr, uint64_t value, unsigned size)
     enet_update_irq();
 }
 
-void module_register()
-{
-    GSC_MODULE_REGISTER_C(xgmac);
-}
+void module_register() { GSC_MODULE_REGISTER_C(xgmac); }

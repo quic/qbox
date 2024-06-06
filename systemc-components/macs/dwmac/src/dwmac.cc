@@ -753,7 +753,4 @@ void dwmac::intr_thread()
     }
 }
 
-void module_register()
-{
-    GSC_MODULE_REGISTER_C(dwmac);
-}
+void module_register() { GSC_MODULE_REGISTER_C(dwmac); }

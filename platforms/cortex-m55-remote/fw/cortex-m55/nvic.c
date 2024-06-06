@@ -1,6 +1,6 @@
 #include <nvic.h>
 
-volatile unsigned int * const nvic = (unsigned int *)0xE000E000;
+volatile unsigned int* const nvic = (unsigned int*)0xE000E000;
 
 #define NVIC_TYPE                    (0x004 >> 2)
 #define NVIC_SYSTICK_CTRL_STATUS     (0x010 >> 2)
@@ -12,14 +12,14 @@ volatile unsigned int * const nvic = (unsigned int *)0xE000E000;
 
 void nvic_enable_irq(unsigned char irq)
 {
-  unsigned char reg = irq / 32;
+    unsigned char reg = irq / 32;
 
-  nvic[NVIC_SET_ENABLE(reg)] |= (1 << ((unsigned int)irq % 32));
+    nvic[NVIC_SET_ENABLE(reg)] |= (1 << ((unsigned int)irq % 32));
 }
 
 void nvic_disable_irq(unsigned char irq)
 {
-  unsigned char reg = irq / 32;
+    unsigned char reg = irq / 32;
 
-  nvic[NVIC_CLR_ENABLE(reg)] |= (1 << ((unsigned int)irq % 32));
+    nvic[NVIC_CLR_ENABLE(reg)] |= (1 << ((unsigned int)irq % 32));
 }
