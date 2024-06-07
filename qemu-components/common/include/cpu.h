@@ -151,6 +151,8 @@ protected:
     /*
      * Called by the QEMU iothread when the deadline timer expires. We kick the
      * CPU out of its execution loop for it to call the end_of_loop_cb callback.
+     * However, we should also handle the case that qemu is currently in 'sync'
+     *  - by setting the time here, we will nudge the sync thread.
      */
     void deadline_timer_cb()
     {
@@ -158,7 +160,16 @@ protected:
         // All syncing will be done in end_of_loop_cb
         m_cpu.kick();
         // Rearm timer for next time ....
-        if (!m_finished) rearm_deadline_timer();
+        if (!m_finished) {
+            rearm_deadline_timer();
+
+            /* Take this opportunity to set the time */
+            int64_t now = m_inst.get().get_virtual_clock();
+            sc_core::sc_time sc_t = sc_core::sc_time_stamp();
+            if (sc_core::sc_time(now, sc_core::SC_NS) > sc_t) {
+                m_qk->set(sc_core::sc_time(now, sc_core::SC_NS) - sc_t);
+            }
+        }
     }
 
     /*
@@ -268,7 +279,6 @@ protected:
      */
     void sync_with_kernel()
     {
-        sc_core::sc_time elapsed;
         int64_t now = m_inst.get().get_virtual_clock();
 
         m_cpu.set_soft_stopped(true);

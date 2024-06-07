@@ -46,7 +46,6 @@ public:
             outstanding = true;
             mutex.unlock();
             async_request_update();
-            mutex.unlock();
 #ifndef SC_HAS_SUSPENDING
             sc_core::sc_internal_async_wakeup();
 #endif
