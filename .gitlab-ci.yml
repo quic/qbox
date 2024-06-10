@@ -2,7 +2,16 @@ include:
   - project: 'qqvp/cmake-boilerplate'
     file: 'gitlab-ci-template.yml'
 
+repolinter:
+  stage: build
+  tags: 
+    - linux
+  script:
+    - echo "start repolinter for Qbox"
+    - repolinter lint ../Qbox
+
 .build_job_template:
+    needs: ["repolinter"]
     extends:
     - .general_build_job_template
     variables:
