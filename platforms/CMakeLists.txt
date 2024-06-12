@@ -19,7 +19,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/lsb-release")
         message("The build is done from an Ubuntu machine.")
 
         if (NOT EXISTS ${PROJECT_SOURCE_DIR}/platforms/ubuntu/fw/Artifacts)
-            set(UBUNTU_BUILD_COMMAND "bash ${PROJECT_SOURCE_DIR}/platforms/ubuntu/fw/build_ubuntu_image.sh -s 4G -p xorg,openbox,mesa-utils,pciutils")
+            set(UBUNTU_BUILD_COMMAND ${PROJECT_SOURCE_DIR}/platforms/ubuntu/fw/build_ubuntu_image.sh -s 4G -p xorg,openbox,mesa-utils,pciutils)
         else()
             set(UBUNTU_BUILD_COMMAND "")
         endif()
