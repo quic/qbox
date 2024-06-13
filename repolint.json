@@ -140,23 +140,17 @@
           "options": {
             "globsAll": [
               "**/*.py",
-              "**/*.js",
               "**/*.c",
               "**/*.cc",
               "**/*.cpp",
               "**/*.h",
-              "**/*.ts",
-              "**/*.sh",
-              "**/*.rs",
-              "**/*.java",
-              "**/*.go",
-              "**/*.bbclass",
-              "**/*.S"
+              "**/*.sh"
             ],
             "skip-paths-matching": {
               "patterns": [
                 "babel.config.js",
                 "build\/",
+                "public\/",
                 "jest.config.js",
                 "node_modules\/",
                 "types\/",
