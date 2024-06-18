@@ -23,6 +23,9 @@
 #include <libgsutils.h>
 #include <libgssync.h>
 
+#include <ports/target-signal-socket.h>
+#include <ports/initiator-signal-socket.h>
+
 #ifndef WITHOUT_QEMU
 #include <ports/target.h>
 #include <ports/initiator.h>
