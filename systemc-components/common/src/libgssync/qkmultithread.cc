@@ -30,7 +30,7 @@ void tlm_quantumkeeper_multithread::timehandler()
         // NB must be handled from within timehandler SC_METHOD process
         // Otherwise the sc_unsuspend wont be in the right process
         m_systemc_waiting = false;
-        SCP_TRACE(())("Unsuspending");
+        SCP_TRACE(())("Unsuspending (stopped)");
         sc_core::sc_unsuspend_all();
         return;
     }
@@ -99,11 +99,13 @@ void tlm_quantumkeeper_multithread::stop()
 {
     if (status != STOPPED) {
         SCP_TRACE(())("Stop");
-        status = STOPPED;
-
-        m_tick.notify(sc_core::SC_ZERO_TIME);
-        cond.notify_all();
-        m_tick.async_detach_suspending();
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            status = STOPPED;
+            m_tick.notify(sc_core::SC_ZERO_TIME);
+            cond.notify_all();
+            m_tick.async_detach_suspending();
+        }
 
         if (m_worker_thread.joinable()) {
             m_worker_thread.join();
