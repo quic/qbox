@@ -5,11 +5,21 @@ project(qbox VERSION 2.0)
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
 set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositories")
+set(QEMU_PATH_NAME "" CACHE STRING "The name of the path of qemu in the git directory")
 
 execute_process(COMMAND git config --get remote.origin.url
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE GIT_URL)
+
+string(FIND "${GIT_URL}" "github" GITHUB_URL)
+if(GITHUB_URL EQUAL -1)
+    set(QEMU_PATH_NAME "qemu/qemu")
+else()
+    set(QEMU_PATH_NAME "qemu")
+endif()
+
+message(STATUS "QEMU_PATH_NAME=${QEMU_PATH_NAME}")
 
 string(REGEX MATCH "(.*\/)" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
 string(REGEX REPLACE "(.*)/sandboxes/[^\/]*/(.*)" "\\1/" GREENSOCS_GIT_ORIGIN "${GREENSOCS_GIT_ORIGIN}")
