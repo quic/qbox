@@ -1,0 +1,55 @@
+name: Deploy static content to Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Doxygen
+        run: sudo apt-get install doxygen graphviz
+
+      - name: Generate Doxygen
+        run: |
+          doxygen -g
+          sed -i "s#PROJECT_NAME *= *\".*\"#PROJECT_NAME = ${GITHUB_REPOSITORY}#" Doxyfile
+          sed -i "s#RECURSIVE *= *NO#RECURSIVE = YES#" Doxyfile
+          if test -f "${GITHUB_WORKSPACE}/docs/qqvp/qqvp_user_doc.md"
+          then
+            echo "Adding qqvp_user_doc.md"
+            sed -i "s#INPUT *= *#INPUT = ./ ./docs/qqvp/qqvp_user_doc.md#" Doxyfile
+          fi
+          sed -i "s#HTML_OUTPUT *= .*#HTML_OUTPUT = public#" Doxyfile
+          sed -i "s#GENERATE_LATEX *= *YES#GENERATE_LATEX = NO#" Doxyfile
+          sed -i "s#EXCLUDE *= *#EXCLUDE = tests/ build/ docs/ scripts/ configs/#" Doxyfile
+          doxygen Doxyfile
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'public/'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
