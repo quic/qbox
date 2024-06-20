@@ -112,7 +112,17 @@ The library assumes the use of C++14, and is compatible with SystemC versions fr
 
 More documentation, including doxygen generated API documentation can be found in the `/docs` directory.
 
- 
+### Gitlab Pages / GitHub Pages
+
+You can also find a complete documentation with the implementation of Gitlab/GitHub Pages.
+
+Gitlab Pages URL:
+
+`https://qqvp.gitlab-pages.qualcomm.com/Qbox/`
+
+GitHub Pages URL:
+
+`https://quic.github.io/qbox/`
 
 ## The GreenSocs SystemC simple components library.
 
