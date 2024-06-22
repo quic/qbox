@@ -110,6 +110,17 @@ MemoryRegion::MemoryRegion(QemuMemoryRegion* mr, std::shared_ptr<LibQemuInternal
 {
 }
 
+/*  perform sub region removal */
+void MemoryRegion::removeSubRegions()
+{
+    for (auto& mr : m_subregions) {
+        if (mr.container) internal_del_subregion(mr);
+        // Dont attempt to re-delete these, when we clear the vector below
+        const_cast<MemoryRegion*>(&mr)->m_obj = nullptr;
+    }
+    m_subregions.clear();
+}
+
 MemoryRegion::~MemoryRegion()
 {
     for (auto& mr : m_subregions) {
@@ -238,8 +249,6 @@ AddressSpace::~AddressSpace()
     if (m_inited) {
         m_int->exports().address_space_destroy(m_as);
     }
-
-    m_int->exports().address_space_free(m_as);
 }
 
 void AddressSpace::init(MemoryRegion mr, const char* name, bool global)

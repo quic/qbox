@@ -49,7 +49,7 @@ class LibQemuInternals
 {
 private:
     LibQemu& m_inst;
-    LibQemuExports* m_exports;
+    LibQemuExports* m_exports = nullptr;
 
     LibQemuObjectCallback<Cpu::EndOfLoopCallbackFn> m_cpu_end_of_loop_cbs;
     LibQemuObjectCallback<Cpu::CpuKickCallbackFn> m_cpu_kick_cbs;

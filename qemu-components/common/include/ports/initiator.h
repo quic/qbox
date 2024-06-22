@@ -422,6 +422,7 @@ public:
     ~QemuInitiatorSocket()
     {
         cancel_all();
+        m_r->m_root->removeSubRegions();
         delete m_r;
         m_r = nullptr;
         //        dmimgr_unlock();

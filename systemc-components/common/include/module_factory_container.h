@@ -441,11 +441,11 @@ public:
 
     virtual ~ContainerBase()
     {
-        m_allModules.clear();
+        m_constructedModules.reverse();
+        m_constructedModules.clear();
         for (auto l : m_dls) {
             dlclose(l);
         }
-        m_dls.clear();
     }
 
     std::shared_ptr<sc_core::sc_module> find_module_by_name(const std::string& mod_name)

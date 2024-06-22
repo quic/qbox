@@ -358,7 +358,7 @@ public:
 
     static constexpr const char* const TYPE = "memory-region";
 
-    MemoryRegion* container;
+    MemoryRegion* container = nullptr;
 
     MemoryRegion() = default;
     MemoryRegion(const MemoryRegion&) = default;
@@ -366,6 +366,7 @@ public:
     MemoryRegion(QemuMemoryRegion* mr, std::shared_ptr<LibQemuInternals> internals);
 
     ~MemoryRegion();
+    void removeSubRegions();
 
     uint64_t get_size();
     int get_priority() const { return m_priority; }

@@ -112,8 +112,10 @@ public:
     }
     void del_dev(QemuDeviceBaseIF* d)
     {
-        std::lock_guard<std::mutex> lock(m_lock);
-        devices.remove(d);
+        if (m_running) {
+            std::lock_guard<std::mutex> lock(m_lock);
+            devices.remove(d);
+        }
     }
     bool can_run()
     {

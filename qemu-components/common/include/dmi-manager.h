@@ -376,6 +376,8 @@ public:
     QemuInstanceDmiManager(const QemuInstanceDmiManager&) = delete;
     QemuInstanceDmiManager(QemuInstanceDmiManager&& a) = delete;
 
+    ~QemuInstanceDmiManager() { m_root.removeSubRegions(); }
+
     void init()
     {
         m_root_container = m_inst.object_new_unparented<QemuContainer>();
