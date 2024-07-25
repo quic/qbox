@@ -304,6 +304,7 @@ if(NOT WITHOUT_QEMU)
 endif()
 
 add_subdirectory(systemc-components)
+add_subdirectory(py-models)
 
 gs_enable_testing()
 
