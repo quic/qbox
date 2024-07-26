@@ -127,50 +127,50 @@
 				device_type = "cpu";
 			};
 
-			cpu@100 {
-				reg = <0x0100>;
+			cpu@1 {
+				reg = <0x1>;
 				enable-method = "psci";
 				compatible = "arm,cortex-a57";
 				device_type = "cpu";
 			};
 
-			cpu@200 {
-				reg = <0x0200>;
+			cpu@2 {
+				reg = <0x2>;
 				enable-method = "psci";
 				compatible = "arm,cortex-a57";
 				device_type = "cpu";
 			};
 
-			cpu@300 {
-				reg = <0x0300>;
+			cpu@3 {
+				reg = <0x3>;
 				enable-method = "psci";
 				compatible = "arm,cortex-a57";
 				device_type = "cpu";
 			};
 
-			cpu@10000 {
-				reg = <0x010000>;
+			cpu@4 {
+				reg = <0x4>;
 				enable-method = "psci";
 				compatible = "arm,cortex-a57";
 				device_type = "cpu";
 			};
 
-			cpu@10100 {
-				reg = <0x010100>;
+			cpu@5 {
+				reg = <0x5>;
 				enable-method = "psci";
 				compatible = "arm,cortex-a57";
 				device_type = "cpu";
 			};
 
-			cpu@10200 {
-				reg = <0x010200>;
+			cpu@6 {
+				reg = <0x6>;
 				enable-method = "psci";
 				compatible = "arm,cortex-a57";
 				device_type = "cpu";
 			};
 
-			cpu@10300 {
-				reg = <0x010300>;
+			cpu@7 {
+				reg = <0x7>;
 				enable-method = "psci";
 				compatible = "arm,cortex-a57";
 				device_type = "cpu";

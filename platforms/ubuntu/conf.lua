@@ -177,7 +177,7 @@ if (ARM_NUM_CPUS > 0) then
             gicv3_maintenance_interrupt = {bind = "&gic_0.ppi_in_cpu_"..i.."_25"},
             pmu_interrupt = {bind = "&gic_0.ppi_in_cpu_"..i.."_23"},
             psci_conduit = psci_conduit,
-            mp_affinity = (math.floor(i / 4) << 16) | ((i % 4)<<8);
+            mp_affinity = (math.floor(i / 8) << 8) | (i % 8);
             -- reset = { bind = "&reset.reset" },
             start_powered_off = true;
             rvbar = INITIAL_DDR_SPACE;
