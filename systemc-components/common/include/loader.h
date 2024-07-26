@@ -35,7 +35,7 @@
 #include <sys/stat.h>
 #endif
 
-#define BINFILE_READ_CHUNK_SIZE 1024
+#define BINFILE_READ_CHUNK_SIZE (1024 * 1024)
 
 namespace gs {
 
