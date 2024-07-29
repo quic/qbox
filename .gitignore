@@ -6,4 +6,5 @@ TAGS
 *.sw?
 .vscode
 .DS_Store
+__pycache__
 platforms/cortex-m55-remote/conf.lua
