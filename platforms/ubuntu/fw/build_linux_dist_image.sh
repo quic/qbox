@@ -1,25 +1,11 @@
 #!/usr/bin/bash
 
- # Copyright (c) 2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
  #
- # This program is free software; you can redistribute it and/or
- # modify it under the terms of the GNU General Public License
- # as published by the Free Software Foundation; either version 2
- # of the License, or (at your option) any later version, or under the
- # Apache License, Version 2.0 (the "License”) at your discretion.
+ # This file is part of libqbox
+ # Copyright (c) 2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
  #
- # SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+ # SPDX-License-Identifier: BSD-3-Clause
  #
- # This program is distributed in the hope that it will be useful,
- # but WITHOUT ANY WARRANTY; without even the implied warranty of
- # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- # GNU General Public License for more details.
- #
- # You should have received a copy of the GNU General Public License
- # along with this program; if not, write to the Free Software
- # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
- # USA. You may obtain a copy of the Apache License at
- # http://www.apache.org/licenses/LICENSE-2.0
 
 
 EXIT_SUCCESS=0
@@ -48,8 +34,11 @@ Options:
 -p  comma separated list of deb packages to be added to image.ext4
 -t  systemd boot target [multi-user.target | graphical.target | <any other target>]
 -s  Rootfs Image size
+-d  OS distribution, i.e. ubuntu, fedora
+-r  OS release, i.e. [noble, jammy, focal] for ubuntu or [37, 38, 40] for fedora
+(Currently only ubuntu and fedora are supported)
 Example:
-    build_ubuntu_image.sh -p <deb packages> -t  <systemd target>
+    build_linux_dist_image.sh -p udev -t multi-user.target -s 5G -d fedora -r 40 
 
 please use these login info:
 username: root
@@ -70,16 +59,22 @@ fail() {
 DEB_PACKAGES_TO_ADD=""
 SD_TARGET="multi-user.target"
 ROOTFS_IMAGE_SIZE="3G"
+OS_DIST="ubuntu"
+OS_RELEASE="jammy"
 
-if [[ $# -eq 6 ]]; then
+if [[ $# -eq 10 ]]; then
 # Don't handle the correctness of the passed parameter in this case,
 # they will be checked later in "case $1 ..." 
     echo "Use $1:"
-    echo $2
+    echo "$2"
     echo "Use $3:"
-    echo $4
+    echo "$4"
 	echo "Use $5:"
-    echo $6
+    echo "$6"
+    echo "Use $7:"
+    echo "$8"
+    echo "Use $9:"
+    echo "${10}"
 elif [[ $# -eq 1  &&  "$1" = "-h" ]]; then
 	usage
 	exit $EXIT_SUCCESS
@@ -87,10 +82,12 @@ elif [[ $# -eq 1  &&  "$1" != "-h" ]]; then
 	usage
 	fail "please use the correct commands line arguments as described above"
 elif [[ $# -eq 0 ]]; then
-    set -- "-t" "multi-user.target" "-p" "" "-s" "3G"
+    set -- "-t" "multi-user.target" "-p" "" "-s" "3G" "-d" "ubuntu" "-r" "jammy"
     echo "Note: use default systemd boot target: multi-user.target"
     echo "Note: No new deb packages are added"
 	echo "Note: use default Rootfs image size: 3G"
+    echo "Note: use default OS distribution: ubuntu"
+    echo "Note: use default OS release: jammy"
 else
     echo "processing arguments ..."
 fi
@@ -112,6 +109,16 @@ while :; do
             shift 2
 			if [[ $# -eq 0 ]]; then break; fi
             ;;
+        -d)
+            OS_DIST=$2
+            shift 2
+			if [[ $# -eq 0 ]]; then break; fi
+            ;;
+        -r)
+            OS_RELEASE=$2
+            shift 2
+			if [[ $# -eq 0 ]]; then break; fi
+            ;;
         *)
             usage
             fail "unkown option used: $1"
@@ -122,17 +129,23 @@ done
 echo "Note: use systemd boot target: ${SD_TARGET}"
 echo "Note: use extra packages: ${DEB_PACKAGES_TO_ADD}"
 echo "Note: use Rootfs image size: ${ROOTFS_IMAGE_SIZE}"
+echo "Note: use OS distribution: ${OS_DIST}"
+echo "Note: use OS release: ${OS_RELEASE}"
 
 MKOSI_GIT_REPO="https://github.com/systemd/mkosi"
 MKOSI_REPO_DIR="mkosi"
-MKOSI_TAG="v13"
+MKOSI_TAG="v24"
+BUILD_DIR=$(pwd)/build
 OUTPUT_ARTIFACTS_DIR="Artifacts"
 COMPRESSED_OUTPUT_KERNEL_IMAGE="image.ext4.vmlinuz"
 INITRD_IMAGE="image.ext4.initrd"
-DEVICE_TREE_SOURCE="ubuntu.dts"
-DEVICE_TREE_BLOB="ubuntu.dtb"
+DEVICE_TREE_SOURCE_SUF=".dts"
+DEVICE_TREE_BLOB_SUF=".dtb"
+DEVICE_TREE_SOURCE="${OS_DIST}${DEVICE_TREE_SOURCE_SUF}"
+DEVICE_TREE_BLOB="${OS_DIST}${DEVICE_TREE_BLOB_SUF}"
 DEVICE_TREE_TEMPLATE="ubuntu-dts.template"
 INITRD_START_ADDR=2323644416 #0x8A800000
+ZIP_SUF=".gz"
 
 # clone git repo to a certain directory.
 # args:
@@ -201,69 +214,27 @@ check_needed_packages_installed() {
     echo "all needed packages are installed."
 }
 
-# get git patch string.
-# args:None
-get_patch_str() {
-    cat << EOF
-diff --git a/mkosi/__init__.py b/mkosi/__init__.py
-index 3aab454..c92737e 100644
---- a/mkosi/__init__.py
-+++ b/mkosi/__init__.py
-@@ -2916,14 +2916,14 @@ def install_debian_or_ubuntu(args: MkosiArgs, root: Path, *, do_run_build_script
- 
-     if args.release not in ("testing", "unstable"):
-         if args.distribution == Distribution.ubuntu:
--            updates = f"deb http://archive.ubuntu.com/ubuntu {args.release}-updates {' '.join(repos)}"
-+            updates = f"deb http://ports.ubuntu.com/ubuntu-ports {args.release}-updates {' '.join(repos)}"
-         else:
-             updates = f"deb http://deb.debian.org/debian {args.release}-updates {' '.join(repos)}"
- 
-         root.joinpath(f"etc/apt/sources.list.d/{args.release}-updates.list").write_text(f"{updates}\n")
- 
-         if args.distribution == Distribution.ubuntu:
--            security = f"deb http://archive.ubuntu.com/ubuntu {args.release}-security {' '.join(repos)}"
-+            security = f"deb http://ports.ubuntu.com/ubuntu-ports {args.release}-security {' '.join(repos)}"
-         elif args.release in ("stretch", "buster"):
-             security = f"deb http://security.debian.org/debian-security/ {args.release}/updates main"
-         else:
-@@ -6726,7 +6726,7 @@ def load_args(args: argparse.Namespace) -> MkosiArgs:
-         elif args.distribution == Distribution.ubuntu:
-             args.mirror = "http://archive.ubuntu.com/ubuntu"
-             if platform.machine() == "aarch64":
--                args.mirror = "http://ports.ubuntu.com/"
-+                args.mirror = "http://ports.ubuntu.com/ubuntu-ports"
-         elif args.distribution == Distribution.arch and platform.machine() == "aarch64":
-             args.mirror = "http://mirror.archlinuxarm.org"
-         elif args.distribution == Distribution.opensuse:
-EOF
-}
-
-# patch mkosi tool to use http://ports.ubuntu.com/ubuntu-ports
-# instead of http://archive.ubuntu.com/ubuntu for AArch64 packages.
-# args:
-# $1: patch string 
-patch_mkosi() {
-    if [ ! -d ${MKOSI_REPO_DIR} ]; then
-        fail "can't find ${INITIAL_WD} repo"
-    fi
-    local patch_str="$1"
-    cd "${MKOSI_REPO_DIR}" || fail "can't cd to ${MKOSI_REPO_DIR}"
-    echo "${patch_str}" | git apply --whitespace=fix --check > /dev/null 2>&1 || { cd ${INITIAL_WD}; return; }
-    echo "patch will be applied to mkosi/__init__.py"
-    echo "${patch_str}" | git apply || fail "can't apply patch to mkosi"
-    cd ${INITIAL_WD}
-}
-
 # use mkosi tool to build ubuntu image.
 # args:
 # $1: extra deb packages
 # $2: systemd boot target
 # $3: rootfs image size
 do_mkosi_build() {
-    local base_deb_packages="udev,dmsetup,networkd-dispatcher,systemd-timesyncd,libnss-systemd,systemd-hwe-hwdb,linux-image-generic,iproute2,iputils-ping,network-manager,gpg,vim,wget,openssh-server,ssh-client,net-tools,dhcpcd5"
+    local base_deb_packages=""
+    local graphical_packages=""
+    case ${OS_DIST} in
+            ubuntu)
+                    base_deb_packages="udev,dmsetup,networkd-dispatcher,systemd-timesyncd,libnss-systemd,systemd-hwe-hwdb,linux-image-generic,iproute2,iputils-ping,network-manager,gpg,vim,wget,openssh-server,ssh-client,net-tools,isc-dhcp-server,isc-dhcp-client"
+                    graphical_packages=$( [[ "$2" == "graphical.target" ]] && printf ",ubuntu-desktop" || printf "" )
+                    ;;
+            fedora) 
+                    base_deb_packages="udev,systemd,kernel-core,openssh-server,openssh-clients,net-tools,systemd-devel,systemd-libs,systemd-udev,systemd-resolved,systemd-networkd,iproute,dhcp-server"
+                    graphical_packages=$( [[ "$2" == "graphical.target" ]] && printf ",@kde-desktop-environment" || printf "" )
+                    ;;
+    esac
+    
     local extra_deb_packages=$( [ ! -z "$1" ] && printf ",$1" || printf "" )
-    local graphical_packages=$( [[ "$2" == "graphical.target" ]] && printf ",ubuntu-desktop" || printf "" )
-    local deb_packages="--package=${base_deb_packages}${extra_deb_packages}${graphical_packages}"
+    local deb_packages="${base_deb_packages}${extra_deb_packages}${graphical_packages}"
     echo "packages add to the rootfs image: ${deb_packages}"
     local image_size="$3"
 	local re='^[0-9]+G$'
@@ -276,21 +247,62 @@ do_mkosi_build() {
     fi
 	echo "Rootfs image size = ${image_size}"
 
-    if [ ! -d "${OUTPUT_ARTIFACTS_DIR}" ]; then
-        mkdir -p Artifacts
+    if [ -d "${OUTPUT_ARTIFACTS_DIR}" ]; then
+        sudo rm -rf ${OUTPUT_ARTIFACTS_DIR}
     fi
 
-    sudo ./mkosi/bin/mkosi -f \
-    --bootable \
-    --boot-protocols=linux \
-    --format=gpt_ext4 \
-    --distribution=ubuntu \
-    --root-size=${image_size} \
-    --output=${OUTPUT_ARTIFACTS_DIR}/image.ext4 \
-    --architecture=aarch64 \
-    --mirror=http://ports.ubuntu.com/ubuntu-ports \
-    --package= ${deb_packages} \
-    --password=root || fail "mkosi failed to build ubutnu"
+    mkdir -p ${OUTPUT_ARTIFACTS_DIR}
+
+    if [ -d "${BUILD_DIR}" ]; then
+        sudo rm -rf ${BUILD_DIR}
+    fi
+
+    mkdir -p ${BUILD_DIR}
+
+    if [ ! -d "mkosi.repart" ]; then
+        fail "missing mkosi.repart dir"
+    fi
+    
+    if [ -e  "mkosi.repart/10-root.conf" ]; then
+        rm mkosi.repart/10-root.conf
+    fi
+
+    touch mkosi.repart/10-root.conf
+    cat >> mkosi.repart/10-root.conf << EOF
+[Partition]
+Type=root
+Format=ext4
+CopyFiles=/
+SizeMinBytes=${ROOTFS_IMAGE_SIZE}
+SizeMaxBytes=${ROOTFS_IMAGE_SIZE}
+
+EOF
+
+    export CACHE_DIRECTORY=${BUILD_DIR}
+
+    sudo -E ./mkosi/bin/mkosi -f \
+    --bootable  \
+    --tools-tree-certificates=yes  \
+    --split-artifacts   \
+    --with-recommends=yes    \
+    --bootloader=none   \
+    --bios-bootloader=none  \
+    --shim-bootloader=none  \
+    --unified-kernel-images=no \
+    --format=disk \
+    --distribution=${OS_DIST} \
+    --output-dir=${OUTPUT_ARTIFACTS_DIR} \
+    --output=image.ext4 \
+    --architecture=arm64 \
+    --release=${OS_RELEASE} \
+    --package=${deb_packages} \
+    --root-password=root \
+    --tools-tree=default    \
+    --workspace-dir=${BUILD_DIR}  \
+    --build-sources=""  \
+    --cache-dir=${BUILD_DIR}  \
+    --package-cache-dir=${BUILD_DIR}  \
+    --build-dir=${BUILD_DIR} || fail "mkosi failed to build ubutnu" 
 }
 
 # uncompress mkosi generate AArch64 compressed kernel image.
@@ -302,11 +314,17 @@ uncompress_kernel_image() {
         fail "can't find images dir: $1"
     fi  
     cd "$1" || fail "can't cd to $1"
-    if [ -e Image ]; then
+    if  file "$2" | grep "gzip compressed"; then
+        gzip -dc "$2" | dd of=Image || fail "can't uncompress linux kernel image: $2"
+    elif file "$2" | grep "PE32+ executable"; then
+        gcc -o get_arm64_gzip_img_from_zboot_efi ../get_arm64_gzip_img_from_zboot_efi.c || fail "can't compile ../get_arm64_gzip_img_from_zboot_efi.c"
+        chmod +x get_arm64_gzip_img_from_zboot_efi || fail "can't chmod +x get_arm64_gzip_img_from_zboot_efi"
+        ./get_arm64_gzip_img_from_zboot_efi  "$2" || fail "can't ./execute get_arm64_gzip_img_from_zboot_efi $2"
+        gzip -dc "${2}${ZIP_SUF}" | dd of=Image || fail "can't uncompress linux kernel image: $2"
+    else
         cd ${INITIAL_WD}
-        return
+        fail "unkown linux kernel image format: $2"
     fi
-    gzip -dc "$2" | dd of=Image || fail "can't uncompress linux kernel image: $2"
     cd ${INITIAL_WD}
     echo "uncompressed AArch64 linux kernel image: $2"
 }
@@ -340,7 +358,7 @@ generate_chosen_node() {
 
 
         chosen {
-		bootargs = "systemd.unit=${sd_boot_target} loglevel=8 root=LABEL=root rootfstype=ext4 rw";
+		bootargs = "systemd.unit=${sd_boot_target} audit=off loglevel=8 root=LABEL=root-arm64 rootfstype=ext4 rw";
 		linux,initrd-start = ${initrd_start_address};
 		linux,initrd-end = ${initrd_end_address};
 		stdout-path = "/pl011@10000000";
@@ -401,7 +419,7 @@ rename_artifacts() {
 	local artifacts_dir="$1"
 	cd "${artifacts_dir}" || fail "can't cd to ${artifacts_dir}"
 	mv Image Image.bin || fail "can't rename Image"
-	mv image.ext4 image_ext4.img || fail "can't rename image.ext4"
+	mv image.ext4.root-arm64.raw image_ext4.img || fail "can't rename image.ext4"
 	mv image.ext4.initrd image_ext4_initrd.img || fail "can't rename image.ext4.initrd"
 	mv image.ext4.vmlinuz image_ext4_vmlinuz.bin || fail "can't rename image.ext4.vmlinuz" 
 	cd ${INITIAL_WD}
@@ -414,7 +432,6 @@ main() {
     check_needed_packages_installed
     clone_git_repo  "${MKOSI_GIT_REPO}" "${MKOSI_REPO_DIR}" 
     checkout_tag "${MKOSI_TAG}" "${MKOSI_REPO_DIR}" 
-    patch_mkosi "$(get_patch_str)"
     do_mkosi_build "${DEB_PACKAGES_TO_ADD}" "${SD_TARGET}" "${ROOTFS_IMAGE_SIZE}"
     uncompress_kernel_image  "${OUTPUT_ARTIFACTS_DIR}" "${COMPRESSED_OUTPUT_KERNEL_IMAGE}"
     generate_dts "${OUTPUT_ARTIFACTS_DIR}" "${SD_TARGET}" "${INITRD_IMAGE}" "${DEVICE_TREE_SOURCE}" "${DEVICE_TREE_TEMPLATE}"

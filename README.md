@@ -732,7 +732,7 @@ The library also provides socket initiators and targets for Qemu
 
 # Ubuntu image
 
-You can build a customized Ubuntu OS (jammy) rootfs image with a script called `build_ubuntu_image.sh`.
+You can build a customized Ubuntu OS rootfs image with a script called `build_linux_dist_image.sh`.
 (Tested on Ubuntu 20.04.5 LTS host machine)
 
 ## Run it by hand
@@ -740,7 +740,7 @@ You can build a customized Ubuntu OS (jammy) rootfs image with a script called `
 You can test this script with a virtual platform in `platforms/ubuntu/`.
 The script is in `platforms/ubuntu/fw/`.
 
-build_ubuntu_image.sh is used to build the Ubuntu OS artifacts.
+build_linux_dist_image.sh is used to build the Ubuntu OS artifacts.
 The output build artifacts are:
 - Image.bin (uncompressed AARch64 Linux kernel image with efi stub)
 - image_ext4_vmlinuz.bin (gzip compressed AARch64 Linux kernel image)
@@ -754,7 +754,7 @@ So if you want to test this platform, you should go in `platforms/ubuntu/fw/`and
 like that:
 
 ```
-./build_ubuntu_image.sh -s 4G -p xorg,openbox,mesa-utils,pciutils
+./build_linux_dist_image.sh -s 4G -p xorg,pciutils
 ```
 
 It will create a `Artifacts` directory with all of the thing needed inside it.
