@@ -275,7 +275,8 @@ PYBIND11_EMBEDDED_MODULE(tlm_generic_payload, m)
         .def("get_data",
              [](tlm::tlm_generic_payload& trans) -> py_char_array {
                  // https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
-                 auto result = py_char_array(trans.get_data_length());
+                 std::vector<pybind11::ssize_t> shape = { trans.get_data_length() };
+                 auto result = py_char_array(shape);
                  pybind11::buffer_info buf = result.request();
                  std::memcpy(buf.ptr, reinterpret_cast<uint8_t*>(trans.get_data_ptr()), trans.get_data_length());
                  return result;
@@ -294,7 +295,8 @@ PYBIND11_EMBEDDED_MODULE(tlm_generic_payload, m)
              })
         .def("get_byte_enable",
              [](tlm::tlm_generic_payload& trans) -> py_char_array {
-                 auto result = py_char_array(trans.get_byte_enable_length());
+                 std::vector<pybind11::ssize_t> shape = { trans.get_byte_enable_length() };
+                 auto result = py_char_array(shape);
                  pybind11::buffer_info buf = result.request();
                  std::memcpy(buf.ptr, reinterpret_cast<uint8_t*>(trans.get_byte_enable_ptr()),
                              trans.get_byte_enable_length());
