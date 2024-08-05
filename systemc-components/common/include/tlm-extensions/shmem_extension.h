@@ -26,10 +26,12 @@ public:
     std::string m_memid;
     uint64_t m_mapped_addr;
     uint64_t m_size;
+    int m_fd;
 
     ShmemIDExtension(): m_mapped_addr(0), m_size(0){};
     ShmemIDExtension(const ShmemIDExtension&) = default;
-    ShmemIDExtension(std::string& s, uint64_t addr, uint64_t size): m_memid(s), m_mapped_addr(addr), m_size(size)
+    ShmemIDExtension(std::string& s, uint64_t addr, uint64_t size, int fd = -1)
+        : m_memid(s), m_mapped_addr(addr), m_size(size), m_fd(fd)
     {
         SCP_DEBUG("ShmemIDExtension") << "ShmemIDExtension constructor";
     }
@@ -38,6 +40,7 @@ public:
         m_memid.assign(o.m_memid);
         m_mapped_addr = o.m_mapped_addr;
         m_size = o.m_size;
+        m_fd = o.m_fd;
         return *this;
     }
 

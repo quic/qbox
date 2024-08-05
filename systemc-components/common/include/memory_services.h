@@ -91,7 +91,7 @@ public:
 
     uint8_t* map_file(const char* mapfile, uint64_t size, uint64_t offset);
 
-    uint8_t* map_mem_create(const char* memname, uint64_t size);
+    uint8_t* map_mem_create(const char* memname, uint64_t size, int* o_fd);
 
     uint8_t* map_mem_join(const char* memname, size_t size);
 

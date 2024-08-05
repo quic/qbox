@@ -129,9 +129,10 @@ class gs_memory : public sc_core::sc_module
                         shmname_stream << "/" << std::hex << hash;
                     }
                     std::string shmname = shmname_stream.str();
-                    if ((m_ptr = MemoryServices::get().map_mem_create(shmname.c_str(), m_len)) != nullptr) {
+                    int shm_fd = -1;
+                    if ((m_ptr = MemoryServices::get().map_mem_create(shmname.c_str(), m_len, &shm_fd)) != nullptr) {
                         m_mapped = true;
-                        m_shmemID = ShmemIDExtension(shmname, (uint64_t)m_ptr, m_len);
+                        m_shmemID = ShmemIDExtension(shmname, (uint64_t)m_ptr, m_len, shm_fd);
                         return *this;
                     }
                 }

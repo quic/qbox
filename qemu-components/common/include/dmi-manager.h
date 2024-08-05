@@ -100,14 +100,14 @@ public:
     public:
         DmiRegion() = default;
 
-        DmiRegion(const tlm::tlm_dmi& info, int priority, qemu::LibQemu& inst)
+        DmiRegion(const tlm::tlm_dmi& info, int priority, qemu::LibQemu& inst, int fd = -1)
             : m_ptr(info.get_dmi_ptr())
             , m_container(inst.object_new_unparented<QemuContainer>())
             , m_mr(inst.object_new_unparented<qemu::MemoryRegion>())
             , m_size(size_from_tlm_dmi(info))
         {
             //          This will parent the objects
-            m_mr.init_ram_ptr(m_container, "dmi", m_size, m_ptr);
+            m_mr.init_ram_ptr(m_container, "dmi", m_size, m_ptr, fd);
             m_mr.set_priority(priority);
             SCP_INFO("DMI.Libqbox") << "Creating " << *this;
         }
@@ -296,7 +296,7 @@ public:
      * region container. They can overlap, hence we use the priority mechanism
      * provided by QEMU.
      */
-    void get_region(const tlm::tlm_dmi& info)
+    void get_region(const tlm::tlm_dmi& info, int fd = -1)
     {
         DmiRegion::Key start = DmiRegion::key_from_tlm_dmi(info);
         uint64_t size = (info.get_end_address() - info.get_start_address()) + 1;
@@ -360,7 +360,7 @@ public:
             m_regions.erase(existing_it);
         }
 
-        DmiRegion region = DmiRegion(dmi, priority, m_inst);
+        DmiRegion region = DmiRegion(dmi, priority, m_inst, fd);
         m_root.add_subregion_overlap(region.get_mut_mr(), region.get_key());
 
         auto res = m_regions.emplace(region.get_key(), std::move(region));
@@ -388,9 +388,9 @@ public:
     /**
      * @brief Create a new alias for the DMI region designated by `info`
      */
-    DmiRegionAlias::Ptr get_new_region_alias(const tlm::tlm_dmi& info)
+    DmiRegionAlias::Ptr get_new_region_alias(const tlm::tlm_dmi& info, int fd = -1)
     {
-        get_region(info);
+        get_region(info, fd);
         return std::make_shared<DmiRegionAlias>(m_root, info, m_inst);
     }
 };

@@ -110,7 +110,7 @@ uint8_t* gs::MemoryServices::map_file(const char* mapfile, uint64_t size, uint64
     return ptr;
 }
 
-uint8_t* gs::MemoryServices::map_mem_create(const char* memname, uint64_t size)
+uint8_t* gs::MemoryServices::map_mem_create(const char* memname, uint64_t size, int* o_fd)
 {
     if (cl_info && cl_info->count == MAX_SHM_SEGS_NUM)
         SCP_FATAL(()) << "can't shm_open create " << memname << ", exceeded: " << MAX_SHM_SEGS_NUM << std::endl;
@@ -135,7 +135,6 @@ uint8_t* gs::MemoryServices::map_mem_create(const char* memname, uint64_t size)
     SCP_DEBUG(()) << "Create Length " << size;
     uint8_t* ptr = (uint8_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     int mmap_error = errno; // even if no error happens here, we need to capture errno directly after mmap()
-    close(fd);
     if (ptr == MAP_FAILED) {
         die_sys_api(mmap_error, memname, "can't mmap(shared memory create)");
     }
@@ -147,6 +146,7 @@ uint8_t* gs::MemoryServices::map_mem_create(const char* memname, uint64_t size)
     strncpy(cl_info->name[cl_info->count++], memname,
             strlen(memname) + 1); // must be called after start_shm_cleaner_proc() to make sure
                                   // that cl_info is allocated.
+    *o_fd = fd;
     return ptr;
 }
 

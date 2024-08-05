@@ -375,7 +375,7 @@ public:
 
     void init(const Object& owner, const char* name, uint64_t size);
     void init_io(Object owner, const char* name, uint64_t size, MemoryRegionOpsPtr ops);
-    void init_ram_ptr(Object owner, const char* name, uint64_t size, void* ptr);
+    void init_ram_ptr(Object owner, const char* name, uint64_t size, void* ptr, int fd = -1);
     void init_alias(Object owner, const char* name, const MemoryRegion& root, uint64_t offset, uint64_t size);
 
     void add_subregion(MemoryRegion& mr, uint64_t offset);

@@ -152,11 +152,12 @@ void MemoryRegion::init_io(Object owner, const char* name, uint64_t size, Memory
     m_int->exports().memory_region_init_io(mr, owner.get_qemu_obj(), qemu_ops, m_ops.get(), name, size);
 }
 
-void MemoryRegion::init_ram_ptr(Object owner, const char* name, uint64_t size, void* ptr)
+void MemoryRegion::init_ram_ptr(Object owner, const char* name, uint64_t size, void* ptr, int fd)
 {
     QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
 
     m_int->exports().memory_region_init_ram_ptr(mr, owner.get_qemu_obj(), name, size, ptr);
+    m_int->exports().libqemu_memory_region_set_fd(mr, fd);
 }
 
 void MemoryRegion::init_alias(Object owner, const char* name, const MemoryRegion& root, uint64_t offset, uint64_t size)

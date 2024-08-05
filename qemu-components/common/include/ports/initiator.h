@@ -25,6 +25,7 @@
 #include <qemu-instance.h>
 #include <tlm-extensions/qemu-mr-hint.h>
 #include <tlm-extensions/exclusive-access.h>
+#include <tlm-extensions/shmem_extension.h>
 #include <tlm_sockets_buswidth.h>
 
 class QemuInitiatorIface
@@ -167,6 +168,7 @@ protected:
     {
         assert(trans.is_dmi_allowed());
         tlm::tlm_dmi dmi_data;
+        int shm_fd = -1;
 
         SCP_INFO(()) << "DMI request for address 0x" << std::hex << trans.get_address();
 
@@ -175,6 +177,13 @@ protected:
 
         if (!(*this)->get_direct_mem_ptr(trans, dmi_data)) {
             return dmi_data;
+        }
+
+        gs::ShmemIDExtension* shm_ext = trans.get_extension<gs::ShmemIDExtension>();
+        // it's ok that ShmemIDExtension is not added to trans as this should only happen when
+        // memory is a shared memory type.
+        if (shm_ext) {
+            shm_fd = shm_ext->m_fd;
         }
 
         SCP_INFO(()) << "DMI Adding for address 0x" << std::hex << trans.get_address();
@@ -248,7 +257,7 @@ protected:
         SCP_INFO(()) << "Adding DMI for range [0x" << std::hex << dmi_data.get_start_address() << "-0x" << std::hex
                      << dmi_data.get_end_address() << "]";
 
-        DmiRegionAlias::Ptr alias = m_inst.get_dmi_manager().get_new_region_alias(dmi_data);
+        DmiRegionAlias::Ptr alias = m_inst.get_dmi_manager().get_new_region_alias(dmi_data, shm_fd);
 
         m_dmi_aliases[start] = alias;
         add_dmi_mr_alias(m_dmi_aliases[start]);
