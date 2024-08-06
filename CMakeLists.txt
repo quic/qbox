@@ -179,6 +179,38 @@ add_library(${PROJECT_NAME} SHARED
 build_lua()
 
 if (NOT WITHOUT_QEMU)
+
+    CPMAddPackage(
+        NAME libslirp
+        GIT_REPOSITORY https://gitlab.freedesktop.org/slirp/libslirp.git
+        GIT_TAG v4.8.0
+        DOWNLOAD_ONLY YES
+    )
+
+    execute_process(
+        COMMAND meson setup --default-library static --prefix ${CMAKE_BINARY_DIR}/_deps/libslirp-prefix/ ${CMAKE_BINARY_DIR}/_deps/libslirp-src/build ${CMAKE_BINARY_DIR}/_deps/libslirp-src
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/_deps/libslirp-src
+        RESULT_VARIABLE result
+        ERROR_VARIABLE error_output
+    )
+
+    if(result)
+        message(FATAL_ERROR "The command 'meson setup' failed with the output error: \n${error_output}")
+    endif()
+
+    execute_process(
+        COMMAND meson install -C ${CMAKE_BINARY_DIR}/_deps/libslirp-src/build
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/_deps/libslirp-src
+        RESULT_VARIABLE result
+        ERROR_VARIABLE error_output
+    )
+
+    if(result)
+        message(FATAL_ERROR "The command 'meson install' failed with the output error: \n${error_output}")
+    endif()
+
+    set(CONFIGURE_ENVIRONMENT_VARIABLE "PKG_CONFIG_PATH=${CMAKE_BINARY_DIR}/_deps/libslirp-prefix/lib/x86_64-linux-gnu/pkgconfig/")
+
     # This is a hack to workaround a CMake issue. We specify an existing file which
     # is _not_ a submodule so that FetchContent does not init any submodule.
     # See https://gitlab.kitware.com/cmake/cmake/-/issues/20579
