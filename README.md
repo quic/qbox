@@ -631,6 +631,7 @@ if (ARM_NUM_CPUS > 0) then
             psci_conduit = "hvc";
             mp_affinity = (math.floor(i / 8) << 8) | (i % 8);
             start_powered_off = true;
+            cntfrq_hz = 6250000,
         };
         if (i==0) then
             cpu["rvbar"] = 0x00000000;

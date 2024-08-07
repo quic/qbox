@@ -42,6 +42,7 @@ protected:
 public:
     cci::cci_param<bool> p_start_powered_off;
     cci::cci_param<uint64_t> p_rvbar;
+    cci::cci_param<uint64_t> p_cntfrq_hz;
     cci::cci_param<bool> p_has_el2;
     cci::cci_param<std::string> p_psci_conduit;
 
@@ -63,6 +64,7 @@ public:
         : QemuCpuArm(name, inst, "cortex-r52-arm")
         , p_has_el2("has_el2", true, "ARM virtualization extensions")
         , p_rvbar("rvbar", 0ull, "Reset vector base address register value")
+        , p_cntfrq_hz("cntfrq_hz", 1ull, "CPU Generic Timer CNTFRQ in Hz")
         , p_start_powered_off("start_powered_off", false,
                               "Start and reset the CPU "
                               "in powered-off state")
@@ -91,6 +93,7 @@ public:
         cpu.set_prop_bool("start-powered-off", p_start_powered_off);
         cpu.set_prop_int("rvbar", p_rvbar);
         cpu.set_prop_int("psci-conduit", get_psci_conduit_val());
+        cpu.set_prop_int("cntfrq", p_cntfrq_hz);
     }
 
     void end_of_elaboration() override

@@ -68,6 +68,7 @@ public:
     cci::cci_param<bool> p_start_powered_off;
     cci::cci_param<std::string> p_psci_conduit;
     cci::cci_param<uint64_t> p_rvbar;
+    cci::cci_param<uint64_t> p_cntfrq_hz;
 
     QemuTargetSignalSocket irq_in;
     QemuTargetSignalSocket fiq_in;
@@ -98,6 +99,7 @@ public:
                          "hvc->through hvc call, "
                          "smc->through smc call")
         , p_rvbar("rvbar", 0ull, "Reset vector base address register value")
+        , p_cntfrq_hz("cntfrq_hz", 1ull, "CPU Generic Timer CNTFRQ in Hz")
 
         , irq_in("irq_in")
         , fiq_in("fiq_in")
@@ -133,6 +135,7 @@ public:
         cpu.set_prop_int("psci-conduit", get_psci_conduit_val());
 
         cpu.set_prop_int("rvbar", p_rvbar);
+        cpu.set_prop_int("cntfrq", p_cntfrq_hz);
     }
 
     void end_of_elaboration() override
