@@ -622,7 +622,7 @@ if (ARM_NUM_CPUS > 0) then
             moduletype = "cpu_arm_cortexA53";
             args = {"&platform.qemu_inst"};
             mem = {bind = "&router.target_socket"};
-            has_el3 = true;
+            has_el2 = true;
             has_el3 = false;
             irq_timer_phys_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_NS_EL1_IRQ},
             irq_timer_virt_out = {bind = "&gic_0.ppi_in_cpu_"..i.."_"..ARCH_TIMER_VIRT_IRQ},
