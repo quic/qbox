@@ -9,8 +9,6 @@ set(GIT_BRANCH "main" CACHE STRING "Git branch from which to clone all gs reposi
 if(EXISTS "${PROJECT_SOURCE_DIR}/Packages")
   message(STATUS "Using Packages cache")
   set(ENV{CPM_SOURCE_CACHE} "${PROJECT_SOURCE_DIR}/Packages")
-  set(PROJECT_PATH ${PROJECT_SOURCE_DIR})
-  set(GREENSOCS_GIT "https://gitlab.qualcomm.com/qqvp/")
 endif()
 
 macro(gs_addexpackage)

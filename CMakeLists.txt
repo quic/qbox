@@ -12,7 +12,17 @@ execute_process(COMMAND git config --get remote.origin.url
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE GIT_URL)
 
-string(FIND "${GIT_URL}" "github" GITHUB_URL)
+string(REGEX MATCH "(.*\/)" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
+string(REGEX REPLACE "(.*)/sandboxes/[^\/]*/(.*)" "\\1/" GREENSOCS_GIT_ORIGIN "${GREENSOCS_GIT_ORIGIN}")
+
+if ("${GREENSOCS_GIT}" STREQUAL "")
+    set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
+endif()
+
+message(STATUS "GREENSOCS_GIT = ${GREENSOCS_GIT}")
+
+string(FIND "${GREENSOCS_GIT}" "github" GITHUB_URL)
+
 if(GITHUB_URL EQUAL -1)
     set(QEMU_PATH_NAME "qemu/qemu")
 else()
@@ -21,25 +31,20 @@ endif()
 
 message(STATUS "QEMU_PATH_NAME=${QEMU_PATH_NAME}")
 
-string(REGEX MATCH "(.*\/)" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
-string(REGEX REPLACE "(.*)/sandboxes/[^\/]*/(.*)" "\\1/" GREENSOCS_GIT_ORIGIN "${GREENSOCS_GIT_ORIGIN}")
-
-if ("${GREENSOCS_GIT}" STREQUAL "")
-    set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
-endif()
-
 include(FetchContent)
 include(CTest)
 
-if(EXISTS "${PROJECT_PATH}/Packages/CPM.cmake/cmake/CPM.cmake")
-  include(${PROJECT_PATH}/Packages/CPM.cmake/cmake/CPM.cmake)
-else()
-  FetchContent_Declare(
+FetchContent_Declare(
     cpm-cmake
     GIT_REPOSITORY https://github.com/cpm-cmake/CPM.cmake.git
     GIT_TAG v0.31.1)
-  FetchContent_MakeAvailable(cpm-cmake)
-  include(${cpm-cmake_SOURCE_DIR}/cmake/CPM.cmake)
+FetchContent_MakeAvailable(cpm-cmake)
+include(${cpm-cmake_SOURCE_DIR}/cmake/CPM.cmake)
+
+if(EXISTS "${PROJECT_SOURCE_DIR}/Packages")
+    if("${GREENSOCS_GIT}" STREQUAL "")
+        set(GREENSOCS_GIT "https://git.codelinaro.org/clo/private/qqvp/")
+    endif()
 endif()
 
 # Allow using package-lock.cmake files in projects using this boilerplate to pin repos, etc.
