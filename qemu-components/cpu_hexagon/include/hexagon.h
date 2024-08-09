@@ -75,6 +75,8 @@ public:
         , p_vtcm_size_kb("vtcm_size_kb", 0, "vtcm size in kb")
         , p_num_coproc_instance("num_coproc_instance", 0, "number of coproc instances")
         , p_hvx_contexts("hvx_contexts", 0, "number of HVX contexts")
+        , p_jtlb_size("jtlb_size", 0, "number of JTLB entries")
+        , p_dma_jtlb_size("dma_jtlb_size", 0, "number of extended JTLB entries")
     /*
      * We have no choice but to attach-suspend here. This is fixable but
      * non-trivial. It means that the SystemC kernel will never starve...
@@ -119,6 +121,8 @@ public:
         cpu.set_prop_int("vtcm-size-kb", p_vtcm_size_kb);
         cpu.set_prop_int("num-coproc-instance", p_num_coproc_instance);
         cpu.set_prop_int("hvx-contexts", p_hvx_contexts);
+        cpu.set_prop_int("jtlb-size", p_jtlb_size);
+        cpu.set_prop_int("dma-jtlb-size", p_dma_jtlb_size);
     }
 
     void end_of_elaboration() override
@@ -150,6 +154,8 @@ public:
     cci::cci_param<uint32_t> p_vtcm_size_kb;
     cci::cci_param<uint32_t> p_num_coproc_instance;
     cci::cci_param<uint32_t> p_hvx_contexts;
+    cci::cci_param<uint32_t> p_jtlb_size;
+    cci::cci_param<uint32_t> p_dma_jtlb_size;
 };
 
 extern "C" void module_register();
