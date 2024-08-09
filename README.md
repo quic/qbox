@@ -36,9 +36,9 @@ Install dependencies:
 
 apt update && apt upgrade -y
 
-apt install -y make cmake g++ wget flex bison unzip python3 python3-dev python3-pip pkg-config libpixman-1-dev libglib2.0-dev
+apt install -y make cmake g++ wget flex bison unzip python3 python3-dev python3-pip pkg-config libpixman-1-dev libglib2.0-dev ninja-build
 
-pip3 install numpy
+pip3 install numpy meson
 
 ```
 
