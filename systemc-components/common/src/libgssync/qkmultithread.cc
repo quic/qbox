@@ -26,6 +26,8 @@ namespace gs {
    local_time - this is the tlm2.0 rule (h) */
 void tlm_quantumkeeper_multithread::timehandler()
 {
+    std::unique_lock<std::mutex> lock(mutex);
+
     if (status != RUNNING) {
         // NB must be handled from within timehandler SC_METHOD process
         // Otherwise the sc_unsuspend wont be in the right process
@@ -158,7 +160,12 @@ void tlm_quantumkeeper_multithread::sync()
         m_tick.notify(sc_core::SC_ZERO_TIME);
         /* Wait for some run budget */
         m_extern_waiting = true;
-        cond.wait(lock, [this] { return status != RUNNING || time_to_sync() != sc_core::SC_ZERO_TIME; });
+        while (status == RUNNING && time_to_sync() == sc_core::SC_ZERO_TIME) {
+            if (cond.wait_for(lock, std::chrono::seconds(1)) == std::cv_status::timeout) {
+                SCP_WARN(())("wait_for timeout");
+                m_tick.notify(sc_core::SC_ZERO_TIME);
+            }
+        }
         m_extern_waiting = false;
     }
 }
