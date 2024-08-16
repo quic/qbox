@@ -188,8 +188,8 @@ if (NOT WITHOUT_QEMU)
     )
 
     execute_process(
-        COMMAND meson setup --default-library static --prefix ${CMAKE_BINARY_DIR}/_deps/libslirp-prefix/ ${CMAKE_BINARY_DIR}/_deps/libslirp-src/build ${CMAKE_BINARY_DIR}/_deps/libslirp-src
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/_deps/libslirp-src
+        COMMAND meson setup --default-library static --prefix ${libslirp_BINARY_DIR}/libslirp-prefix/ ${libslirp_BINARY_DIR} ${libslirp_SOURCE_DIR}
+        WORKING_DIRECTORY ${libslirp_SOURCE_DIR}
         RESULT_VARIABLE result
         ERROR_VARIABLE error_output
     )
@@ -199,8 +199,8 @@ if (NOT WITHOUT_QEMU)
     endif()
 
     execute_process(
-        COMMAND meson install -C ${CMAKE_BINARY_DIR}/_deps/libslirp-src/build
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/_deps/libslirp-src
+        COMMAND meson install -C ${libslirp_BINARY_DIR}
+        WORKING_DIRECTORY ${libslirp_SOURCE_DIR}
         RESULT_VARIABLE result
         ERROR_VARIABLE error_output
     )
@@ -209,7 +209,7 @@ if (NOT WITHOUT_QEMU)
         message(FATAL_ERROR "The command 'meson install' failed with the output error: \n${error_output}")
     endif()
 
-    set(CONFIGURE_ENVIRONMENT_VARIABLE "PKG_CONFIG_PATH=${CMAKE_BINARY_DIR}/_deps/libslirp-prefix/lib/${CMAKE_LIBRARY_ARCHITECTURE}/pkgconfig/")
+    set(CONFIGURE_ENVIRONMENT_VARIABLE "PKG_CONFIG_PATH=${libslirp_BINARY_DIR}/libslirp-prefix/lib/${CMAKE_LIBRARY_ARCHITECTURE}/pkgconfig/")
 
     # This is a hack to workaround a CMake issue. We specify an existing file which
     # is _not_ a submodule so that FetchContent does not init any submodule.
