@@ -209,7 +209,7 @@ if (NOT WITHOUT_QEMU)
         message(FATAL_ERROR "The command 'meson install' failed with the output error: \n${error_output}")
     endif()
 
-    set(CONFIGURE_ENVIRONMENT_VARIABLE "PKG_CONFIG_PATH=${CMAKE_BINARY_DIR}/_deps/libslirp-prefix/lib/x86_64-linux-gnu/pkgconfig/")
+    set(CONFIGURE_ENVIRONMENT_VARIABLE "PKG_CONFIG_PATH=${CMAKE_BINARY_DIR}/_deps/libslirp-prefix/lib/${CMAKE_LIBRARY_ARCHITECTURE}/pkgconfig/")
 
     # This is a hack to workaround a CMake issue. We specify an existing file which
     # is _not_ a submodule so that FetchContent does not init any submodule.
