@@ -245,9 +245,12 @@ public:
         auto existing_it = m_regions.find(start);
         if (existing_it != m_regions.end()) {
             if (existing_it->second.get_size() != size) {
-                SCP_FATAL("DMI.Libqbox")("Overlapping DMI regions!");
+                SCP_INFO("DMI.Libqbox")("Overlapping DMI regions!");
+                m_root.del_subregion(existing_it->second.get_mut_mr());
+                m_regions.erase(existing_it);
+            } else {
+                return; // Identicle region exists
             }
-            return; // Identicle region exists
         }
         DmiRegion region = DmiRegion(dmi, 0, m_inst, fd);
         m_root.add_subregion(region.get_mut_mr(), region.get_key());

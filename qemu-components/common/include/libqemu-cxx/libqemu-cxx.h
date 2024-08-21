@@ -8,8 +8,12 @@
 
 #pragma once
 
-// SID this one for you to play with!
-// #define UNORD
+/*
+ * it seems like there is a trade off between an unordered and ordered map for the cached iommu translations.
+ * More experimentation is probably required. For now it looks like the unordered map is better,
+ * but this is left as a convenience for testing the alternative.
+ */
+#define USE_UNORD
 
 #include <string>
 #include <unordered_map>
@@ -456,15 +460,15 @@ public:
         IOMMU_RW = 3,
     } IOMMUAccessFlags;
 
-    typedef struct {
+    struct IOMMUTLBEntry {
         QemuAddressSpace* target_as;
         uint64_t iova;
         uint64_t translated_addr;
         uint64_t addr_mask;
         IOMMUAccessFlags perm;
-    } IOMMUTLBEntry;
+    };
 
-#ifdef UNORD
+#ifdef USE_UNORD
     std::unordered_map<uint64_t, qemu::IOMMUMemoryRegion::IOMMUTLBEntry> m_mapped_te;
 #else
     std::map<uint64_t, qemu::IOMMUMemoryRegion::IOMMUTLBEntry> m_mapped_te;
