@@ -332,8 +332,9 @@ public:
      - archive_name: the name of the zip archive.
      - file_name: name of the file to be extracted from archive_name.
     */
-    void zip_file_load(zip_t* p_archive, const std::string& archive_name, uint64_t addr, std::string file_name = "",
-                       uint64_t file_offset = 0, uint64_t file_data_len = 0)
+    void zip_file_load(zip_t* p_archive, const std::string& archive_name, uint64_t addr,
+                       const std::string& file_name = "", uint64_t file_offset = 0, uint64_t file_data_len = 0,
+                       bool is_compressed = false, const std::string& uncompressed_file_name = "")
     {
         if (archive_name.empty()) SCP_FATAL(()) << "Missing zip archive name!";
         zip_t* z_archive = p_archive;
@@ -357,9 +358,39 @@ public:
             if (zip_stat_index(z_archive, 0, ZIP_FL_NOCASE, &z_stat) < 0)
                 SCP_FATAL(()) << "Can't get status os the file inside zip archive: " << archive_name;
         }
+        zip_int64_t used_data_len = 0;
+        if (!is_compressed) {
+            std::vector<uint8_t> bin_info(z_stat.size);
+            used_data_len = zip_read_file(z_archive, archive_name, z_stat, bin_info, file_offset, file_data_len);
+            SCP_DEBUG(()) << "load data from zip archive " << archive_name << " to addr: 0x" << std::hex << addr
+                          << " len: 0x" << std::hex << used_data_len;
+            send(addr, reinterpret_cast<uint8_t*>(&bin_info[0]) + file_offset, used_data_len);
+        } else {
+            std::vector<uint8_t> compressed_file_data(z_stat.size);
+            zip_read_file(z_archive, file_name, z_stat, compressed_file_data, 0, z_stat.size);
+            zip_t* f_archive = zip_open_from_source(
+                zip_source_buffer_create(reinterpret_cast<uint8_t*>(&compressed_file_data[0]), z_stat.size, 0, nullptr),
+                ZIP_RDONLY, nullptr);
+            if (!f_archive) SCP_FATAL(()) << "Can't open zip archive: " << file_name;
+            zip_int64_t f_num_entries = zip_get_num_entries(f_archive, ZIP_FL_UNCHANGED);
+            if (f_num_entries != 1)
+                SCP_FATAL(()) << "Compressed file: " << file_name << " in: " << archive_name << " is corrupted!";
+            zip_stat_t f_stat;
+            if (zip_stat(f_archive, uncompressed_file_name.c_str(), ZIP_FL_NOCASE, &f_stat) < 0)
+                SCP_FATAL(()) << "Can't find any file named: " << uncompressed_file_name
+                              << " in the zip archive: " << file_name << " extracted from: " << archive_name;
+            std::vector<uint8_t> bin_info(f_stat.size);
+            used_data_len = zip_read_file(f_archive, file_name, f_stat, bin_info, file_offset, file_data_len);
+            SCP_DEBUG(()) << "load data from zip archive " << file_name << " to addr: 0x" << std::hex << addr
+                          << " len: 0x" << std::hex << used_data_len;
+            send(addr, reinterpret_cast<uint8_t*>(&bin_info[0]) + file_offset, used_data_len);
+        }
+    }
 
-        std::vector<uint8_t> bin_info(z_stat.size);
-        uint8_t* bin_info_t = &bin_info[0];
+    zip_int64_t zip_read_file(zip_t* z_archive, const std::string& archive_name, const zip_stat_t& z_stat,
+                              std::vector<uint8_t>& data, uint64_t file_offset, uint64_t file_data_len)
+    {
+        uint8_t* bin_info_t = &data[0];
         zip_file_t* fd = zip_fopen(z_archive, z_stat.name, ZIP_FL_NOCASE);
         if (!fd) SCP_FATAL(()) << "Can't open file: " << z_stat.name << "in zip archive: " << archive_name;
         zip_int64_t used_file_data_len = 0;
@@ -383,10 +414,8 @@ public:
             bin_info_t += read_bytes_num;
             rem -= read_bytes_num;
         }
-        SCP_DEBUG(()) << "load data from zip archive " << archive_name << " to addr: 0x" << std::hex << addr
-                      << " len: 0x" << std::hex << used_file_data_len;
-        send(addr, reinterpret_cast<uint8_t*>(&bin_info[0]) + file_offset, used_file_data_len);
         zip_fclose(fd);
+        return used_file_data_len;
     }
 
     void csv_load(std::string filename, uint64_t offset, std::string addr_str, std::string value_str, bool byte_swap)
