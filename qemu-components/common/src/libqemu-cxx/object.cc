@@ -64,16 +64,6 @@ void Object::set_prop_int(const char* name, int64_t val)
     }
 }
 
-void Object::set_prop_uint(const char* name, uint64_t val)
-{
-    QemuError* e = nullptr;
-    m_int->exports().object_property_set_uint(m_obj, name, val, &e);
-
-    if (e != nullptr) {
-        throw SetPropertyException("int", name, m_int->exports().error_get_pretty(e));
-    }
-}
-
 void Object::set_prop_str(const char* name, const char* val)
 {
     QemuError* e = nullptr;

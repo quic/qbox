@@ -12,8 +12,6 @@
 
 #include <libqemu-cxx/libqemu-cxx.h>
 #include <internals.h>
-#include <limits>
-#include <math.h>
 
 namespace qemu {
 
@@ -231,29 +229,12 @@ MemoryRegion::MemTxResult MemoryRegion::dispatch_write(uint64_t addr, uint64_t d
     return QEMU_TO_LIB_MEMTXRESULT_MAPPING(qemu_res);
 }
 
-void IOMMUMemoryRegion::init(const Object& owner, const char* name, uint64_t size, MemoryRegionOpsPtr ops,
-                             IOMMUTranslateCallbackFn cb)
+void MemoryRegion::set_ops(const MemoryRegionOpsPtr ops)
 {
-    m_root_te.init(*this, "IOMMU translated root", std::numeric_limits<uint64_t>::max());
-    m_as_te->init(m_root_te, "IOMMU DMI AddressSpace");
-    m_root.init_io(*this, "IOMMU untranslated root", std::numeric_limits<uint64_t>::max(), ops);
-    m_as->init(m_root, "IOMMU untranslated DMI AddressSpace");
-
-    QemuIOMMUMemoryRegion* mr = reinterpret_cast<QemuIOMMUMemoryRegion*>(m_obj);
-    typedef std::function<int(uint64_t, uint64_t*, unsigned int, MemTxAttrs)> LibQemuIOMMUTranslateCallBack;
-
-    m_int->exports().iommu_memory_region_init(mr, owner.get_qemu_obj(), name, size);
-
-    m_int->get_iommu_translate_cb().register_cb(*this, cb);
-
-    auto s = m_int->exports().memory_region_iommu_get_min_page_size(mr);
-    min_page_sz = log2(s);
-}
-
-void IOMMUMemoryRegion::iommu_unmap(IOMMUTLBEntry* te)
-{
-    QemuIOMMUMemoryRegion* mr = reinterpret_cast<QemuIOMMUMemoryRegion*>(m_obj);
-    m_int->exports().iommu_unmap(mr, (QemuIOMMUTLBEntry*)te);
+    m_ops = ops;
+    QemuMemoryRegion* mr = reinterpret_cast<QemuMemoryRegion*>(m_obj);
+    QemuMemoryRegionOps* qemu_ops = ops->get_qemu_mr_ops();
+    m_int->exports().memory_region_set_ops(mr, qemu_ops);
 }
 
 AddressSpace::AddressSpace(QemuAddressSpace* as, std::shared_ptr<LibQemuInternals> internals)

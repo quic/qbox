@@ -53,7 +53,6 @@ private:
 
     LibQemuObjectCallback<Cpu::EndOfLoopCallbackFn> m_cpu_end_of_loop_cbs;
     LibQemuObjectCallback<Cpu::CpuKickCallbackFn> m_cpu_kick_cbs;
-    LibQemuObjectCallback<IOMMUMemoryRegion::IOMMUTranslateCallbackFn> m_iommu_translate_cbs;
     LibQemuObjectCallback<CpuRiscv64::MipUpdateCallbackFn> m_riscv_mip_update_cbs;
 
     std::vector<LibQemuObjectCallbackBase*> m_cbs{
@@ -78,10 +77,6 @@ public:
     LibQemuObjectCallback<Cpu::EndOfLoopCallbackFn>& get_cpu_end_of_loop_cb() { return m_cpu_end_of_loop_cbs; }
 
     LibQemuObjectCallback<Cpu::CpuKickCallbackFn>& get_cpu_kick_cb() { return m_cpu_kick_cbs; }
-    LibQemuObjectCallback<IOMMUMemoryRegion::IOMMUTranslateCallbackFn>& get_iommu_translate_cb()
-    {
-        return m_iommu_translate_cbs;
-    }
 
     LibQemuObjectCallback<CpuRiscv64::MipUpdateCallbackFn>& get_cpu_riscv_mip_update_cb()
     {

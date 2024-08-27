@@ -30,7 +30,6 @@
 #include <tlm_utils/multi_passthrough_target_socket.h>
 
 #include <tlm-extensions/pathid_extension.h>
-#include <tlm-extensions/underlying-dmi.h>
 #include <cciutils.h>
 #include <router_if.h>
 #include <module_factory_registery.h>
@@ -153,6 +152,7 @@ private:
     std::vector<target_info> alias_targets;
     std::vector<target_info*> targets;
     std::vector<target_info*> id_targets;
+    std::vector<target_info*> dynamic_targets;
 
     std::vector<PathIDExtension*> m_pathIDPool; // at most one per thread!
 #if THREAD_SAFE == true
@@ -198,6 +198,14 @@ private:
         sc_dt::uint64 addr = trans.get_address();
         auto ti = decode_address(trans);
         if (!ti) {
+            for (auto dti : dynamic_targets) {
+                initiator_socket[dti->index]->b_transport(trans, delay);
+                if (trans.get_response_status() == tlm::TLM_OK_RESPONSE) {
+                    return;
+                }
+            }
+        }
+        if (!ti) {
             SCP_WARN(())("Attempt to access unknown register at offset 0x{:x}", addr);
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return;
@@ -219,6 +227,14 @@ private:
         sc_dt::uint64 addr = trans.get_address();
         auto ti = decode_address(trans);
         if (!ti) {
+            for (auto dti : dynamic_targets) {
+                unsigned int ret = initiator_socket[dti->index]->transport_dbg(trans);
+                if (trans.get_response_status() == tlm::TLM_OK_RESPONSE) {
+                    return ret;
+                }
+            }
+        }
+        if (!ti) {
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             return 0;
         }
@@ -233,50 +249,36 @@ private:
     bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
         sc_dt::uint64 addr = trans.get_address();
-
-        tlm::tlm_dmi dmi_data_hole;
-        auto ti = find_hole(addr, dmi_data_hole);
-
-        UnderlyingDMITlmExtension* u_dmi;
-        trans.get_extension(u_dmi);
-        if (u_dmi) {
-            SCP_DEBUG(())
-            ("DMI info 0x{:x} 0x{:x} {}", dmi_data_hole.get_start_address(), dmi_data_hole.get_end_address(),
-             (ti ? "mapped" : "nomap"));
-            u_dmi->add_dmi(this, dmi_data_hole, (ti ? gs::tlm_dmi_ex::dmi_mapped : gs::tlm_dmi_ex::dmi_nomap));
+        auto ti = decode_address(trans);
+        if (!ti) {
+            for (auto dti : dynamic_targets) {
+                unsigned int ret = initiator_socket[dti->index]->get_direct_mem_ptr(trans, dmi_data);
+                if (ret) {
+                    return ret;
+                }
+            }
         }
-
         if (!ti) {
             return false;
         }
+
+        if (ti->use_offset) trans.set_address(addr - ti->address);
 
         if (!m_dmi_mutex.try_lock()) { // if we're busy invalidating, dont grant DMI's
             return false;
         }
 
-        if (ti->use_offset) trans.set_address(addr - ti->address);
         SCP_TRACE((D[ti->index]), ti->name) << "calling get_direct_mem_ptr : " << scp::scp_txn_tostring(trans);
         bool status = initiator_socket[ti->index]->get_direct_mem_ptr(trans, dmi_data);
-        if (ti->use_offset) trans.set_address(addr);
         if (status) {
             if (ti->use_offset) {
                 assert(dmi_data.get_start_address() < ti->size);
                 dmi_data.set_start_address(ti->address + dmi_data.get_start_address());
                 dmi_data.set_end_address(ti->address + dmi_data.get_end_address());
-            }
-            /* ensure we dont overspill the 'hole' we have in the address map */
-            if (dmi_data.get_start_address() < dmi_data_hole.get_start_address()) {
-                dmi_data.set_dmi_ptr(dmi_data.get_dmi_ptr() +
-                                     (dmi_data_hole.get_start_address() - dmi_data.get_start_address()));
-                dmi_data.set_start_address(dmi_data_hole.get_start_address());
-            }
-            if (dmi_data.get_end_address() > dmi_data_hole.get_end_address()) {
-                dmi_data.set_end_address(dmi_data_hole.get_end_address());
+                trans.set_address(addr);
             }
             record_dmi(id, dmi_data);
         }
-        SCP_DEBUG(())
-        ("Providing DMI (status {:x}) {:x} - {:x}", status, dmi_data.get_start_address(), dmi_data.get_end_address());
         m_dmi_mutex.unlock();
         return status;
     }
@@ -342,32 +344,6 @@ private:
         return nullptr;
     }
 
-    target_info* find_hole(uint64_t addr, tlm::tlm_dmi& dmi)
-    {
-        uint64_t end = std::numeric_limits<uint64_t>::max();
-        uint64_t start = 0;
-        for (auto ti : targets) {
-            if (ti->address < end && ti->address > addr) {
-                end = ti->address - 1;
-            }
-            if ((ti->address + ti->size) > start && (ti->address + ti->size) <= addr) {
-                start = ti->address + ti->size;
-            }
-            if (addr >= ti->address && (addr - ti->address) < ti->size) {
-                if (ti->address > start) start = ti->address;
-                if ((ti->address + ti->size) < end) end = ti->address + ti->size;
-                SCP_DEBUG(())("Device found for address {:x} from {:x} to {:x}", addr, start, end);
-                dmi.set_start_address(start);
-                dmi.set_end_address(end);
-                return ti;
-            }
-        }
-        SCP_DEBUG(())("Hole for address {:x} from {:x} to {:x}", addr, start, end);
-        dmi.set_start_address(start);
-        dmi.set_end_address(end);
-        return nullptr;
-    }
-
 protected:
     virtual void before_end_of_elaboration()
     {
@@ -382,6 +358,10 @@ private:
         initialized = true;
 
         for (auto& ti : bound_targets) {
+            if (gs::cci_get_d<bool>(m_broker, ti.name + ".dynamic", false) == true) {
+                dynamic_targets.push_back(&ti);
+                continue;
+            }
             std::string name = ti.name;
             std::string src;
             if (gs::cci_get<std::string>(m_broker, ti.name + ".0", src)) {
