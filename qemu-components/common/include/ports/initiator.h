@@ -29,10 +29,7 @@
 #include <tlm-extensions/underlying-dmi.h>
 #include <tlm_sockets_buswidth.h>
 
-/*
- * Define this as 1 if you want to enable the cache debug mechanism below.
- */
-#define DEBUG_CACHE 0
+// #define DEBUG_CACHE
 
 class QemuInitiatorIface
 {
@@ -143,7 +140,7 @@ protected:
      * @param base_addr base address of the iommumr memory region in the address space
      * @param addr address to translate
      * @param flags QEMU read/write request flags
-     * @param idx   index of translation block.
+     * @param ind   index of translation block.
      *
      */
     void dmi_translate(qemu::IOMMUMemoryRegion::IOMMUTLBEntry* te, std::shared_ptr<qemu::IOMMUMemoryRegion> iommumr,
@@ -151,25 +148,21 @@ protected:
     {
         TlmPayload ltrans;
         uint64_t tmp;
-#if DEBUG_CACHE
+#ifdef DEBUG_CACHE
         bool incache = false;
         qemu::IOMMUMemoryRegion::IOMMUTLBEntry tmpte;
-#endif // DEBUG_CACHE
-
-        /*
-         * Fast path : check to see if the TE is already cached, if so return it straight away.
-         */
+#endif
         {
             // Really wish we didn't need the lock here
             std::lock_guard<std::mutex> lock(m_mutex);
 
-#ifdef USE_UNORD
+#ifdef UNORD
             auto m = iommumr->m_mapped_te.find(addr >> iommumr->min_page_sz);
             if (m != iommumr->m_mapped_te.end()) {
                 *te = m->second;
                 return;
             }
-#else // USE_UNORD
+#else
 
             if (iommumr->m_mapped_te.size() > 0) {
                 auto it = iommumr->m_mapped_te.upper_bound(addr);
@@ -177,10 +170,10 @@ protected:
                     it--;
                     if (it != iommumr->m_mapped_te.end() && (it->first) == (addr & ~it->second.addr_mask)) {
                         *te = it->second;
-#if DEBUG_CACHE
+#ifdef DEBUG_CACHE
                         tmpte = *te;
                         incache = true;
-#endif // DEBUG_CACHE
+#endif
                         SCP_TRACE(())
                         ("FAST translate for 0x{:x} :  0x{:x}->0x{:x} (mask 0x{:x})", addr, te->iova,
                          te->translated_addr, te->addr_mask);
@@ -189,19 +182,8 @@ protected:
                     }
                 }
             }
-#endif // USE_UNORD
+#endif
         }
-
-        /*
-         * Slow path, use DMI to investigate the memory, and see what sort of TE we can set up
-         *
-         * There are 3 options
-         * 1/ a real IOMMU region that should be mapped into the IOMMU address space
-         * 2/ a 'dmi-able' region which is not an IOMMU (e.g. local memory)
-         * 3/ a 'non-dmi-able' object (e.g. an MMIO device) - a minimum page size will be used for this.
-         *
-         * Enable DEBUG_CACHE to see if the fast path should have been used.
-         */
 
         // construct maximal mask.
         uint64_t start_msk = (base_addr ^ (base_addr - 1)) >> 1;
@@ -259,7 +241,7 @@ protected:
                 ("Translate 1-1 passthrough 0x{:x}->0x{:x} (mask 0x{:x})", te->iova, te->translated_addr,
                  te->addr_mask);
             }
-#if DEBUG_CACHE
+#ifdef DEBUG_CACHE
             if (incache) {
                 SCP_WARN(())("Could have used the cache! {:x}\n", addr);
                 assert(te->iova == tmpte.iova);
@@ -268,13 +250,13 @@ protected:
                 assert(te->translated_addr == tmpte.translated_addr);
                 assert(te->perm == tmpte.perm);
             }
-#endif // DEBUG_CACHE
+#endif
             std::lock_guard<std::mutex> lock(m_mutex);
-#ifdef USE_UNORD
+#ifdef UNORD
             iommumr->m_mapped_te[(addr & ~te->addr_mask) >> iommumr->min_page_sz] = *te;
-#else  // USE_UNORD
+#else
             iommumr->m_mapped_te[addr & ~te->addr_mask] = *te;
-#endif //  USE_UNORD
+#endif
             SCP_DEBUG(())
             ("Caching TE at addr 0x{:x} (mask {:x})", addr & ~te->addr_mask, te->addr_mask);
 
@@ -333,7 +315,7 @@ protected:
      * @note Needs to be called with iothread locked as it will be doing several
      * updates and we dont want multiple DMI's
      *
-     * @returns The DMI descriptor for the corresponding DMI region - this is used to help construct memory maps only.
+     * @returns The DMI descriptor for the corresponding DMI region
      */
     tlm::tlm_dmi check_dmi_hint_locked(TlmPayload& trans)
     {
@@ -366,16 +348,6 @@ protected:
             return dmi_data;
         }
 
-        /*
-         * This is the 'special' case of IOMMU's which require an IOMMU memory region setup
-         * The IOMMU will be constructed here, but not populated - that will happen in the callback
-         * There will be a 'pair' of new regions, one to hold non iommu regions within this space,
-         * the other to hold iommu regions themselves.
-         *
-         * In extreme circumstances, if the IOMMU DMI to this region previously failed, we may have
-         * ended up with a normal DMI region here, which needs removing. We do that here, and then simply
-         * return and wait for a new access to sort things out.
-         */
         if (u_dmi.has_dmi(gs::tlm_dmi_ex::dmi_iommu)) {
             /* We have an IOMMU request setup an IOMMU region */
             SCP_INFO(())("IOMMU DMI available for {:x}", trans.get_address());
@@ -391,9 +363,6 @@ protected:
                 // Better check for overlapping iommu's - they must be banned     !!
 
                 qemu::RcuReadLock rcu_read_lock = m_inst.get().rcu_read_lock_new();
-
-                /* invalidate any 'old' regions we happen to have mapped previously */
-                invalidate_single_range(start, start + size);
 
                 SCP_INFO(())
                 ("Adding IOMMU for VA 0x{:x} [0x{:x} - 0x{:x}]", trans.get_address(), start, start + size);
@@ -418,6 +387,8 @@ protected:
                 }
                 m_r->m_root->add_subregion(*iommumr, start);
 
+                /* invalidate any 'old' regions we happen to have mapped previously */
+                invalidate_direct_mem_ptr(start, start + iommumr->get_size());
             } else {
                 // Previously when looking up a TE, we failed to get the lock, so the DMI failed, we ended up in a
                 // limited passthrough. Which causes us to re-arrive here.... but, with a DMI hint. Hopefully next time
@@ -433,6 +404,30 @@ protected:
                 uint64_t end_range = itr->first + itr->second->get_size();
 
                 invalidate_direct_mem_ptr(start_range, end_range);
+#if 0
+#ifdef UNORD
+            start_range >>= iommumr->min_page_sz            ;
+            end_range >>= iommumr->min_page_sz    ;
+#endif
+                for (auto m : m_mmio_mrs) {
+                    if (m.first <= start_range && (m.first + m.second->get_size()) >= end_range) {
+                        for (auto it = itr->second->m_mapped_te.begin(); it != itr->second->m_mapped_te.end();) {
+
+#ifdef UNORD                        
+                        if ((it->first << m.second->min_page_sz) + mr_start >= start_range && (it->first<<m.second->min_page_sz) + mr_start < end_range) {
+#else
+                        if (it->first + mr_start >= start_range && it->first + mr_start < end_range) {
+                        if (it->first >= start_range && it->first < end_range) {
+#endif           
+                                m.second->iommu_unmap(&(it->second));
+                                it = itr->second->m_mapped_te.erase(it);
+                            } else
+                                it++;
+                        }
+                        break;
+                    }
+                }
+#endif
             }
             return dmi_data;
         }
@@ -829,7 +824,7 @@ public:
                 if ((mr_start >= start_range && mr_start <= end_range) ||
                     (mr_end >= start_range && mr_end <= end_range) || (mr_start < start_range && mr_end > end_range)) {
                     for (auto it = m.second->m_mapped_te.begin(); it != m.second->m_mapped_te.end();) {
-#ifdef USE_UNORD
+#ifdef UNORD
                         if ((it->first << m.second->min_page_sz) + mr_start >= start_range &&
                             (it->first << m.second->min_page_sz) + mr_start < end_range) {
 #else
