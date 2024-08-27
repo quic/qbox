@@ -57,6 +57,7 @@ public:
         , p_qtimer_base_addr("qtimer_base_addr", 0xffffffffULL, "qtimer base address")
         , p_exec_start_addr("hexagon_start_addr", 0xffffffffULL, "execution start address")
         , p_vp_mode("vp_mode", true, "override the vp_mode for testing")
+        , p_semihosting("enable_semihosting", false, "enable semihosting for debugging/testing")
         , p_dsp_arch("dsp_arch", "v68", "DSP arch")
         , p_start_powered_off("start_powered_off", false,
                               "Start and reset the CPU "
@@ -106,6 +107,7 @@ public:
         cpu.set_prop_int("start-evb", p_exec_start_addr);
         cpu.set_prop_bool("sched-limit", p_sched_limit);
         cpu.set_prop_bool("virtual-platform-mode", p_vp_mode);
+        cpu.set_prop_bool("enable-semihosting", p_semihosting);
         cpu.set_prop_bool("paranoid-commit-state", p_paranoid);
         cpu.set_prop_int("subsystem-id", p_subsystem_id);
         cpu.set_prop_int("thread-count", p_hexagon_num_threads);
@@ -133,6 +135,7 @@ public:
     cci::cci_param<uint32_t> p_qtimer_base_addr;
     cci::cci_param<uint32_t> p_exec_start_addr;
     cci::cci_param<bool> p_vp_mode;
+    cci::cci_param<bool> p_semihosting;
     cci::cci_param<bool> p_start_powered_off;
     cci::cci_param<bool> p_sched_limit;
     cci::cci_param<bool> p_paranoid;
