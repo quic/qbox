@@ -32,7 +32,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
-
 namespace gs {
 
 class PyInterpreterManager
@@ -67,7 +66,7 @@ public:
 private:
     void init_binder();
 
-    void setup_biflow_socket();
+    void setup_biflow_socket(pybind11::object& _modules);
 
     void do_b_transport(int id, pybind11::object& py_trans, pybind11::object& py_delay);
 
@@ -97,6 +96,7 @@ public:
     cci::cci_param<std::string> p_py_mod_name;
     cci::cci_param<std::string> p_py_mod_dir;
     cci::cci_param<std::string> p_py_mod_args;
+    cci::cci_param<std::string> p_py_mod_current_mod_id_prefix;
     cci::cci_param<uint32_t> p_tlm_initiator_ports_num;
     cci::cci_param<uint32_t> p_tlm_target_ports_num;
     cci::cci_param<uint32_t> p_initiator_signals_num;

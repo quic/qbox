@@ -58,6 +58,7 @@ int sc_main(int argc, char* argv[])
         { "test_bench.python-binder.py_module_dir", cci::cci_value(getexepath()) },
         { "test_bench.python-binder.py_module_name", cci::cci_value("python-binder-test") },
         { "test_bench.python-binder.py_module_args", cci::cci_value("--debug") },
+        { "test_bench.python-binder.current_mod_id_prefix", cci::cci_value("test_")}
     });
 
     ::testing::InitGoogleTest(&argc, argv);
