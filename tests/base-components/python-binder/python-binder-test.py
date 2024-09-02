@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from tlm_generic_payload import tlm_command, tlm_response_status, tlm_generic_payload
-import initiator_signal_socket
+import test_initiator_signal_socket
 from sc_core import (
     sc_time,
     sc_time_unit,
@@ -12,8 +12,8 @@ from sc_core import (
     sc_event,
     sc_time_stamp,
 )
-import tlm_do_b_transport
-import cpp_shared_vars
+import test_tlm_do_b_transport
+import test_cpp_shared_vars
 import functools
 import numpy as np
 from typing import List, Callable
@@ -38,12 +38,15 @@ def parse_args(args_str: str) -> argparse.Namespace:
     return parser.parse_args(shlex.split(args_str))
 
 
-args = parse_args(cpp_shared_vars.module_args)
+args = parse_args(test_cpp_shared_vars.module_args)
 
 
 def log(msg: str) -> None:
     if args.debug:
         print(f"[python] {msg}")
+
+
+log(f"passed arguments: {test_cpp_shared_vars.module_args}")
 
 
 def sc_thread(func):
@@ -111,7 +114,7 @@ def start_of_simulation() -> None:
     trans.set_data_ptr(data)
     trans.set_command(tlm_command.TLM_WRITE_COMMAND)
     delay = sc_time(0, sc_time_unit.SC_NS)
-    tlm_do_b_transport.do_b_transport(0, trans, delay)
+    test_tlm_do_b_transport.do_b_transport(0, trans, delay)
     signal_writer_event.notify(sc_time(0, sc_time_unit.SC_NS))
 
 
@@ -119,9 +122,9 @@ def start_of_simulation() -> None:
 def signal_writer():
     dummy_event.notify(sc_time(10, sc_time_unit.SC_NS))
     for _ in range(0, 2):
-        initiator_signal_socket.write(0, False)
+        test_initiator_signal_socket.write(0, False)
         yield sc_time(10, sc_time_unit.SC_NS)
-        initiator_signal_socket.write(0, True)
+        test_initiator_signal_socket.write(0, True)
         yield sc_time(10, sc_time_unit.SC_NS)
 
 
@@ -222,7 +225,7 @@ def test2(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
     data = generate_test_data2()
     trans.set_data(data)
     trans.set_command(tlm_command.TLM_WRITE_COMMAND)
-    tlm_do_b_transport.do_b_transport(0, trans, delay)
+    test_tlm_do_b_transport.do_b_transport(0, trans, delay)
 
 
 def test3(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
