@@ -8,6 +8,8 @@
 #ifndef __REMOTE_CORTEX_M55__
 #define __REMOTE_CORTEX_M55__
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <systemc>
 #include <tlm>
 #include <cci_configuration>

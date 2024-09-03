@@ -8,6 +8,8 @@
 #ifndef RUNONSYSTEMC_H
 #define RUNONSYSTEMC_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <thread>
 #include <mutex>
 #include <condition_variable>

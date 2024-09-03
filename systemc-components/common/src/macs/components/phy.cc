@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <fcntl.h>
 #include <net/if.h>
 #include <netinet/in.h>

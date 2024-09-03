@@ -9,6 +9,8 @@
 #ifndef _LIBQBOX_COMPONENTS_IRQ_CTRL_ARM_GICV2_H
 #define _LIBQBOX_COMPONENTS_IRQ_CTRL_ARM_GICV2_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <systemc>
 #include <cci_configuration>
 

@@ -12,6 +12,8 @@
 #ifndef _GS_UART_BACKEND_SOCKET_H_
 #define _GS_UART_BACKEND_SOCKET_H_
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <unistd.h>
 #include <poll.h>
 #include <errno.h>

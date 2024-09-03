@@ -8,6 +8,8 @@
 #ifndef SEMAPHORE_H
 #define SEMAPHORE_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 namespace gs {
 
 #include <mutex>

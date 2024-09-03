@@ -7,6 +7,8 @@
 #ifndef _GREENSOCS_BASE_COMPONENTS_REMOTE_H
 #define _GREENSOCS_BASE_COMPONENTS_REMOTE_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <cci_configuration>
 #include <systemc>
 #include <tlm>

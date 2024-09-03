@@ -8,6 +8,8 @@
 #ifndef BASIC_PLATFORM_REPORT_H
 #define BASIC_PLATFORM_REPORT_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <systemc>
 #include <cinttypes>
 

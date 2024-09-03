@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <chrono>
 #include <string>
 
@@ -14,6 +16,10 @@
 #include <cciutils.h>
 #include <argparser.h>
 #include <module_factory_container.h>
+
+#if SC_VERSION_MAJOR < 3
+#warning PLEASE UPDATE TO SYSTEMC 3.0, OLDER VERSIONS ARE DEPRECATED AND MAY NOT WORK
+#endif
 
 class GreenSocsPlatform : public gs::ModuleFactory::Container
 {
@@ -36,6 +42,12 @@ public:
 
 int sc_main(int argc, char* argv[])
 {
+    if (sc_core::sc_version_major < 3) {
+        SCP_WARN()
+        ("\n********************************\nWARNING, USING A DEPRECATED VERSION OF SYSTEMC, PLEASE "
+         "UPGRADE\n********************************");
+    }
+
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)
                           .logAsync(false)

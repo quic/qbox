@@ -7,6 +7,8 @@
 #ifndef _GREENSOCS_BASE_COMPONENTS_REG_ROUTER_H
 #define _GREENSOCS_BASE_COMPONENTS_REG_ROUTER_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <cinttypes>
 #include <iomanip>
 #include <cci_configuration>

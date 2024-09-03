@@ -11,6 +11,9 @@
 
 #ifndef _GS_UART_BACKEND_FILE_H_
 #define _GS_UART_BACKEND_FILE_H_
+
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <systemc>
 #include <tlm.h>
 #include <tlm_utils/simple_target_socket.h>

@@ -9,6 +9,8 @@
 #ifndef _LIBQBOX_COMPONENTS_IRQ_CTRL_HEXAGON_L2VIC_H
 #define _LIBQBOX_COMPONENTS_IRQ_CTRL_HEXAGON_L2VIC_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <string>
 #include <cassert>
 

@@ -9,6 +9,8 @@
 #ifndef TESTS_INCLUDE_TEST_CPU_H
 #define TESTS_INCLUDE_TEST_CPU_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <keystone/keystone.h>
 
 #include <systemc>

@@ -9,6 +9,8 @@
 #ifndef _LIBQBOX_COMPONENTS_MMU_ARM_SMMU_H
 #define _LIBQBOX_COMPONENTS_MMU_ARM_SMMU_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <string>
 #include <cassert>
 

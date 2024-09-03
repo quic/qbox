@@ -8,6 +8,7 @@
 #ifndef CCIUTILS_H
 #define CCIUTILS_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <scp/report.h>
 #include <iostream>
 #include <list>

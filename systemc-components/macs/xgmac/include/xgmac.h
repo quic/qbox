@@ -7,6 +7,8 @@
 
 #pragma once
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include "tlm.h"
 #include "tlm_utils/simple_initiator_socket.h"
 #include "tlm_utils/simple_target_socket.h"

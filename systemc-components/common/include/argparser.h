@@ -7,6 +7,8 @@
 #ifndef __GS_ARG_PARSER_H__
 #define __GS_ARG_PARSER_H__
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <scp/report.h>
 #include <cci_configuration>
 #include <iostream>

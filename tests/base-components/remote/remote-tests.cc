@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include "remote-bench.h"
 #include <cci/utils/broker.h>
 #include <scp/report.h>

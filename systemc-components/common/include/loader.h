@@ -8,6 +8,8 @@
 #ifndef _GREENSOCS_BASE_COMPONENTS_LOADER_H
 #define _GREENSOCS_BASE_COMPONENTS_LOADER_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <fstream>
 
 #include <cci_configuration>

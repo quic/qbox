@@ -8,6 +8,8 @@
 #ifndef _LIBQBOX_COMPONENTS_DISPLAY_H
 #define _LIBQBOX_COMPONENTS_DISPLAY_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <systemc>
 #include <scp/report.h>
 

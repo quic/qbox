@@ -15,6 +15,8 @@
  * using pybind11.
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <cci_configuration>
 #include <systemc>
 #include <tlm>

@@ -8,6 +8,8 @@
 #ifndef ASYNC_EVENT
 #define ASYNC_EVENT
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <iostream>
 
 #include <systemc>

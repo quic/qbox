@@ -8,6 +8,8 @@
 #ifndef QK_FACTORY_H
 #define QK_FACTORY_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <iostream>
 #include <libgssync.h>
 

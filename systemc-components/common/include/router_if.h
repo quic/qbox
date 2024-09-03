@@ -8,6 +8,8 @@
 #ifndef _GREENSOCS_BASE_COMPONENTS_ROUTER_IF_H
 #define _GREENSOCS_BASE_COMPONENTS_ROUTER_IF_H
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <systemc>
 #include <tlm>
 #include <scp/report.h>

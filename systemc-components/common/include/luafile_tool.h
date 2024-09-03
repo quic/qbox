@@ -20,6 +20,8 @@
 #define GC_LUA_DEBUG false
 #endif
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <scp/report.h>
 #include <cci_configuration>
 #include <iostream>
