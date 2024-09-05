@@ -14,6 +14,7 @@ python_backend_stdio_0 = {
         py_module_name = "py-uart";
         py_module_dir = "/path/to/py-models";
         py_module_args = "--enable_input --baudrate 115200";
+        current_mod_id_prefix = "uart_";
         biflow_socket_num = 1;
     };
 
@@ -29,9 +30,9 @@ python_backend_stdio_0 = {
 """
 
 from tlm_generic_payload import tlm_generic_payload
-import biflow_socket
+import uart_biflow_socket
 from sc_core import sc_time, sc_spawn, sc_spawn_options, sc_time_unit, sc_event
-import cpp_shared_vars
+import uart_cpp_shared_vars
 import numpy as np
 import argparse
 import shlex
@@ -72,7 +73,7 @@ def sc_thread(func):
 def module_init() -> None:
     signal.signal(signal.SIGINT, sigint_handler)
     log(f"loaded module: {__name__}")
-    log(f"module args: {cpp_shared_vars.module_args}")
+    log(f"module args: {uart_cpp_shared_vars.module_args}")
 
 
 def log(msg: str) -> None:
@@ -99,7 +100,7 @@ def parse_args(args_str: str) -> argparse.Namespace:
     return parser.parse_args(shlex.split(args_str))
 
 
-args = parse_args(cpp_shared_vars.module_args)
+args = parse_args(uart_cpp_shared_vars.module_args)
 
 
 @dataclasses.dataclass
@@ -142,7 +143,7 @@ def sendall() -> None:
     """systemc method to send all bytes read from stdin to pl011, called by systemc simulation kernel"""
     if not receiver.queue.empty():
         data = np.frombuffer(receiver.queue.get(), dtype=np.uint8)
-        biflow_socket.enqueue(data)
+        uart_biflow_socket.enqueue(data)
     if not receiver.queue.empty():
         receiver.send_event.notify(sc_time(1 / args.baudrate, sc_time_unit.SC_SEC))
 
@@ -175,7 +176,7 @@ def spawn_sc_thread(thread: Callable, thread_name: str) -> None:
 def set_send_limit_to_inf() -> None:
     """send the ctrl struct with cmd set to INFINITE to pl011"""
     try:
-        biflow_socket.can_receive_any()
+        uart_biflow_socket.can_receive_any()
     except SystemExit:
         return
     except Exception as e:
