@@ -8,11 +8,12 @@ react on the coming systemc transactions and initiate the proper transactions
 from/to the i2c systemc C++ model.
 
 this backend is being used by "qupv3_qupv3_se_wrapper_se0_i2c-test.cc".
+CCI parameter current_mod_id_prefix should be set like that: current_mod_id_prefix = "i2c_"; 
 """
 from tlm_generic_payload import tlm_command, tlm_generic_payload
-import biflow_socket
+import i2c_biflow_socket
 from sc_core import sc_time, sc_time_unit
-import cpp_shared_vars
+import i2c_cpp_shared_vars
 import argparse
 import shlex
 from queue import Queue
@@ -45,7 +46,7 @@ def parse_args(args_str: str) -> argparse.Namespace:
     return parser.parse_args(shlex.split(args_str))
 
 
-args = parse_args(cpp_shared_vars.module_args)
+args = parse_args(i2c_cpp_shared_vars.module_args)
 
 
 def i2c_read(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
@@ -64,10 +65,10 @@ def i2c_read(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
         txn.set_address(args.address)
         txn.set_data_length(requested_len)
         txn.set_command(tlm_command.TLM_WRITE_COMMAND)
-        biflow_socket.set_default_txn(txn)
+        i2c_biflow_socket.set_default_txn(txn)
         i = 0
         while i < trans.get_data_length():
-            biflow_socket.enqueue(q.get())
+            i2c_biflow_socket.enqueue(q.get())
             i = i + 1
     except SystemExit:
         return
@@ -91,7 +92,7 @@ def i2c_write(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
 def set_send_limit_to_inf() -> None:
     """send the ctrl struct with cmd set to INFINITE to i2c qup"""
     try:
-        biflow_socket.can_receive_any()
+        i2c_biflow_socket.can_receive_any()
     except SystemExit:
         return
     except Exception as e:
