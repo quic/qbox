@@ -423,6 +423,17 @@ The set of modules exposed from C++ to python are:
         * do_b_transport(id:int, trans:tlm_generic_payload.tlm_generic_payload, delay:sc_core.sc_time) -> None: initiate a b_transport call from python, the function maps to C++ initiator_sockets[id]->b_transport(trans, delay). 
     * initiator_signal_socket:
         * write(id:int, value:bool) -> None: write value using C++ initiator_signal_sockets[id].
+    * biflow_socket:
+        * can_receive_more(int) -> None: biflow_socket can_receive_more function.
+        * can_receive_set(int) -> None: biflow_socket can_receive_set function.
+        * can_receive_any() -> None: biflow_socket can_receive_any function.
+        * enqueue(numpy.typing.NDArray[uint8]) -> None: biflow_socket enqueue function.
+        * set_default_txn(tlm_generic_payload) -> None: biflow_socket set_default_txn function.
+        * force_send(tlm_generic_payload) -> None: biflow_socket force_send function.
+        * reset() -> None: biflow_socket reset function.
+
+
+These dynamically created modules [cpp_shared_vars, tlm_do_b_transport, initiator_signal_socket and biflow_socket] will have the CCI parameter: "current_mod_id_prefix" value as prefix to each module name to have them imported uniquely per python model because they use a per python_binder model instance data memembers. So, for example: instead of using `import biflow_socket`, it should be `import i2c_biflow_socket` if the `current_mod_id_prefix = "i2c_"`
 
 The input to the model is a sc_vector<tlm_utils::simple_target_socket_tagged_b<...>> target_sockets.  
 A python b_transport(id:int, trans:tlm_generic_payload.tlm_generic_payload, delay:sc_ccore.sc_time) -> None: can be implemented to react to transactions on target_sockets[id].

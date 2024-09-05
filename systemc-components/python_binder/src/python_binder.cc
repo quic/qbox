@@ -381,15 +381,19 @@ void python_binder<BUSWIDTH>::init_binder()
         pybind11::print("current python path: ", path);
 
         // create dyamic modules
-        std::string m_cpp_shared_vars_mod_name = p_py_mod_current_mod_id_prefix.get_value() +
-                                                 std::string("cpp_shared_vars");
+        std::string m_cpp_shared_vars_mod_name = (p_py_mod_current_mod_id_prefix.get_value().empty()
+                                                      ? std::string("cpp_shared_vars")
+                                                      : p_py_mod_current_mod_id_prefix.get_value() +
+                                                            std::string("cpp_shared_vars"));
         m_cpp_shared_vars_mod = pybind11::module_::import("types").attr("ModuleType")(
             m_cpp_shared_vars_mod_name.c_str());
         m_cpp_shared_vars_mod.attr("module_args") = p_py_mod_args.get_value();
         modules.attr("setdefault")(m_cpp_shared_vars_mod_name.c_str(), m_cpp_shared_vars_mod);
 
-        std::string m_tlm_do_b_transport_mod_name = p_py_mod_current_mod_id_prefix.get_value() +
-                                                    std::string("tlm_do_b_transport");
+        std::string m_tlm_do_b_transport_mod_name = (p_py_mod_current_mod_id_prefix.get_value().empty()
+                                                         ? std::string("tlm_do_b_transport")
+                                                         : p_py_mod_current_mod_id_prefix.get_value() +
+                                                               std::string("tlm_do_b_transport"));
         m_tlm_do_b_transport_mod = pybind11::module_::import("types").attr("ModuleType")(
             m_tlm_do_b_transport_mod_name.c_str());
         m_tlm_do_b_transport_mod.attr("do_b_transport") = pybind11::cpp_function(
@@ -400,8 +404,10 @@ void python_binder<BUSWIDTH>::init_binder()
 
         setup_biflow_socket(modules);
 
-        std::string m_initiator_signal_socket_mod_name = p_py_mod_current_mod_id_prefix.get_value() +
-                                                         std::string("initiator_signal_socket");
+        std::string m_initiator_signal_socket_mod_name = (p_py_mod_current_mod_id_prefix.get_value().empty()
+                                                              ? std::string("initiator_signal_socket")
+                                                              : p_py_mod_current_mod_id_prefix.get_value() +
+                                                                    std::string("initiator_signal_socket"));
         m_initiator_signal_socket_mod = pybind11::module_::import("types").attr("ModuleType")(
             m_initiator_signal_socket_mod_name.c_str());
         m_initiator_signal_socket_mod.attr("write") = pybind11::cpp_function(
@@ -427,7 +433,10 @@ void python_binder<BUSWIDTH>::init_binder()
 template <unsigned int BUSWIDTH>
 void python_binder<BUSWIDTH>::setup_biflow_socket(pybind11::object& _modules)
 {
-    std::string m_biflow_socket_mod_name = p_py_mod_current_mod_id_prefix.get_value() + std::string("biflow_socket");
+    std::string m_biflow_socket_mod_name = (p_py_mod_current_mod_id_prefix.get_value().empty()
+                                                ? std::string("biflow_socket")
+                                                : p_py_mod_current_mod_id_prefix.get_value() +
+                                                      std::string("biflow_socket"));
     m_biflow_socket_mod = pybind11::module_::import("types").attr("ModuleType")(m_biflow_socket_mod_name.c_str());
     m_biflow_socket_mod.attr("can_receive_more") = pybind11::cpp_function(
         [this](int i) { bf_socket[0].can_receive_more(i); });
