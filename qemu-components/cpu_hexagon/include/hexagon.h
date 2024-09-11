@@ -75,6 +75,7 @@ public:
         , p_vtcm_size_kb("vtcm_size_kb", 0, "vtcm size in kb")
         , p_num_coproc_instance("num_coproc_instance", 0, "number of coproc instances")
         , p_hvx_contexts("hvx_contexts", 0, "number of HVX contexts")
+        , p_num_tlbs("num_tlbs", 0, "number of Joint TLB entries")
     /*
      * We have no choice but to attach-suspend here. This is fixable but
      * non-trivial. It means that the SystemC kernel will never starve...
@@ -120,6 +121,9 @@ public:
         cpu.set_prop_int("vtcm-size-kb", p_vtcm_size_kb);
         cpu.set_prop_int("num-coproc-instance", p_num_coproc_instance);
         cpu.set_prop_int("hvx-contexts", p_hvx_contexts);
+        if (!p_num_tlbs.is_default_value()) {
+            cpu.set_prop_int("jtlb-entries", p_num_tlbs);
+        }
     }
 
     qemu::CpuHexagon get_cpu_hexagon() const { return qemu::CpuHexagon(m_cpu); }
@@ -156,6 +160,7 @@ public:
     cci::cci_param<uint32_t> p_vtcm_size_kb;
     cci::cci_param<uint32_t> p_num_coproc_instance;
     cci::cci_param<uint32_t> p_hvx_contexts;
+    cci::cci_param<uint32_t> p_num_tlbs;
 };
 
 extern "C" void module_register();
