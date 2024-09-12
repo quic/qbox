@@ -8,12 +8,20 @@
 
 #pragma once
 
+/*
+ * it seems like there is a trade off between an unordered and ordered map for the cached iommu translations.
+ * More experimentation is probably required. For now it looks like the unordered map is better,
+ * but this is left as a convenience for testing the alternative.
+ */
+#define USE_UNORD
+
 #include <string>
 #include <unordered_map>
 #include <memory>
 #include <functional>
 #include <set>
 #include <vector>
+#include <map>
 
 #include <libqemu-cxx/target_info.h>
 #include <libqemu-cxx/exceptions.h>
@@ -35,6 +43,7 @@ struct DisplayChangeListener;
 struct MemTxAttrs;
 struct QemuMemoryRegion;
 struct QemuMemoryRegionOps;
+struct QemuIOMMUMemoryRegion;
 struct QemuAddressSpace;
 struct QemuMemoryListener;
 struct QemuTimer;
@@ -62,6 +71,7 @@ class LibQemuInternals;
 class Object;
 class MemoryRegion;
 class MemoryRegionOps;
+class IOMMUMemoryRegion;
 class AddressSpace;
 class MemoryListener;
 class Gpio;
@@ -233,6 +243,7 @@ public:
 
     void set_prop_bool(const char* name, bool val);
     void set_prop_int(const char* name, int64_t val);
+    void set_prop_uint(const char* name, uint64_t val);
     void set_prop_str(const char* name, const char* val);
     void set_prop_link(const char* name, const Object& link);
     void set_prop_parse(const char* name, const char* value);
@@ -417,6 +428,60 @@ public:
     MemTxResult write(uint64_t addr, const void* data, size_t size, MemTxAttrs attrs);
 
     void update_topology();
+};
+
+/* this is simply used to hold shared_ptr's for memory management and
+ * to check if the DMIRegions exist.
+ */
+struct DmiRegionBase {
+};
+class IOMMUMemoryRegion : public MemoryRegion
+{
+public:
+    static constexpr const char* const TYPE = "libqemu-iommu-memory-region";
+
+    qemu::MemoryRegion m_root_te;
+    std::shared_ptr<qemu::AddressSpace> m_as_te;
+    qemu::MemoryRegion m_root;
+    std::shared_ptr<qemu::AddressSpace> m_as;
+    std::map<uint64_t, std::shared_ptr<DmiRegionBase>> m_dmi_aliases_te;
+    std::map<uint64_t, std::shared_ptr<DmiRegionBase>> m_dmi_aliases_io;
+    uint64_t min_page_sz;
+
+    IOMMUMemoryRegion(const Object& o)
+        : MemoryRegion(o)
+        , m_root_te(get_inst().object_new_unparented<qemu::MemoryRegion>())
+        , m_as_te(get_inst().address_space_new())
+        , m_root(get_inst().object_new_unparented<qemu::MemoryRegion>())
+        , m_as(get_inst().address_space_new())
+    {
+    }
+
+    typedef enum {
+        IOMMU_NONE = 0,
+        IOMMU_RO = 1,
+        IOMMU_WO = 2,
+        IOMMU_RW = 3,
+    } IOMMUAccessFlags;
+
+    struct IOMMUTLBEntry {
+        QemuAddressSpace* target_as;
+        uint64_t iova;
+        uint64_t translated_addr;
+        uint64_t addr_mask;
+        IOMMUAccessFlags perm;
+    };
+
+#ifdef USE_UNORD
+    std::unordered_map<uint64_t, qemu::IOMMUMemoryRegion::IOMMUTLBEntry> m_mapped_te;
+#else
+    std::map<uint64_t, qemu::IOMMUMemoryRegion::IOMMUTLBEntry> m_mapped_te;
+#endif
+
+    using IOMMUTranslateCallbackFn = std::function<void(IOMMUTLBEntry*, uint64_t, IOMMUAccessFlags, int)>;
+    void init(const Object& owner, const char* name, uint64_t size, MemoryRegionOpsPtr ops,
+              IOMMUTranslateCallbackFn cb);
+    void iommu_unmap(IOMMUTLBEntry*);
 };
 
 class MemoryListener
