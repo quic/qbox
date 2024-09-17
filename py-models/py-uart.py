@@ -48,6 +48,7 @@ import atexit
 import signal
 import functools
 import inspect
+import copy
 
 
 def sigint_handler(signno: int, frame: Optional[FrameType]) -> None:
@@ -110,11 +111,14 @@ class stdin_receiver:
     ifd: int
 
     def __post_init__(self):
-        self._old_flags: List[Any] = termios.tcgetattr(self.ifd)
-        self._new_flags: List[Any] = termios.tcgetattr(self.ifd)
+        self._old_flags: List[Any] = copy.deepcopy(termios.tcgetattr(self.ifd))
+        self._new_flags: List[Any] = copy.deepcopy(termios.tcgetattr(self.ifd))
 
     def set_termios_attr(self) -> None:
         # slef.new_flags[3] = lflags
+        self._old_flags[3] = self._new_flags[3] | (
+            termios.ECHO | termios.ECHONL | termios.ICANON | termios.IEXTEN
+        )
         self._new_flags[3] = self._new_flags[3] & ~(
             termios.ECHO | termios.ECHONL | termios.ICANON | termios.IEXTEN
         )
@@ -136,7 +140,7 @@ def notifier():
             receiver.queue.put(ch)
             # let's do the processing in the sendall systemc method by notifying a systemc event
             receiver.send_event.notify(sc_time(0, sc_time_unit.SC_NS))
-        yield sc_time(100, sc_time_unit.SC_US)
+        yield sc_time(10, sc_time_unit.SC_NS)
 
 
 def sendall() -> None:
@@ -185,6 +189,7 @@ def set_send_limit_to_inf() -> None:
 
 def before_end_of_elaboration() -> None:
     """called by the C++ systemc kernel before end of elaboration"""
+    module_init()
     try:
         receiver.set_termios_attr()
         if args.enable_input:
@@ -213,11 +218,11 @@ def bf_b_transport(trans: tlm_generic_payload, delay: sc_time) -> None:
         raise Exception(f"b_transport error: {e}")
 
 
+def end_of_simulation() -> None:
+    receiver.reset_termios_attr()
+
+
 @atexit.register
 def terminate() -> None:
     """cleanup before exiting"""
-    receiver.reset_termios_attr()
     log("py-uart script terminated")
-
-
-module_init()
