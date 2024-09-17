@@ -135,7 +135,6 @@ if((NOT WITHOUT_PYTHON_BINDER) AND (NOT GS_ONLY))
     find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
     gs_addexpackage("gh:pybind/pybind11#v2.11.1")
     set(PYBIND11_EMBED "pybind11::embed")
-    set(PYTHON_BINDER_SRC "systemc-components/python_binder/src/python_binder.cc")
 endif()
 
 set(systemc_srcs
@@ -341,7 +340,9 @@ if(NOT WITHOUT_QEMU)
 endif()
 
 add_subdirectory(systemc-components)
-add_subdirectory(py-models)
+if((NOT WITHOUT_PYTHON_BINDER) AND (NOT GS_ONLY))
+    add_subdirectory(py-models)
+endif()
 
 gs_enable_testing()
 
