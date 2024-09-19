@@ -1,0 +1,28 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index eb52c19..5176319 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -107,12 +107,14 @@ INSTALL(FILES "${PKG_CONFIG_FILE_PATH}"
+         DESTINATION lib${LLVM_LIBDIR_SUFFIX}/pkgconfig)
+ 
+ # uninstall target
+-configure_file(
+-    "${CMAKE_CURRENT_SOURCE_DIR}/CMakeUninstall.in"
+-    "${CMAKE_CURRENT_BINARY_DIR}/CMakeUninstall.cmake"
+-    IMMEDIATE @ONLY)
+-
+-add_custom_target(uninstall
+-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/CMakeUninstall.cmake)
++if(NOT TARGET uninstall)
++	configure_file(
++	    "${CMAKE_CURRENT_SOURCE_DIR}/CMakeUninstall.in"
++	    "${CMAKE_CURRENT_BINARY_DIR}/CMakeUninstall.cmake"
++	    IMMEDIATE @ONLY)
++
++	add_custom_target(uninstall
++	    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/CMakeUninstall.cmake)
++endif()
+ 
+-add_subdirectory(suite/fuzz)
+\ No newline at end of file
++add_subdirectory(suite/fuzz)
