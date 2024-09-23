@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#define SC_ALLOW_DEPRECATED_IEEE_API
 
 #include <monitor.h>
 #include <module_factory_registery.h>
@@ -60,7 +61,6 @@ std::vector<crow::json::wvalue> json_cci_params(sc_core::sc_object* obj)
     std::set<std::string> cldr;
     for (sc_core::sc_object* child : obj->get_child_objects()) {
         if (child->kind() == std::string("sc_module")) {
-            SCP_WARN("monitor")("children mod {}", child->name());
             cldr.insert(child->name());
         }
     }
@@ -69,7 +69,6 @@ std::vector<crow::json::wvalue> json_cci_params(sc_core::sc_object* obj)
     auto uncon = m_broker.get_unconsumed_preset_values([&](const std::pair<std::string, cci_value>& iv) {
         if (iv.first.find(name + ".") == 0) {
             std::string namep = iv.first.substr(0, iv.first.find(".", l));
-            //                SCP_WARN("monitor")("{} is in {}", namep, cldr.find(namep)==cldr.end());
             return (cldr.find(namep) == cldr.end());
         }
         return false;
@@ -78,7 +77,6 @@ std::vector<crow::json::wvalue> json_cci_params(sc_core::sc_object* obj)
         std::string p_name = p.name();
         if (p_name.find(name + ".") == 0) {
             std::string namep = p_name.substr(0, p_name.find(".", l));
-            //                SCP_WARN("monitor")("{} {} is in {}", p_name, namep, cldr.find(namep)==cldr.end());
             return (cldr.find(namep) == cldr.end());
         }
         return false;
@@ -143,7 +141,6 @@ crow::json::wvalue json_object(sc_core::sc_object* obj)
     for (sc_core::sc_object* child : obj->get_child_objects()) {
         co.push_back(object_to_json(child));
         if (child->kind() == std::string("sc_module")) {
-            SCP_WARN("monitor")("Child : {}", child->name());
             cm.push_back(object_to_json(child));
         }
 
@@ -258,7 +255,7 @@ void monitor<BUSWIDTH>::init_monitor()
             r["error"] = "Object not a tlm base target socket";
             return r;
         }
-        uint64_t data;
+        uint32_t data;
         tlm::tlm_generic_payload txn;
         txn.set_command(tlm::TLM_READ_COMMAND);
         txn.set_address(0);
@@ -272,8 +269,10 @@ void monitor<BUSWIDTH>::init_monitor()
         int size = exp->get_base_export()->transport_dbg(txn);
         if (size != 4) {
             r["error"] = "Unable to get data";
+        } else {
+            r["value"] = data;
+            r["size"] = size;
         }
-        r["value"] = data;
         return r;
     });
 

@@ -57,6 +57,8 @@ class port_fnct : public tlm_utils::simple_target_socket<port_fnct, DEFAULT_TLM_
     cci::cci_param<bool> p_is_callback;
     bool m_in_callback = false;
 
+    std::function<unsigned int(tlm::tlm_generic_payload&)> transport_dbg_func;
+
     std::string my_name()
     {
         std::string n(name());
@@ -66,7 +68,13 @@ class port_fnct : public tlm_utils::simple_target_socket<port_fnct, DEFAULT_TLM_
     }
 
     /* to be implemented !!!!*/
-    unsigned int transport_dbg(tlm::tlm_generic_payload& txn) { return 1; }
+    unsigned int transport_dbg(tlm::tlm_generic_payload& txn)
+    {
+        if (transport_dbg_func) {
+            return transport_dbg_func(txn);
+        } else
+            return 0;
+    }
 
     void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
@@ -120,12 +128,12 @@ class port_fnct : public tlm_utils::simple_target_socket<port_fnct, DEFAULT_TLM_
         txn.set_dmi_allowed(false);
     }
 
-    template <typename T>
+    /*template <typename T>
     void is_a_do(std::shared_ptr<tlm_fnct> cb, std::function<void()> fn)
     {
         auto cbt = dynamic_cast<T*>(cb.get());
         if (cbt) fn();
-    }
+    }*/
 
 public:
     void pre_read(tlm_fnct::TLMFUNC cb) { m_pre_read_fncts.push_back(std::make_shared<tlm_fnct>(cb)); }
@@ -146,6 +154,11 @@ public:
                                                                                                &port_fnct::b_transport);
         tlm_utils::simple_target_socket<port_fnct, DEFAULT_TLM_BUSWIDTH>::register_transport_dbg(
             this, &port_fnct::transport_dbg);
+    }
+
+    void register_transport_dbg_func(std::function<unsigned int(tlm::tlm_generic_payload&)> fn)
+    {
+        transport_dbg_func = fn;
     }
 
 protected:
@@ -338,6 +351,24 @@ public:
         SCP_LOGGER_NAME().features[0] = parent(n) + "." + _name;
         n = n.substr(0, n.length() - strlen("_target_socket")); // get rid of last part of string
         SCP_TRACE((), n)("constructor : {} attching in {}", _name, path);
+
+        register_transport_dbg_func([&](tlm::tlm_generic_payload& txn) {
+            if (txn.get_data_length() < sizeof(TYPE)) return (unsigned int)0;
+            unsigned char* data = txn.get_data_ptr();
+            if (txn.get_command() == tlm::TLM_READ_COMMAND) {
+                TYPE tmp = proxy_data<TYPE>::get();
+                memset(data, 0, txn.get_data_length());
+                memcpy(data, &tmp, sizeof(TYPE));
+                return (unsigned int)sizeof(TYPE);
+            }
+            if (txn.get_command() == tlm::TLM_WRITE_COMMAND) {
+                TYPE tmp;
+                memcpy(&tmp, data, sizeof(TYPE));
+                proxy_data<TYPE>::set(tmp);
+                return (unsigned int)sizeof(TYPE);
+            }
+            return (unsigned int)0;
+        });
     }
     void operator=(TYPE value) { proxy_data<TYPE>::set(value); }
     operator TYPE() { return proxy_data<TYPE>::get(); }
