@@ -47,6 +47,7 @@
             <tbody id="cciParamsBody"></tbody>
         </table>
 
+        <h3>Registers</h3>
         <div id="dbgPortsList"></div>
 
         <button id="backButton">Reload Objects</button>
@@ -189,24 +190,11 @@
                 const data = await response.json();
 
                 const resultSpan = container.querySelector('.dbg-result');
-                resultSpan.textContent = `Result: ${JSON.stringify(data)}`;
-            } catch (error) {
-                console.error('Error fetching debug data:', error);
-            }
-        }
-        async function fetchDebugData(value, port, container) {
-            if (!value) {
-                alert('Please enter a number.');
-                return;
-            }
-
-            try {
-                const response = await fetch(`/transport_dbg/${value}/${port}`);
-                if (!response.ok) throw new Error('Network response was not ok');
-                const data = await response.json();
-
-                const resultSpan = container.querySelector('.dbg-result');
-                resultSpan.textContent = `Result: ${JSON.stringify(data)}`;
+                if (data.error) {
+                    resultSpan.textContent = `Value: ${JSON.stringify(data)}`;
+                } else {
+                    resultSpan.textContent = `Value: 0x${data.value.toString(16)}`;
+                }
             } catch (error) {
                 console.error('Error fetching debug data:', error);
             }
@@ -252,31 +240,52 @@
             dbgPortsList.innerHTML = ''; // Clear existing entries
 
             if (object.child_dbg_ports && object.child_dbg_ports.length > 0) {
+                // Create a table for the debug ports
+                const table = document.createElement('table');
+
+                const tbody = document.createElement('tbody');
+
                 object.child_dbg_ports.forEach(port => {
-                    const dbgPortContainer = document.createElement('div');
-                    dbgPortContainer.className = 'dbg-port-container';
+                    const row = document.createElement('tr');
 
-                    const label = document.createElement('label');
-                    label.textContent = port.name; // Show port name
+                    // Port Name column
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = port.basename;
+                    row.appendChild(nameCell);
 
+                    // Input Address column
+                    const inputCell = document.createElement('td');
                     const input = document.createElement('input');
                     input.type = 'number';
                     input.placeholder = 'Enter address';
+                    inputCell.appendChild(input);
+                    row.appendChild(inputCell);
 
+                    // Query Button column
+                    const buttonCell = document.createElement('td');
                     const button = document.createElement('button');
                     button.textContent = 'Query';
-                    button.onclick = () => fetchDebugData(input.value, port.name, dbgPortContainer);
+                    button.onclick = () => fetchDebugData(input.value, port.name, resultCell);
+                    buttonCell.appendChild(button);
+                    row.appendChild(buttonCell);
 
+                    // Result column
+                    const resultCell = document.createElement('td');
                     const result = document.createElement('span');
                     result.className = 'dbg-result';
+                    resultCell.appendChild(result);
+                    row.appendChild(resultCell);
 
-                    dbgPortContainer.appendChild(label);
-                    dbgPortContainer.appendChild(input);
-                    dbgPortContainer.appendChild(button);
-                    dbgPortContainer.appendChild(result);
+                    // Add the row to the table body
+                    tbody.appendChild(row);
 
-                    dbgPortsList.appendChild(dbgPortContainer);
+                    // Optionally, auto-query the port with an address of 0
+                    fetchDebugData("0", port.name, resultCell); // Fetch with address 0 initially
                 });
+
+                // Append tbody to the table and table to the dbgPortsList
+                table.appendChild(tbody);
+                dbgPortsList.appendChild(table);
             } else {
                 dbgPortsList.innerHTML = '<p>No child debug ports available</p>';
             }
