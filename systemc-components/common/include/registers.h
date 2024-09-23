@@ -64,6 +64,10 @@ class port_fnct : public tlm_utils::simple_target_socket<port_fnct, DEFAULT_TLM_
         n = n.substr(n.find_last_of(".") + 1);                  // take the last part.
         return n;
     }
+
+    /* to be implemented !!!!*/
+    unsigned int transport_dbg(tlm::tlm_generic_payload& txn) { return 1; }
+
     void b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
         if (m_pre_read_fncts.size() || m_pre_write_fncts.size() || m_post_read_fncts.size() ||
@@ -140,6 +144,8 @@ public:
         p_is_callback.lock();
         tlm_utils::simple_target_socket<port_fnct, DEFAULT_TLM_BUSWIDTH>::register_b_transport(this,
                                                                                                &port_fnct::b_transport);
+        tlm_utils::simple_target_socket<port_fnct, DEFAULT_TLM_BUSWIDTH>::register_transport_dbg(
+            this, &port_fnct::transport_dbg);
     }
 
 protected:

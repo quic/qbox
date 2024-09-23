@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Monitor</title>
+
+
+</head>
+
+<body>
+    SystemC time : <span id="sc_time">Loading...</span> SystemC Running : <input type=checkbox id="sc_status" checked>
+    <br>
+    <br>
+    <h3>QK Status</h3>
+    <table id="statusTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>SC Waiting</th>
+                <th>External Waiting</th>
+                <th>State</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data will be inserted here -->
+        </tbody>
+    </table>
+
+    <hr>
+    Object Explorer <br>
+    <ul id="objectList"></ul>
+
+    <div id="objectDetails" class="hidden">
+        <h3 id="detailsName"></h3>
+        <h4>Child Modules:</h4>
+        <ul id="childModulesList"></ul>
+
+        <h4>CCI Parameters:</h4>
+        <table id="cciParamsTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Value</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody id="cciParamsBody"></tbody>
+        </table>
+
+        <div id="dbgPortsList"></div>
+
+        <button id="backButton">Reload Objects</button>
+    </div>
+
+    <script>
+
+        async function fetchFlag() {
+            try {
+                const response = await fetch('/sc_time'); // API URL
+                const data = await response.json();
+                const statusElement = document.getElementById('sc_time');
+                statusElement.textContent = data.sc_time_stamp;
+
+                const qkresponse = await fetch('/qk_status');
+                const qkdata = await qkresponse.json();
+                populateQKTable(qkdata);
+
+            } catch (error) {
+                console.error('Error fetching flag:', error);
+                //                document.getElementById('status').textContent = 'Error fetching data';
+            }
+        }
+
+        document.getElementById('sc_status').addEventListener('change', function () {
+            if (this.checked) {
+                const rsp = fetch('/continue');
+            } else {
+                const rsp = fetch('/pause');
+            }
+        });
+        function populateQKTable(data) {
+            const tableBody = document.getElementById('statusTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            data.forEach(item => {
+                const row = tableBody.insertRow();
+
+                // Name cell
+                const nameCell = row.insertCell(0);
+                nameCell.textContent = item.name;
+
+                // SC Waiting cell
+                const scWaitingCell = row.insertCell(1);
+                const scWaitingIndicator = document.createElement('span');
+                scWaitingIndicator.textContent = item.sc_waiting ? '\u274C' : '\u2713'; // Tick or Cross
+                scWaitingIndicator.style.color = item.sc_waiting ? 'red' : 'green'; // Set color based on status
+                scWaitingCell.appendChild(scWaitingIndicator);
+
+                // External Waiting cell
+                const externWaitingCell = row.insertCell(2);
+                const externWaitingIndicator = document.createElement('span');
+                externWaitingIndicator.textContent = item.extern_waiting ? '\u274C' : '\u2713'; // Tick or Cross
+                externWaitingIndicator.style.color = item.extern_waiting ? 'red' : 'green'; // Set color based on status
+                externWaitingCell.appendChild(externWaitingIndicator);
+
+                // State cell
+                const stateCell = row.insertCell(3);
+                stateCell.textContent = item.state;
+
+            });
+        }
+        // Fetch the flag every 1 second
+        setInterval(fetchFlag, 1000);
+
+
+
+
+        async function fetchObjects() {
+            try {
+                const response = await fetch('/object/');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                populateObjectList(data);
+            } catch (error) {
+                console.error('Error fetching objects:', error);
+            }
+        }
+
+        function populateObjectList(objects) {
+            const objectList = document.getElementById('objectList');
+            objectList.innerHTML = ''; // Clear existing items
+
+            objects.forEach(object => {
+                const listItem = document.createElement('li');
+                listItem.textContent = object.name;
+                listItem.style.cursor = 'pointer';
+                listItem.onclick = () => fetchObjectDetails(object.name);
+                objectList.appendChild(listItem);
+            });
+        }
+
+        async function fetchObjectDetails(name) {
+            try {
+                const response = await fetch(`/object/${name}`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const object = await response.json();
+                displayObjectDetails(object);
+            } catch (error) {
+                console.error('Error fetching object details:', error);
+            }
+        }
+
+
+        function createClickableHierarchy(name) {
+            const parts = name.split('.');
+            const container = document.createElement('span');
+
+            parts.forEach((part, index) => {
+                const clickablePart = document.createElement('span');
+                clickablePart.textContent = part;
+                clickablePart.classList.add('clickable');
+                clickablePart.style.cursor = 'pointer';
+
+                clickablePart.onclick = () => {
+                    const parentBasename = parts.slice(0, index + 1).join('.'); // Construct the basename of the current part
+                    fetchObjectDetails(parentBasename); // Fetch details for the parent part
+                };
+
+                container.appendChild(clickablePart);
+
+                // Add a dot after each part except the last one
+                if (index < parts.length - 1) {
+                    container.appendChild(document.createTextNode(' . '));
+                }
+            });
+
+            return container; // Return the container with clickable parts
+        }
+
+        async function fetchDebugData(value, port, container) {
+            if (!value) {
+                alert('Please enter a number.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/transport_dbg/${value}/${port}`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+
+                const resultSpan = container.querySelector('.dbg-result');
+                resultSpan.textContent = `Result: ${JSON.stringify(data)}`;
+            } catch (error) {
+                console.error('Error fetching debug data:', error);
+            }
+        }
+        async function fetchDebugData(value, port, container) {
+            if (!value) {
+                alert('Please enter a number.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/transport_dbg/${value}/${port}`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+
+                const resultSpan = container.querySelector('.dbg-result');
+                resultSpan.textContent = `Result: ${JSON.stringify(data)}`;
+            } catch (error) {
+                console.error('Error fetching debug data:', error);
+            }
+        }
+
+        function displayObjectDetails(object) {
+            document.getElementById('detailsName').innerHTML = '';
+            document.getElementById('detailsName').appendChild(createClickableHierarchy(object.name));
+
+            const childModulesList = document.getElementById('childModulesList');
+            childModulesList.innerHTML = ''; // Clear existing items
+
+            if (object.child_modules) {
+                object.child_modules.forEach(child => {
+                    const childItem = document.createElement('li');
+                    childItem.textContent = child.basename; // Display child module name
+                    childItem.style.cursor = 'pointer';
+                    childItem.onclick = () => fetchObjectDetails(child.name); // Use child name for fetching details
+                    childModulesList.appendChild(childItem);
+                });
+            } else {
+                childModulesList.innerHTML = '<li>No child modules</li>';
+            }
+
+            // Populate CCI Parameters
+            const cciParamsBody = document.getElementById('cciParamsBody');
+            cciParamsBody.innerHTML = ''; // Clear existing rows
+
+            if (object.cci_params && object.cci_params.length > 0) {
+                object.cci_params.forEach(param => {
+                    const row = cciParamsBody.insertRow();
+                    row.insertCell(0).textContent = param.name; // Parameter name
+                    row.insertCell(1).textContent = param.value; // Parameter value
+                    row.insertCell(2).textContent = param.description || ''; // Optional description
+                });
+            } else {
+                cciParamsBody.innerHTML = '<tr><td colspan="4">No CCI parameters available</td></tr>';
+            }
+
+
+            // Populate Debug Ports
+            const dbgPortsList = document.getElementById('dbgPortsList');
+            dbgPortsList.innerHTML = ''; // Clear existing entries
+
+            if (object.child_dbg_ports && object.child_dbg_ports.length > 0) {
+                object.child_dbg_ports.forEach(port => {
+                    const dbgPortContainer = document.createElement('div');
+                    dbgPortContainer.className = 'dbg-port-container';
+
+                    const label = document.createElement('label');
+                    label.textContent = port.name; // Show port name
+
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.placeholder = 'Enter address';
+
+                    const button = document.createElement('button');
+                    button.textContent = 'Query';
+                    button.onclick = () => fetchDebugData(input.value, port.name, dbgPortContainer);
+
+                    const result = document.createElement('span');
+                    result.className = 'dbg-result';
+
+                    dbgPortContainer.appendChild(label);
+                    dbgPortContainer.appendChild(input);
+                    dbgPortContainer.appendChild(button);
+                    dbgPortContainer.appendChild(result);
+
+                    dbgPortsList.appendChild(dbgPortContainer);
+                });
+            } else {
+                dbgPortsList.innerHTML = '<p>No child debug ports available</p>';
+            }
+
+
+            document.getElementById('objectDetails').classList.remove('hidden');
+        }
+
+        document.getElementById('backButton').onclick = () => {
+            document.getElementById('objectDetails').classList.add('hidden');
+            fetchObjects();
+        };
+
+        // Fetch top-level objects on page load
+        window.onload = fetchObjects;
+    </script>
+
+</body>
+
+</html>

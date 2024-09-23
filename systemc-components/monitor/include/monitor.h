@@ -32,6 +32,8 @@
 #include <thread>
 #include <future>
 
+#include <qkmultithread.h>
+
 namespace gs {
 
 template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
@@ -75,6 +77,10 @@ private:
     crow::SimpleApp m_app;
     std::future<void> m_app_future;
     gs::runonsysc m_sc;
+
+    std::vector<tlm_quantumkeeper_multithread*> m_qks;
+
+    const std::string m_html = R"(Use monitor.html)";
 };
 } // namespace gs
 
