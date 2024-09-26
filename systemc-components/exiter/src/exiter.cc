@@ -6,7 +6,6 @@
 
 #define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
-
 #include <exiter.h>
 
 void module_register() { GSC_MODULE_REGISTER_C(exiter); }
