@@ -31,8 +31,10 @@
 #include "crow.h"
 #include <thread>
 #include <future>
-
 #include <qkmultithread.h>
+#include <chrono>
+
+#define MAX_ASIO_BUF_LEN 2048
 
 namespace gs {
 
@@ -54,6 +56,13 @@ public:
 private:
     void init_monitor();
 
+    void write_to_qmp_socket(const std::string& msg);
+
+    std::string read_from_qmp_socket();
+
+    void execute_qemu_qpm_with_ts_cmd(const std::string& cmd_name, const std::string& ret_event,
+                                      crow::json::wvalue& resp);
+
     void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay);
 
     unsigned int transport_dbg(int id, tlm::tlm_generic_payload& trans);
@@ -70,6 +79,10 @@ public:
     cci::cci_param<uint32_t> p_tlm_initiator_ports_num;
     cci::cci_param<uint32_t> p_tlm_target_ports_num;
     cci::cci_param<uint32_t> p_server_port;
+    cci::cci_param<std::string> p_qmp_ud_socket_path;
+    cci::cci_param<std::string> p_html_doc_template_dir_path;
+    cci::cci_param<std::string> p_html_doc_name;
+    cci::cci_param<bool> p_use_qmp;
     sc_core::sc_vector<tlm_initiator_socket_t> initiator_sockets;
     sc_core::sc_vector<tlm_target_socket_t> target_sockets;
 
@@ -77,10 +90,14 @@ private:
     crow::SimpleApp m_app;
     std::future<void> m_app_future;
     gs::runonsysc m_sc;
-
     std::vector<tlm_quantumkeeper_multithread*> m_qks;
-
     const std::string m_html = R"(Use monitor.html)";
+    asio::io_service m_ios;
+    asio::local::stream_protocol::endpoint m_u_endpoint;
+    asio::local::stream_protocol::socket m_u_socket;
+    std::string last_qemu_event;
+    double m_now;
+    double m_qemu_timestamp_secs;
 };
 } // namespace gs
 

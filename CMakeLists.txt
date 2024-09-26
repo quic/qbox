@@ -350,6 +350,7 @@ add_subdirectory(systemc-components)
 if((NOT WITHOUT_PYTHON_BINDER) AND (NOT GS_ONLY))
     add_subdirectory(py-models)
 endif()
+add_subdirectory(html)
 
 gs_enable_testing()
 

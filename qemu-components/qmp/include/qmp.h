@@ -13,6 +13,8 @@
 #include <device.h>
 #include <qemu-instance.h>
 #include <module_factory_registery.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 class qmp : public sc_core::sc_module
 {
@@ -28,6 +30,12 @@ public:
         SCP_TRACE(())("qmp constructor");
         if (p_qmp_str.get_value().empty()) {
             SCP_FATAL(())("qmp options string is empty!");
+        }
+        if (p_qmp_str.get_value().find("unix") != std::string::npos) {
+            auto first = p_qmp_str.get_value().find(":") + 1;
+            auto last = p_qmp_str.get_value().find(",");
+            std::string socket_path = p_qmp_str.get_value().substr(first, last - first);
+            unlink(socket_path.c_str());
         }
         // https://qemu.weilnetz.de/doc/2.10/qemu-qmp-ref.html
         inst.add_arg("-qmp");
