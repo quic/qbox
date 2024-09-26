@@ -10,6 +10,8 @@
 <body>
     SystemC time : <span id="sc_time">Loading...</span> SystemC Running : <input type=checkbox id="sc_status" checked>
     <br>
+    <button id="resetButton">Platform Reset</button>
+    <br>
     <br>
     <h3>QK Status</h3>
     <table id="statusTable">
@@ -71,7 +73,6 @@
                 //                document.getElementById('status').textContent = 'Error fetching data';
             }
         }
-
         document.getElementById('sc_status').addEventListener('change', function () {
             if (this.checked) {
                 const rsp = fetch('/continue');
@@ -297,6 +298,10 @@
         document.getElementById('backButton').onclick = () => {
             document.getElementById('objectDetails').classList.add('hidden');
             fetchObjects();
+        };
+        
+        document.getElementById('resetButton').onclick = () => {
+            const rsp = fetch('/reset');
         };
 
         // Fetch top-level objects on page load

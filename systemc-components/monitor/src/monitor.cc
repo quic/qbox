@@ -5,21 +5,32 @@
  */
 #define SC_ALLOW_DEPRECATED_IEEE_API
 
+/**
+ * Example configuration:
+ *
+ * platform["qmp_0"] = {
+    moduletype = "qmp";
+    args = {"&platform.qemu_inst"};
+    qmp_str = "unix:qmp.sock,server,nowait";
+};
+
+platform["monitor_0"] = {
+    moduletype = "monitor";
+    server_port = 18080;
+    use_qmp = true;
+    qmp_ud_socket_path  = "qmp.sock";
+    html_doc_template_dir_path = "/path/to/html/templates";
+    html_doc_name = "monitor.html";
+};
+ */
+
 #include <monitor.h>
 #include <module_factory_registery.h>
-// #include <pybind11/stl.h>
-// #include <pybind11/embed.h>
-// #include <pybind11/functional.h>
-// #include <pybind11/operators.h>
-// #include <string>
 #include <vector>
 #include <functional>
 #include <exception>
-// #include <stdexcept>
-// #include <cstdint>
-// #include <exception>
-
 #include <cciutils.h>
+#include <algorithm>
 
 namespace gs {
 
@@ -29,8 +40,15 @@ monitor<BUSWIDTH>::monitor(const sc_core::sc_module_name& nm)
     , p_tlm_initiator_ports_num("tlm_initiator_ports_num", 0, "number of tlm initiator ports")
     , p_tlm_target_ports_num("tlm_target_ports_num", 0, "number of tlm target ports")
     , p_server_port("server_port", 18080, "monitor server port number")
+    , p_use_qmp("use_qmp", false, "is qmp model used?")
+    , p_qmp_ud_socket_path("qmp_ud_socket_path", "qmp.sock", "QMP unix domain socket path")
+    , p_html_doc_template_dir_path("html_doc_template_dir_path", "",
+                                   "path to a template directory where HTML document to call the REST API exist")
+    , p_html_doc_name("html_doc_name", "", "name of a HTML document to call the REST API")
     , initiator_sockets("initiator_socket")
     , target_sockets("target_socket")
+    , m_u_endpoint(p_qmp_ud_socket_path.get_value())
+    , m_u_socket(m_ios)
 {
     SCP_DEBUG(()) << "monitor constructor";
     initiator_sockets.init(p_tlm_initiator_ports_num.get_value(),
@@ -50,6 +68,7 @@ template <unsigned int BUSWIDTH>
 monitor<BUSWIDTH>::~monitor()
 {
     m_app.stop();
+    m_u_socket.close();
 }
 
 std::vector<crow::json::wvalue> json_cci_params(sc_core::sc_object* obj)
@@ -103,6 +122,7 @@ crow::json::wvalue object_to_json(sc_core::sc_object* obj)
 {
     return { { "basename", obj->basename() }, { "name", obj->name() }, { "kind", obj->kind() } };
 }
+
 crow::json::wvalue json_object(sc_core::sc_object* obj)
 {
     crow::json::wvalue r = object_to_json(obj);
@@ -177,35 +197,57 @@ crow::json::wvalue json_object(sc_core::sc_object* obj)
         r["child_dbg_ports"] = crow::json::wvalue::list(cs);
     }
 
-    //
-    //        return crow::json::wvalue::list(r);
-    //    }
     return r;
 }
+
 template <unsigned int BUSWIDTH>
 void monitor<BUSWIDTH>::init_monitor()
 {
     CROW_ROUTE(m_app, "/")
     ([&]() {
-        std::string ret = m_html;
-        return ret;
+        if (!p_html_doc_template_dir_path.get_value().empty() && !p_html_doc_name.get_value().empty()) {
+            crow::mustache::set_global_base(p_html_doc_template_dir_path.get_value());
+            auto page = crow::mustache::load(p_html_doc_name.get_value());
+            return page.render_string();
+        } else {
+            std::string ret =
+                "API:\n/sc_time\n/pause\n/continue\n/reset\n/object/\n//object/<str>\n/qk_status\n/sc_suspended\n/"
+                "transport_dbg/<int>/<str>";
+            return ret;
+        }
     });
     CROW_ROUTE(m_app, "/sc_time")
     ([&]() {
         crow::json::wvalue r;
-        m_sc.run_on_sysc([&] { r["sc_time_stamp"] = sc_core::sc_time_stamp().to_string(); });
+        m_sc.run_on_sysc([&] { r["sc_time_stamp"] = sc_core::sc_time_stamp().to_seconds(); });
         return r;
     });
     CROW_ROUTE(m_app, "/pause")
     ([&]() {
-        std::string ret = "simulation: paused!";
-        m_sc.run_on_sysc([&] { sc_core::sc_suspend_all(); });
+        crow::json::wvalue ret;
+        execute_qemu_qpm_with_ts_cmd("stop", "STOP", ret);
+        m_sc.run_on_sysc([&] {
+            sc_core::sc_suspend_all();
+            ret["sc_time_stamp"] = sc_core::sc_time_stamp().to_seconds();
+        });
         return ret;
     });
     CROW_ROUTE(m_app, "/continue")
     ([&]() {
-        std::string ret = "simulation: continue";
-        m_sc.run_on_sysc([&] { sc_core::sc_unsuspend_all(); });
+        crow::json::wvalue ret;
+        execute_qemu_qpm_with_ts_cmd("cont", "RESUME", ret);
+        m_sc.run_on_sysc([&] {
+            sc_core::sc_unsuspend_all();
+            ret["sc_time_stamp"] = sc_core::sc_time_stamp().to_seconds();
+        });
+        return ret;
+    });
+    CROW_ROUTE(m_app, "/reset")
+    ([&]() {
+        crow::json::wvalue ret;
+        std::string msg = R"({ "execute": "system_reset" })";
+        write_to_qmp_socket(msg);
+        m_sc.run_on_sysc([&] { ret["sc_time_stamp"] = sc_core::sc_time_stamp().to_seconds(); });
         return ret;
     });
     CROW_ROUTE(m_app, "/object/")
@@ -271,12 +313,80 @@ void monitor<BUSWIDTH>::init_monitor()
             r["error"] = "Unable to get data";
         } else {
             r["value"] = data;
+
             r["size"] = size;
         }
         return r;
     });
 
     m_app_future = m_app.loglevel(crow::LogLevel::Error).port(p_server_port.get_value()).multithreaded().run_async();
+}
+
+template <unsigned int BUSWIDTH>
+void monitor<BUSWIDTH>::write_to_qmp_socket(const std::string& msg)
+{
+    if (!p_use_qmp.get_value()) {
+        return;
+    }
+    try {
+        asio::write(m_u_socket, asio::buffer(msg.data(), msg.size()), asio::transfer_all());
+    } catch (const asio::system_error& ae) {
+        SCP_FATAL(()) << "Couldn't write mesage: " << msg
+                      << " on QMP unix domain socket: " << p_qmp_ud_socket_path.get_value() << " Error: " << ae.what();
+    }
+}
+
+template <unsigned int BUSWIDTH>
+std::string monitor<BUSWIDTH>::read_from_qmp_socket()
+{
+    if (!p_use_qmp.get_value()) {
+        return std::string("");
+    }
+    std::vector<char> data_read;
+    data_read.reserve(MAX_ASIO_BUF_LEN);
+    asio::socket_base::bytes_readable m_command(true);
+    m_u_socket.io_control(m_command);
+    size_t readable_bytes = m_command.get();
+    data_read.resize(readable_bytes);
+    char* data = reinterpret_cast<char*>(&data_read[0]);
+    try {
+        asio::read(m_u_socket, asio::buffer(data, readable_bytes));
+    } catch (const asio::system_error& ae) {
+        SCP_FATAL(()) << "Couldn't read from QMP unix domain socket: " << p_qmp_ud_socket_path.get_value()
+                      << " Error: " << ae.what();
+    }
+    auto ret = std::string(data_read.begin(), data_read.end());
+    ret.erase(std::remove_if(ret.begin(), ret.end(), [](char c) { return c == '\r' || c == '\n' || c == '\\'; }),
+              ret.end());
+    return ret;
+}
+
+template <unsigned int BUSWIDTH>
+void monitor<BUSWIDTH>::execute_qemu_qpm_with_ts_cmd(const std::string& cmd_name, const std::string& ret_event,
+                                                     crow::json::wvalue& resp)
+{
+    if (!p_use_qmp.get_value()) {
+        return;
+    }
+    std::string r_msg;
+    do {
+        std::string w_msg = R"({ "execute": ")" + cmd_name + R"(" })";
+        write_to_qmp_socket(w_msg);
+        r_msg = read_from_qmp_socket();
+    } while ((r_msg.find(ret_event) == std::string::npos) && (last_qemu_event.empty() || last_qemu_event != ret_event));
+
+    std::string resp_str = (last_qemu_event != ret_event ? r_msg.substr(0, r_msg.find(ret_event) + ret_event.size() + 2)
+                                                         : "");
+    if (resp_str.empty()) {
+        resp["qemu_time_stamp"] = m_qemu_timestamp_secs;
+    } else {
+        auto json_obj = crow::json::load(resp_str);
+        m_qemu_timestamp_secs = (static_cast<double>(json_obj["timestamp"]["seconds"].u()) +
+                                 (static_cast<double>(json_obj["timestamp"]["microseconds"].u()) / 1000'000)) -
+                                m_now;
+        resp["qemu_time_stamp"] = m_qemu_timestamp_secs;
+    }
+    last_qemu_event = ret_event;
 }
 
 template <unsigned int BUSWIDTH>
@@ -299,16 +409,37 @@ template <unsigned int BUSWIDTH>
 void monitor<BUSWIDTH>::end_of_elaboration()
 {
     m_qks = find_sc_objects<gs::tlm_quantumkeeper_multithread>();
+
+    if (p_use_qmp.get_value() && !p_qmp_ud_socket_path.get_value().empty()) {
+        try {
+            m_u_socket.connect(m_u_endpoint);
+            if (!m_u_socket.is_open()) {
+                SCP_FATAL(()) << "QMP unix domain socket: " << p_qmp_ud_socket_path.get_value()
+                              << " is not opened successfully!";
+            }
+        } catch (const asio::system_error& ae) {
+            SCP_FATAL(()) << "Couldn't connect to QMP unix domain socket: " << p_qmp_ud_socket_path.get_value()
+                          << " Error: " << ae.what();
+        }
+        std::string msg = R"({ "execute": "qmp_capabilities" })";
+        write_to_qmp_socket(msg);
+    }
 }
 
 template <unsigned int BUSWIDTH>
 void monitor<BUSWIDTH>::start_of_simulation()
 {
+    uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
+                       std::chrono::system_clock::now().time_since_epoch())
+                       .count();
+    m_now = now / 1000'000; // to seconds
 }
 
 template <unsigned int BUSWIDTH>
 void monitor<BUSWIDTH>::end_of_simulation()
 {
+    m_app.stop();
+    m_u_socket.close();
 }
 
 template class monitor<32>;
