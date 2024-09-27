@@ -73,6 +73,8 @@ public:
     std::string get_status_json()
     {
         std::string s = "\"name\":\"" + std::string(name()) + "\"";
+        s = s + ",\"quantum_time\":\"" + std::string(get_local_time().to_string()) + "\"";
+        s = s + ",\"local_time\":\"" + std::string(get_current_time().to_string()) + "\"";
         if ((status & (RUNNING | STOPPED)) == NONE) s = s + ",\"state\":\"NONE\"";
         if (status & RUNNING) s = s + ",\"state\":\"RUNNING\"";
         if (status & STOPPED) s = s + ",\"state\":\"IDLE\"";
