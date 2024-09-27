@@ -20,7 +20,9 @@
                 <th>Name</th>
                 <th>SC Waiting</th>
                 <th>External Waiting</th>
-                <th>State</th>
+                <th>run/idle State</th>
+                <th>local time</th>
+                <th>quantum time</th>
             </tr>
         </thead>
         <tbody>
@@ -69,10 +71,13 @@
                 populateQKTable(qkdata);
 
             } catch (error) {
-                console.error('Error fetching flag:', error);
+                const statusElement = document.getElementById('sc_time');
+                statusElement.textContent = "Not connected";
+                //console.error('Error fetching flag:', error);
                 //                document.getElementById('status').textContent = 'Error fetching data';
             }
         }
+
         document.getElementById('sc_status').addEventListener('change', function () {
             if (this.checked) {
                 const rsp = fetch('/continue');
@@ -94,20 +99,25 @@
                 // SC Waiting cell
                 const scWaitingCell = row.insertCell(1);
                 const scWaitingIndicator = document.createElement('span');
-                scWaitingIndicator.textContent = item.sc_waiting ? '\u274C' : '\u2713'; // Tick or Cross
+                scWaitingIndicator.textContent = item.sc_waiting ? 'STALLED' : 'RUNNING'; // Tick or Cross
                 scWaitingIndicator.style.color = item.sc_waiting ? 'red' : 'green'; // Set color based on status
                 scWaitingCell.appendChild(scWaitingIndicator);
 
                 // External Waiting cell
                 const externWaitingCell = row.insertCell(2);
                 const externWaitingIndicator = document.createElement('span');
-                externWaitingIndicator.textContent = item.extern_waiting ? '\u274C' : '\u2713'; // Tick or Cross
+                externWaitingIndicator.textContent = item.extern_waiting ? 'STALLED' : 'RUNNING'; // Tick or Cross
                 externWaitingIndicator.style.color = item.extern_waiting ? 'red' : 'green'; // Set color based on status
                 externWaitingCell.appendChild(externWaitingIndicator);
 
                 // State cell
                 const stateCell = row.insertCell(3);
                 stateCell.textContent = item.state;
+
+                const ltime = row.insertCell(4);
+                ltime.textContent = item.local_time;
+                const qtime = row.insertCell(5);
+                qtime.textContent = item.quantum_time;
 
             });
         }
