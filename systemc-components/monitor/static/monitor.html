@@ -14,19 +14,14 @@
         Reset Platform
     </button><BR>
     <br>
-    <h3>QMP</h3>
-    <a href="https://qemu-project.gitlab.io/qemu/interop/qemu-qmp-ref.html">QEMU QMP Reference Manual</a>
-    <h4>Request</h4>
-    <p>(QMP CMD: { "execute": "qmp_capabilities" } is already executed to exit the capabilities negotiation mode.)</p>
-    <textarea id="wsmsg" cols=100 rows=5>
+
+    <select id="biflowsDropdown">
+        <option value="" disabled selected>Select a biflow</option>
+    </select>
+    <textarea id="wslog" cols=100 rows=50>
     </textarea>
-    <button id="wssend">
-        Send
-    </button><BR>
-    <h4>Response</h4>
-    <textarea id="wslog" cols=100 rows=5>
-    </textarea>
-    <button id="wsclear">Clear</button>
+    <a href="https://qemu-project.gitlab.io/qemu/interop/qemu-qmp-ref.html">for QEMU QMP, see Reference Manual</a>
+    
     <br>
     <br>
     <h3>QK Status</h3>
@@ -74,30 +69,58 @@
     </div>
 
     <script>
-        var sock = new WebSocket("ws://" + location.host + "/ws");
-        sock.onopen = ()=>{
-            console.log('open websocket')
-        }
-        sock.onerror = (e)=>{
-            console.log('error websocket',e)
-        }
-        sock.onclose = (e)=>{
-            console.log('close websocket', e)
-        }
-        sock.onmessage = (e)=>{
-            document.getElementById('wslog').value = 
-                document.getElementById('wslog').value + e.data +"\n";
-        }
 
-        document.getElementById('wssend').onclick = () => {
-            sock.send(document.getElementById('wsmsg').value);
-            console.log('send', document.getElementById('wsmsg').value)
-            document.getElementById('wsmsg').value = "";
-        };
+        function populateBiFlows(data) {
+                const dropdown = document.getElementById('biflowsDropdown');
 
-        document.getElementById('wsclear').onclick = () => {
-            document.getElementById('wslog').value = ""
-        };
+                data.biflows.forEach(biflow => {
+                    const option = document.createElement('option');
+                    option.value = biflow;
+                    option.textContent = biflow;
+                    dropdown.appendChild(option);
+                });
+
+                // Set up WebSocket connection when a biflow is selected
+                dropdown.addEventListener('change', function () {
+                    const selectedBiflow = this.value;
+                    if (selectedBiflow) {
+                        openWebSocket(selectedBiflow);
+                    }
+                });
+        }
+        var sock;
+        var savedtext = "";
+
+        function openWebSocket(biflowName) {
+            savedtext = "";
+            var t = document.getElementById('wslog');
+            t.value = "";
+
+            sock = new WebSocket("ws://" + location.host + "/biflow/" + biflowName);
+            sock.onopen = () => {
+                console.log('open websocket')
+            }
+            sock.onerror = (e) => {
+                console.log('error websocket', e)
+            }
+            sock.onclose = (e) => {
+                console.log('close websocket', e)
+                savedtext = "";
+                var t = document.getElementById('wslog');
+                t.value = "";
+            }
+            sock.onmessage = (e) => {
+                var t = document.getElementById('wslog');
+                t.value = t.value + e.data;//+"\n";
+                savedtext = t.value;
+                t.scrollTop = t.scrollHeight;
+            }
+            document.getElementById('wslog').addEventListener('input', function () {
+                var t = event.target;
+                sock.send(t.value.substring(savedtext.length));
+                t.value = savedtext; // drop the new chars, to prevent echo.
+            }, false);
+        }
 
         document.getElementById('reset').onclick = () => {
             const rsp = fetch('/reset');
@@ -177,6 +200,14 @@
                 if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();
                 populateObjectList(data);
+            } catch (error) {
+                console.error('Error fetching objects:', error);
+            }
+            try {
+                const response = await fetch('/biflows');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                populateBiFlows(data);
             } catch (error) {
                 console.error('Error fetching objects:', error);
             }
