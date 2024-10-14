@@ -28,6 +28,8 @@ public:
         {
         }
 
+        std::function<void()> set_dev_props;
+
         /// @brief We cannot do the end_of_elaboration at this point because we
         /// need the USB bus (created only during the USB host realize step)
         void end_of_elaboration() override {}
@@ -68,6 +70,9 @@ public:
 
         qemu::Bus root_bus = m_dev.get_child_bus("usb-bus.0");
         for (Device* device : m_devices) {
+            if (device->set_dev_props) {
+                device->set_dev_props();
+            }
             device->usb_realize(root_bus);
         }
     }

@@ -281,7 +281,7 @@ public:
         void event(bool level)
         {
             if (!m_prev_valid || (level != m_prev)) {
-                m_cb(level);
+                if (m_cb) m_cb(level);
             }
 
             m_prev_valid = true;
