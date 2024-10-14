@@ -136,6 +136,7 @@ set(CROW_INSTALL ON CACHE STRING "Enable Crow install")
 gs_addexpackage("gh:CrowCpp/Crow#v1.2.0")
 
 option(WITHOUT_PYTHON_BINDER "without python binder model" OFF)
+option(QEMU_ENABLE_USB_REDIRECT "enable qemu usb redirect" OFF)
 
 if((NOT WITHOUT_PYTHON_BINDER) AND (NOT GS_ONLY))
     find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)

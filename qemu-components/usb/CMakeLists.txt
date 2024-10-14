@@ -1,2 +1,5 @@
 add_subdirectory(qemu_kbd)
 add_subdirectory(qemu_tablet)
+if(QEMU_ENABLE_USB_REDIRECT)
+    add_subdirectory(usb_host)
+endif()

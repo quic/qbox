@@ -42,7 +42,13 @@ pip3 install numpy meson
 
 ```
 
- 
+To enable QEMU usb-host device, these packages are needed:  
+```
+on mac os:
+brew install usbutils usbredir
+on linux:
+apt install libusb-dev libusbredirhost-dev libusb-1.0-0-dev
+```
 
  
 
