@@ -70,6 +70,7 @@ public:
         , p_isdben_trusted("isdben_trusted", true, "isdben trusted")
         , p_isdben_secure("isdben_secure", true, "isdben secure")
         , p_coproc("coproc", "", "coproc")
+        , p_cmdline("cmdline", "", "cmdline")
         , p_vtcm_base_addr("vtcm_base_addr", 0, "vtcm base address")
         , p_vtcm_size_kb("vtcm_size_kb", 0, "vtcm size in kb")
         , p_num_coproc_instance("num_coproc_instance", 0, "number of coproc instances")
@@ -114,6 +115,7 @@ public:
         cpu.set_prop_bool("isdben-trusted", p_isdben_trusted);
         cpu.set_prop_bool("isdben-secure", p_isdben_secure);
         cpu.set_prop_str("coproc", p_coproc.get_value().data());
+        cpu.set_prop_str("cmdline", p_cmdline.get_value().data());
         cpu.set_prop_int("vtcm-base-addr", p_vtcm_base_addr);
         cpu.set_prop_int("vtcm-size-kb", p_vtcm_size_kb);
         cpu.set_prop_int("num-coproc-instance", p_num_coproc_instance);
@@ -145,6 +147,7 @@ public:
     cci::cci_param<bool> p_isdben_trusted;
     cci::cci_param<bool> p_isdben_secure;
     cci::cci_param<std::string> p_coproc;
+    cci::cci_param<std::string> p_cmdline;
     cci::cci_param<uint64_t> p_vtcm_base_addr;
     cci::cci_param<uint32_t> p_vtcm_size_kb;
     cci::cci_param<uint32_t> p_num_coproc_instance;
