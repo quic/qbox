@@ -3,7 +3,9 @@
 
 <head>
     <title>Monitor</title>
-
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
 
 </head>
 
@@ -18,10 +20,9 @@
     <select id="biflowsDropdown">
         <option value="" disabled selected>Select a biflow</option>
     </select>
-    <textarea id="wslog" cols=100 rows=50>
-    </textarea>
-    <a href="https://qemu-project.gitlab.io/qemu/interop/qemu-qmp-ref.html">for QEMU QMP, see Reference Manual</a>
-    
+
+    <div id="terminal" style="min-width:400px; width: 80% ; height:400px;"></div>
+
     <br>
     <br>
     <h3>QK Status</h3>
@@ -70,31 +71,42 @@
 
     <script>
 
-        function populateBiFlows(data) {
-                const dropdown = document.getElementById('biflowsDropdown');
-
-                data.biflows.forEach(biflow => {
-                    const option = document.createElement('option');
-                    option.value = biflow;
-                    option.textContent = biflow;
-                    dropdown.appendChild(option);
-                });
-
-                // Set up WebSocket connection when a biflow is selected
-                dropdown.addEventListener('change', function () {
-                    const selectedBiflow = this.value;
-                    if (selectedBiflow) {
-                        openWebSocket(selectedBiflow);
-                    }
-                });
-        }
         var sock;
         var savedtext = "";
+        var term;
+
+        var term = new window.Terminal({
+            cursorBlink: false,
+            cursorInactiveStyle: "outline"
+        });
+        term.open(document.getElementById('terminal'));
+        term.onData((data) => { sock.send(data) });
+        var fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+
+        function populateBiFlows(data) {
+            const dropdown = document.getElementById('biflowsDropdown');
+
+            data.biflows.forEach(biflow => {
+                const option = document.createElement('option');
+                option.value = biflow;
+                option.textContent = biflow;
+                dropdown.appendChild(option);
+            });
+
+            // Set up WebSocket connection when a biflow is selected
+            dropdown.addEventListener('change', function () {
+                const selectedBiflow = this.value;
+                if (sock) sock.close();
+                if (selectedBiflow) {
+                    term.reset();
+                    openWebSocket(selectedBiflow);
+                    fitAddon.fit();
+                }
+            });
+        }
 
         function openWebSocket(biflowName) {
-            savedtext = "";
-            var t = document.getElementById('wslog');
-            t.value = "";
 
             sock = new WebSocket("ws://" + location.host + "/biflow/" + biflowName);
             sock.onopen = () => {
@@ -105,21 +117,10 @@
             }
             sock.onclose = (e) => {
                 console.log('close websocket', e)
-                savedtext = "";
-                var t = document.getElementById('wslog');
-                t.value = "";
             }
             sock.onmessage = (e) => {
-                var t = document.getElementById('wslog');
-                t.value = t.value + e.data;//+"\n";
-                savedtext = t.value;
-                t.scrollTop = t.scrollHeight;
+                term.write(e.data);
             }
-            document.getElementById('wslog').addEventListener('input', function () {
-                var t = event.target;
-                sock.send(t.value.substring(savedtext.length));
-                t.value = savedtext; // drop the new chars, to prevent echo.
-            }, false);
         }
 
         document.getElementById('reset').onclick = () => {
@@ -140,8 +141,6 @@
             } catch (error) {
                 const statusElement = document.getElementById('sc_time');
                 statusElement.textContent = "Not connected";
-                //console.error('Error fetching flag:', error);
-                //                document.getElementById('status').textContent = 'Error fetching data';
             }
         }
 
@@ -387,6 +386,16 @@
 
         // Fetch top-level objects on page load
         window.onload = fetchObjects;
+
+        window.addEventListener('resize', () => {
+            console.log("Here");
+
+            const container = document.getElementById('terminal');
+            console.log('Container dimensions:', container.clientWidth, container.clientHeight);
+            console.log('Terminal rows:', term.rows, 'columns:', term.cols);
+            fitAddon.fit();
+            term.refresh(0, -term.rows - 1);
+        });
     </script>
 
 </body>

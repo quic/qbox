@@ -19,7 +19,7 @@ platform["monitor_0"] = {
 
  */
 
-#include <monitor.h>
+#include "monitor.h"
 #include <module_factory_registery.h>
 #include <vector>
 #include <functional>
@@ -27,15 +27,21 @@ platform["monitor_0"] = {
 #include <cciutils.h>
 #include <algorithm>
 
+/*
+ * pre declaration for getexepath
+ * NB this has to be done like this because of a nasty conflicting #def in libgen.h
+ */
+std::string getexepath();
+
 namespace gs {
 
 template <unsigned int BUSWIDTH>
 monitor<BUSWIDTH>::monitor(const sc_core::sc_module_name& nm)
     : sc_core::sc_module(nm)
     , p_server_port("server_port", 18080, "monitor server port number")
-    , p_html_doc_template_dir_path("html_doc_template_dir_path", "",
+    , p_html_doc_template_dir_path("html_doc_template_dir_path", getexepath(),
                                    "path to a template directory where HTML document to call the REST API exist")
-    , p_html_doc_name("html_doc_name", "", "name of a HTML document to call the REST API")
+    , p_html_doc_name("html_doc_name", "monitor.html", "name of a HTML document to call the REST API")
     , p_use_html_presentation("use_html_presentation", true, "use HTML document to present the REST API")
 {
     SCP_DEBUG(()) << "monitor constructor";
@@ -331,11 +337,11 @@ void monitor<BUSWIDTH>::init_monitor()
         })
         .onclose([&](crow::websocket::connection& conn, const std::string& reason) {
             auto b = (static_cast<std::unique_ptr<biflow_ws>*>(conn.userdata()));
-            (*b)->clear_conn();
+            (*b)->clear_conn(&conn);
         })
         .onerror([&](crow::websocket::connection& conn, const std::string& reason) {
             auto b = (static_cast<std::unique_ptr<biflow_ws>*>(conn.userdata()));
-            (*b)->clear_conn();
+            (*b)->clear_conn(&conn);
         });
     m_app_future = m_app.loglevel(crow::LogLevel::Error).port(p_server_port.get_value()).multithreaded().run_async();
 }
@@ -374,5 +380,38 @@ template class monitor<32>;
 template class monitor<64>;
 } // namespace gs
 typedef gs::monitor<32> monitor;
+
+/* Helper function to get the executable path
+ * This needs to be at the end of this file, to prevent conflicts with 'basename' which seems to be
+ * defined in libgen.h
+ */
+#include <unistd.h>
+#include <libgen.h>
+#if defined(__APPLE__)
+#include <mach-o/dyld.h>
+#endif
+
+std::string getexepath()
+{
+    char result[1024] = { 0 };
+#ifdef __APPLE__
+    uint32_t size = sizeof(result);
+    if (_NSGetExecutablePath(result, &size) != 0) {
+        std::cerr << "error executing _NSGetExecutablePath() in python-binder-bench.h" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return std::string(dirname(result));
+#elif __linux__
+    ssize_t count = readlink("/proc/self/exe", result, 1024);
+    if (count < 0) {
+        std::cerr << "error executing readlink() in python-binder-bench.h: " << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return std::string(dirname(result), count);
+
+#else
+#error monitor supports only Mac OS and linux for now!
+#endif
+}
 
 void module_register() { GSC_MODULE_REGISTER_C(monitor); }
