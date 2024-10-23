@@ -65,7 +65,6 @@ public:
 
     // only NONE, RUNNING and STOPPED will be used by the model, the rest are for debug
     enum jobstates { NONE = 0, RUNNING = 1, STOPPED = 2, SYSC_WAITING = 4, EXT_WAITING = 8, ILLEGAL = 12 } status;
-
     // MAKE THIS INTO A CCI_PARAM, and provide to_json in the 'normal' way !!!!!
 
     // this function provided only for debug.

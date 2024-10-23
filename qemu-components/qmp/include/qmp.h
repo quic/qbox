@@ -33,12 +33,14 @@ class qmp : public sc_core::sc_module
 
 public:
     cci::cci_param<std::string> p_qmp_str;
+    cci::cci_param<bool> p_monitor;
 
     qmp(const sc_core::sc_module_name& name, sc_core::sc_object* o): qmp(name, *(dynamic_cast<QemuInstance*>(o))) {}
     qmp(const sc_core::sc_module_name& n, QemuInstance& inst)
         : sc_core::sc_module(n)
         , p_qmp_str("qmp_str", "", "qmp options string, i.e. unix:./qmp-sock,server,wait=off")
         , qmp_socket("qmp_socket")
+        , p_monitor("monitor", true, "use the HMP monitor (true, default) - or QMP (false) ")
     {
         SCP_TRACE(())("qmp constructor");
         if (p_qmp_str.get_value().empty()) {
@@ -51,7 +53,11 @@ public:
             //            unlink(socket_path.c_str());
         }
         // https://qemu-project.gitlab.io/qemu/interop/qemu-qmp-ref.html
-        inst.add_arg("-qmp");
+        if (p_monitor) {
+            inst.add_arg("-monitor");
+        } else {
+            inst.add_arg("-qmp");
+        }
         inst.add_arg(p_qmp_str.get_value().c_str());
 
         qmp_socket.register_b_transport(this, &qmp::b_transport);
@@ -67,17 +73,19 @@ public:
          * is, otherwise wrap it as a human monitor command */
         buffer = buffer + std::string(data, length);
         if (data[length - 1] == '\n' || data[length - 1] == '\r') {
-            buffer.erase(std::remove_if(buffer.begin(), buffer.end(), [](char c) { return c == '\r' || c == '\n'; }),
-                         buffer.end());
-            std::string msg;
-            if (buffer[0] != '{') {
-                msg = R"("{ "execute": "human-monitor-command", "arguments": { "command-line": ")" + buffer +
-                      R"(" } }")";
-            } else {
-                msg = buffer;
+            if (!p_monitor) {
+                buffer.erase(
+                    std::remove_if(buffer.begin(), buffer.end(), [](char c) { return c == '\r' || c == '\n'; }),
+                    buffer.end());
+                if (buffer[0] != '{') {
+                    SCP_WARN(())
+                    ("Wrapping raw HMP command {} on QMP interface, consider selecting monitor mode", buffer);
+                    buffer = R"("{ "execute": "human-monitor-command", "arguments": { "command-line": ")" + buffer +
+                             R"(" } }")";
+                }
             }
             if (m_sockfd > 0) {
-                send(m_sockfd, msg.c_str(), msg.length(), 0);
+                send(m_sockfd, buffer.c_str(), buffer.length(), 0);
             }
             buffer = "";
         }
@@ -128,9 +136,11 @@ public:
             SCP_ERR(())("Unable to connect to QMP socket");
         }
 
-        std::string msg = R"({ "execute": "qmp_capabilities", "arguments": { "enable": ["oob"] } })";
-        if (write(m_sockfd, msg.c_str(), msg.size()) == -1) {
-            SCP_ERR(())("Can't send initialization command");
+        if (!p_monitor) {
+            std::string msg = R"({ "execute": "qmp_capabilities", "arguments": { "enable": ["oob"] } })";
+            if (write(m_sockfd, msg.c_str(), msg.size()) == -1) {
+                SCP_ERR(())("Can't send initialization command");
+            }
         }
     }
 };

@@ -37,6 +37,7 @@
 #include <ports/biflow-socket.h>
 
 #define MAX_ASIO_BUF_LEN (1024ULL * 16ULL)
+#define MAX_BUFFER       1000
 
 namespace gs {
 
@@ -47,11 +48,11 @@ class monitor : public sc_core::sc_module
 
     class biflow_ws
     {
-        public:
-        crow::websocket::connection* m_conn=nullptr;
+    public:
+        std::vector<crow::websocket::connection*> m_conns;
         biflow_socket<biflow_ws> socket;
         std::string buffer;
-        const char *name;
+        const char* name;
 
     public:
         void bind(biflow_bindable& other)
@@ -66,9 +67,9 @@ class monitor : public sc_core::sc_module
             char* ptr = (char*)txn.get_data_ptr();
             std::string data(ptr, txn.get_data_length());
             buffer = (buffer + data);
-            if (buffer.size()>1000) buffer=buffer.substr(buffer.size()-1000);
-            if (m_conn) {
-                m_conn->send_text(data);
+            if (buffer.size() > MAX_BUFFER) buffer = buffer.substr(buffer.size() - MAX_BUFFER);
+            for (auto conn : m_conns) {
+                conn->send_text(data);
             }
         }
         void enqueue(std::string data)
@@ -77,13 +78,24 @@ class monitor : public sc_core::sc_module
                 socket.enqueue(c);
             }
         }
-        biflow_ws(gs::biflow_multibindable& o, const char *n): socket(sc_core::sc_gen_unique_name("monitor_biflow_backend")), name(n)
+        biflow_ws(gs::biflow_multibindable& o, const char* n)
+            : socket(sc_core::sc_gen_unique_name("monitor_biflow_backend")), name(n)
         {
             socket.register_b_transport(this, &biflow_ws::b_transport);
             bind(o);
         }
-        void set_conn(crow::websocket::connection* c) { m_conn = c; m_conn->send_text(buffer);}
-        void clear_conn(){m_conn=nullptr;}
+        void set_conn(crow::websocket::connection* c)
+        {
+            m_conns.push_back(c);
+            c->send_text(buffer);
+        }
+        void clear_conn(crow::websocket::connection* c)
+        {
+            auto i = std::find(m_conns.begin(), m_conns.end(), c);
+            if (i != m_conns.end()) {
+                m_conns.erase(i);
+            }
+        }
     };
     std::map<std::string, std::unique_ptr<biflow_ws>> biflows;
 
