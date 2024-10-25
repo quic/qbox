@@ -13,6 +13,9 @@
     SystemC time : <span id="sc_time">Loading...</span> SystemC Running : <input type=checkbox id="sc_status" checked>
     <br>
     <br>
+
+    <button id="openPopupButton">Open Terminal</button>
+
     <select id="biflowsDropdown">
         <option value="" disabled selected>Select a biflow</option>
     </select>
@@ -68,7 +71,6 @@
     <script>
 
         var sock;
-        var savedtext = "";
         var term;
 
         var term = new window.Terminal({
@@ -80,7 +82,68 @@
         var fitAddon = new FitAddon.FitAddon();
         term.loadAddon(fitAddon);
 
+        function popupWindow(biflowName) {
+            var tw = window.open('', '_blank', 'popup=true,toolbar=no,scrollbars=no,menubar=no,directories=no,location=no,status=no,resizable=yes, width=500, height=300');
+
+            if (!tw || tw.closed || typeof tw.closed == 'undefined') {
+                alert('Popup blocked! Please allow popups for this site.');
+                return;
+            }
+
+            tw.document.write(`
+<head><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css"></head>
+<body style="margin:0; padding:0; width: 100%; height:100%; background:black"">
+<div id="terminal" style="margin:0; padding:0; width: 100%; height:100%"></div>
+</body>
+`);
+            tw.focus();
+
+            // Initialize the terminal in the popup window
+            tw.term = new window.Terminal({
+                cursorBlink: false,
+                cursorInactiveStyle: "outline",
+
+            });
+            tw.sock = new WebSocket("ws://" + location.host + "/biflow/" + biflowName);
+
+            tw.sock.onmessage = (e) => {
+                tw.term.write(e.data);
+            }
+            tw.sock.addEventListener("close", () => {
+                tw.close();
+            });
+
+            tw.fitAddon = new window.FitAddon.FitAddon();
+            tw.term.loadAddon(tw.fitAddon);
+
+            var terminalElement = tw.document.getElementById('terminal');
+            tw.term.open(terminalElement);
+            tw.fitAddon.fit();
+
+            tw.term.onData((data) => {
+                if (tw.sock) tw.sock.send(data);
+            });
+
+            tw.addEventListener('resize', () => {
+                tw.fitAddon.fit();
+            });
+
+            tw.opener.onbeforeunload = function () {
+                tw.sock.close();
+            };
+            tw.onbeforeunload = function () {
+                tw.sock.close();
+            };
+        }
         function populateBiFlows(data) {
+
+            document.getElementById('openPopupButton').addEventListener('click', function () {
+                var biflowName = document.getElementById('biflowsDropdown').value;
+                if (biflowName) {
+                    popupWindow(biflowName);
+                }
+            });
+
             const dropdown = document.getElementById('biflowsDropdown');
 
             data.biflows.forEach(biflow => {
@@ -96,27 +159,13 @@
                 if (sock) sock.close();
                 if (selectedBiflow) {
                     term.reset();
-                    openWebSocket(selectedBiflow);
+                    sock = new WebSocket("ws://" + location.host + "/biflow/" + selectedBiflow);
+                    sock.onmessage = (e) => {
+                        term.write(e.data);
+                    }
                     fitAddon.fit();
                 }
             });
-        }
-
-        function openWebSocket(biflowName) {
-
-            sock = new WebSocket("ws://" + location.host + "/biflow/" + biflowName);
-            sock.onopen = () => {
-                console.log('open websocket')
-            }
-            sock.onerror = (e) => {
-                console.log('error websocket', e)
-            }
-            sock.onclose = (e) => {
-                console.log('close websocket', e)
-            }
-            sock.onmessage = (e) => {
-                term.write(e.data);
-            }
         }
 
         async function fetchFlag() {
@@ -380,13 +429,8 @@
         window.onload = fetchObjects;
 
         window.addEventListener('resize', () => {
-            console.log("Here");
-
             const container = document.getElementById('terminal');
-            console.log('Container dimensions:', container.clientWidth, container.clientHeight);
-            console.log('Terminal rows:', term.rows, 'columns:', term.cols);
             fitAddon.fit();
-            term.refresh(0, -term.rows - 1);
         });
     </script>
 
