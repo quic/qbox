@@ -1,0 +1,17 @@
+#
+# This file is part of libqbox
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+[Unit]
+Description=use /run/systemd/resolve/resolv.conf instead of /etc/resolv.conf
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/systemd/mkosi-use-systemd-resolved.sh
+
+[Install]
+WantedBy=multi-user.target
