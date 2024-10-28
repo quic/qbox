@@ -1,12 +1,13 @@
 #!/usr/bin/bash
 
- #
- # This file is part of libqbox
- # Copyright (c) 2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
- #
- # SPDX-License-Identifier: BSD-3-Clause
- #
+#
+# This file is part of libqbox
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
 
+set -eux
 
 EXIT_SUCCESS=0
 EXIT_ERROR=1
@@ -35,8 +36,8 @@ Options:
 -t  systemd boot target [multi-user.target | graphical.target | <any other target>]
 -s  Rootfs Image size
 -d  OS distribution, i.e. ubuntu, fedora
--r  OS release, i.e. [noble, jammy, focal] for ubuntu or [37, 38, 40] for fedora
-(Currently only ubuntu and fedora are supported)
+-r  OS release: [jammy, noble] for ubuntu or [39, 40] for fedora.
+(Currently only ubuntu [jammy, noble] and fedora [39, 40] are supported)
 Example:
     build_linux_dist_image.sh -p udev -t multi-user.target -s 5G -d fedora -r 40 
 
@@ -92,32 +93,27 @@ else
     echo "processing arguments ..."
 fi
 
-while :; do
+while [[ "$#" -gt 0 ]]; do
     case $1 in
         -p)
             DEB_PACKAGES_TO_ADD=$2
             shift 2
-			if [[ $# -eq 0 ]]; then break; fi
             ;;
         -t)
             SD_TARGET=$2
             shift 2
-			if [[ $# -eq 0 ]]; then break; fi
             ;;
 		-s)
             ROOTFS_IMAGE_SIZE=$2
             shift 2
-			if [[ $# -eq 0 ]]; then break; fi
             ;;
         -d)
             OS_DIST=$2
             shift 2
-			if [[ $# -eq 0 ]]; then break; fi
             ;;
         -r)
             OS_RELEASE=$2
             shift 2
-			if [[ $# -eq 0 ]]; then break; fi
             ;;
         *)
             usage
@@ -134,7 +130,7 @@ echo "Note: use OS release: ${OS_RELEASE}"
 
 MKOSI_GIT_REPO="https://github.com/systemd/mkosi"
 MKOSI_REPO_DIR="mkosi"
-MKOSI_TAG="v24"
+MKOSI_TAG="v24.3"
 BUILD_DIR=$(pwd)/build
 OUTPUT_ARTIFACTS_DIR="Artifacts"
 COMPRESSED_OUTPUT_KERNEL_IMAGE="image.ext4.vmlinuz"
@@ -210,6 +206,7 @@ check_needed_packages_installed() {
     check_installed "btrfs-progs" || install_package "btrfs-progs"
     check_installed "arch-install-scripts" || install_package "arch-install-scripts"
     check_installed "device-tree-compiler" || install_package "device-tree-compiler"
+    check_installed "dnf" || install_package "dnf"
     check_installed "systemd-container" || install_package "systemd-container"
     echo "all needed packages are installed."
 }
@@ -222,14 +219,20 @@ check_needed_packages_installed() {
 do_mkosi_build() {
     local base_deb_packages=""
     local graphical_packages=""
+    local base_packages=""
+    local tools_tree_release=""
     case ${OS_DIST} in
             ubuntu)
-                    base_deb_packages="udev,dmsetup,networkd-dispatcher,systemd-timesyncd,libnss-systemd,systemd-hwe-hwdb,linux-image-generic,iproute2,iputils-ping,network-manager,gpg,vim,wget,openssh-server,ssh-client,net-tools,isc-dhcp-server,isc-dhcp-client"
+                    base_deb_packages="udev,xorg,systemd-sysv,dmsetup,networkd-dispatcher,network-manager-gnome,systemd-timesyncd,libnss-systemd,linux-image-generic,iproute2,iputils-ping,network-manager,gpg,vim,wget,openssh-server,openssh-client,net-tools,isc-dhcp-server,isc-dhcp-client"
                     graphical_packages=$( [[ "$2" == "graphical.target" ]] && printf ",ubuntu-desktop" || printf "" )
+                    base_packages="systemd,apt,apt-utils,coreutils,ubuntu-keyring"
+                    tools_tree_release="noble"
                     ;;
             fedora) 
-                    base_deb_packages="udev,systemd,kernel-core,openssh-server,openssh-clients,net-tools,systemd-devel,systemd-libs,systemd-udev,systemd-resolved,systemd-networkd,iproute,dhcp-server"
-                    graphical_packages=$( [[ "$2" == "graphical.target" ]] && printf ",@kde-desktop-environment" || printf "" )
+                    base_deb_packages="udev,kernel-core,openssh-server,openssh-clients,net-tools,systemd-devel,systemd-libs,systemd-udev,systemd-resolved,systemd-networkd,iproute,dhcp-server"
+                    graphical_packages=$( [[ "$2" == "graphical.target" ]] && printf ",@kde-desktop" || printf "" )
+                    base_packages="systemd,dnf,util-linux"
+                    tools_tree_release=${OS_RELEASE}
                     ;;
     esac
     
@@ -277,6 +280,25 @@ SizeMinBytes=${ROOTFS_IMAGE_SIZE}
 SizeMaxBytes=${ROOTFS_IMAGE_SIZE}
 
 EOF
+    
+    if [ -e  "./install_extra_pkgs.sh" ]; then
+        rm install_extra_pkgs.sh
+    fi
+
+    touch ./install_extra_pkgs.sh
+    cat >> ./install_extra_pkgs.sh << EOF
+#!/usr/bin/bash
+
+if [[ "\$DISTRIBUTION" == ubuntu ]]; then
+    mkosi-chroot  \
+    apt-get install -y ${deb_packages//,/ } flash-kernel-
+else
+    mkosi-chroot  \
+    dnf install -y ${deb_packages//,/ } --exclude=openh264
+fi
+        
+EOF
+    chmod +x ./install_extra_pkgs.sh
 
     export CACHE_DIRECTORY=${BUILD_DIR}
 
@@ -285,6 +307,7 @@ EOF
     --tools-tree-certificates=yes  \
     --split-artifacts   \
     --with-recommends=yes    \
+    --with-docs=yes   \
     --bootloader=none   \
     --bios-bootloader=none  \
     --shim-bootloader=none  \
@@ -295,9 +318,14 @@ EOF
     --output=image.ext4 \
     --architecture=arm64 \
     --release=${OS_RELEASE} \
-    --package=${deb_packages} \
+    --package=${base_packages}  \
     --root-password=root \
     --tools-tree=default    \
+    --tools-tree-distribution=${OS_DIST}  \
+    --tools-tree-release=${tools_tree_release}  \
+    --postinst-script=./install_extra_pkgs.sh  \
+    --with-network=yes  \
+    --debug  \
     --workspace-dir=${BUILD_DIR}  \
     --build-sources=""  \
     --cache-dir=${BUILD_DIR}  \
