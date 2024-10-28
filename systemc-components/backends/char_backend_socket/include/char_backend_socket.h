@@ -228,7 +228,7 @@ public:
         if (ret < 0) {
             ::close(m_srv_socket);
             m_srv_socket = -1;
-            SCP_ERR(()) << "bind failed: " << std::strerror(errno);
+            SCP_ERR(()) << "bind to port '" << iport << "' failed: " << std::strerror(errno);
             return;
         }
 
