@@ -130,10 +130,13 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 gs_addexpackage("gh:rpclib/rpclib#v2.3.0")
 
 # libasio-dev should be installed on the system
-set(CROW_BUILD_EXAMPLES OFF CACHE STRING "Disable building Crow examples")
-set(DCROW_BUILD_TESTS OFF CACHE STRING "Disable building Crow tests")
-set(CROW_INSTALL ON CACHE STRING "Enable Crow install")
-gs_addexpackage("gh:CrowCpp/Crow#v1.2.0")
+if(NOT GS_ONLY)
+    set(CROW_BUILD_EXAMPLES OFF CACHE STRING "Disable building Crow examples")
+    set(DCROW_BUILD_TESTS OFF CACHE STRING "Disable building Crow tests")
+    set(CROW_INSTALL ON CACHE STRING "Enable Crow install")
+    gs_addexpackage("gh:CrowCpp/Crow#v1.2.0")
+    set(CROW_DEP "Crow::Crow")
+endif()
 
 option(WITHOUT_PYTHON_BINDER "without python binder model" OFF)
 option(QEMU_ENABLE_USB_REDIRECT "enable qemu usb redirect" OFF)
@@ -325,7 +328,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         ${LIBELF_LIBRARIES}
         Threads::Threads
         rpc
-        Crow::Crow
+        ${CROW_DEP}
         zip
         ${PYBIND11_EMBED}
         ${CMAKE_DL_LIBS}  
