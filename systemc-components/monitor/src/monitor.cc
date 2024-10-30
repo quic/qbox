@@ -351,7 +351,7 @@ void monitor<BUSWIDTH>::init_monitor()
             auto b = (static_cast<std::unique_ptr<biflow_ws>*>(conn.userdata()));
             (*b)->clear_conn(&conn);
         });
-    m_app_future = m_app.loglevel(crow::LogLevel::Error).port(p_server_port.get_value()).multithreaded().run_async();
+    m_app_future = m_app.loglevel(crow::LogLevel::Error).port(p_server_port.get_value()).concurrency(1).run_async();
 }
 
 template <unsigned int BUSWIDTH>
