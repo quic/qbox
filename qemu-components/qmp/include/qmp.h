@@ -143,6 +143,13 @@ public:
             }
         }
     }
+
+    ~qmp()
+    {
+        if (reader_thread.joinable()) {
+            reader_thread.join();
+        }
+    }
 };
 
 extern "C" void module_register();
