@@ -12,11 +12,7 @@
 <body>
     SystemC time : <span id="sc_time">Loading...</span> SystemC Running : <input type=checkbox id="sc_status" checked>
     <br>
-    <button id="reset">
-        Reset Platform
-    </button><BR>
     <br>
-
     <select id="biflowsDropdown">
         <option value="" disabled selected>Select a biflow</option>
     </select>
@@ -122,10 +118,6 @@
                 term.write(e.data);
             }
         }
-
-        document.getElementById('reset').onclick = () => {
-            const rsp = fetch('/reset');
-        };
 
         async function fetchFlag() {
             try {

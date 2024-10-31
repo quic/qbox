@@ -26,12 +26,32 @@ platform["monitor_0"] = {
 #include <exception>
 #include <cciutils.h>
 #include <algorithm>
+#include <unistd.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
-/*
- * pre declaration for getexepath
- * NB this has to be done like this because of a nasty conflicting #def in libgen.h
- */
-std::string getexepath();
+std::string getexepath()
+{
+    char result[1024] = { 0 };
+#ifdef __APPLE__
+    uint32_t size = sizeof(result);
+    if (_NSGetExecutablePath(result, &size) != 0) {
+        std::cerr << "error executing _NSGetExecutablePath() in monitor.cc" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+#elif __linux__
+    ssize_t count = readlink("/proc/self/exe", result, 1024);
+    if (count < 0) {
+        std::cerr << "error executing readlink(\"/proc/self/exe\") in monitor.cc: " << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
+    }
+#else
+#error monitor supports only Mac OS and linux for now!
+#endif
+    std::string exec_path = result;
+    return exec_path.substr(0, exec_path.rfind("/"));
+}
 
 namespace gs {
 
@@ -210,8 +230,6 @@ void monitor<BUSWIDTH>::init_monitor()
     CROW_ROUTE(m_app, "/pause")
     ([&]() {
         crow::json::wvalue ret;
-        //        std::string msg = R"({ "execute": "stop" })";
-        //        write_to_qmp_socket(msg);
         m_sc.run_on_sysc([&] {
             sc_core::sc_suspend_all();
             ret["sc_time_stamp"] = sc_core::sc_time_stamp().to_seconds();
@@ -221,20 +239,10 @@ void monitor<BUSWIDTH>::init_monitor()
     CROW_ROUTE(m_app, "/continue")
     ([&]() {
         crow::json::wvalue ret;
-        //        std::string msg = R"({ "execute": "cont" })";
-        //        write_to_qmp_socket(msg);
         m_sc.run_on_sysc([&] {
             sc_core::sc_unsuspend_all();
             ret["sc_time_stamp"] = sc_core::sc_time_stamp().to_seconds();
         });
-        return ret;
-    });
-    CROW_ROUTE(m_app, "/reset")
-    ([&]() {
-        crow::json::wvalue ret;
-        //       std::string msg = R"({ "execute": "system_reset" })";
-        //       write_to_qmp_socket(msg);
-        m_sc.run_on_sysc([&] { ret["sc_time_stamp"] = sc_core::sc_time_stamp().to_seconds(); });
         return ret;
     });
     CROW_ROUTE(m_app, "/object/")
@@ -380,38 +388,4 @@ template class monitor<32>;
 template class monitor<64>;
 } // namespace gs
 typedef gs::monitor<32> monitor;
-
-/* Helper function to get the executable path
- * This needs to be at the end of this file, to prevent conflicts with 'basename' which seems to be
- * defined in libgen.h
- */
-#include <unistd.h>
-#include <libgen.h>
-#if defined(__APPLE__)
-#include <mach-o/dyld.h>
-#endif
-
-std::string getexepath()
-{
-    char result[1024] = { 0 };
-#ifdef __APPLE__
-    uint32_t size = sizeof(result);
-    if (_NSGetExecutablePath(result, &size) != 0) {
-        std::cerr << "error executing _NSGetExecutablePath() in python-binder-bench.h" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    return std::string(dirname(result));
-#elif __linux__
-    ssize_t count = readlink("/proc/self/exe", result, 1024);
-    if (count < 0) {
-        std::cerr << "error executing readlink() in python-binder-bench.h: " << strerror(errno) << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    return std::string(dirname(result), count);
-
-#else
-#error monitor supports only Mac OS and linux for now!
-#endif
-}
-
 void module_register() { GSC_MODULE_REGISTER_C(monitor); }
