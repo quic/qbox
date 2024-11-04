@@ -19,7 +19,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <atomic>
 
+#define QMP_SOCK_POLL_TIMEOUT 300
+#define QMP_RECV_BUFFER_LEN   8192
 class qmp : public sc_core::sc_module
 {
     SCP_LOGGER();
@@ -30,6 +33,7 @@ class qmp : public sc_core::sc_module
     std::string buffer = "";
     std::thread reader_thread;
     std::string socket_path;
+    std::atomic_bool stop_running;
 
 public:
     cci::cci_param<std::string> p_qmp_str;
@@ -41,6 +45,7 @@ public:
         , p_qmp_str("qmp_str", "", "qmp options string, i.e. unix:./qmp-sock,server,wait=off")
         , qmp_socket("qmp_socket")
         , p_monitor("monitor", true, "use the HMP monitor (true, default) - or QMP (false) ")
+        , stop_running{ false }
     {
         SCP_TRACE(())("qmp constructor");
         if (p_qmp_str.get_value().empty()) {
@@ -97,17 +102,20 @@ public:
 
     void start_of_simulation()
     {
-        reader_thread = std::thread([&]() {
-            unsigned char buffer[1024];
-
-            sleep(1);
+        reader_thread = std::thread([this]() {
             connect_to_qmp_usocket();
-
-            while (m_sockfd > 0) {
-                int l = recv(m_sockfd, buffer, 1024, 0);
-                if (l < 0) break;
-                for (int i = 0; i < l; i++) {
-                    qmp_socket.enqueue(buffer[i]);
+            struct pollfd qmp_poll;
+            qmp_poll.fd = m_sockfd;
+            qmp_poll.events = POLLIN;
+            int ret;
+            while (!stop_running) {
+                ret = poll(&qmp_poll, 1, QMP_SOCK_POLL_TIMEOUT);
+                if ((ret == -1 && errno == EINTR) || (ret == 0) /*timeout*/) {
+                    continue;
+                } else if ((ret > 0) && (qmp_poll.revents & POLLIN)) {
+                    if (!qmp_recv()) break;
+                } else {
+                    break;
                 }
             }
 
@@ -116,6 +124,17 @@ public:
             }
             m_sockfd = 0;
         });
+    }
+
+    bool qmp_recv()
+    {
+        unsigned char buffer[QMP_RECV_BUFFER_LEN];
+        int l = recv(m_sockfd, buffer, QMP_RECV_BUFFER_LEN, 0);
+        if (l < 0) return false;
+        for (int i = 0; i < l; i++) {
+            qmp_socket.enqueue(buffer[i]);
+        }
+        return true;
     }
 
     void connect_to_qmp_usocket()
@@ -146,6 +165,7 @@ public:
 
     ~qmp()
     {
+        stop_running = true;
         if (reader_thread.joinable()) {
             reader_thread.join();
         }
