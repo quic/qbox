@@ -751,7 +751,7 @@ The library also provides socket initiators and targets for Qemu
 # Ubuntu image
 
 You can build a customized Ubuntu OS rootfs image with a script called `build_linux_dist_image.sh`.
-(Tested on Ubuntu 20.04.5 LTS host machine)
+(The script needs _and only tested on_ Ubuntu 22.04.5 LTS host machine)
 
 ## Run it by hand
 

@@ -17,7 +17,7 @@ usage() {
     cat << EOF
 ***************************************************************************************
 Build a customized Ubuntu OS (jammy) rootfs image and populate a QQVP_IMAGE_DIR.
-(Tested on Ubuntu 20.04.5 LTS host machine)
+(The script needs _and only tested on_ Ubuntu 22.04.5 LTS host machine)
 
 The output build artifacts are:
 - Image (uncompressed AARch64 Linux kernel image with efi stub)
