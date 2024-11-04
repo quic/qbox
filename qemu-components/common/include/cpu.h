@@ -12,6 +12,7 @@
 #include <sstream>
 #include <mutex>
 #include <condition_variable>
+#include <atomic>
 
 #include <tlm>
 #include <tlm_utils/simple_initiator_socket.h>
@@ -50,13 +51,13 @@ protected:
     sc_core::sc_event_or_list m_external_ev;
     sc_core::sc_process_handle m_sc_thread; // used for co-routines
 
-    bool m_signaled;
+    std::atomic<bool> m_signaled;
     std::mutex m_signaled_lock;
     std::condition_variable m_signaled_cond;
 
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
-    bool m_finished = false;
-    bool m_started = false;
+    std::atomic<bool> m_finished = false;
+    std::atomic<bool> m_started = false;
     std::mutex m_can_delete;
     QemuCpuHintTlmExtension m_cpu_hint_ext;
 
@@ -368,7 +369,9 @@ public:
     virtual ~QemuCpu()
     {
         end_of_simulation(); // catch the case we exited abnormally
-        std::lock_guard<std::mutex> lock(m_can_delete);
+        while (!m_can_delete.try_lock()) {
+            m_qk->stop();
+        }
         m_inst.del_dev(this);
     }
 

@@ -12,6 +12,7 @@
 
 #include <mutex>
 #include <condition_variable>
+#include <atomic>
 #include <systemc>
 #include <tlm>
 #include <scp/report.h>
@@ -64,7 +65,8 @@ public:
     virtual bool need_sync() override;
 
     // only NONE, RUNNING and STOPPED will be used by the model, the rest are for debug
-    enum jobstates { NONE = 0, RUNNING = 1, STOPPED = 2, SYSC_WAITING = 4, EXT_WAITING = 8, ILLEGAL = 12 } status;
+    enum jobstates { NONE = 0, RUNNING = 1, STOPPED = 2, SYSC_WAITING = 4, EXT_WAITING = 8, ILLEGAL = 12 };
+    std::atomic<jobstates> status;
     // MAKE THIS INTO A CCI_PARAM, and provide to_json in the 'normal' way !!!!!
 
     // this function provided only for debug.
