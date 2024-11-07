@@ -9,7 +9,7 @@
 CPMDeclarePackage(qemu
     NAME libqemu
     GIT_REPOSITORY ${GREENSOCS_GIT}${QEMU_PATH_NAME}.git
-    GIT_TAG libqemu-nordau-v9.0-v0.5
+    GIT_TAG libqemu-v9.1-v0.3
     GIT_SUBMODULES CMakeLists.txt
     GIT_SHALLOW on
 )
