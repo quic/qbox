@@ -28,8 +28,22 @@ protected:
 public:
     void b_transport(tlm::tlm_generic_payload & trans, sc_core::sc_time & delay)
     {
-        exit_code = *reinterpret_cast<uint32_t*>(trans.get_data_ptr());
-        sc_core::sc_stop();
+        switch (trans.get_command()) {
+        case tlm::TLM_READ_COMMAND: {
+            uint32_t data = 0;
+            *reinterpret_cast<uint32_t*>(trans.get_data_ptr()) = 0;
+            trans.set_response_status(tlm::TLM_OK_RESPONSE);
+            break;
+        }
+        case tlm::TLM_WRITE_COMMAND: {
+            exit_code = *reinterpret_cast<uint32_t*>(trans.get_data_ptr());
+            sc_core::sc_stop();
+            break;
+        }
+        default:
+            SCP_ERR(()) << "TLM command not supported";
+            break;
+        }
     }
 
     SC_CTOR (exiter)
