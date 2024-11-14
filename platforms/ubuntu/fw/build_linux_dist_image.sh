@@ -20,8 +20,8 @@ Build a customized Ubuntu OS (jammy) rootfs image and populate a QQVP_IMAGE_DIR.
 (The script needs _and only tested on_ Ubuntu 22.04.5 LTS host machine)
 
 The output build artifacts are:
-- Image (uncompressed AARch64 Linux kernel image with efi stub)
-- image.ext4.vmlinuz (gzip compressed AARch64 Linux kernel image)
+- Image (uncompressed AARch64/RISCV64 Linux kernel image with efi stub)
+- image.ext4.vmlinuz (gzip compressed AARch64/RISCV64 Linux kernel image)
 - image.ext4 (ext4 root file system image)   
 - image.ext4.initrd (initramfs to bring up the root file system)  
 - image.ext4.manifest (list of all packages included in the image.ext4)
@@ -37,7 +37,9 @@ Options:
 -s  Rootfs Image size
 -d  OS distribution, i.e. ubuntu, fedora
 -r  OS release: [jammy, noble] for ubuntu or [39, 40] for fedora.
-(Currently only ubuntu [jammy, noble] and fedora [39, 40] are supported)
+-a  architecture: [arm64/aarch64, riscv64]
+(Currently only ubuntu [jammy, noble] and fedora [39, 40] are supported for aarch64
+and ubuntu [jammy, noble] for riscv64)
 Example:
     build_linux_dist_image.sh -p udev -t multi-user.target -s 5G -d fedora -r 40 
 
@@ -62,6 +64,7 @@ SD_TARGET="multi-user.target"
 ROOTFS_IMAGE_SIZE="3G"
 OS_DIST="ubuntu"
 OS_RELEASE="jammy"
+IMG_ARCHITECTURE="arm64"
 
 if [[ $# -eq 10 ]]; then
 # Don't handle the correctness of the passed parameter in this case,
@@ -111,6 +114,14 @@ while [[ "$#" -gt 0 ]]; do
             OS_DIST=$2
             shift 2
             ;;
+        -a)
+            if [[ $2 == "aarch64" ]]; then
+                IMG_ARCHITECTURE="arm64"
+            else
+                IMG_ARCHITECTURE=$2
+            fi
+            shift 2
+            ;;
         -r)
             OS_RELEASE=$2
             shift 2
@@ -127,10 +138,12 @@ echo "Note: use extra packages: ${DEB_PACKAGES_TO_ADD}"
 echo "Note: use Rootfs image size: ${ROOTFS_IMAGE_SIZE}"
 echo "Note: use OS distribution: ${OS_DIST}"
 echo "Note: use OS release: ${OS_RELEASE}"
+echo "Note: use Arch: ${IMG_ARCHITECTURE}"
 
 MKOSI_GIT_REPO="https://github.com/systemd/mkosi"
 MKOSI_REPO_DIR="mkosi"
 MKOSI_TAG="v24.3"
+OPENSBI_TAG="tags/v1.5.1"
 BUILD_DIR=$(pwd)/build
 OUTPUT_ARTIFACTS_DIR="Artifacts"
 COMPRESSED_OUTPUT_KERNEL_IMAGE="image.ext4.vmlinuz"
@@ -139,9 +152,18 @@ DEVICE_TREE_SOURCE_SUF=".dts"
 DEVICE_TREE_BLOB_SUF=".dtb"
 DEVICE_TREE_SOURCE="${OS_DIST}${DEVICE_TREE_SOURCE_SUF}"
 DEVICE_TREE_BLOB="${OS_DIST}${DEVICE_TREE_BLOB_SUF}"
-DEVICE_TREE_TEMPLATE="ubuntu-dts.template"
+DEVICE_TREE_TEMPLATE="ubuntu-dts-arm64.template"
+UART_STDOUT_PATH="/pl011@10000000";
 INITRD_START_ADDR=2323644416 #0x8A800000
 ZIP_SUF=".gz"
+KERNEL_CONSOLE_ARGS=""
+
+if [[ "${IMG_ARCHITECTURE}" == "riscv64" ]]; then
+    DEVICE_TREE_TEMPLATE="ubuntu-dts-riscv64.template"
+    UART_STDOUT_PATH="/soc/serial@10000000"
+    INITRD_START_ADDR=2686451712 #0xa02000000
+    KERNEL_CONSOLE_ARGS="console=ttyS0 earlycon=sbi "
+fi
 
 # clone git repo to a certain directory.
 # args:
@@ -208,6 +230,7 @@ check_needed_packages_installed() {
     check_installed "device-tree-compiler" || install_package "device-tree-compiler"
     check_installed "dnf" || install_package "dnf"
     check_installed "systemd-container" || install_package "systemd-container"
+    check_installed "gcc-riscv64-linux-gnu" || install_package "gcc-riscv64-linux-gnu"
     echo "all needed packages are installed."
 }
 
@@ -316,7 +339,7 @@ EOF
     --distribution=${OS_DIST} \
     --output-dir=${OUTPUT_ARTIFACTS_DIR} \
     --output=image.ext4 \
-    --architecture=arm64 \
+    --architecture=${IMG_ARCHITECTURE} \
     --release=${OS_RELEASE} \
     --package=${base_packages}  \
     --root-password=root \
@@ -333,7 +356,7 @@ EOF
     --build-dir=${BUILD_DIR} || fail "mkosi failed to build ubutnu" 
 }
 
-# uncompress mkosi generate AArch64 compressed kernel image.
+# uncompress mkosi generate AArch64/RISCV64 compressed kernel image.
 # args:
 # $1: mkosi generated output artifacts dir
 # $2: compressed kernel image name
@@ -342,6 +365,12 @@ uncompress_kernel_image() {
         fail "can't find images dir: $1"
     fi  
     cd "$1" || fail "can't cd to $1"
+    if [[ "${IMG_ARCHITECTURE}" == "riscv64" ]]; then
+        cp "$2" Image
+        echo "uncompressed riscv64 linux kernel image: $2"
+        cd ${INITIAL_WD}
+        return
+    fi
     if  file "$2" | grep "gzip compressed"; then
         gzip -dc "$2" | dd of=Image || fail "can't uncompress linux kernel image: $2"
     elif file "$2" | grep "PE32+ executable"; then
@@ -386,10 +415,10 @@ generate_chosen_node() {
 
 
         chosen {
-		bootargs = "systemd.unit=${sd_boot_target} audit=off loglevel=8 root=LABEL=root-arm64 rootfstype=ext4 rw";
+		bootargs = "${KERNEL_CONSOLE_ARGS}systemd.unit=${sd_boot_target} audit=off loglevel=8 root=LABEL=root-${IMG_ARCHITECTURE} rootfstype=ext4 rw";
 		linux,initrd-start = ${initrd_start_address};
 		linux,initrd-end = ${initrd_end_address};
-		stdout-path = "/pl011@10000000";
+		stdout-path = "${UART_STDOUT_PATH}";
 		kaslr-seed = <0xdec2698b 0x996c3b6b>;
 	};
 };
@@ -447,11 +476,35 @@ rename_artifacts() {
 	local artifacts_dir="$1"
 	cd "${artifacts_dir}" || fail "can't cd to ${artifacts_dir}"
 	mv Image Image.bin || fail "can't rename Image"
-	mv image.ext4.root-arm64.raw image_ext4.img || fail "can't rename image.ext4"
+	mv image.ext4.root-${IMG_ARCHITECTURE}.raw image_ext4.img || fail "can't rename image.ext4"
 	mv image.ext4.initrd image_ext4_initrd.img || fail "can't rename image.ext4.initrd"
 	mv image.ext4.vmlinuz image_ext4_vmlinuz.bin || fail "can't rename image.ext4.vmlinuz" 
 	cd ${INITIAL_WD}
 	echo "Finished renaming large images"
+}
+
+# build opensbi for riscv64 architecture.
+# args: 
+# $1: mkosi artifacts dir
+# $2: opensbi tag
+build_opensbi() {
+    local artifacts_dir="$1"
+    local opensbi_tag="$2"
+    local opensbi_dir_name="opensbi"
+    if [ ! -d ${opensbi_dir_name} ]; then
+        git clone https://github.com/riscv-software-src/opensbi || fail "can't clone opensbi github repository"
+        cd ${opensbi_dir_name} || fail "can't cd to opensbi"
+        git checkout "${opensbi_tag}" || fail "can't checkout opensbi ${opensbi_tag}"
+    else
+        cd ${opensbi_dir_name} || fail "can't cd to ${opensbi_dir_name}"
+        make clean
+    fi
+    export CROSS_COMPILE=riscv64-linux-gnu-
+    export PLATFORM_RISCV_XLEN=64
+    make -j4 FW_JUMP_ADDR=0x80200000  FW_JUMP_FDT_ADDR=0x82800000 FW_JUMP=y PLATFORM=generic
+    cd ${INITIAL_WD}
+    cp ${opensbi_dir_name}/build/platform/generic/firmware/fw_jump.bin "${artifacts_dir}/"
+	echo "Finished building opensbi"
 }
 
 # main.
@@ -465,6 +518,9 @@ main() {
     generate_dts "${OUTPUT_ARTIFACTS_DIR}" "${SD_TARGET}" "${INITRD_IMAGE}" "${DEVICE_TREE_SOURCE}" "${DEVICE_TREE_TEMPLATE}"
     generate_dtb "${OUTPUT_ARTIFACTS_DIR}" "${DEVICE_TREE_SOURCE}" "${DEVICE_TREE_BLOB}"
     rename_artifacts "${OUTPUT_ARTIFACTS_DIR}"
+    if [[ "${IMG_ARCHITECTURE}" == "riscv64" ]]; then
+        build_opensbi "${OUTPUT_ARTIFACTS_DIR}" "${OPENSBI_TAG}"
+    fi
 }
 
 # run the script

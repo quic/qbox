@@ -1,4 +1,9 @@
-set(LIBQEMU_TARGETS aarch64)
+set(UBUNTU_ARCH "aarch64" CACHE STRING "select the target architecture for ubuntu image")
+if(UBUNTU_ARCH STREQUAL "riscv64")
+    set(LIBQEMU_TARGETS riscv64)
+else()
+    set(LIBQEMU_TARGETS aarch64)
+endif()
 
 add_executable(platforms-vp
     ${PROJECT_SOURCE_DIR}/platforms/src/main.cc
@@ -17,13 +22,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/lsb-release")
     file(STRINGS "/etc/lsb-release" LSB_RELEASE_CONTENT REGEX "DISTRIB_ID.*Ubuntu")
     if(LSB_RELEASE_CONTENT)
         message("The build is done from an Ubuntu machine.")
-
-        if (NOT EXISTS ${PROJECT_SOURCE_DIR}/platforms/ubuntu/fw/Artifacts)
-            set(UBUNTU_BUILD_COMMAND ${PROJECT_SOURCE_DIR}/platforms/ubuntu/fw/build_linux_dist_image.sh -s 4G -p xorg,pciutils)
-        else()
-            set(UBUNTU_BUILD_COMMAND "")
-        endif()
-
+        set(UBUNTU_BUILD_COMMAND ${PROJECT_SOURCE_DIR}/platforms/ubuntu/fw/build_linux_dist_image.sh -s 4G -p xorg,pciutils -d ubuntu -r noble -s 5G -a ${UBUNTU_ARCH})
         if (EXISTS ${CMAKE_SOURCE_DIR}/configs/fw/8775/bsp/lnx/ubuntu/conf.lua)
                 add_custom_target(ubuntu
                     COMMAND ${UBUNTU_BUILD_COMMAND}
@@ -35,7 +34,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/lsb-release")
             add_custom_target(ubuntu
                 COMMAND ${UBUNTU_BUILD_COMMAND}
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/platforms/ubuntu/fw
-                COMMAND ${qbox_BINARY_DIR}/platforms/platforms-vp -l ${PROJECT_SOURCE_DIR}/platforms/ubuntu/conf.lua
+                COMMAND ${qbox_BINARY_DIR}/platforms/platforms-vp -l ${PROJECT_SOURCE_DIR}/platforms/ubuntu/conf_${UBUNTU_ARCH}.lua
                 DEPENDS platforms-vp
             )
         endif()
