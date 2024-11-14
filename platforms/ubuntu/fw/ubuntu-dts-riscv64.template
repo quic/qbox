@@ -1,0 +1,305 @@
+/dts-v1/;
+
+/ {
+	#address-cells = <0x02>;
+	#size-cells = <0x02>;
+	compatible = "riscv-virtio";
+	model = "riscv-virtio,qemu";
+
+	aliases {
+		serial0 = "/soc/serial@10000000";
+	};
+
+	reboot {
+		offset = <0x00>;
+		compatible = "syscon-reboot";
+		value = <0x7777>;
+		regmap = <0x0c>;
+	};
+
+	poweroff {
+		offset = <0x00>;
+		compatible = "syscon-poweroff";
+		value = <0x5555>;
+		regmap = <0x0c>;
+	};
+
+	reserved-memory {
+		#address-cells = <0x02>;
+		#size-cells = <0x02>;
+		ranges;
+
+		mmode_resv0@80040000 {
+			reg = <0x00 0x80040000 0x00 0x20000>;
+			no-map;
+		};
+
+		mmode_resv1@80000000 {
+			reg = <0x00 0x80000000 0x00 0x40000>;
+			no-map;
+		};
+	};
+
+
+	cpus {
+		#address-cells = <0x01>;
+		#size-cells = <0x00>;
+		timebase-frequency = <0x989680>;
+
+		cpu@0 {
+			phandle = <0x09>;
+			device_type = "cpu";
+			reg = <0x00>;
+			status = "okay";
+			compatible = "riscv";
+			riscv,cbop-block-size = <0x40>;
+			riscv,cboz-block-size = <0x40>;
+			riscv,cbom-block-size = <0x40>;
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zic64b", "zicbom", "zicbop", "zicboz", "ziccamoa", "ziccif", "zicclsm", "ziccrse", "zicntr", "zicsr", "zifencei", "zihintntl", "zihintpause", "zihpm", "zmmul", "za64rs", "zaamo", "zalrsc", "zawrs", "zfa", "zca", "zcd", "zba", "zbb", "zbc", "zbs", "ssccptr", "sscounterenw", "sstc", "sstvala", "sstvecd", "svadu";
+			riscv,isa-base = "rv64i";
+			riscv,isa = "rv64imafdch_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zicsr_zifencei_zihintntl_zihintpause_zihpm_zmmul_za64rs_zaamo_zalrsc_zawrs_zfa_zca_zcd_zba_zbb_zbc_zbs_ssccptr_sscounterenw_sstc_sstvala_sstvecd_svadu";
+			mmu-type = "riscv,sv57";
+
+			interrupt-controller {
+				#interrupt-cells = <0x01>;
+				interrupt-controller;
+				compatible = "riscv,cpu-intc";
+				phandle = <0x0a>;
+			};
+		};
+
+		cpu@1 {
+			phandle = <0x07>;
+			device_type = "cpu";
+			reg = <0x01>;
+			status = "okay";
+			compatible = "riscv";
+			riscv,cbop-block-size = <0x40>;
+			riscv,cboz-block-size = <0x40>;
+			riscv,cbom-block-size = <0x40>;
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zic64b", "zicbom", "zicbop", "zicboz", "ziccamoa", "ziccif", "zicclsm", "ziccrse", "zicntr", "zicsr", "zifencei", "zihintntl", "zihintpause", "zihpm", "zmmul", "za64rs", "zaamo", "zalrsc", "zawrs", "zfa", "zca", "zcd", "zba", "zbb", "zbc", "zbs", "ssccptr", "sscounterenw", "sstc", "sstvala", "sstvecd", "svadu";
+			riscv,isa-base = "rv64i";
+			riscv,isa = "rv64imafdch_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zicsr_zifencei_zihintntl_zihintpause_zihpm_zmmul_za64rs_zaamo_zalrsc_zawrs_zfa_zca_zcd_zba_zbb_zbc_zbs_ssccptr_sscounterenw_sstc_sstvala_sstvecd_svadu";
+			mmu-type = "riscv,sv57";
+
+			interrupt-controller {
+				#interrupt-cells = <0x01>;
+				interrupt-controller;
+				compatible = "riscv,cpu-intc";
+				phandle = <0x08>;
+			};
+		};
+
+		cpu@2 {
+			phandle = <0x05>;
+			device_type = "cpu";
+			reg = <0x02>;
+			status = "okay";
+			compatible = "riscv";
+			riscv,cbop-block-size = <0x40>;
+			riscv,cboz-block-size = <0x40>;
+			riscv,cbom-block-size = <0x40>;
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zic64b", "zicbom", "zicbop", "zicboz", "ziccamoa", "ziccif", "zicclsm", "ziccrse", "zicntr", "zicsr", "zifencei", "zihintntl", "zihintpause", "zihpm", "zmmul", "za64rs", "zaamo", "zalrsc", "zawrs", "zfa", "zca", "zcd", "zba", "zbb", "zbc", "zbs", "ssccptr", "sscounterenw", "sstc", "sstvala", "sstvecd", "svadu";
+			riscv,isa-base = "rv64i";
+			riscv,isa = "rv64imafdch_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zicsr_zifencei_zihintntl_zihintpause_zihpm_zmmul_za64rs_zaamo_zalrsc_zawrs_zfa_zca_zcd_zba_zbb_zbc_zbs_ssccptr_sscounterenw_sstc_sstvala_sstvecd_svadu";
+			mmu-type = "riscv,sv57";
+
+			interrupt-controller {
+				#interrupt-cells = <0x01>;
+				interrupt-controller;
+				compatible = "riscv,cpu-intc";
+				phandle = <0x06>;
+			};
+		};
+
+		cpu@3 {
+			phandle = <0x03>;
+			device_type = "cpu";
+			reg = <0x03>;
+			status = "okay";
+			compatible = "riscv";
+			riscv,cbop-block-size = <0x40>;
+			riscv,cboz-block-size = <0x40>;
+			riscv,cbom-block-size = <0x40>;
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zic64b", "zicbom", "zicbop", "zicboz", "ziccamoa", "ziccif", "zicclsm", "ziccrse", "zicntr", "zicsr", "zifencei", "zihintntl", "zihintpause", "zihpm", "zmmul", "za64rs", "zaamo", "zalrsc", "zawrs", "zfa", "zca", "zcd", "zba", "zbb", "zbc", "zbs", "ssccptr", "sscounterenw", "sstc", "sstvala", "sstvecd", "svadu";
+			riscv,isa-base = "rv64i";
+			riscv,isa = "rv64imafdch_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zicsr_zifencei_zihintntl_zihintpause_zihpm_zmmul_za64rs_zaamo_zalrsc_zawrs_zfa_zca_zcd_zba_zbb_zbc_zbs_ssccptr_sscounterenw_sstc_sstvala_sstvecd_svadu";
+			mmu-type = "riscv,sv57";
+
+			interrupt-controller {
+				#interrupt-cells = <0x01>;
+				interrupt-controller;
+				compatible = "riscv,cpu-intc";
+				phandle = <0x04>;
+			};
+		};
+
+		cpu@4 {
+			phandle = <0x01>;
+			device_type = "cpu";
+			reg = <0x04>;
+			status = "okay";
+			compatible = "riscv";
+			riscv,cbop-block-size = <0x40>;
+			riscv,cboz-block-size = <0x40>;
+			riscv,cbom-block-size = <0x40>;
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zic64b", "zicbom", "zicbop", "zicboz", "ziccamoa", "ziccif", "zicclsm", "ziccrse", "zicntr", "zicsr", "zifencei", "zihintntl", "zihintpause", "zihpm", "zmmul", "za64rs", "zaamo", "zalrsc", "zawrs", "zfa", "zca", "zcd", "zba", "zbb", "zbc", "zbs", "ssccptr", "sscounterenw", "sstc", "sstvala", "sstvecd", "svadu";
+			riscv,isa-base = "rv64i";
+			riscv,isa = "rv64imafdch_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zicsr_zifencei_zihintntl_zihintpause_zihpm_zmmul_za64rs_zaamo_zalrsc_zawrs_zfa_zca_zcd_zba_zbb_zbc_zbs_ssccptr_sscounterenw_sstc_sstvala_sstvecd_svadu";
+			mmu-type = "riscv,sv57";
+
+			interrupt-controller {
+				#interrupt-cells = <0x01>;
+				interrupt-controller;
+				compatible = "riscv,cpu-intc";
+				phandle = <0x02>;
+			};
+		};
+
+		cpu-map {
+
+			cluster0 {
+
+				core0 {
+					cpu = <0x09>;
+				};
+
+				core1 {
+					cpu = <0x07>;
+				};
+
+				core2 {
+					cpu = <0x05>;
+				};
+
+				core3 {
+					cpu = <0x03>;
+				};
+
+				core4 {
+					cpu = <0x01>;
+				};
+			};
+		};
+	};
+
+	memory0@80000000 {
+		device_type = "memory";
+		reg = <0x00 0x80000000 0x03 0x80000000>;
+	};
+
+	soc {
+		#address-cells = <0x02>;
+		#size-cells = <0x02>;
+		compatible = "simple-bus";
+		ranges;
+
+		virtio_mmio@10001000 {
+			interrupts = <0x01>;
+			interrupt-parent = <0x0b>;
+			compatible = "virtio,mmio";
+			reg = <0x00 0x10001000 0x00 0x1000>;
+		};
+
+		virtio_mmio@10002000 {
+			interrupts = <0x02>;
+			interrupt-parent = <0x0b>;
+			compatible = "virtio,mmio";
+			reg = <0x00 0x10002000 0x00 0x1000>;
+		};
+
+		cache-controller@2010000 {
+			cache-block-size = <0x40>;
+			cache-level = <0x02>;
+			cache-sets = <0x1000>;
+			cache-size = <0x200000>;
+			cache-unified;
+			compatible = "cache";
+			next-level-cache = <0x02>;
+			reg = <0x00 0x2010000 0x00 0x1000>;
+			reg-names = "control";
+		};
+
+		clint@2000000 {
+			interrupts-extended = <0x0a 0x03 0x0a 0x07 0x08 0x03 0x08 0x07 0x06 0x03 0x06 0x07 0x04 0x03 0x04 0x07 0x02 0x03 0x02 0x07>;
+			reg = <0x00 0x2000000 0x00 0x10000>;
+			compatible = "sifive,clint0", "riscv,clint0";
+		};
+
+
+		interrupt-controller@c000000 {
+           phandle = <0x0b>;
+			riscv,ndev = <0x5f>;
+			reg = <0x00 0xc000000 0x00 0x600000>;
+			interrupts-extended = <0x0a 0xffffffff 0x0a 0x09 0x08 0xffffffff 0x08 0x09 0x06 0xffffffff 0x06 0x09 0x04 0xffffffff 0x04 0x09 0x02 0xffffffff 0x02 0x09>;
+			interrupt-controller;
+			compatible = "sifive,plic-1.0.0", "riscv,plic0";
+			#address-cells = <0x00>;
+			#interrupt-cells = <0x01>;
+        };
+
+		uart1: serial@10000000 {
+			clock-frequency = <3686400>;
+			compatible = "ns16550a";
+			interrupt-parent = <0x0b>;
+			interrupts = <0x0a>;
+			reg = <0x00 0x10000000 0x00 0x100>;
+			reg-shift = <0x02>;
+		};
+
+		test@100000 {
+			compatible = "sifive,test1", "sifive,test0", "syscon";
+			reg = <0x00 0x100000 0x00 0x1000>;
+			phandle = <0x0c>;
+		};
+
+		pci@30000000 {
+			interrupt-map-mask = <0x1800 0x00 0x00 0x07>;
+			interrupt-map = <0x00   0x00 0x00 0x01 0x0b 0x20 
+						   0x00   0x00 0x00 0x02 0x0b 0x21 
+						   0x00   0x00 0x00 0x03 0x0b 0x22 
+						   0x00   0x00 0x00 0x04 0x0b 0x23 
+						   0x800  0x00 0x00 0x01 0x0b 0x21 
+						   0x800  0x00 0x00 0x02 0x0b 0x22 
+						   0x800  0x00 0x00 0x03 0x0b 0x23 
+						   0x800  0x00 0x00 0x04 0x0b 0x20 
+						   0x1000 0x00 0x00 0x01 0x0b 0x22
+						   0x1000 0x00 0x00 0x02 0x0b 0x23
+						   0x1000 0x00 0x00 0x03 0x0b 0x20
+						   0x1000 0x00 0x00 0x04 0x0b 0x21
+						   0x1800 0x00 0x00 0x01 0x0b 0x23
+						   0x1800 0x00 0x00 0x02 0x0b 0x20
+						   0x1800 0x00 0x00 0x03 0x0b 0x21
+						   0x1800 0x00 0x00 0x04 0x0b 0x22>;
+			ranges = <0x1000000 0x00 0x3000000       0x00 0x3000000  0x00 0x10000 
+					0x2000000 0x00 0x40000000 0x00 0x40000000 0x00 0x40000000
+					0x3000000 0x04 0x00       0x04 0x00       0x04 0x00>;
+			reg = <0x00 0x30000000 0x00 0x10000000>;
+			dma-coherent;
+			bus-range = <0x00 0xff>;
+			linux,pci-domain = <0x00>;
+			device_type = "pci";
+			compatible = "pci-host-ecam-generic";
+			#size-cells = <0x02>;
+			#interrupt-cells = <0x01>;
+			#address-cells = <0x03>;
+		};
+	};
+
+	fw-cfg@10100000 {
+		dma-coherent;
+		compatible = "qemu,fw-cfg-mmio";
+		reg = <0x00 0x10100000 0x00 0x18>;
+	};
+
+	platform-bus@4000000 {
+		#address-cells = <0x01>;
+		#size-cells = <0x01>;
+		interrupt-parent = <0x0b>;
+		compatible = "qemu,platform", "simple-bus";
+		ranges = <0x00 0x00 0x4000000 0x2000000>;
+	};
+
+	pmu {
+		compatible = "riscv,pmu";
+	};

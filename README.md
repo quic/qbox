@@ -750,8 +750,11 @@ The library also provides socket initiators and targets for Qemu
 
 # Ubuntu image
 
-You can build a customized Ubuntu OS rootfs image with a script called `build_linux_dist_image.sh`.
-(The script needs _and only tested on_ Ubuntu 22.04.5 LTS host machine)
+You can build a customized Ubuntu OS rootfs image with a script called `build_linux_dist_image.sh`.  
+Note:  
+- The script needs _and only tested on_ Ubuntu 22.04.5 LTS host machine
+- Currently only ubuntu [jammy, noble] and fedora [39, 40] are supported for aarch64
+and ubuntu [jammy, noble] for riscv64.
 
 ## Run it by hand
 
@@ -771,24 +774,66 @@ The output build artifacts are:
 So if you want to test this platform, you should go in `platforms/ubuntu/fw/`and generate the ubuntu images
 like that:
 
+For aarch64:  
 ```
-./build_linux_dist_image.sh -s 4G -p xorg,pciutils
+./build_linux_dist_image.sh -s 4G -p xorg,pciutils -a aarch64
+```
+For riscv64:  
+```
+./build_linux_dist_image.sh -s 4G -p xorg,pciutils -a riscv64
 ```
 
-It will create a `Artifacts` directory with all of the thing needed inside it.
+It will create a `Artifacts` directory with all linux OS artifacts needed inside it.
 If you want to run and test this ubuntu platform, you should go back at the top level 
-of the repository and build the project.
+of the repository and build the project:
+
+For aarch64:  
+```
+cmake -Bbuild -DLIBQEMU_TARGETS=aarch64
+cd build
+make -j
+```
+For riscv64:  
+```
+cmake -Bbuild -DLIBQEMU_TARGETS=riscv64
+cd build
+make -j
+```
 
 And then run the platform in your build directory:
 ```
-./platforms/platforms-vp -l ../platforms/ubuntu/conf.lua
+./platforms/platforms-vp -l ../platforms/ubuntu/conf_aarch64.lua
+```
+
+For riscv64:
+```
+./build_linux_dist_image.sh -s 4G -p xorg,pciutils -a riscv64
+```
+Then, from the build directory, run:  
+```
+./platforms/platforms-vp -l ../platforms/ubuntu/conf_riscv64.lua
 ```
 
 ## Run the custom target 'ubuntu'
 
 More simple, you can just run the custom target 'ubuntu' to build and run a customized ubuntu platform.
 
-You should just go in your build directory and run:
+Execute the platform build step first from the top of the repository:  
+
+For aarch64:  
+```
+cmake -Bbuild -DUBUNTU_ARCH=aarch64 -DLIBQEMU_TARGETS=aarch64
+cd build
+make -j
+```
+For riscv64:
+```
+cmake -Bbuild -DUBUNTU_ARCH=riscv64 -DLIBQEMU_TARGETS=riscv64
+cd build
+make -j
+```
+
+Then, in your build directory run:
 ```
 make ubuntu
 ```
