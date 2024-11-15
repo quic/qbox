@@ -24,6 +24,9 @@
 #include <termios.h>
 #include <poll.h>
 #include <regex>
+#include <atomic>
+
+#define RCV_POLL_TIMEOUT_MS 300
 
 class char_backend_stdio : public sc_core::sc_module
 {
@@ -33,7 +36,7 @@ protected:
     cci::cci_param<std::string> p_highlight;
 
 private:
-    bool m_running = true;
+    std::atomic_bool m_running;
     std::thread rcv_thread_id;
     pthread_t rcv_pthread_id = 0;
     std::atomic<bool> c_flag;
@@ -142,6 +145,7 @@ public:
         , p_expect("expect", "", "string of expect commands")
         , p_highlight("ansi_highlight", "", "ANSI highlight code to use for output, default bold")
         , socket("biflow_socket")
+        , m_running(true)
         , c_flag(false)
     {
         SCP_TRACE(()) << "CharBackendStdio constructor";
@@ -182,35 +186,22 @@ public:
     void end_of_elaboration() { socket.can_receive_any(); }
 
     void enqueue(char c) { socket.enqueue(c); }
-    void* rcv_thread()
+    void rcv_thread()
     {
-        struct sigaction act = { 0 };
-        act.sa_handler = &catch_fn;
-        sigaction(SIGURG, &act, NULL);
-
-        rcv_pthread_id = pthread_self();
-        sigset_t set;
-        sigemptyset(&set);
-        sigaddset(&set, SIGURG);
-        pthread_sigmask(SIG_UNBLOCK, &set, NULL);
-
-        int fd = 0;
-
-        struct pollfd self_pipe_monitor;
-        self_pipe_monitor.fd = fd;
-        self_pipe_monitor.events = POLLIN;
+        int fd = STDIN_FILENO;
+        struct pollfd rcv_monitor;
+        rcv_monitor.fd = fd;
+        rcv_monitor.events = POLLIN;
 
         while (m_running) {
-            int ret = poll(&self_pipe_monitor, 1, 300);
+            int ret = poll(&rcv_monitor, 1, RCV_POLL_TIMEOUT_MS);
             if ((ret == -1 && errno == EINTR) || (ret == 0) /*timeout*/) {
                 if (c_flag) {
                     c_flag = false;
                     enqueue('\x03');
                 }
                 continue;
-            } else if (self_pipe_monitor.revents & (POLLHUP | POLLERR | POLLNVAL)) {
-                break;
-            } else if (self_pipe_monitor.revents & POLLIN) {
+            } else if (rcv_monitor.revents & POLLIN) {
                 char c;
                 int r = read(fd, &c, 1);
                 if (r == 1) {
@@ -219,10 +210,10 @@ public:
                 if (r == 0) {
                     break;
                 }
+            } else {
+                break;
             }
         }
-
-        return NULL;
     }
 
     void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
@@ -245,7 +236,6 @@ public:
     ~char_backend_stdio()
     {
         m_running = false;
-        if (rcv_pthread_id) pthread_kill(rcv_pthread_id, SIGURG);
         if (rcv_thread_id.joinable()) rcv_thread_id.join();
     }
 };
