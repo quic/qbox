@@ -91,9 +91,11 @@ SC_MODULE (realtimelimiter) {
                     startSC;
             if (last > sc_core::SC_ZERO_TIME && sc_core::sc_time_stamp() == last) {
                 p_RTquantum_ms.set_value(p_RTquantum_ms.get_value() + 100);
-                SCP_WARN(())
-                ("Stalled ? (runto is {}s ahead, systemc time has not changed, new limit {}ms {}s)",
-                 (runto - sc_core::sc_time_stamp()).to_seconds(), p_RTquantum_ms.get_value(), runto.to_seconds());
+                if (p_SCTimeout_ms) {
+                    SCP_WARN(())
+                    ("Stalled ? (runto is {}s ahead, systemc time has not changed, new limit {}ms {}s)",
+                     (runto - sc_core::sc_time_stamp()).to_seconds(), p_RTquantum_ms.get_value(), runto.to_seconds());
+                }
                 /* Only check for exsessive runto's if we're stalled */
                 if (p_SCTimeout_ms &&
                     (runto > sc_core::sc_time_stamp() + sc_core::sc_time(p_SCTimeout_ms, sc_core::SC_MS))) {
