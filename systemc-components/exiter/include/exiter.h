@@ -22,7 +22,6 @@ SC_MODULE (exiter) {
     SCP_LOGGER();
 
 protected:
-    cci::cci_param<uint32_t> exit_code;
     tlm_utils::simple_target_socket<exiter, DEFAULT_TLM_BUSWIDTH> socket;
 
 public:
@@ -36,7 +35,13 @@ public:
             break;
         }
         case tlm::TLM_WRITE_COMMAND: {
-            exit_code = *reinterpret_cast<uint32_t*>(trans.get_data_ptr());
+            auto value = *reinterpret_cast<uint32_t*>(trans.get_data_ptr());
+            if (value) {
+                auto previous_actions = sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR,
+                                                                                sc_core::SC_LOG | sc_core::SC_DISPLAY);
+                SC_REPORT_ERROR("Exiter", ("Abnormal value: " + std::to_string(value)).c_str());
+                sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR, previous_actions);
+            }
             sc_core::sc_stop();
             break;
         }
@@ -46,9 +51,7 @@ public:
         }
     }
 
-    SC_CTOR (exiter)
-        : exit_code("exit_code", 0, "Exit code returned by writing to the exiter memory location")
-        , socket("target_socket")
+    SC_CTOR (exiter) : socket("target_socket")
         {
             socket.register_b_transport(this, &exiter::b_transport);
         }
