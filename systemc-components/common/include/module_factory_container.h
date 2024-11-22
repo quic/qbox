@@ -39,6 +39,11 @@
 #include <module_factory_registery.h>
 #include <transaction_forwarder_if.h>
 #include <tlm_sockets_buswidth.h>
+#include <algorithm>
+#include <vector>
+#include <iterator>
+#include <regex>
+#include <cctype>
 
 namespace gs {
 namespace ModuleFactory {
@@ -190,24 +195,13 @@ public:
 
             if (initname.at(0) != '&') continue; // all port binds are donated with a '&', so not for us
 
-            initname.erase(0, 1); // remove leading '&'
-            initname = std::string(name()) + "." + initname;
-
-            SCP_TRACE(())("Bind {} to {}", targetname, initname);
-
-            sc_core::sc_object* i_obj = nullptr;
-            sc_core::sc_object* t_obj = nullptr;
-            /* find the initiator object */
-
-            i_obj = find_sc_obj(nullptr, initname);
-
-            /* find the target object which mast be inside this object */
-            t_obj = find_sc_obj(m, targetname);
-
-            // actually you could probably just cast everything to (tlm::tlm_target_socket<>*), but
-            // we will dynamic cast to be sure.
-            if (!try_bind_all<32>(i_obj, t_obj) && !try_bind_all<64>(i_obj, t_obj)) {
-                SCP_FATAL(())("No bind found for: {} to {}", i_obj->name(), t_obj->name());
+            if (initname.find(';') != std::string::npos) {
+                order_bind(m, initname, targetname);
+            } else {
+                initname.erase(0, 1); // remove leading '&'
+                initname = std::string(name()) + "." + initname;
+                SCP_TRACE(())("Bind {} to {}", targetname, initname);
+                do_binding(m, initname, targetname);
             }
         }
     }
@@ -436,6 +430,7 @@ public:
     sc_core::sc_vector<tlm_target_socket_type> target_sockets;
     sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets;
     sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
+    TargetSignalSocket<bool> container_self_reset;
     transaction_forwarder_if<PASS>* m_local_pass;
 
     std::vector<cci::cci_param<gs::cci_constructor_vl>*> registered_mods;
@@ -495,6 +490,7 @@ public:
         , target_sockets("target_socket")
         , initiator_signal_sockets("initiator_signal_socket")
         , target_signal_sockets("target_signal_socket")
+        , container_self_reset("container_self_reset")
         , m_local_pass(nullptr)
         , container_mod_arg(p_container_mod_arg)
     {
@@ -524,6 +520,8 @@ public:
                 if (m_local_pass) m_local_pass->fw_handle_signal(i, value);
             });
         }
+
+        container_self_reset.register_value_changed_cb([this](bool value) { do_reset(value); });
 
         auto mods = gs::ModuleFactory::GetAvailableModuleList();
 
@@ -607,7 +605,64 @@ private:
             m_local_pass->fw_invalidate_direct_mem_ptr(start, end);
         }
     }
-}; // namespace ModuleFactory
+
+    std::vector<std::string> parse_order_str(const std::string& reset_order)
+    {
+        std::vector<std::string> ret;
+        if (reset_order.empty()) {
+            return ret;
+        }
+        std::string reset_order_tr = reset_order;
+        reset_order_tr.erase(
+            std::remove_if(reset_order_tr.begin(), reset_order_tr.end(), [](char c) { return std::isspace(c); }),
+            reset_order_tr.end());
+        size_t sig_count = std::count_if(reset_order_tr.begin(), reset_order_tr.end(), [](char c) { return c == ';'; });
+        ret.resize(sig_count + 1);
+        const std::regex separator(R"(;)");
+        std::copy(std::sregex_token_iterator(reset_order_tr.begin(), reset_order_tr.end(), separator, -1),
+                  std::sregex_token_iterator(), ret.begin());
+        return ret;
+    }
+
+    void do_binding(sc_core::sc_module* module_obj, const std::string& initiator_name, const std::string& target_name)
+    {
+        sc_core::sc_object* i_obj = nullptr;
+        sc_core::sc_object* t_obj = nullptr;
+        /* find the initiator object */
+
+        i_obj = find_sc_obj(nullptr, initiator_name);
+
+        /* find the target object which must be inside this object */
+        t_obj = find_sc_obj(module_obj, target_name);
+
+        // actually you could probably just cast everything to (tlm::tlm_target_socket<>*), but
+        // we will dynamic cast to be sure.
+        if (!try_bind_all<32>(i_obj, t_obj) && !try_bind_all<64>(i_obj, t_obj)) {
+            SCP_FATAL(())("No bind found for: {} to {}", i_obj->name(), t_obj->name());
+        }
+    }
+
+    void order_bind(sc_core::sc_module* module_obj, const std::string& target_order_str,
+                    const std::string& initiator_name)
+    {
+        if (!target_order_str.empty()) {
+            std::vector<std::string> target_vec = parse_order_str(target_order_str);
+            for (const auto& target : target_vec) {
+                std::string target_name = target;
+                if (target_name.at(0) != '&') continue;
+                target_name.erase(0, 1);
+                target_name = std::string(name()) + "." + target_name;
+                SCP_TRACE(())("Bind {} to {}", target_name, initiator_name);
+                do_binding(module_obj, target_name, initiator_name);
+            }
+        }
+    }
+
+    virtual void do_reset(bool value)
+    {
+        if (value) SCP_WARN(()) << "Reset";
+    }
+};
 
 /**
  * ModulesConstruct() function is called at Container constructor.
