@@ -1,0 +1,8 @@
+gs_addexpackage("gh:google/googletest#main")
+macro(gs_add_test test)
+    add_executable(${test} ${test}.cc)
+    target_link_libraries(${test} PRIVATE gtest gmock gs_memory reg_router ${TARGET_LIBS})
+    add_test(NAME ${test} COMMAND ${test})
+    set_tests_properties(${test} PROPERTIES TIMEOUT 10)
+endmacro()
+gs_add_test(gs_register-tests)

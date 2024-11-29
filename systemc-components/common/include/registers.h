@@ -20,6 +20,8 @@
 #include <scp/report.h>
 #include <cciutils.h>
 #include <tlm_sockets_buswidth.h>
+#include <vector>
+#include <algorithm>
 
 namespace gs {
 
@@ -100,8 +102,10 @@ class port_fnct : public tlm_utils::simple_target_socket<port_fnct, DEFAULT_TLM_
                     default:
                         break;
                     }
+                    capture_txn_pre(txn);
                     break;
                 case tlm::TLM_OK_RESPONSE:
+                    handle_mask_post(txn);
                     switch (txn.get_command()) {
                     case tlm::TLM_READ_COMMAND:
                         if (m_post_read_fncts.size()) {
@@ -140,6 +144,8 @@ public:
     void pre_write(tlm_fnct::TLMFUNC cb) { m_pre_write_fncts.push_back(std::make_shared<tlm_fnct>(cb)); }
     void post_read(tlm_fnct::TLMFUNC cb) { m_post_read_fncts.push_back(std::make_shared<tlm_fnct>(cb)); }
     void post_write(tlm_fnct::TLMFUNC cb) { m_post_write_fncts.push_back(std::make_shared<tlm_fnct>(cb)); }
+    virtual void capture_txn_pre(tlm::tlm_generic_payload& txn) = 0;
+    virtual void handle_mask_post(tlm::tlm_generic_payload& txn) = 0;
 
     port_fnct() = delete;
     port_fnct(std::string name, std::string path_name)
@@ -201,6 +207,7 @@ public:
     cci::cci_param<uint64_t> p_number;
     cci::cci_param<uint64_t> p_offset;
     cci::cci_param<uint64_t> p_size;
+    cci::cci_param<TYPE> p_mask;
     cci::cci_param<bool> p_relative_addresses;
 
     tlm_utils::simple_initiator_socket<proxy_data_array, DEFAULT_TLM_BUSWIDTH> initiator_socket;
@@ -231,19 +238,32 @@ public:
         }
     }
 
-    void set(TYPE* src, uint64_t idx = 0, uint64_t length = 1)
+    void set(TYPE* src, uint64_t idx = 0, uint64_t length = 1, bool use_mask = true)
     {
         sc_assert(idx + length <= p_number);
         if (m_dmi) {
             SCP_TRACE(())("Set value (DMI) : [{:#x}]", fmt::join(std::vector<TYPE>(&src[0], &src[length]), ","));
-            memcpy(&m_dmi[idx], src, sizeof(TYPE) * length);
+            TYPE curr_val = m_dmi[idx];
+            if (!use_mask || (p_mask.get_value() == ((1ULL << sizeof(TYPE)) - 1ULL))) {
+                memcpy(&m_dmi[idx], src, sizeof(TYPE) * length);
+            } else {
+                write_with_mask(src, reinterpret_cast<TYPE*>(&m_dmi[idx]), length);
+            }
         } else {
             tlm::tlm_generic_payload m_txn;
             sc_core::sc_time dummy;
+            std::vector<unsigned char> curr_data;
+            if (p_mask.get_value() == ((1ULL << sizeof(TYPE)) - 1ULL) || !use_mask) {
+                m_txn.set_data_ptr(reinterpret_cast<unsigned char*>(src));
+            } else {
+                curr_data.resize(sizeof(TYPE) * length);
+                get(reinterpret_cast<TYPE*>(curr_data.data()), idx, length);
+                write_with_mask(src, reinterpret_cast<TYPE*>(curr_data.data()), length);
+                m_txn.set_data_ptr(reinterpret_cast<unsigned char*>(curr_data.data()));
+            }
             m_txn.set_byte_enable_length(0);
             m_txn.set_dmi_allowed(false);
             m_txn.set_command(tlm::TLM_WRITE_COMMAND);
-            m_txn.set_data_ptr(reinterpret_cast<unsigned char*>(src));
             m_txn.set_address(p_offset + (sizeof(TYPE) * idx));
             m_txn.set_data_length(sizeof(TYPE) * length);
             m_txn.set_streaming_width(sizeof(TYPE) * length);
@@ -257,6 +277,26 @@ public:
         }
     }
 
+    void write_with_mask(TYPE* src, TYPE* dst, uint64_t length)
+    {
+        if (!src) {
+            SCP_FATAL(())("write_with_mask(): src pointer is NULL");
+        }
+        if (!dst) {
+            SCP_FATAL(())("write_with_mask(): dst pointer is NULL");
+        }
+        std::vector<TYPE> mask_to_apply(length, p_mask.get_value());
+        std::vector<TYPE> new_and_mask(length, 0);     // result of *src & mask
+        std::vector<TYPE> old_and_not_mask(length, 0); // result of *dmi & ~mask
+        std::transform(src, src + length, mask_to_apply.cbegin(), new_and_mask.begin(),
+                       [](TYPE src_val, TYPE mask_val) { return src_val & mask_val; });
+        std::transform(dst, dst + length, mask_to_apply.cbegin(), old_and_not_mask.begin(),
+                       [](TYPE curr_val, TYPE mask_val) { return curr_val & (~mask_val); });
+        std::transform(
+            new_and_mask.cbegin(), new_and_mask.cend(), old_and_not_mask.cbegin(), dst,
+            [](TYPE new_and_mask_val, TYPE old_and_not_mask_val) { return new_and_mask_val | old_and_not_mask_val; });
+    }
+
     TYPE& operator[](int idx)
     {
         if (!m_dmi) {
@@ -266,18 +306,24 @@ public:
             }
         }
         SCP_TRACE(())("Access value (DMI) using operator [] at idx {}", idx);
+        if (p_mask.get_value() != ((1ULL << sizeof(TYPE)) - 1ULL)) {
+            SCP_FATAL(()) << "operator[](): Register Mask: " << std::hex << p_mask.get_value()
+                          << " has readonly bits, please use set(TYPE* src, uint64_t idx, uint64_t length) and "
+                             "get(TYPE* dst, uint64_t idx, uint64_t length) instead";
+        }
         return m_dmi[idx];
     }
     void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) { m_dmi = nullptr; }
 
     proxy_data_array(scp::scp_logger_cache& logger, std::string name, std::string path_name, uint64_t _offset = 0,
-                     uint64_t number = 1)
+                     uint64_t number = 1, TYPE mask = (1ULL << sizeof(TYPE)) - 1ULL)
         : SCP_LOGGER_NAME()(logger)
         , m_path_name(path_name)
         , p_number(path_name + ".number", number, "number of elements in this register")
         , initiator_socket((name + "_initiator_socket").c_str())
         , p_offset(path_name + ".target_socket.address", _offset, "Offset of this register")
         , p_size(path_name + ".target_socket.size", sizeof(TYPE) * number, "size of this register")
+        , p_mask(path_name + ".target_socket.mask", mask, " R/W mask, 0 means read only, and 1 means write/read")
         , p_relative_addresses(path_name + ".target_socket.relative_addresses", true,
                                "allow relative_addresses for this register")
 
@@ -309,8 +355,9 @@ public:
     void operator=(TYPE value) { set(value); }
 
     proxy_data(scp::scp_logger_cache& logger, std::string name, std::string path_name, uint64_t offset = 0,
-               uint64_t number = 1, uint64_t start = 0, uint64_t length = sizeof(TYPE) * 8)
-        : proxy_data_array<TYPE>(logger, name, path_name, offset, number), SCP_LOGGER_NAME()(logger)
+               uint64_t number = 1, uint64_t start = 0, uint64_t length = sizeof(TYPE) * 8,
+               TYPE mask = (1ULL << sizeof(TYPE)) - 1ULL)
+        : proxy_data_array<TYPE>(logger, name, path_name, offset, number, mask), SCP_LOGGER_NAME()(logger)
     {
         static_assert(std::is_unsigned<TYPE>::value, "Register types must be unsigned");
     }
@@ -334,18 +381,16 @@ class gs_register : public port_fnct, public proxy_data<TYPE>
 private:
     std::string m_regname;
     std::string m_path;
-    uint64_t m_offset;
-    uint64_t m_size;
+    std::vector<unsigned char> captured_txn_data;
 
 public:
     gs_register() = delete;
-    gs_register(std::string _name, std::string path = "", uint64_t offset = 0, uint64_t number = 1)
+    gs_register(std::string _name, std::string path = "", uint64_t offset = 0, uint64_t number = 1,
+                TYPE mask = (1ULL << sizeof(TYPE)) - 1ULL)
         : m_regname(_name)
         , m_path(path)
-        , m_offset(offset)
-        , m_size(sizeof(TYPE) * number)
         , port_fnct(_name, path)
-        , proxy_data<TYPE>(SCP_LOGGER_NAME(), _name, path, offset, number)
+        , proxy_data<TYPE>(SCP_LOGGER_NAME(), _name, path, offset, number, mask)
     {
         std::string n(name());
         SCP_LOGGER_NAME().features[0] = parent(n) + "." + _name;
@@ -376,18 +421,78 @@ public:
     void operator=(gs_register<TYPE>& other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get()); }
     void operator+=(TYPE other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get() + other); }
     void operator-=(TYPE other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get() - other); }
+    void operator/=(TYPE other)
+    {
+        if (other == 0) SCP_FATAL(())("Trying to devide a register by 0!");
+        proxy_data<TYPE>::set(proxy_data<TYPE>::get() / other);
+    }
+    void operator*=(TYPE other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get() * other); }
     void operator&=(TYPE other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get() & other); }
     void operator|=(TYPE other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get() | other); }
+    void operator^=(TYPE other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get() ^ other); }
     void operator<<=(TYPE other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get() << other); }
     void operator>>=(TYPE other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get() >> other); }
 
     TYPE& operator[](int idx) { return proxy_data_array<TYPE>::operator[](idx); }
+    void get(TYPE* dst, uint64_t idx, uint64_t length) { return proxy_data_array<TYPE>::get(dst, idx, length); }
+    void set(TYPE* src, uint64_t idx, uint64_t length, bool use_mask = true)
+    {
+        return proxy_data_array<TYPE>::set(src, idx, length, use_mask);
+    }
 
     gs_bitfield<TYPE> operator[](gs_field<TYPE>& f) { return gs_bitfield<TYPE>(*this, f); }
     std::string get_regname() const { return m_regname; }
     std::string get_path() const { return m_path; }
-    uint64_t get_offset() const { return m_offset; }
-    uint64_t get_size() const { return m_size; }
+    uint64_t get_offset() const { return proxy_data<TYPE>::p_offset.get_value(); }
+    uint64_t get_size() const { return proxy_data<TYPE>::p_size.get_value(); }
+    void set_mask(TYPE mask) // mask is allowed to be set to implement e.g. write-once semantics
+    {
+        proxy_data<TYPE>::p_mask = mask;
+    }
+    TYPE get_mask() const { return proxy_data<TYPE>::p_mask.get_value(); }
+    void capture_txn_pre(tlm::tlm_generic_payload& txn) override
+    {
+        if ((proxy_data<TYPE>::p_mask.get_value() == ((1ULL << sizeof(TYPE)) - 1ULL)) ||
+            (txn.get_command() != tlm::tlm_command::TLM_WRITE_COMMAND)) {
+            return;
+        }
+        unsigned int txn_data_len = txn.get_data_length();
+        if ((txn_data_len == 0) || (txn_data_len % sizeof(TYPE)))
+            SCP_FATAL(()) << "capture_txn_pre(): txn data length should be n * sizeof(TYPE) where n >= 1";
+        uint64_t txn_addr = txn.get_address();
+        uint64_t idx = 0;
+        if (proxy_data<TYPE>::p_relative_addresses.get_value()) {
+            idx = txn_addr / sizeof(TYPE);
+        } else {
+            idx = (txn_addr - proxy_data<TYPE>::p_offset.get_value()) / sizeof(TYPE);
+        }
+        captured_txn_data.clear();
+        captured_txn_data.resize(txn_data_len);
+        get(reinterpret_cast<TYPE*>(captured_txn_data.data()), idx, txn_data_len / sizeof(TYPE));
+    }
+    void handle_mask_post(tlm::tlm_generic_payload& txn) override
+    {
+        if ((proxy_data<TYPE>::p_mask.get_value() == ((1ULL << sizeof(TYPE)) - 1ULL)) ||
+            (txn.get_command() != tlm::tlm_command::TLM_WRITE_COMMAND)) {
+            return;
+        }
+        unsigned int txn_data_len = txn.get_data_length();
+        if ((txn_data_len == 0) || (txn_data_len % sizeof(TYPE)))
+            SCP_FATAL(()) << "handle_mask_post(): txn data length should be n * sizeof(TYPE) where n >= 1";
+        uint64_t txn_addr = txn.get_address();
+        uint64_t idx = 0;
+        if (proxy_data<TYPE>::p_relative_addresses.get_value()) {
+            idx = txn_addr / sizeof(TYPE);
+        } else {
+            idx = (txn_addr - proxy_data<TYPE>::p_offset.get_value()) / sizeof(TYPE);
+        }
+        unsigned char* txn_data_ptr = txn.get_data_ptr();
+        proxy_data<TYPE>::write_with_mask(reinterpret_cast<TYPE*>(txn_data_ptr),
+                                          reinterpret_cast<TYPE*>(captured_txn_data.data()),
+                                          txn_data_len / sizeof(TYPE));
+        set(reinterpret_cast<TYPE*>(captured_txn_data.data()), idx, txn_data_len / sizeof(TYPE), false);
+        memcpy(txn_data_ptr, captured_txn_data.data(), txn_data_len);
+    }
 };
 
 /**
