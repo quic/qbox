@@ -7,12 +7,14 @@
 #include "gs_register-bench.h"
 #include <cci/utils/broker.h>
 
-#define REG_MEM_ADDR 0x0UL
-#define REG_MEM_SZ   0x10000UL
-#define FIFO0_ADDR   0x100UL
-#define FIFO0_LEN    16UL
-#define CMD0_ADDR    0x0UL
-#define CMD0_LEN     1UL
+#define REG_MEM_ADDR  0x0UL
+#define REG_MEM_SZ    0x10000UL
+#define FIFO0_ADDR    0x100UL
+#define FIFO0_LEN     16UL
+#define CMD0_ADDR     0x0UL
+#define CMD0_LEN      1UL
+#define STATUS64_ADDR 0x200UL
+#define STATUS64_LEN  1UL
 
 RegisterTestBench::RegisterTestBench(const sc_core::sc_module_name& n)
     : TestBench(n)
@@ -23,9 +25,10 @@ RegisterTestBench::RegisterTestBench(const sc_core::sc_module_name& n)
     , CMD0("CMD0", "CMD0", CMD0_ADDR, CMD0_LEN)
     , CMD0_OPCODE(CMD0, CMD0.get_regname() + ".OPCODE", 27UL, 5UL)
     , CMD0_PARAM(CMD0, CMD0.get_regname() + ".PARAM", 0UL, 27UL)
+    , STATUS64("STATUS64", "STATUS64", STATUS64_ADDR, STATUS64_LEN)
     , last_written_value(0)
     , last_written_idx(0)
-    , last_used_mask((1 << sizeof(uint32_t)) - 1)
+    , last_used_mask(gs::gs_full_mask<uint32_t>())
     , is_array(false)
 {
     m_initiator.socket.bind(m_reg_router.target_socket);
@@ -39,6 +42,10 @@ RegisterTestBench::RegisterTestBench(const sc_core::sc_module_name& n)
     CMD0.initiator_socket.bind(m_reg_memory.socket);
     m_reg_router.initiator_socket.bind(CMD0);
     m_reg_router.rename_last(std::string(this->name()) + ".CMD0.target_socket");
+
+    STATUS64.initiator_socket.bind(m_reg_memory.socket);
+    m_reg_router.initiator_socket.bind(STATUS64);
+    m_reg_router.rename_last(std::string(this->name()) + ".STATUS64.target_socket");
 }
 
 void RegisterTestBench::end_of_elaboration()
@@ -46,7 +53,7 @@ void RegisterTestBench::end_of_elaboration()
     // first post_write registered callback
     FIFO0.post_write([&](tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
         if (!is_array) {
-            if (last_used_mask == ((1 << sizeof(uint32_t)) - 1)) {
+            if (last_used_mask == gs::gs_full_mask<uint32_t>()) {
                 ASSERT_EQ(FIFO0[last_written_idx], last_written_value);
             } else {
                 uint32_t read_value = 0;
@@ -85,12 +92,19 @@ void RegisterTestBench::end_of_elaboration()
     CMD0.pre_read([&](tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) { CMD0 += 1; });
 
     CMD0.post_read([&](tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) { CMD0 *= 2; });
+
+    STATUS64.pre_write([&](tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
+        STATUS64.set_mask(0x0ULL); /*Read Only*/
+    });
 }
 
 TEST_BENCH(RegisterTestBench, test_registers)
 {
     uint32_t write_value = 0UL;
     SCP_DEBUG(()) << "****************Testing register array****************" << std::endl;
+    SCP_DEBUG(()) << "Assert FIFO0 array register default mask is 0xFFFFFFFF";
+    ASSERT_EQ(FIFO0.get_mask(), 0xFFFFFFFFUL);
+
     SCP_DEBUG(()) << "write 1 value to the register array with default mask";
     write_value = 0xABABABABUL;
     last_written_idx = 0;
@@ -170,6 +184,12 @@ TEST_BENCH(RegisterTestBench, test_registers)
     ASSERT_EQ(m_initiator.do_b_transport(trans), tlm::TLM_OK_RESPONSE);
 
     SCP_DEBUG(()) << "****************Testing normal register (not register array case)****************" << std::endl;
+    SCP_DEBUG(()) << "Assert CMD0 register default mask is 0xFFFFFFFF";
+    ASSERT_EQ(CMD0.get_mask(), 0xFFFFFFFFUL);
+
+    SCP_DEBUG(()) << "Assert STATUS64 register default mask is 0xFFFFFFFFFFFFFFFF";
+    ASSERT_EQ(STATUS64.get_mask(), 0xFFFFFFFFFFFFFFFFULL);
+
     SCP_DEBUG(()) << "write value to the register with default mask";
     write_value = 0xABABABABUL;
     last_written_value = write_value;
@@ -233,6 +253,20 @@ TEST_BENCH(RegisterTestBench, test_registers)
     ASSERT_EQ(reg_value, 26UL); // because of pre_read CB
     reg_value = CMD0;
     ASSERT_EQ(reg_value, 52UL); // because of post_read CB
+
+    SCP_DEBUG(()) << "test 64 bit reagister access";
+    uint64_t write_value_64 = 0xABABABABCDCDCDCDULL;
+    uint64_t mask_64 = gs::gs_full_mask<uint64_t>();
+    STATUS64.set_mask(mask_64);
+    STATUS64 = write_value_64;
+    uint64_t read_value_64 = 0x0ULL;
+    m_initiator.do_read<uint64_t>(STATUS64_ADDR, read_value_64);
+    ASSERT_EQ(read_value_64, write_value_64);
+    uint64_t new_write_value_64 = 0xFF00FF00FF00FF00ULL;
+    m_initiator.do_write<uint64_t>(STATUS64_ADDR, new_write_value_64);
+    m_initiator.do_read<uint64_t>(STATUS64_ADDR, read_value_64);
+    ASSERT_EQ(read_value_64, write_value_64); // 0x0ULL mask will be applied in pre_pread callback, so the value of the
+                                              // register shouldn't change at write
 }
 
 int sc_main(int argc, char* argv[])
