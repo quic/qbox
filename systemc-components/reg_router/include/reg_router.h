@@ -301,10 +301,12 @@ protected:
     }
 
 public:
-    explicit reg_router(const sc_core::sc_module_name& nm,
-                        const std::map<uint64_t, std::pair<uint64_t, const char*>>& p_mod_addr_name_map = {},
-                        const std::function<void(bool, uint64_t)>& pre_b_transport_callback = {},
-                        cci::cci_broker_handle broker = cci::cci_get_broker())
+    explicit reg_router(
+        const sc_core::sc_module_name& nm,
+        const std::map<uint64_t, std::pair<uint64_t, const char*>>& p_mod_addr_name_map =
+            std::map<uint64_t, std::pair<uint64_t, const char*>>(),
+        const std::function<void(bool, uint64_t)>& pre_b_transport_callback = std::function<void(bool, uint64_t)>(),
+        cci::cci_broker_handle broker = cci::cci_get_broker())
         : sc_core::sc_module(nm)
         , initiator_socket("initiator_socket", [&](std::string s) -> void { register_boundto(s); })
         , target_socket("target_socket")
@@ -338,7 +340,7 @@ public:
 private:
     std::vector<target_info*> mem_targets;
     std::map<sc_dt::uint64, target_info*> cb_targets;
-    const std::map<uint64_t, std::pair<uint64_t, const char*>>& mod_addr_name_map;
+    std::map<uint64_t, std::pair<uint64_t, const char*>> mod_addr_name_map;
     std::function<void(bool, uint64_t)> m_pre_b_transport_callback;
     bool initialized = false;
 };
