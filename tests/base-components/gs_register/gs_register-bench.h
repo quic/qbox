@@ -30,6 +30,7 @@ protected:
     gs::gs_register<uint32_t> CMD0;
     gs::gs_field<uint32_t> CMD0_OPCODE;
     gs::gs_field<uint32_t> CMD0_PARAM;
+    gs::gs_register<uint64_t> STATUS64;
     uint32_t last_written_value;
     uint64_t last_written_idx;
     uint32_t last_used_mask;
