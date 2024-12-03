@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
+
 #include <memory_dumper.h>
 
 typedef gs::memory_dumper<> memory_dumper;

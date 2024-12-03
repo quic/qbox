@@ -9,8 +9,6 @@
 #ifndef _LIBGSUTILS_PORTS_TARGET_SIGNAL_SOCKET_H
 #define _LIBGSUTILS_PORTS_TARGET_SIGNAL_SOCKET_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <functional>
 #include <cassert>
 

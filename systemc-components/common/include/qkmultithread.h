@@ -8,8 +8,6 @@
 #ifndef QKMULTITHREAD_H
 #define QKMULTITHREAD_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <mutex>
 #include <condition_variable>
 #include <atomic>

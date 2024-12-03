@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
+
 #include <virtio_gpu_pci.h>
 
 void module_register() { GSC_MODULE_REGISTER_C(virtio_gpu_pci, sc_core::sc_object*, sc_core::sc_object*); }

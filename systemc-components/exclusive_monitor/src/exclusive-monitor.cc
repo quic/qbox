@@ -3,6 +3,10 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+
+#define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
+
 #include <exclusive-monitor.h>
 
 void module_register() { GSC_MODULE_REGISTER_C(exclusive_monitor); }

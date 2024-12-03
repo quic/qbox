@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
+
 /* Quic Module Cortex-M55 */
 #include "remote_cpu.h"
 #include <module_factory_container.h>

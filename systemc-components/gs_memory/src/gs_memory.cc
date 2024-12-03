@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
+
 #include "gs_memory.h"
 
 typedef gs::gs_memory<> gs_memory;

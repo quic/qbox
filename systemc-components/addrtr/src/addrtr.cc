@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
+
 #include "addrtr.h"
 
 void module_register() { GSC_MODULE_REGISTER_C(addrtr); }

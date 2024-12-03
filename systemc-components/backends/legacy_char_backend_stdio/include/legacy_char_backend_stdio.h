@@ -6,8 +6,6 @@
 
 #pragma once
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include "backends/legacy-char-backend.h"
 
 #include <unistd.h>

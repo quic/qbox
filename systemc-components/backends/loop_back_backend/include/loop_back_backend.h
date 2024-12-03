@@ -12,8 +12,6 @@
 #ifndef _GS_LOOP_BACK_BACKEND_H_
 #define _GS_LOOP_BACK_BACKEND_H_
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <systemc>
 #include <tlm.h>
 #include <tlm_utils/simple_target_socket.h>

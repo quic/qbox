@@ -8,8 +8,6 @@
 #ifndef REALTIMLIMITER_H
 #define REALTIMLIMITER_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <thread>
 #include <mutex>
 #include <queue>

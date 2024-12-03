@@ -9,8 +9,6 @@
 #ifndef _LIBQBOX_COMPONENTS_UART_PL011_H
 #define _LIBQBOX_COMPONENTS_UART_PL011_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <cci_configuration>
 
 #include <libgssync.h>

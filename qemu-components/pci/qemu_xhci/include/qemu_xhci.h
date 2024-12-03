@@ -8,8 +8,6 @@
 #ifndef _LIBQBOX_COMPONENTS_USB_XHCI_H
 #define _LIBQBOX_COMPONENTS_USB_XHCI_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <module_factory_registery.h>
 
 #include <qemu_gpex.h>

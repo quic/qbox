@@ -7,8 +7,6 @@
 #ifndef GS_REGISTERS_H
 #define GS_REGISTERS_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <type_traits>
 
 #include <systemc>

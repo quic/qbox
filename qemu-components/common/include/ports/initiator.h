@@ -9,8 +9,6 @@
 #ifndef _LIBQBOX_PORTS_INITIATOR_H
 #define _LIBQBOX_PORTS_INITIATOR_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <functional>
 #include <limits>
 #include <cassert>

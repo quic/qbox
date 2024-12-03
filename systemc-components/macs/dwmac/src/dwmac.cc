@@ -6,6 +6,7 @@
  */
 
 #define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
 
 #include <arpa/inet.h>
 #include <scp/report.h>

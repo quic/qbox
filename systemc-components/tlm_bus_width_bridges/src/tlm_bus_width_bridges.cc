@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
+
 #include <tlm_bus_width_bridges.h>
 
 typedef gs::tlm_bus_width_bridges<32, 64> TLMBUSWIDTHBridgeFrom32To64;

@@ -8,8 +8,6 @@
 #ifndef _LIBQBOX_COMPONENTS_SIFIVE_TEST_H
 #define _LIBQBOX_COMPONENTS_SIFIVE_TEST_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <systemc>
 #include <cci_configuration>
 #include <module_factory_registery.h>

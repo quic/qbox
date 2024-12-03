@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
+
 #include <arm-gicv2.h>
 
 void module_register() { GSC_MODULE_REGISTER_C(arm_gicv2, sc_core::sc_object*); }

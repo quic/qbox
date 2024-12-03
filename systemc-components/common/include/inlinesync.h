@@ -8,7 +8,6 @@
 #ifndef INLINESYNC_H
 #define INLINESYNC_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 #include <tlm>
 #include "tlm_utils/simple_target_socket.h"

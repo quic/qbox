@@ -395,7 +395,7 @@ public:
                         eventList run = *run_it;
 
                         if (!std::equal(one.begin(), one.end(), run.begin())) {
-                            std::equal(one.begin(), one.end(), run.begin(), [this, i](auto a, auto b) -> bool {
+                            (void)std::equal(one.begin(), one.end(), run.begin(), [this, i](auto a, auto b) -> bool {
                                 if (!(a == b)) {
                                     SCP_INFO("checker.h") << "  Non determinitic Difference in run " << i << " between "
                                                           << a.model->name() << " (at time "

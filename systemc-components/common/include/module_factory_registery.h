@@ -9,8 +9,6 @@
 
 #define CCI_GS_MF_NAME "__GS.ModuleFactory."
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <cciutils.h>
 
 /**

@@ -14,6 +14,9 @@
  * uart
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
+
 #include "uart-pl011.h"
 
 #include <char_backend_socket.h>

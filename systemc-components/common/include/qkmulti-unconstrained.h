@@ -8,8 +8,6 @@
 #ifndef QKMULTI_UNCONSTRAINED_H
 #define QKMULTI_UNCONSTRAINED_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <qkmultithread.h>
 
 namespace gs {

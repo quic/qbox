@@ -8,8 +8,6 @@
 #ifndef QKMULTI_ADAPTIVE_QUANTUM_H
 #define QKMULTI_ADAPTIVE_QUANTUM_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <qkmultithread.h>
 
 namespace gs {
