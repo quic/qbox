@@ -12,7 +12,6 @@
  */
 
 #define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <systemc.h>
 
 #include "uart-pl011.h"

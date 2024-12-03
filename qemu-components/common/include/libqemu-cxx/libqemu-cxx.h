@@ -27,6 +27,8 @@
 #include <libqemu-cxx/exceptions.h>
 #include <libqemu-cxx/loader.h>
 
+#include <scp/report.h>
+
 /* libqemu types forward declaration */
 struct LibQemuExports;
 struct QemuObject;

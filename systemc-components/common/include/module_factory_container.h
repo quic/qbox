@@ -7,8 +7,6 @@
 #ifndef GREENSOCS_MODULE_FACTORY_H
 #define GREENSOCS_MODULE_FACTORY_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include "cciutils.h"
 #include <cci_configuration>
 #include <systemc>

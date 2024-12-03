@@ -4,6 +4,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
+
+#include <systemc>
+
 #include <sifive-x280-rtl.h>
 
 void module_register()

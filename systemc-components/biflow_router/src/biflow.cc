@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
 
 #include <module_factory_registery.h>
 #include <ports/biflow-socket.h>

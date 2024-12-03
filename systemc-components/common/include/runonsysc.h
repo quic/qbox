@@ -8,8 +8,6 @@
 #ifndef RUNONSYSTEMC_H
 #define RUNONSYSTEMC_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -18,7 +16,6 @@
 
 #include <async_event.h>
 #include <uutils.h>
-#include <module_factory_registery.h>
 
 namespace gs {
 class runonsysc : public sc_core::sc_module
@@ -121,7 +118,6 @@ public:
     {
         SC_HAS_PROCESS(runonsysc);
         SC_THREAD(jobs_handler);
-        SigHandler::get().register_on_exit_cb([this]() { cancel_all(); });
     }
 
     /**

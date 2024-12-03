@@ -10,7 +10,7 @@
 #include <string>
 
 #include <libqemu-cxx/target/aarch64.h>
-#define SC_ALLOW_DEPRECATED_IEEE_API
+
 #include <module_factory_registery.h>
 
 #include <irq-ctrl/armv7m_nvic/include/armv7m-nvic.h>

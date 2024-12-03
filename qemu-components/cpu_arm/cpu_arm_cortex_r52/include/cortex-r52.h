@@ -8,8 +8,6 @@
 
 #pragma once
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <string>
 
 #include <cci_configuration>

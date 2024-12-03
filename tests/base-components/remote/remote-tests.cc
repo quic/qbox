@@ -5,6 +5,7 @@
  */
 
 #define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
 
 #include "remote-bench.h"
 #include <cci/utils/broker.h>

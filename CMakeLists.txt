@@ -34,12 +34,13 @@ message(STATUS "QEMU_PATH_NAME=${QEMU_PATH_NAME}")
 include(FetchContent)
 include(CTest)
 
-FetchContent_Declare(
-    cpm-cmake
-    GIT_REPOSITORY https://github.com/cpm-cmake/CPM.cmake.git
-    GIT_TAG v0.31.1)
-FetchContent_MakeAvailable(cpm-cmake)
-include(${cpm-cmake_SOURCE_DIR}/cmake/CPM.cmake)
+# download CPM.cmake
+file(
+  DOWNLOAD
+  https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.40.2/CPM.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
+)
+include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
 
 if(EXISTS "${PROJECT_SOURCE_DIR}/Packages")
     if("${GREENSOCS_GIT}" STREQUAL "")

@@ -6,6 +6,7 @@
  */
 
 #define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
 
 #include <cstdio>
 #include <cstring>
@@ -26,7 +27,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <systemc>
 #include <scp/report.h>
 
 #include "backends/tap.h"

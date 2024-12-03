@@ -9,8 +9,6 @@
 #ifndef _LIBQBOX_COMPONENTS_TIMER_HEXAGON_QTIMER_H
 #define _LIBQBOX_COMPONENTS_TIMER_HEXAGON_QTIMER_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <string>
 #include <cassert>
 

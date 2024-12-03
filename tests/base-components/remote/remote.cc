@@ -5,8 +5,8 @@
  */
 
 #define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <systemc>
+
 #include <tlm>
 #include <cci_configuration>
 #include <scp/report.h>

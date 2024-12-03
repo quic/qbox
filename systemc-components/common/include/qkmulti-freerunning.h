@@ -7,8 +7,6 @@
 #ifndef QKMULTI_FREERUNNING_H
 #define QKMULTI_FREERUNNING_H
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
-
 #include <qkmultithread.h>
 
 namespace gs {

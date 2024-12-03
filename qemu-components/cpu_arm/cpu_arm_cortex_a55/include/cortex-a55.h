@@ -10,7 +10,6 @@
 
 #include <string>
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <cci_configuration>
 
 #include <libqemu-cxx/target/aarch64.h>

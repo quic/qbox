@@ -5,13 +5,13 @@
  */
 
 #define SC_ALLOW_DEPRECATED_IEEE_API
+#include <systemc>
 
 /* M55 mini-vp */
 #include <chrono>
 #include <string>
 
 #include <cci_configuration>
-#include <systemc>
 
 #include <cciutils.h>
 #include <argparser.h>
