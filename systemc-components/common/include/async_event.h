@@ -26,19 +26,28 @@ private:
     sc_core::sc_time m_delay;
     std::thread::id tid;
     std::mutex mutex; // Belt and braces
-    bool outstanding;
+    bool outstanding = false;
+    enum { none, attach, detach } attach_pending_state = none;
 
 public:
     async_event(bool start_attached = true): outstanding(0)
     {
         tid = std::this_thread::get_id();
-        outstanding = false;
         enable_attach_suspending(start_attached);
     }
 
     void async_notify() { notify(); }
 
-    void notify(sc_core::sc_time delay = sc_core::sc_time(sc_core::SC_ZERO_TIME))
+    void notify()
+    {
+        if (tid == std::this_thread::get_id()) {
+            sc_core::sc_event::notify();
+        } else {
+            notify(sc_core::SC_ZERO_TIME);
+        }
+    }
+    void notify(double d, sc_core::sc_time_unit u) { notify(sc_core::sc_time(d, u)); }
+    void notify(sc_core::sc_time delay)
     {
         if (tid == std::this_thread::get_id()) {
             sc_core::sc_event::notify(delay);
@@ -59,7 +68,14 @@ public:
 #ifndef SC_HAS_ASYNC_ATTACH_SUSPENDING
         sc_core::async_attach_suspending(this);
 #else
-        this->sc_core::sc_prim_channel::async_attach_suspending();
+        if (tid == std::this_thread::get_id()) {
+            this->sc_core::sc_prim_channel::async_attach_suspending();
+        } else {
+            mutex.lock();
+            attach_pending_state = attach;
+            mutex.unlock();
+            async_request_update();
+        }
 #endif
     }
 
@@ -68,14 +84,18 @@ public:
 #ifndef SC_HAS_ASYNC_ATTACH_SUSPENDING
         sc_core::async_detach_suspending(this);
 #else
-        this->sc_core::sc_prim_channel::async_detach_suspending();
+        if (tid == std::this_thread::get_id()) {
+            this->sc_core::sc_prim_channel::async_detach_suspending();
+        } else {
+            mutex.lock();
+            attach_pending_state = detach;
+            mutex.unlock();
+            async_request_update();
+        }
 #endif
     }
 
-    void enable_attach_suspending(bool e)
-    {
-        e ? this->async_attach_suspending() : this->async_detach_suspending();
-    }
+    void enable_attach_suspending(bool e) { e ? this->async_attach_suspending() : this->async_detach_suspending(); }
 
 private:
     void update(void)
@@ -86,6 +106,17 @@ private:
             sc_event::notify(m_delay);
             outstanding = false;
         }
+        switch (attach_pending_state) {
+        case attach:
+            this->async_attach_suspending();
+            break;
+        case detach:
+            this->async_detach_suspending();
+            break;
+        default:
+            break;
+        }
+        attach_pending_state = none;
         mutex.unlock();
     }
     void start_of_simulation()
