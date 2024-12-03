@@ -302,6 +302,7 @@ private:
              */
             it--;
         }
+        std::set<int> initiators;
 
         while (it != m_dmi_info_map.end()) {
             tlm::tlm_dmi& r = it->second.dmi;
@@ -317,13 +318,16 @@ private:
                 continue;
             }
             for (auto t : it->second.initiators) {
-                SCP_INFO((DMI)) << "Invalidating initiator " << t << " [0x" << std::hex
-                                << it->second.dmi.get_start_address() << " - 0x" << it->second.dmi.get_end_address()
-                                << "]";
-                target_socket[t]->invalidate_direct_mem_ptr(it->second.dmi.get_start_address(),
-                                                            it->second.dmi.get_end_address());
+                SCP_TRACE((DMI)) << "Queueing initiator " << t << " for invalidation, its bounds are [0x" << std::hex
+                                 << it->second.dmi.get_start_address() << " - 0x" << it->second.dmi.get_end_address()
+                                 << "]";
+                initiators.insert(t);
             }
             it = m_dmi_info_map.erase(it);
+        }
+        for (auto t : initiators) {
+            SCP_INFO((DMI)) << "Invalidating initiator " << t << " [0x" << std::hex << start << " - 0x" << end << "]";
+            target_socket[t]->invalidate_direct_mem_ptr(start, end);
         }
     }
 
@@ -407,8 +411,7 @@ private:
             ti.priority = gs::cci_get_d<uint32_t>(m_broker, name + ".priority", 0);
 
             SCP_INFO((D[ti.index]), ti.name)
-                << "Address map " << ti.name + " at"
-                << " address "
+                << "Address map " << ti.name << " at address "
                 << "0x" << std::hex << ti.address << " size "
                 << "0x" << std::hex << ti.size << (ti.use_offset ? " (with relative address) " : "");
             if (ti.chained) SCP_DEBUG(())("{} is chained so debug will be suppressed", ti.name);
