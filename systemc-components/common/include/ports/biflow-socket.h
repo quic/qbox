@@ -135,7 +135,7 @@ class biflow_socket : public sc_core::sc_module, public biflow_bindable
         default:
             SCP_FATAL(())("Unkown command");
         }
-        m_send_event.notify();
+        m_send_event.notify(sc_core::SC_ZERO_TIME);
     }
     void send_ctrl(ctrl& c)
     {
