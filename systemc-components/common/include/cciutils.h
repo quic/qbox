@@ -241,6 +241,7 @@ public:
 
     void print_used_parameter(cci::cci_broker_handle broker, std::string path = "")
     {
+        bool found_match = false;
         for (auto v : m_used) {
             if (v.rfind(path, 0) == 0) {
                 cci::cci_value c = cci_get(broker, v);
@@ -254,7 +255,11 @@ public:
                     std::cout << " (" << h.get_description() << ")";
                 }
                 std::cout << std::endl;
+                found_match = true;
             }
+        }
+        if (!path.empty() && !found_match) {
+            SCP_FATAL("cciutils") << "No parameter matching '" << path << "'.";
         }
     }
 
