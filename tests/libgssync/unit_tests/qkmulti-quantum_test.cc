@@ -53,7 +53,7 @@ void finished_quantum()
     qk->sync();
     budget = qk->time_to_sync();
     EXPECT_THAT(budget, AnyOf(Eq(quantum), Eq(quantum - inc)));
-    qk->inc(budget);
+    qk->inc(quantum - inc);
     qk->sync();
     budget = qk->time_to_sync();
     EXPECT_LE(budget, quantum);
