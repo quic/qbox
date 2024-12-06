@@ -56,7 +56,7 @@ public:
     {
         struct termios tty;
 
-        int fd = 0; /* stdout */
+        int fd = STDIN_FILENO; /* stdin */
 
         tcgetattr(fd, &tty);
 
@@ -157,18 +157,6 @@ public:
             SCP_WARN(())("Processing expect string {}", ecmd);
         }
 
-        struct termios tty;
-
-        int fd = 0; /* stdout */
-
-        tcgetattr(fd, &tty);
-
-        tty.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
-
-        tcsetattr(fd, TCSANOW, &tty);
-
-        atexit(tty_reset);
-
         gs::SigHandler::get().register_on_exit_cb(tty_reset);
         gs::SigHandler::get().add_sig_handler(SIGINT, gs::SigHandler::Handler_CB::PASS);
         gs::SigHandler::get().register_handler([&](int signo) {
@@ -231,10 +219,22 @@ public:
         fflush(stdout);
     }
 
+    void start_of_simulation()
+    {
+        struct termios tty;
+        int fd = STDIN_FILENO; /* stdin */
+        tcgetattr(fd, &tty);
+        tty.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
+        tcsetattr(fd, TCSANOW, &tty);
+    }
+
+    void end_of_simulation() { tty_reset(); }
+
     ~char_backend_stdio()
     {
         m_running = false;
         if (rcv_thread_id.joinable()) rcv_thread_id.join();
+        tty_reset();
     }
 };
 extern "C" void module_register();
