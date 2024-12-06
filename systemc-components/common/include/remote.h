@@ -409,7 +409,7 @@ private:
 
         void stop()
         {
-            if (is_stopped) return;
+            if (is_stopped || !is_started) return;
 
             is_stopped = true;
             {
@@ -1112,7 +1112,7 @@ public:
 
     void stop()
     {
-        if (cancel_waiting) return;
+        if (cancel_waiting || is_local_mode()) return;
         cancel_waiting = true;
         {
             std::lock_guard<std::mutex> cc_lg(client_conncted_mut);
