@@ -99,7 +99,7 @@ private:
 
     void _update_all_sigs_cb();
 
-    void _change_pass_sig_cbs_to_force_exit();
+    void _change_sig_cbs_to_dfl();
 
 private:
     std::map<int, Handler_CB> m_signals;

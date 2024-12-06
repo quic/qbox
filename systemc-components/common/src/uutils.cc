@@ -98,11 +98,11 @@ void gs::SigHandler::mark_error_signal(int signum, std::string error_msg)
 
 gs::SigHandler::~SigHandler()
 {
-    _change_pass_sig_cbs_to_force_exit();
-    close(self_sockpair_fd[0]); // this should terminate the pass_handler thread.
-    close(self_sockpair_fd[1]);
-    stop_running = true;
+    stop_running = true; // this should terminate the pass_handler thread.
     if (pass_handler.joinable()) pass_handler.join();
+    _change_sig_cbs_to_dfl();
+    close(self_sockpair_fd[0]);
+    close(self_sockpair_fd[1]);
 }
 
 void gs::SigHandler::_start_pass_signal_handler()
@@ -125,7 +125,13 @@ void gs::SigHandler::_start_pass_signal_handler()
                     exit(EXIT_FAILURE);
                 }
                 if (m_signals[sig_num] == Handler_CB::EXIT) {
-                    for (auto on_exit_cb : exit_handlers) on_exit_cb();
+                    if ((sc_core::sc_get_status() != sc_core::SC_STOPPED) &&
+                        (sc_core::sc_get_status() !=
+                         sc_core::SC_END_OF_SIMULATION)) // don't call if sc_stop was already called, because
+                                                         // destructors of other classes may have been already called
+                                                         // and the order of destruction of objects may cause the exit
+                                                         // callback functions to be called on non-existing objects
+                        for (auto on_exit_cb : exit_handlers) on_exit_cb();
                     if (error_signals.find(sig_num) != error_signals.end()) {
                         std::cerr << "Fatal error: " << error_signals[sig_num] << std::endl;
                         _Exit(EXIT_FAILURE);
@@ -133,7 +139,9 @@ void gs::SigHandler::_start_pass_signal_handler()
                     if (sc_core::sc_get_status() < sc_core::SC_RUNNING)
                         _Exit(EXIT_SUCCESS); // FIXME: should the exit status be EXIT_FAILURE?
                     stop_running = true;
-                    async_request_update();
+                    if ((sc_core::sc_get_status() != sc_core::SC_STOPPED) &&
+                        (sc_core::sc_get_status() != sc_core::SC_END_OF_SIMULATION))
+                        async_request_update();
                 } else {
                     for (auto handler : handlers) handler(sig_num);
                 }
@@ -141,7 +149,6 @@ void gs::SigHandler::_start_pass_signal_handler()
                 exit(EXIT_FAILURE);
             }
         }
-        _change_pass_sig_cbs_to_force_exit();
     });
     is_pass_handler_requested = true;
 }
@@ -207,15 +214,16 @@ void gs::SigHandler::_update_all_sigs_cb()
     }
 }
 
-void gs::SigHandler::_change_pass_sig_cbs_to_force_exit()
+void gs::SigHandler::_change_sig_cbs_to_dfl()
 {
     for (auto sig_cb_pair : m_signals) {
-        if (sig_cb_pair.second == Handler_CB::EXIT || sig_cb_pair.second == Handler_CB::PASS)
-            _update_sig_cb(sig_cb_pair.first, Handler_CB::FORCE_EXIT);
+        if (sig_cb_pair.second != Handler_CB::DFL) _update_sig_cb(sig_cb_pair.first, Handler_CB::DFL);
     }
 }
 
-gs::ProcAliveHandler::ProcAliveHandler(): stop_running(false), m_is_ppid_set{ false }, m_is_parent_setup_called{ false } {}
+gs::ProcAliveHandler::ProcAliveHandler(): stop_running(false), m_is_ppid_set{ false }, m_is_parent_setup_called{ false }
+{
+}
 
 gs::ProcAliveHandler::~ProcAliveHandler()
 {
@@ -312,7 +320,7 @@ void gs::ProcAliveHandler::check_parent_conn_nth(std::function<void()> on_parent
 }
 
 void gs::ProcAliveHandler::_set_ppid()
-    {
-        m_ppid = getppid();
-        m_is_ppid_set = true;
-    }
+{
+    m_ppid = getppid();
+    m_is_ppid_set = true;
+}
