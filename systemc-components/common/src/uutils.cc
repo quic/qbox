@@ -98,7 +98,13 @@ void gs::SigHandler::mark_error_signal(int signum, std::string error_msg)
 
 gs::SigHandler::~SigHandler()
 {
-    stop_running = true; // this should terminate the pass_handler thread.
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        stop_running = true; // this should cause the pass_handler thread to exit next time it checks the flag.
+
+        exit_handlers.clear();
+        handlers.clear();
+    }
     if (pass_handler.joinable()) pass_handler.join();
     _change_sig_cbs_to_dfl();
     close(self_sockpair_fd[0]);
@@ -117,31 +123,36 @@ void gs::SigHandler::_start_pass_signal_handler()
             if ((ret == -1 && errno == EINTR) || (ret == 0) /*timeout*/)
                 continue;
             else if (self_pipe_monitor.revents & (POLLHUP | POLLERR | POLLNVAL)) {
-                return;
+                break;
             } else if (self_pipe_monitor.revents & POLLIN) {
+                std::unique_lock<std::mutex> lock(mutex);
+                if (stop_running) break;
                 char ch[1];
                 if (read(self_pipe_monitor.fd, ch, 1) == -1) {
                     perror("pipe read");
                     exit(EXIT_FAILURE);
                 }
                 if (m_signals[sig_num] == Handler_CB::EXIT) {
+                    stop_running = true;
+                    if (sc_core::sc_get_status() < sc_core::SC_RUNNING) {
+                        _Exit(EXIT_SUCCESS); // FIXME: should the exit status be EXIT_FAILURE?
+                    }
                     if ((sc_core::sc_get_status() != sc_core::SC_STOPPED) &&
                         (sc_core::sc_get_status() !=
-                         sc_core::SC_END_OF_SIMULATION)) // don't call if sc_stop was already called, because
-                                                         // destructors of other classes may have been already called
-                                                         // and the order of destruction of objects may cause the exit
-                                                         // callback functions to be called on non-existing objects
+                         sc_core::SC_END_OF_SIMULATION)) { // don't call if sc_stop was already called, because
+                                                           // destructors of other classes may have been already
+                                                           // called and the order of destruction of objects may
+                                                           // cause the exit callback functions to be called on
+                                                           // non-existing objects
                         for (auto on_exit_cb : exit_handlers) on_exit_cb();
+                        exit_handlers.clear();
+                        handlers.clear();
+                        async_request_update();
+                    }
                     if (error_signals.find(sig_num) != error_signals.end()) {
-                        std::cerr << "Fatal error: " << error_signals[sig_num] << std::endl;
+                        std::cerr << "\nFatal error: " << error_signals[sig_num] << std::endl;
                         _Exit(EXIT_FAILURE);
                     }
-                    if (sc_core::sc_get_status() < sc_core::SC_RUNNING)
-                        _Exit(EXIT_SUCCESS); // FIXME: should the exit status be EXIT_FAILURE?
-                    stop_running = true;
-                    if ((sc_core::sc_get_status() != sc_core::SC_STOPPED) &&
-                        (sc_core::sc_get_status() != sc_core::SC_END_OF_SIMULATION))
-                        async_request_update();
                 } else {
                     for (auto handler : handlers) handler(sig_num);
                 }

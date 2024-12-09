@@ -77,12 +77,14 @@ protected:
     std::mutex m_async_jobs_mutex;
 
     async_event m_jobs_handler_event;
+    std::atomic<bool> running = true;
 
     // Process inside a thread incase the job calls wait
     void jobs_handler()
     {
         std::unique_lock<std::mutex> lock(m_async_jobs_mutex);
-        for (;;) {
+        running = true;
+        for (; running;) {
             while (!m_async_jobs.empty()) {
                 m_running_job = m_async_jobs.front();
                 m_async_jobs.pop();
@@ -95,11 +97,12 @@ protected:
 
                 m_running_job.reset();
             }
-
             lock.unlock();
             wait(m_jobs_handler_event);
             lock.lock();
         }
+        SC_REPORT_WARNING("RunOnSysc", "Stopped");
+        sc_core::sc_stop();
     }
 
     void cancel_pendings_locked()
@@ -153,7 +156,11 @@ public:
             m_running_job.reset();
         }
     }
-
+    void stop()
+    {
+        running = false;
+        m_jobs_handler_event.async_notify();
+    }
     void end_of_simulation() { cancel_all(); }
 
     void fork_on_systemc(std::function<void()> job_entry) { run_on_sysc(job_entry, false); }
@@ -185,7 +192,39 @@ public:
 
             if (wait) {
                 /* Wait for job completion */
-                job->wait();
+                try {
+                    job->wait();
+                } catch (std::runtime_error const& e) {
+                    /* Report unknown runtime errors, without causing a futher excetion */
+                    auto old = sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR,
+                                                                       sc_core::SC_LOG | sc_core::SC_DISPLAY);
+                    SC_REPORT_ERROR(
+                        "RunOnSysc",
+                        ("Run on systemc received a runtime error from job: " + std::string(e.what())).c_str());
+                    sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR, old);
+                    stop();
+                    return false;
+                } catch (const std::exception& exc) {
+                    if (sc_core::sc_report_handler::get_count(sc_core::SC_ERROR) == 0) {
+                        /* Report exceptions that were not caused by SC_ERRORS (which have already been reported)*/
+                        auto old = sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR,
+                                                                           sc_core::SC_LOG | sc_core::SC_DISPLAY);
+                        SC_REPORT_ERROR(
+                            "RunOnSysc",
+                            ("Run on systemc received an exception from job: " + std::string(exc.what())).c_str());
+                        sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR, old);
+                    }
+                    stop();
+                    return false;
+                } catch (...) {
+                    auto old = sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR,
+                                                                       sc_core::SC_LOG | sc_core::SC_DISPLAY);
+                    SC_REPORT_ERROR("RunOnSysc", "Run on systemc received an unknown exception from job");
+                    sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR, old);
+                    stop();
+                    return false;
+                }
+
                 return !job->is_cancelled();
             }
 
@@ -195,10 +234,8 @@ public:
 
     /**
      * @return Whether we are on SystemC thread
-    */
-    bool is_on_sysc() const {
-        return std::this_thread::get_id() == m_thread_id;
-    }
+     */
+    bool is_on_sysc() const { return std::this_thread::get_id() == m_thread_id; }
 };
 } // namespace gs
 

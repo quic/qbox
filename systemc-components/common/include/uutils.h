@@ -85,6 +85,13 @@ public:
 
     ~SigHandler();
 
+    void end_of_simulation()
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+
+        stop_running = true;
+    }
+
 private:
     void _start_pass_signal_handler();
 
@@ -118,6 +125,7 @@ private:
     struct sigaction force_exit_act;
     struct sigaction ign_act;
     struct sigaction dfl_act;
+    std::mutex mutex;
 };
 
 class ProcAliveHandler
