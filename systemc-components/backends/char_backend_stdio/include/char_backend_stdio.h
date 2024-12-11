@@ -46,6 +46,8 @@ private:
 
 public:
     gs::biflow_socket<char_backend_stdio> socket;
+    static struct termios oldtty;
+    static bool oldtty_valid;
 
 #ifdef WIN32
 #pragma message("CharBackendStdio not yet implemented for WIN32")
@@ -54,15 +56,15 @@ public:
 
     static void tty_reset()
     {
-        struct termios tty;
-
         int fd = STDIN_FILENO; /* stdin */
-
-        tcgetattr(fd, &tty);
-
-        tty.c_lflag |= ECHO | ECHONL | ICANON | IEXTEN;
-
-        tcsetattr(fd, TCSANOW, &tty);
+        if (char_backend_stdio::oldtty_valid) {
+            tcsetattr(fd, TCSANOW, &char_backend_stdio::oldtty);
+        } else {
+            struct termios tty;
+            tcgetattr(fd, &tty);
+            tty.c_lflag |= ECHO | ECHONL | ICANON | IEXTEN;
+            tcsetattr(fd, TCSANOW, &tty);
+        }
     }
     // trim from end of string (right)
     std::string& rtrim(std::string& s)
@@ -221,11 +223,15 @@ public:
 
     void start_of_simulation()
     {
-        struct termios tty;
-        int fd = STDIN_FILENO; /* stdin */
-        tcgetattr(fd, &tty);
-        tty.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
-        tcsetattr(fd, TCSANOW, &tty);
+        if (!char_backend_stdio::oldtty_valid) {
+            struct termios tty;
+            int fd = STDIN_FILENO; /* stdin */
+            tcgetattr(fd, &tty);
+            char_backend_stdio::oldtty = tty;
+            char_backend_stdio::oldtty_valid = true;
+            tty.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
+            tcsetattr(fd, TCSANOW, &tty);
+        }
     }
 
     void end_of_simulation() { tty_reset(); }
