@@ -134,6 +134,7 @@ void gs::SigHandler::_start_pass_signal_handler()
                 }
                 if (m_signals[sig_num] == Handler_CB::EXIT) {
                     stop_running = true;
+                    _change_sig_cbs_to_dfl();
                     if (sc_core::sc_get_status() < sc_core::SC_RUNNING) {
                         _Exit(EXIT_SUCCESS); // FIXME: should the exit status be EXIT_FAILURE?
                     }
