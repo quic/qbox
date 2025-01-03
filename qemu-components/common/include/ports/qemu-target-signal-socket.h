@@ -45,6 +45,8 @@ protected:
 public:
     QemuTargetSignalSocket(const char* name): TargetSignalSocket(name) {}
 
+    ~QemuTargetSignalSocket() { register_value_changed_cb(nullptr); }
+
     /**
      * @brief Initialize this socket with a device and a GPIO index
      *

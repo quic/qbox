@@ -122,6 +122,8 @@ public:
     {
     }
 
+    ~QemuInitiatorSignalSocket() { m_proxy.set_event_callback(nullptr); }
+
     /**
      * @brief Initialize this socket with a device and a GPIO index
      *
