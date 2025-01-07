@@ -339,6 +339,7 @@ private:
     std::condition_variable is_sc_status_set;
     std::mutex client_conncted_mut;
     std::mutex sc_status_mut;
+    std::mutex stop_mutex;
     std::atomic_bool cancel_waiting;
     std::thread::id sc_tid;
     std::queue<std::pair<int, bool>> sig_queue;
@@ -366,6 +367,7 @@ private:
         std::vector<sc_core::sc_event> port_available_events;
         std::vector<bool> is_port_busy;
         std::condition_variable is_rpc_execed;
+        std::mutex start_stop_mutex;
         std::mutex rpc_execed_mut;
         /**
          * FIXME: this is a temp solution for making the b_transport reentrant.
@@ -400,18 +402,22 @@ private:
         }
         void start()
         {
-            if (is_started) return;
-
-            is_started = true;
+            {
+                std::lock_guard<std::mutex> start_lg(start_stop_mutex);
+                if (is_started) return;
+                is_started = true;
+            }
 
             notifier_thread = std::thread(&trans_waiter::notifier_task, this);
         }
 
         void stop()
         {
-            if (is_stopped || !is_started) return;
-
-            is_stopped = true;
+            {
+                std::lock_guard<std::mutex> stop_lg(start_stop_mutex);
+                if (is_stopped || !is_started) return;
+                is_stopped = true;
+            }
             {
                 std::lock_guard<std::mutex> lg(rpc_execed_mut);
                 is_rpc_execed.notify_one();
@@ -1112,8 +1118,11 @@ public:
 
     void stop()
     {
-        if (cancel_waiting || is_local_mode()) return;
-        cancel_waiting = true;
+        {
+            std::lock_guard<std::mutex> lg(stop_mutex);
+            if (cancel_waiting || is_local_mode()) return;
+            cancel_waiting = true;
+        }
         {
             std::lock_guard<std::mutex> cc_lg(client_conncted_mut);
             is_client_connected.notify_one();
