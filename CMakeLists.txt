@@ -202,8 +202,13 @@ if (NOT WITHOUT_QEMU)
         DOWNLOAD_ONLY YES
     )
 
+    find_program(MESON meson)
+    if(NOT MESON)
+        message(FATAL_ERROR "meson not found")
+    endif()
+
     execute_process(
-        COMMAND meson setup --default-library static --prefix ${libslirp_BINARY_DIR}/libslirp-prefix/ ${libslirp_BINARY_DIR} ${libslirp_SOURCE_DIR}
+        COMMAND ${MESON} setup --default-library static --prefix ${libslirp_BINARY_DIR}/libslirp-prefix/ ${libslirp_BINARY_DIR} ${libslirp_SOURCE_DIR}
         WORKING_DIRECTORY ${libslirp_SOURCE_DIR}
         RESULT_VARIABLE result
         ERROR_VARIABLE error_output
@@ -214,7 +219,7 @@ if (NOT WITHOUT_QEMU)
     endif()
 
     execute_process(
-        COMMAND meson install -C ${libslirp_BINARY_DIR}
+        COMMAND ${MESON} install -C ${libslirp_BINARY_DIR}
         WORKING_DIRECTORY ${libslirp_SOURCE_DIR}
         RESULT_VARIABLE result
         ERROR_VARIABLE error_output
