@@ -268,9 +268,11 @@ protected:
         unsigned int bel = txn.get_byte_enable_length();
 
         if (txn.get_streaming_width() < len) {
-            SCP_FATAL(()) << "not supported.";
+            SCP_FATAL(()) << "using streaming width: 0x" << std::hex << txn.get_streaming_width()
+                          << " less than data length: 0x" << std::hex << len << " is not supported.";
         }
-        SCP_INFO(()) << "b_transport :" << scp::scp_txn_tostring(txn);
+        SCP_INFO(()) << "Start b_transport :" << get_txn_command_str(txn) << " to address: 0x" << std::hex << addr
+                     << " len: 0x" << std::hex << len;
 
         if (!m_relative_addresses) {
             if (addr < m_address) {
@@ -323,16 +325,36 @@ protected:
         }
         delay += p_latency;
         txn.set_response_status(tlm::TLM_OK_RESPONSE);
+        SCP_INFO(()) << "Completed b_transport :" << scp::scp_txn_tostring(txn);
 
         if (p_dmi) txn.set_dmi_allowed(true);
+    }
+
+    const char* get_txn_command_str(const tlm::tlm_generic_payload& trans)
+    {
+        switch (trans.get_command()) {
+        case tlm::TLM_READ_COMMAND:
+            return "READ";
+        case tlm::TLM_WRITE_COMMAND:
+            return "WRITE";
+        case tlm::TLM_IGNORE_COMMAND:
+            return "IGNORE";
+        default:
+            break;
+        }
+        return "UNKNOWN";
     }
 
     virtual unsigned int transport_dbg(int id, tlm::tlm_generic_payload& txn)
     {
         unsigned int len = txn.get_data_length();
+        sc_dt::uint64 addr = txn.get_address();
         sc_core::sc_time delay = sc_core::SC_ZERO_TIME;
+        SCP_INFO(()) << "Start b_transport dbg :" << get_txn_command_str(txn) << " to address: 0x" << std::hex << addr
+                     << " len: 0x" << std::hex << len;
         b_transport(id, txn, delay);
-        SCP_INFO(()) << "b_transport dbg :" << scp::scp_txn_tostring(txn);
+        SCP_INFO(()) << "Completed b_transport dbg :" << get_txn_command_str(txn) << " to address: 0x" << std::hex
+                     << addr << " len: 0x" << std::hex << len << " status: " << txn.get_response_string();
         if (txn.get_response_status() == tlm::TLM_OK_RESPONSE)
             return len;
         else
