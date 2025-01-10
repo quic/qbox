@@ -1,0 +1,1 @@
+qbox_add_cpu_test(reset-test 100 reset-test.cc)

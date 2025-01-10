@@ -36,9 +36,7 @@ protected:
     class QemuCpuHintTlmExtension : public ::QemuCpuHintTlmExtension
     {
     public:
-        void free() override
-        { /* leave my extension alone, TLM */
-        }
+        void free() override { /* leave my extension alone, TLM */ }
     };
 
     gs::runonsysc m_on_sysc;
@@ -238,7 +236,7 @@ protected:
                 if (!m_coroutines) {
                     // In the case of accelerators, allow them to handle signals etc.
                     SCP_TRACE(())("Stopping QK");
-                    m_qk->stop();              // Stop the QK, it will be enabled when we next see work to do.
+                    m_qk->stop(); // Stop the QK, it will be enabled when we next see work to do.
                     break;
                 }
                 wait_for_work();
@@ -474,9 +472,7 @@ public:
         if (!m_finished && val) {
             m_qk->start();
             SCP_WARN(())("calling reset");
-            m_inst.get().lock_iothread();
             m_cpu.reset();
-            m_inst.get().unlock_iothread();
             socket.reset();
             m_qemu_kick_ev.async_notify(); // notify the other thread so that the CPU is allowed to continue
         }

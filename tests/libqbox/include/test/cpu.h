@@ -190,6 +190,15 @@ public:
             halt[i++].bind(cpu.halt);
         }
     }
+
+    void map_reset_to_cpus(sc_core::sc_vector<sc_core::sc_out<bool>>& reset)
+    {
+        int i = 0;
+
+        for (auto& cpu : m_cpus) {
+            reset[i++].bind(cpu.reset);
+        }
+    }
 };
 
 #endif
