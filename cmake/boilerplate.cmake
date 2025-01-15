@@ -2,8 +2,6 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   message(FATAL_ERROR "Please use a build directory.")
 endif()
 
-set(GIT_BRANCH "main" CACHE STRING "Git branch from which to clone all gs repositoies")
-
 # Only include/use/update a pre-existing package cache. Otherwise, a package
 # cache can be built by including it on the command line with -DCPM_SOURCE_CACHE
 if(EXISTS "${PROJECT_SOURCE_DIR}/Packages")
@@ -312,17 +310,6 @@ macro(gs_export)
 endmacro()
 
 # by default switch on verbosity
-
-macro (gs_addpackage name)
-  string (REGEX REPLACE ".*/([^/]+)" "\\1" GSPACKAGENAME "${name}")
-  CPMAddPackage(
-    NAME "${GSPACKAGENAME}"
-    GIT_REPOSITORY "${GREENSOCS_GIT}${name}.git"
-    GIT_TAG "${GIT_BRANCH}" 
-    GIT_SHALLOW on
-    ${ARGN}
-  )
-endmacro()
 
 macro(gs_enable_testing)
   if (NOT GS_ONLY)

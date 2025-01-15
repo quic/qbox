@@ -7,6 +7,7 @@ project(qbox VERSION 2.0)
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to build all targets.")
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "The with CMAKE_CXX_STANDARD selected C++ standard is a requirement.")
+set(GIT_BRANCH "main" CACHE STRING "Git branch from which to clone all gs repositoies")
 set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositories")
 set(PKG_LOCK "package-lock.cmake" CACHE STRING "Package lock which will be used by the user")
 set(QEMU_PATH_NAME "" CACHE STRING "The name of the path of qemu in the git directory")
@@ -229,10 +230,20 @@ if (NOT WITHOUT_QEMU)
 
     set(CONFIGURE_ENVIRONMENT_VARIABLE "PKG_CONFIG_PATH=${libslirp_BINARY_DIR}/libslirp-prefix/lib/${CMAKE_LIBRARY_ARCHITECTURE}/pkgconfig/")
 
-    # This is a hack to workaround a CMake issue. We specify an existing file which
-    # is _not_ a submodule so that FetchContent does not init any submodule.
-    # See https://gitlab.kitware.com/cmake/cmake/-/issues/20579
-    gs_addpackage(qemu/qemu GIT_SUBMODULES "CMakeLists.txt")
+    # TODO: Remove the "hack" in the future, once support for Ubuntu 20 can be
+    # dropped. A fix for it was added in CMake 3.18, but the default version of
+    # Ubuntu 20 is 3.16
+    # This is a hack to workaround a CMake issue. We specify an existing file
+    # which is _not_ a submodule so that FetchContent does not init any
+    # submodule. See https://gitlab.kitware.com/cmake/cmake/-/issues/20579
+    CPMAddPackage(
+        NAME qemu
+        GIT_REPOSITORY "${GREENSOCS_GIT}/${QEMU_PATH_NAME}.git"
+        GIT_TAG "${GIT_BRANCH}"
+        GIT_SHALLOW TRUE
+        GIT_SUBMODULES "CMakeLists.txt"
+    )
+
     if(TARGET libqemu)
         list(APPEND TARGET_LIBS "libqemu")
     endif()
