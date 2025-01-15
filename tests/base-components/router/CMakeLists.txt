@@ -1,4 +1,3 @@
-CPMAddPackage("gh:google/googletest#master")
 macro(gs_add_test test)
     add_executable(${test} ${test}.cc)
     target_link_libraries(${test} PRIVATE gtest gmock router pass ${TARGET_LIBS})

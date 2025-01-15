@@ -1,4 +1,3 @@
-CPMAddPackage("gh:google/googletest#master")
 macro(gs_add_test test)
     add_executable(${test} ${test}.cc)
     target_link_libraries(${test} PRIVATE gtest gmock uart-pl011 uart-ibex char_backend_socket char_backend_file char_backend_stdio ${TARGET_LIBS})

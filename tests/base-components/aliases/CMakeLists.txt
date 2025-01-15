@@ -1,4 +1,3 @@
-gs_addexpackage("gh:google/googletest#main")
 macro(gs_add_test test)
     add_executable(${test} ${test}.cc)
     target_link_libraries(${test}  gtest gmock gs_memory router ${TARGET_LIBS})
