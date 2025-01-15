@@ -198,6 +198,7 @@ if (NOT WITHOUT_QEMU)
         NAME libslirp
         GIT_REPOSITORY https://gitlab.freedesktop.org/slirp/libslirp.git
         GIT_TAG v4.8.0
+        GIT_SHALLOW TRUE
         DOWNLOAD_ONLY YES
     )
 
