@@ -316,8 +316,7 @@ if (APPLE)
     list(APPEND CMAKE_INSTALL_RPATH ${BREW_LIB})
 endif (APPLE)
 
-# using main branch as it has fixes for cmake
-gs_addexpackage("gh:google/googletest#main")
+gs_addexpackage("gh:google/googletest#v1.15.2")
 
 target_include_directories(
     ${PROJECT_NAME} PUBLIC
