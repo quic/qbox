@@ -4,8 +4,16 @@ project(qbox VERSION 2.0)
 ##############################################
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
+
+set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to build all targets.")
+set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "The with CMAKE_CXX_STANDARD selected C++ standard is a requirement.")
 set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositories")
+set(PKG_LOCK "package-lock.cmake" CACHE STRING "Package lock which will be used by the user")
 set(QEMU_PATH_NAME "" CACHE STRING "The name of the path of qemu in the git directory")
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 execute_process(COMMAND git config --get remote.origin.url
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -48,8 +56,8 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/Packages")
     endif()
 endif()
 
-# Allow using package-lock.cmake files in projects using this boilerplate to pin repos, etc.
-set(PKG_LOCK "package-lock.cmake" CACHE STRING "Package lock which will be used by the user")
+# Allow using package-lock.cmake files in projects using this boilerplate to
+# pin repos, etc.
 CPMUsePackageLock(${PKG_LOCK})
 # ##############################################
 
@@ -82,13 +90,6 @@ message(STATUS "PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/cmake/CTestCustom.cmake ${CMAKE_BINARY_DIR} @ONLY)
 # ----------------------------------------------------------------------------------------
 
-set(CMAKE_CXX_STANDARD
-    14
-    CACHE STRING "C++ standard to build all targets.")
-set(CMAKE_CXX_STANDARD_REQUIRED
-    ON
-    CACHE BOOL
-          "The with CMAKE_CXX_STANDARD selected C++ standard is a requirement.")
 mark_as_advanced(CMAKE_CXX_STANDARD_REQUIRED)
 
 include(GNUInstallDirs)
@@ -123,9 +124,6 @@ find_package(Threads REQUIRED)
 gs_addexpackage("gh:nih-at/libzip#v1.10.1")
 
 gs_systemc()
-
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Other Dependencies
 gs_addexpackage("gh:rpclib/rpclib#v2.3.0")
@@ -324,8 +322,6 @@ target_include_directories(
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}>
     ${LIBELF_INCLUDE_DIR}
     )
-
-set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
         ${TARGET_LIBS}
