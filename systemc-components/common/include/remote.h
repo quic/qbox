@@ -208,8 +208,8 @@ class PassRPC : public sc_core::sc_module, public transaction_forwarder_if<PASS>
         double m_sc_time;
         double m_quantum_time;
 
-        RPCLIB_MSGPACK::type::raw_ref m_data;
-        RPCLIB_MSGPACK::type::raw_ref m_byte_enable;
+        std::vector<unsigned char> m_data;
+        std::vector<unsigned char> m_byte_enable;
         // extensions will not be carried
         MSGPACK_DEFINE_ARRAY(m_address, m_command, m_length, m_response_status, m_dmi, m_byte_enable_length,
                              m_streaming_width, m_gp_option, m_sc_time, m_quantum_time, m_data, m_byte_enable);
@@ -224,10 +224,22 @@ class PassRPC : public sc_core::sc_module, public transaction_forwarder_if<PASS>
             m_streaming_width = other.get_streaming_width();
             m_gp_option = other.get_gp_option();
             m_dmi = other.is_dmi_allowed();
-            m_data.ptr = reinterpret_cast<const char*>(other.get_data_ptr());
-            m_data.size = m_length;
-            m_byte_enable.ptr = reinterpret_cast<const char*>(other.get_byte_enable_ptr());
-            m_byte_enable.size = m_byte_enable_length;
+            unsigned char* data_ptr = other.get_data_ptr();
+            if (m_length && data_ptr) {
+                m_data.resize(m_length);
+                std::copy(data_ptr, data_ptr + m_length, m_data.begin());
+            } else {
+                m_length = 0;
+                m_data.clear();
+            }
+            unsigned char* byte_enable_ptr = other.get_byte_enable_ptr();
+            if (m_byte_enable_length && byte_enable_ptr) {
+                m_byte_enable.resize(m_byte_enable_length);
+                std::copy(byte_enable_ptr, byte_enable_ptr + m_byte_enable_length, m_byte_enable.begin());
+            } else {
+                m_byte_enable_length = 0;
+                m_byte_enable.clear();
+            }
         }
         void deep_copy_to_tlm(tlm::tlm_generic_payload& other)
         {
@@ -239,25 +251,33 @@ class PassRPC : public sc_core::sc_module, public transaction_forwarder_if<PASS>
             other.set_streaming_width(m_streaming_width);
             other.set_gp_option((tlm::tlm_gp_option)(m_gp_option));
             other.set_dmi_allowed(m_dmi);
-            other.set_data_ptr(const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(m_data.ptr)));
+            if (!m_length) {
+                other.set_data_ptr(nullptr);
+            } else {
+                other.set_data_ptr(reinterpret_cast<unsigned char*>(m_data.data()));
+            }
             if (!m_byte_enable_length) {
                 other.set_byte_enable_ptr(nullptr);
             } else {
-                other.set_byte_enable_ptr(
-                    const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(m_byte_enable.ptr)));
+                other.set_byte_enable_ptr(reinterpret_cast<unsigned char*>(m_byte_enable.data()));
             }
         }
 
         void update_to_tlm(tlm::tlm_generic_payload& other)
         {
             tlm::tlm_generic_payload tmp; // make use of TLM's built in update
-            tmp.set_data_ptr(const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(m_data.ptr)));
+            if (!m_length) {
+                tmp.set_data_ptr(nullptr);
+            } else {
+                tmp.set_data_ptr(reinterpret_cast<unsigned char*>(m_data.data()));
+            }
+
             if (!m_byte_enable_length) {
                 other.set_byte_enable_ptr(nullptr);
             } else {
-                tmp.set_byte_enable_ptr(
-                    const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(m_byte_enable.ptr)));
+                tmp.set_byte_enable_ptr(reinterpret_cast<unsigned char*>(m_byte_enable.data()));
             }
+            tmp.set_data_length(m_length);
             tmp.set_byte_enable_length(m_byte_enable_length);
             tmp.set_response_status((tlm::tlm_response_status)m_response_status);
             tmp.set_dmi_allowed(m_dmi);
