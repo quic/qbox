@@ -27,6 +27,7 @@ set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repo
 set(PKG_LOCK "package-lock.cmake" CACHE STRING "Package lock which will be used by the user")
 set(QEMU_PATH_NAME "" CACHE STRING "The name of the path of qemu in the git directory")
 
+set(CMAKE_FIND_USE_PACKAGE_REGISTRY FALSE)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)

@@ -77,8 +77,6 @@ if (GS_ENABLE_AUTO_INIT)
     add_compile_options("-ftrivial-auto-var-init=pattern")
 endif()
 
-set(CMAKE_FIND_USE_PACKAGE_REGISTRY FALSE)
-
 # # ##############################################################################
 
 # ##############################################################################
