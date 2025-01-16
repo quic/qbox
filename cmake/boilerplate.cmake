@@ -146,35 +146,39 @@ macro(install_systemc_dependencies)
     )
 endmacro()
 
-macro(gs_systemc)
-    install_systemc()
-    install_systemc_dependencies()
+macro(configure_systemc)
+    set(RapidJSON_DIR "${RapidJSON_BINARY_DIR}")
+    set(RAPIDJSON_INCLUDE_DIRS "${RapidJSON_SOURCE_DIR}/include")
 
-set(RapidJSON_DIR "${RapidJSON_BINARY_DIR}")
-set(RAPIDJSON_INCLUDE_DIRS "${RapidJSON_SOURCE_DIR}/include")
+    if(SystemCCCI_ADDED)
+        set(SystemCCCI_FOUND TRUE)
+    endif()
 
-if(SystemCCCI_ADDED)
-  set(SystemCCCI_FOUND TRUE)
-endif()
-# upstream set INSTALL_NAME_DIR wrong !
-if (APPLE)
-  set_target_properties(
-    cci
-    PROPERTIES
-    INSTALL_NAME_DIR "@rpath"
-  )
-endif()
-message(STATUS "Using SystemCCI ${SystemCCCI_VERSION} (${SystemCCCI_SOURCE_DIR})")
+    # upstream set INSTALL_NAME_DIR wrong !
+    if(APPLE)
+        set_target_properties(
+            cci
+            PROPERTIES
+            INSTALL_NAME_DIR "@rpath"
+        )
+    endif()
 
-set(SYSTEMC_PROJECT TRUE)
+    message(STATUS "Using SystemCCI ${SystemCCCI_VERSION} (${SystemCCCI_SOURCE_DIR})")
 
-add_compile_definitions(HAS_CCI)
+    set(SYSTEMC_PROJECT TRUE)
 
+    add_compile_definitions(HAS_CCI)
 
-    if (NOT GS_ONLY)
+    if(NOT GS_ONLY)
         list(APPEND TARGET_LIBS "SystemC::systemc;SystemC::cci;scp::reporting")
         set(TARGET_LIBS "${TARGET_LIBS}" CACHE INTERNAL "target_libs")
     endif()
+endmacro()
+
+macro(gs_systemc)
+    install_systemc()
+    install_systemc_dependencies()
+    configure_systemc()
 endmacro()
 # ##############################################################################
 
