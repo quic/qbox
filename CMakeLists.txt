@@ -5,6 +5,18 @@ project(qbox VERSION 2.0)
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
 
+# Note that GS_ENABLE_AUTO_INIT requires clang >= 8; gcc >= 12
+option(GS_ENABLE_AUTO_INIT "Enable trivial auto variable initialization" OFF)
+option(GS_ENABLE_CXXLIB_CHECK "Enable C, C++ library checks" OFF)
+option(GS_ENABLE_GLIBC "Use glibc instead of some other host C library" ON)
+option(GS_ENABLE_LIBCXX "Use libc++ instead of libstdc++" OFF)
+option(GS_ENABLE_LLD "Link using lld instead of default (ld.bfd)" OFF)
+option(GS_ENABLE_LTO "Use LTO to build" OFF)
+option(GS_ENABLE_SANITIZERS "Enable ASan+UBSan" OFF)
+option(GS_ENABLE_SCUDO "Enable Scudo allocator" OFF)
+option(GS_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
+option(GS_ENABLE_VIRCLRENDERER "Enable/Disable virclrenderer" ON)
+option(GS_ENABLE_VIRGLRENDERER "Enable/Disable virglrenderer" ON)
 option(WITHOUT_PYTHON_BINDER "without python binder model" OFF)
 option(QEMU_ENABLE_USB_REDIRECT "enable qemu usb redirect" OFF)
 

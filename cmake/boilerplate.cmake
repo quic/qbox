@@ -1,16 +1,3 @@
-# Note that GS_ENABLE_AUTO_INIT requires clang >= 8; gcc >= 12
-option(GS_ENABLE_AUTO_INIT "Enable trivial auto variable initialization" OFF)
-option(GS_ENABLE_CXXLIB_CHECK "Enable C, C++ library checks" OFF)
-option(GS_ENABLE_GLIBC "Use glibc instead of some other host C library" ON)
-option(GS_ENABLE_LIBCXX "Use libc++ instead of libstdc++" OFF)
-option(GS_ENABLE_LLD "Link using lld instead of default (ld.bfd)" OFF)
-option(GS_ENABLE_LTO "Use LTO to build" OFF)
-option(GS_ENABLE_SANITIZERS "Enable ASan+UBSan" OFF)
-option(GS_ENABLE_SCUDO "Enable Scudo allocator" OFF)
-option(GS_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
-option(GS_ENABLE_VIRCLRENDERER "Enable/Disable virclrenderer" ON)
-option(GS_ENABLE_VIRGLRENDERER "Enable/Disable virglrenderer" ON)
-
 if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   message(FATAL_ERROR "Please use a build directory.")
 endif()
@@ -97,6 +84,7 @@ set(CMAKE_FIND_USE_PACKAGE_REGISTRY FALSE)
 # ##############################################################################
 # ----- SystemC and CCI Dependencies
 # ##############################################################################
+
 macro(gs_systemc)
 if(DEFINED ENV{SYSTEMC_HOME} OR DEFINED SYSTEMC_HOME)
     set(SYSTEMC_HOME $ENV{SYSTEMC_HOME})
