@@ -85,7 +85,6 @@ if (GS_ENABLE_CXXLIB_CHECK)
         set(cxx_defs _GLIBCXX_DEBUG=1 _GLIBCXX_CONCEPT_CHECKS=1)
     endif()
     add_compile_definitions("$<$<COMPILE_LANGUAGE:CXX>:${cxx_defs}>")
-#   add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Weffc++>")
 endif()
 
 if (GS_ENABLE_AUTO_INIT)
