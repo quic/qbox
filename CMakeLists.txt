@@ -5,6 +5,9 @@ project(qbox VERSION 2.0)
 # ----- fetch GreenSocs cmake BOILERPLATE
 ##############################################
 
+option(WITHOUT_PYTHON_BINDER "without python binder model" OFF)
+option(QEMU_ENABLE_USB_REDIRECT "enable qemu usb redirect" OFF)
+
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to build all targets.")
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "The with CMAKE_CXX_STANDARD selected C++ standard is a requirement.")
 set(GIT_BRANCH "main" CACHE STRING "Git branch from which to clone all gs repositoies")
@@ -137,9 +140,6 @@ if(NOT GS_ONLY)
     gs_addexpackage("gh:CrowCpp/Crow#v1.2.0")
     set(CROW_DEP "Crow::Crow")
 endif()
-
-option(WITHOUT_PYTHON_BINDER "without python binder model" OFF)
-option(QEMU_ENABLE_USB_REDIRECT "enable qemu usb redirect" OFF)
 
 if((NOT WITHOUT_PYTHON_BINDER) AND (NOT GS_ONLY))
     find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
