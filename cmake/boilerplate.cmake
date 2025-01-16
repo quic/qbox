@@ -83,6 +83,41 @@ endif()
 # ----- SystemC and CCI Dependencies
 # ##############################################################################
 
+macro(install_systemc)
+    if(DEFINED ENV{SYSTEMC_HOME} OR DEFINED SYSTEMC_HOME)
+        set(SYSTEMC_HOME $ENV{SYSTEMC_HOME})
+
+        CPMAddPackage(NAME SystemC SOURCE_DIR ${SYSTEMC_HOME})
+
+        set(SystemCLanguage_FOUND TRUE)
+        set(SystemCLanguageLocal_FOUND TRUE)
+    else()
+        gs_addexpackage(
+            NAME SystemCLanguage
+            GIT_REPOSITORY https://github.com/accellera-official/systemc.git
+            GIT_TAG main
+            GIT_SHALLOW TRUE
+            OPTIONS "ENABLE_SUSPEND_ALL" "ENABLE_PHASE_CALLBACKS"
+        )
+
+        # Prevent CCI attempting to re-find SystemC
+        if(SystemCLanguage_ADDED)
+            set(SystemCLanguage_FOUND TRUE)
+        endif()
+
+        # upstream set INSTALL_NAME_DIR wrong !
+        if(APPLE)
+            set_target_properties(
+                systemc
+                PROPERTIES
+                INSTALL_NAME_DIR "@rpath"
+            )
+        endif()
+
+        message(STATUS "Using SystemC ${SystemCLanguage_VERSION} (${SystemCLanguage_SOURCE_DIR})")
+    endif()
+endmacro()
+
 macro(install_systemc_dependencies)
     gs_addexpackage(
         NAME RapidJSON
@@ -112,38 +147,7 @@ macro(install_systemc_dependencies)
 endmacro()
 
 macro(gs_systemc)
-if(DEFINED ENV{SYSTEMC_HOME} OR DEFINED SYSTEMC_HOME)
-    set(SYSTEMC_HOME $ENV{SYSTEMC_HOME})
-    CPMAddPackage(
-        NAME SystemC
-        SOURCE_DIR ${SYSTEMC_HOME}
-    )
-    set(SystemCLanguage_FOUND TRUE)
-    set(SystemCLanguageLocal_FOUND TRUE)
-else()
-    gs_addexpackage(
-        NAME SystemCLanguage
-        GIT_REPOSITORY https://github.com/accellera-official/systemc.git
-        GIT_TAG main
-        GIT_SHALLOW TRUE
-        OPTIONS "ENABLE_SUSPEND_ALL" "ENABLE_PHASE_CALLBACKS"
-    )
-
-    # Prevent CCI attempting to re-find SystemC
-    if(SystemCLanguage_ADDED)
-        set(SystemCLanguage_FOUND TRUE)
-    endif()
-
-    # upstream set INSTALL_NAME_DIR wrong !
-    if (APPLE)
-      set_target_properties(
-        systemc
-        PROPERTIES
-        INSTALL_NAME_DIR "@rpath"
-      )
-    endif()
-    message(STATUS "Using SystemC ${SystemCLanguage_VERSION} (${SystemCLanguage_SOURCE_DIR})")
-endif()
+    install_systemc()
     install_systemc_dependencies()
 
 set(RapidJSON_DIR "${RapidJSON_BINARY_DIR}")
