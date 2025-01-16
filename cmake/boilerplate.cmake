@@ -83,6 +83,34 @@ endif()
 # ----- SystemC and CCI Dependencies
 # ##############################################################################
 
+macro(install_systemc_dependencies)
+    gs_addexpackage(
+        NAME RapidJSON
+        GIT_REPOSITORY https://github.com/Tencent/rapidjson
+        GIT_TAG e0f68a435610e70ab5af44fc6a90523d69b210b3
+        GIT_SHALLOW TRUE
+        OPTIONS
+            "RAPIDJSON_BUILD_TESTS OFF"
+            "RAPIDJSON_BUILD_DOC OFF"
+            "RAPIDJSON_BUILD_EXAMPLES OFF"
+    )
+
+    gs_addexpackage(
+        NAME SystemCCCI
+        GIT_REPOSITORY https://github.com/accellera-official/cci.git
+        GIT_TAG main
+        GIT_SHALLOW TRUE
+        OPTIONS "SYSTEMCCCI_BUILD_TESTS OFF"
+    )
+
+    gs_addexpackage(
+        NAME SCP
+        GIT_REPOSITORY https://github.com/accellera-official/systemc-common-practices.git
+        GIT_TAG main
+        GIT_SHALLOW TRUE
+    )
+endmacro()
+
 macro(gs_systemc)
 if(DEFINED ENV{SYSTEMC_HOME} OR DEFINED SYSTEMC_HOME)
     set(SYSTEMC_HOME $ENV{SYSTEMC_HOME})
@@ -94,17 +122,13 @@ if(DEFINED ENV{SYSTEMC_HOME} OR DEFINED SYSTEMC_HOME)
     set(SystemCLanguageLocal_FOUND TRUE)
 else()
     gs_addexpackage(
-        NAME
-        SystemCLanguage
-        GIT_REPOSITORY
-        https://github.com/accellera-official/systemc.git
-        GIT_TAG
-        main
-        GIT_SHALLOW
-        True
-        OPTIONS
-        "ENABLE_SUSPEND_ALL"
-        "ENABLE_PHASE_CALLBACKS")
+        NAME SystemCLanguage
+        GIT_REPOSITORY https://github.com/accellera-official/systemc.git
+        GIT_TAG main
+        GIT_SHALLOW TRUE
+        OPTIONS "ENABLE_SUSPEND_ALL" "ENABLE_PHASE_CALLBACKS"
+    )
+
     # Prevent CCI attempting to re-find SystemC
     if(SystemCLanguage_ADDED)
         set(SystemCLanguage_FOUND TRUE)
@@ -120,35 +144,10 @@ else()
     endif()
     message(STATUS "Using SystemC ${SystemCLanguage_VERSION} (${SystemCLanguage_SOURCE_DIR})")
 endif()
-
-gs_addexpackage(
-    NAME
-    RapidJSON
-    GIT_REPOSITORY
-    https://github.com/Tencent/rapidjson
-    GIT_TAG
-    e0f68a435610e70ab5af44fc6a90523d69b210b3
-    GIT_SHALLOW
-    FALSE
-    OPTIONS
-    "RAPIDJSON_BUILD_TESTS OFF"
-    "RAPIDJSON_BUILD_DOC OFF"
-    "RAPIDJSON_BUILD_EXAMPLES OFF")
+    install_systemc_dependencies()
 
 set(RapidJSON_DIR "${RapidJSON_BINARY_DIR}")
 set(RAPIDJSON_INCLUDE_DIRS "${RapidJSON_SOURCE_DIR}/include")
-
-gs_addexpackage(
-    NAME
-    SystemCCCI
-    GIT_REPOSITORY
-    https://github.com/accellera-official/cci.git
-    GIT_TAG
-    main
-    GIT_SHALLOW
-    True
-    OPTIONS
-    "SYSTEMCCCI_BUILD_TESTS OFF")
 
 if(SystemCCCI_ADDED)
   set(SystemCCCI_FOUND TRUE)
@@ -167,11 +166,6 @@ set(SYSTEMC_PROJECT TRUE)
 
 add_compile_definitions(HAS_CCI)
 
-gs_addexpackage(
-    NAME SCP
-    GIT_REPOSITORY https://github.com/accellera-official/systemc-common-practices.git
-    GIT_TAG main
-    GIT_SHALLOW True)
 
     if (NOT GS_ONLY)
         list(APPEND TARGET_LIBS "SystemC::systemc;SystemC::cci;scp::reporting")
