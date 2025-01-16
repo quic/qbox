@@ -170,8 +170,6 @@ class PassRPC : public sc_core::sc_module, public transaction_forwarder_if<PASS>
         {
             m_shmem_fn = shm->m_memid;
             m_shmem_size = shm->m_size;
-            //            SCP_DEBUG(()) << "DMI from tlm Size "<<m_shmem_size;
-
             m_shmem_offset = (uint64_t)(other.get_dmi_ptr()) - shm->m_mapped_addr;
             m_dmi_start_address = other.get_start_address();
             m_dmi_end_address = other.get_end_address();
@@ -183,9 +181,6 @@ class PassRPC : public sc_core::sc_module, public transaction_forwarder_if<PASS>
         void to_tlm(tlm::tlm_dmi& other)
         {
             if (m_shmem_size == 0) return;
-
-            //            SCP_DEBUG(()) << "DMI to_tlm Size "<<m_shmem_size;
-
             other.set_dmi_ptr(m_shmem_offset + MemoryServices::get().map_mem_join(m_shmem_fn.c_str(), m_shmem_size));
             other.set_start_address(m_dmi_start_address);
             other.set_end_address(m_dmi_end_address);
@@ -610,12 +605,6 @@ private:
         t.from_tlm(trans);
         t.m_quantum_time = delay.to_seconds();
         t.m_sc_time = sc_core::sc_time_stamp().to_seconds();
-
-        //        SCP_DEBUG(()) << name() << " b_transport socket ID " << id << " From_tlm " <<
-        //        txn_str(trans); SCP_DEBUG(()) << getpid() <<" IS THE b_ RPC PID " <<
-        //        std::this_thread::get_id() <<" is the thread ID";
-        /*tlm_generic_payload_rpc r = client->call("b_tspt", id, t)
-                                        .template as<tlm_generic_payload_rpc>();*/
         /**
          * FIXME: this is a temp solution for making the b_transport reentrant.
          * remove the quantumkeeper and make b_tspt RPC async call, wait for the future
@@ -649,11 +638,6 @@ private:
         r.update_to_tlm(trans);
         delay = sc_core::sc_time(r.m_quantum_time, sc_core::SC_SEC);
         sc_core::sc_time other_time = sc_core::sc_time(r.m_sc_time, sc_core::SC_SEC);
-        //        m_qk->set(other_time+delay);
-        //        m_qk->sync();
-        //        SCP_DEBUG(()) << name() << " update_to_tlm " << txn_str(trans);
-        //        SCP_DEBUG(()) << name() << " b_transport socket ID " << id << " returned " <<
-        //        txn_str(trans);
         btspt_waiter->is_port_busy[id] = false;
         btspt_waiter->port_available_events[id].notify(sc_core::SC_ZERO_TIME);
     }
@@ -661,31 +645,12 @@ private:
     {
         tlm::tlm_generic_payload trans;
         t.deep_copy_to_tlm(trans);
-        //       SCP_DEBUG(()) << name() << " deep copy to_tlm " << txn_str(trans);
         sc_core::sc_time delay = sc_core::sc_time(t.m_quantum_time, sc_core::SC_SEC);
         sc_core::sc_time other_time = sc_core::sc_time(t.m_sc_time, sc_core::SC_SEC);
 
-        //       SCP_DEBUG(()) << "Here"<<m_qk->time_to_sync();
-        //        m_qk->sync();
-        //        SCP_DEBUG(()) << "THere";
-        //        SCP_DEBUG(()) << getpid() <<" IS THE rpc RPC PID " <<
-        //        std::this_thread::get_id() <<" is the thread ID";
-        m_sc.run_on_sysc([&] {
-            //             SCP_DEBUG(()) <<"gere "<<id;
-            //        SCP_DEBUG(()) << getpid() <<" IS THE rpc RPC PID " <<
-            //        std::this_thread::get_id()
-            //        <<" is the thread ID";
-            //             m_qk->set(other_time+delay - sc_core::sc_time_stamp());
-            //             SCP_DEBUG(()) << "WHAT Sync";
-            //             m_qk->sync();
-            //             m_qk->reset();
-            initiator_sockets[id]->b_transport(trans, delay);
-            //             SCP_DEBUG(()) << "WHAT";
-            //             m_qk->sync();
-        });
+        m_sc.run_on_sysc([&] { initiator_sockets[id]->b_transport(trans, delay); });
         t.from_tlm(trans);
         t.m_quantum_time = delay.to_seconds();
-        //        SCP_DEBUG(()) << name() << " from_tlm " << txn_str(trans) ;
         return t;
     }
 
@@ -712,9 +677,7 @@ private:
         t.deep_copy_to_tlm(trans);
         int ret_len;
         SCP_DEBUG(()) << name() << " remote-> debug tlm " << txn_str(trans);
-        //        m_sc.run_on_sysc([&] {
         ret_len = initiator_sockets[id]->transport_dbg(trans);
-        //            });
         t.from_tlm(trans);
         SCP_DEBUG(()) << name() << " remote<- debug tlm done " << txn_str(trans);
 
@@ -737,9 +700,6 @@ private:
 #ifdef DMICACHE
         c = in_cache(trans.get_address());
         if (c) {
-            //            SCP_DEBUG(()) << "In Cache " << std::hex << c->get_start_address() <<
-            //            "
-            //            - " << std::hex << c->get_end_address() ;
             dmi_data = *c;
             return !(dmi_data.is_none_allowed());
         }
@@ -747,32 +707,17 @@ private:
         tlm_generic_payload_rpc t;
         tlm_dmi_rpc r;
         t.from_tlm(trans);
-        //        SCP_DEBUG(()) << name() << " DMI socket ID " << id << " From_tlm " <<
-        //        txn_str(trans)
-        //        ;
         r = do_rpc_as<tlm_dmi_rpc>(do_rpc_call("dmi_req", id, t));
 
         if (r.m_shmem_size == 0) {
             SCP_DEBUG(()) << name() << "DMI OK, but no shared memory available?" << trans.get_address();
             return false;
         }
-        //        SCP_DEBUG(()) << "Got " << std::hex << r.m_dmi_start_address << " - " <<
-        //        std::hex << r.m_dmi_end_address ; c = in_cache(r.m_shmem_fn); if (c) {
-        //            dmi_data = *c;
-        //        } else {
         r.to_tlm(dmi_data);
-//            SCP_DEBUG(()) << "Adding " << r.m_shmem_fn << " " << dmi_data.get_start_address()
-//                      << " to cache";
 #ifdef DMICACHE
         assert(m_dmi_cache.count(dmi_data.get_start_address()) == 0);
         m_dmi_cache[dmi_data.get_start_address()] = dmi_data;
 #endif
-        //        }
-        //        SCP_DEBUG(()) << name() << "DMI to " <<trans.get_address()<<" status "
-        //        <<!(dmi_data.is_none_allowed()) <<" range " << std::hex <<
-        //        dmi_data.get_start_address() << " - " << std::hex <<
-        //        dmi_data.get_end_address() <<
-        //        "";
         return !(dmi_data.is_none_allowed());
     }
 
@@ -1030,8 +975,6 @@ public:
                 return;
             });
 
-            // m_qk = tlm_quantumkeeper_factory(p_sync_policy);
-            // m_qk->reset();
             server->async_run(1);
 
             if (p_cport) {
@@ -1190,7 +1133,6 @@ public:
         if (is_local_mode()) return;
         send_status();
         handle_before_sim_start_signals();
-        // m_qk->start();
     }
 
     PassRPC() = delete;
@@ -1198,7 +1140,6 @@ public:
     ~PassRPC()
     {
         if (is_local_mode()) return;
-        // m_qk->stop();
         SCP_DEBUG(()) << "EXIT " << name();
         stop();
 #ifdef DMICACHE
@@ -1209,7 +1150,6 @@ public:
     void end_of_simulation() override
     {
         if (is_local_mode()) return;
-        // m_qk->stop();
         stop();
     }
 }; // namespace gs
