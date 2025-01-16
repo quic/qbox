@@ -29,8 +29,6 @@ macro(gs_addexpackage)
   endif()
 endmacro()
 
-gs_addexpackage("gh:TheLartians/PackageProject.cmake@1.4.1")
-
 # ######################## COMPILATIONS OPTIONS ################################
 if(APPLE)
   message(STATUS "Adding flag -undefined dynamic_lookup to build dependent dylib's")
@@ -244,7 +242,6 @@ endmacro()
 # ----- LUA
 # ##############################################################################
 macro(build_lua)
-  gs_addexpackage("gh:lua/lua#v5.4.2")
   if (lua_ADDED)
       # lua has no CMake support, so we create our own target
       FILE(GLOB lua_sources ${lua_SOURCE_DIR}/*.c)

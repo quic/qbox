@@ -125,12 +125,13 @@ mark_as_advanced(LIBELF_INCLUDE_DIR LIBELF_LIBRARIES)
 
 find_package(Threads REQUIRED)
 
+gs_addexpackage("gh:google/googletest#v1.15.2")
+gs_addexpackage("gh:lua/lua#v5.4.2")
 gs_addexpackage("gh:nih-at/libzip#v1.10.1")
+gs_addexpackage("gh:rpclib/rpclib#v2.3.0")
+gs_addexpackage("gh:TheLartians/PackageProject.cmake@1.4.1")
 
 gs_systemc()
-
-# Other Dependencies
-gs_addexpackage("gh:rpclib/rpclib#v2.3.0")
 
 # libasio-dev should be installed on the system
 if(NOT GS_ONLY)
@@ -325,8 +326,6 @@ if (APPLE)
     list(APPEND CMAKE_BUILD_RPATH ${BREW_LIB})
     list(APPEND CMAKE_INSTALL_RPATH ${BREW_LIB})
 endif (APPLE)
-
-gs_addexpackage("gh:google/googletest#v1.15.2")
 
 target_include_directories(
     ${PROJECT_NAME} PUBLIC
