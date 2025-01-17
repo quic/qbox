@@ -79,7 +79,84 @@ endif()
 # Allow using package-lock.cmake files in projects using this boilerplate to
 # pin repos, etc.
 CPMUsePackageLock(${PKG_LOCK})
+
 # ##############################################
+if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
+    message(FATAL_ERROR "Please use a build directory.")
+endif()
+
+# Only include/use/update a pre-existing package cache. Otherwise, a package
+# cache can be built by including it on the command line with -DCPM_SOURCE_CACHE
+if(EXISTS "${PROJECT_SOURCE_DIR}/Packages")
+    message(STATUS "Using Packages cache")
+    set(ENV{CPM_SOURCE_CACHE} "${PROJECT_SOURCE_DIR}/Packages")
+endif()
+
+# ######################## COMPILATIONS OPTIONS ################################
+if(APPLE)
+    message(STATUS "Adding flag -undefined dynamic_lookup to build dependent dylib's")
+    set(
+        CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
+        "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup"
+    )
+endif()
+
+if(GS_ENABLE_LTO)
+    message(STATUS "LTO build enabled")
+    add_compile_options("-flto")
+    add_link_options("-flto")
+
+    set(GS_ENABLE_LLD ON CACHE BOOL "" FORCE)
+endif()
+
+if(GS_ENABLE_LLD)
+    add_link_options("-fuse-ld=lld")
+endif()
+
+if(GS_ENABLE_SCUDO)
+    message(STATUS "Scudo allocator enabled")
+    add_compile_options("-fsanitize=scudo")
+    add_link_options("-fsanitize=scudo")
+endif()
+
+if(GS_ENABLE_SANITIZERS)
+    message(STATUS "ASan/UBSan enabled")
+    add_compile_options("-fsanitize=address,undefined")
+    add_link_options("-fsanitize=address,undefined")
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        add_link_options("-shared-libasan")
+    endif()
+endif()
+
+if(GS_ENABLE_TSAN)
+    message(STATUS "TSan enabled")
+    add_compile_options("-fsanitize=thread")
+    add_link_options("-fsanitize=thread")
+endif()
+
+if(GS_ENABLE_LIBCXX)
+    message(STATUS "libc++ enabled")
+    add_compile_options("-stdlib=libc++")
+    add_link_options("-stdlib=libc++")
+endif()
+
+if(GS_ENABLE_CXXLIB_CHECK)
+    message(STATUS "C/C++ library checks enabled")
+    if (GS_ENABLE_GLIBC)
+        add_compile_definitions("_FORTIFY_SOURCE=1")
+    endif()
+    if (NOT GS_ENABLE_LIBCXX)
+        set(cxx_defs _GLIBCXX_DEBUG=1 _GLIBCXX_CONCEPT_CHECKS=1)
+    endif()
+    add_compile_definitions("$<$<COMPILE_LANGUAGE:CXX>:${cxx_defs}>")
+endif()
+
+if(GS_ENABLE_AUTO_INIT)
+    message(STATUS "auto variable init pattern enabled")
+    add_compile_options("-ftrivial-auto-var-init=pattern")
+endif()
+# ##############################################################################
+
 if(APPLE)
   set(CMAKE_BUILD_RPATH "\@executable_path/../lib;\@executable_path/../lib/libqemu")
   set(CMAKE_INSTALL_RPATH "\@executable_path/../lib;\@executable_path/../lib/libqemu")
