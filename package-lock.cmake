@@ -1,20 +1,6 @@
 # CPM Package Lock
 # This file should be committed to version control
 
-# This is a hack to workaround a CMake issue. We specify an existing file which
-# is _not_ a submodule so that FetchContent does not init any submodule.
-# See https://gitlab.kitware.com/cmake/cmake/-/issues/20579
-
-# cci
-CPMDeclarePackage(SystemCCCI
-  NAME SystemCCCI
-  GIT_TAG v1.0.1
-  GIT_REPOSITORY https://github.com/accellera-official/cci.git
-  GIT_SHALLOW on
-  OPTIONS
-      "SYSTEMCCCI_BUILD_TESTS OFF"
-)
-
 # SystemC
 CPMDeclarePackage(SystemCLanguage
   NAME SystemCLanguage

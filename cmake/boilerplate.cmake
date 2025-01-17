@@ -120,20 +120,9 @@ endmacro()
 
 macro(install_systemc_dependencies)
     gs_addexpackage(
-        NAME RapidJSON
-        GIT_REPOSITORY https://github.com/Tencent/rapidjson
-        GIT_TAG e0f68a435610e70ab5af44fc6a90523d69b210b3
-        GIT_SHALLOW TRUE
-        OPTIONS
-            "RAPIDJSON_BUILD_TESTS OFF"
-            "RAPIDJSON_BUILD_DOC OFF"
-            "RAPIDJSON_BUILD_EXAMPLES OFF"
-    )
-
-    gs_addexpackage(
         NAME SystemCCCI
         GIT_REPOSITORY https://github.com/accellera-official/cci.git
-        GIT_TAG main
+        GIT_TAG 2f70602c8753220e02778fcab040f197c0747f84
         GIT_SHALLOW TRUE
         OPTIONS "SYSTEMCCCI_BUILD_TESTS OFF"
     )
@@ -147,9 +136,6 @@ macro(install_systemc_dependencies)
 endmacro()
 
 macro(configure_systemc)
-    set(RapidJSON_DIR "${RapidJSON_BINARY_DIR}")
-    set(RAPIDJSON_INCLUDE_DIRS "${RapidJSON_SOURCE_DIR}/include")
-
     if(SystemCCCI_ADDED)
         set(SystemCCCI_FOUND TRUE)
     endif()
