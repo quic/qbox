@@ -46,35 +46,45 @@ file(
 include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/boilerplate.cmake)
 
-execute_process(COMMAND git config --get remote.origin.url
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE GIT_URL)
+macro(determine_qbox_git_url)
+    execute_process(
+        COMMAND git config --get remote.origin.url
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE GIT_URL
+    )
 
-string(REGEX MATCH "(.*\/)" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
-string(REGEX REPLACE "(.*)/sandboxes/[^\/]*/(.*)" "\\1/" GREENSOCS_GIT_ORIGIN "${GREENSOCS_GIT_ORIGIN}")
+    string(REGEX MATCH "(.*\/)" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
+    string(
+        REGEX
+        REPLACE "(.*)/sandboxes/[^\/]*/(.*)" "\\1/"
+        GREENSOCS_GIT_ORIGIN "${GREENSOCS_GIT_ORIGIN}"
+    )
 
-if ("${GREENSOCS_GIT}" STREQUAL "")
-    set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
-endif()
-
-message(STATUS "GREENSOCS_GIT = ${GREENSOCS_GIT}")
-
-string(FIND "${GREENSOCS_GIT}" "github" GITHUB_URL)
-
-if(GITHUB_URL EQUAL -1)
-    set(QEMU_PATH_NAME "qemu/qemu")
-else()
-    set(QEMU_PATH_NAME "qemu")
-endif()
-
-message(STATUS "QEMU_PATH_NAME=${QEMU_PATH_NAME}")
-
-if(EXISTS "${PROJECT_SOURCE_DIR}/Packages")
-    if("${GREENSOCS_GIT}" STREQUAL "")
-        set(GREENSOCS_GIT "https://git.codelinaro.org/clo/private/qqvp/")
+    if ("${GREENSOCS_GIT}" STREQUAL "")
+        set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
     endif()
-endif()
+
+    string(FIND "${GREENSOCS_GIT}" "github" GITHUB_URL)
+
+    if(GITHUB_URL EQUAL -1)
+        set(QEMU_PATH_NAME "qemu/qemu")
+    else()
+        set(QEMU_PATH_NAME "qemu")
+    endif()
+
+    message(STATUS "QEMU_PATH_NAME=${QEMU_PATH_NAME}")
+
+    if(EXISTS "${PROJECT_SOURCE_DIR}/Packages")
+        if("${GREENSOCS_GIT}" STREQUAL "")
+            set(GREENSOCS_GIT "https://git.codelinaro.org/clo/private/qqvp/")
+        endif()
+    endif()
+
+    message(STATUS "GREENSOCS_GIT = ${GREENSOCS_GIT}")
+endmacro()
+
+determine_qbox_git_url()
 
 # Allow using package-lock.cmake files in projects using this boilerplate to
 # pin repos, etc.
