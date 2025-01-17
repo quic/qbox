@@ -32,6 +32,20 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
+include(CMakePackageConfigHelpers)
+include(CTest)
+include(GNUInstallDirs)
+include(FetchContent)
+include(FindPackageHandleStandardArgs)
+
+file(
+    DOWNLOAD
+    https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.40.5/CPM.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
+)
+include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/boilerplate.cmake)
+
 execute_process(COMMAND git config --get remote.origin.url
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -56,17 +70,6 @@ endif()
 
 message(STATUS "QEMU_PATH_NAME=${QEMU_PATH_NAME}")
 
-include(FetchContent)
-include(CTest)
-
-# download CPM.cmake
-file(
-  DOWNLOAD
-  https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.40.5/CPM.cmake
-  ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
-)
-include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
-
 if(EXISTS "${PROJECT_SOURCE_DIR}/Packages")
     if("${GREENSOCS_GIT}" STREQUAL "")
         set(GREENSOCS_GIT "https://git.codelinaro.org/clo/private/qqvp/")
@@ -77,9 +80,6 @@ endif()
 # pin repos, etc.
 CPMUsePackageLock(${PKG_LOCK})
 # ##############################################
-
-include(${PROJECT_SOURCE_DIR}/cmake/boilerplate.cmake)
-
 if(APPLE)
   set(CMAKE_BUILD_RPATH "\@executable_path/../lib;\@executable_path/../lib/libqemu")
   set(CMAKE_INSTALL_RPATH "\@executable_path/../lib;\@executable_path/../lib/libqemu")
@@ -109,8 +109,6 @@ configure_file(${PROJECT_SOURCE_DIR}/cmake/CTestCustom.cmake ${CMAKE_BINARY_DIR}
 
 mark_as_advanced(CMAKE_CXX_STANDARD_REQUIRED)
 
-include(GNUInstallDirs)
-
 #This is an exclusive define for the SCP library which allow to switch ON/OFF if we want thread local or not.
 add_compile_definitions(DISABLE_REPORT_THREAD_LOCAL)
 
@@ -129,7 +127,6 @@ find_library(LIBZ_LIBRARIES NAMES z "libz.a"
 list(APPEND LIBELF_LIBRARIES ${LIBZ_LIBRARIES})
 list(APPEND LIBELF_INCLUDE_DIR ${LIBELF_INCLUDE_DIR}/libelf)
 
-include(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibELF DEFAULT_MSG
                                   LIBELF_LIBRARIES
                                   LIBELF_INCLUDE_DIR)
@@ -296,8 +293,6 @@ if (NOT WITHOUT_QEMU)
     else ()
         install(TARGETS ${PROJECT_NAME} EXPORT libqemu-cxx-targets)
     endif ()
-
-    include(CMakePackageConfigHelpers)
 
     configure_package_config_file(libqemu-cxxConfig.cmake.in
         ${CMAKE_CURRENT_BINARY_DIR}/libqemu-cxxConfig.cmake
