@@ -46,6 +46,18 @@ file(
 include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/boilerplate.cmake)
 
+macro(determine_qemu_git_path)
+    string(FIND "${GREENSOCS_GIT}" "github" GITHUB_URL)
+
+    if(GITHUB_URL EQUAL -1)
+        set(QEMU_PATH_NAME "qemu/qemu")
+    else()
+        set(QEMU_PATH_NAME "qemu")
+    endif()
+
+    message(STATUS "QEMU_PATH_NAME=${QEMU_PATH_NAME}")
+endmacro()
+
 macro(determine_qbox_git_url)
     execute_process(
         COMMAND git config --get remote.origin.url
@@ -61,19 +73,11 @@ macro(determine_qbox_git_url)
         GREENSOCS_GIT_ORIGIN "${GREENSOCS_GIT_ORIGIN}"
     )
 
-    if ("${GREENSOCS_GIT}" STREQUAL "")
+    if("${GREENSOCS_GIT}" STREQUAL "")
         set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
     endif()
 
-    string(FIND "${GREENSOCS_GIT}" "github" GITHUB_URL)
-
-    if(GITHUB_URL EQUAL -1)
-        set(QEMU_PATH_NAME "qemu/qemu")
-    else()
-        set(QEMU_PATH_NAME "qemu")
-    endif()
-
-    message(STATUS "QEMU_PATH_NAME=${QEMU_PATH_NAME}")
+    determine_qemu_git_path()
 
     if(EXISTS "${PROJECT_SOURCE_DIR}/Packages")
         if("${GREENSOCS_GIT}" STREQUAL "")
