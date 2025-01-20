@@ -26,6 +26,8 @@
 #include "tlm-extensions/qemu-cpu-hint.h"
 #include "ports/qemu-target-signal-socket.h"
 
+#define NSEC_IN_ONE_SEC 1e9
+
 class QemuCpu : public QemuDevice, public QemuInitiatorIface
 {
 protected:
@@ -61,6 +63,9 @@ protected:
 
     std::mutex m_can_delete;
     QemuCpuHintTlmExtension m_cpu_hint_ext;
+    icount_plugin::vCPUTime* vcpu = nullptr;
+    sc_core::sc_time base_time;
+    cci::cci_param<uint64_t> p_insn_per_second;
 
     uint64_t m_quantum_ns; // For convenience
 
@@ -151,6 +156,50 @@ protected:
     }
 
     /*
+     * Gets the current QEMU virtual time.
+     * Returns the current virtual time from the QEMU instance.
+     */
+    sc_core::sc_time get_qemu_time() { return sc_core::sc_time(m_inst.get().get_virtual_clock(), sc_core::SC_NS); }
+
+    /*
+     * Gets the CPU time.
+     * Calculates the current CPU time based on the number of instructions executed and the base time.
+     * If vcpu is not available, it returns zero time. If the CPU cannot run, it resets the total instructions and
+     * updates the base time.
+     */
+    sc_core::sc_time get_cpu_time()
+    {
+        if (m_inst.is_sync_time_enabled()) {
+            if (m_inst.is_tcg_enabled()) {
+                if (!m_started) return sc_core::SC_ZERO_TIME;
+                if (!vcpu && (m_cpu.get_index() < m_inst.get_icount_plugin().n_cpus)) {
+                    SCP_DEBUG(())("tcg enabled");
+                    vcpu = static_cast<icount_plugin::vCPUTime*>(m_inst.get().p_api.qemu_plugin_scoreboard_find(
+                        m_inst.get_icount_plugin().vcpus, m_cpu.get_index()));
+                }
+                if (!vcpu) {
+                    return sc_core::SC_ZERO_TIME;
+                }
+                if (!m_cpu.can_run()) {
+                    vcpu->total_insn = 0;
+                    base_time = sc_core::sc_time_stamp();
+                }
+                double num_secs = (double)(vcpu->total_insn + vcpu->quantum_insn) / (double)p_insn_per_second;
+                int64_t time_ns = num_secs * (double)NSEC_IN_ONE_SEC;
+                return (base_time + sc_core::sc_time(time_ns, sc_core::SC_NS));
+            } else if (m_inst.is_hvf_enabled()) {
+                SCP_DEBUG(())("hvf enabled");
+                return get_qemu_time();
+            } else if (m_inst.is_kvm_enabled()) {
+                SCP_DEBUG(())("kvm enabled");
+                return get_qemu_time();
+            }
+        } else {
+            return get_qemu_time();
+        }
+    }
+
+    /*
      * Called by the QEMU iothread when the deadline timer expires. We kick the
      * CPU out of its execution loop for it to call the end_of_loop_cb callback.
      * However, we should also handle the case that qemu is currently in 'sync'
@@ -166,10 +215,10 @@ protected:
             rearm_deadline_timer();
 
             /* Take this opportunity to set the time */
-            int64_t now = m_inst.get().get_virtual_clock();
+            sc_core::sc_time now = get_cpu_time();
             sc_core::sc_time sc_t = sc_core::sc_time_stamp();
-            if (sc_core::sc_time(now, sc_core::SC_NS) > sc_t) {
-                m_qk->set(sc_core::sc_time(now, sc_core::SC_NS) - sc_t);
+            if (now > sc_t) {
+                m_qk->set(now - sc_t);
             }
         }
     }
@@ -214,7 +263,8 @@ protected:
     {
         // This is a simple "every quantum" tick. Whether the QK makes use of it or not
         // is down to the sync policy
-        m_deadline_timer->mod(m_inst.get().get_virtual_clock() + m_quantum_ns);
+        m_deadline_timer->mod(
+            static_cast<int64_t>(std::floor(get_qemu_time().to_seconds() * NSEC_IN_ONE_SEC) + m_quantum_ns));
     }
 
     /*
@@ -262,14 +312,14 @@ protected:
      */
     void run_cpu_loop()
     {
-        auto last_vclock = m_inst.get().get_virtual_clock();
+        auto last_vclock = get_cpu_time();
         m_cpu.loop();
         /*
          * Workaround in icount mode: sometimes, the CPU does not execute
          * on the first call of run_loop(). Give it a second chance.
          */
         for (int i = 0; i < m_inst.number_devices(); i++) {
-            if ((m_inst.get().get_virtual_clock() == last_vclock) && (m_cpu.can_run())) {
+            if ((get_cpu_time() == last_vclock) && (m_cpu.can_run())) {
                 m_cpu.loop();
             } else
                 break;
@@ -281,8 +331,6 @@ protected:
      */
     void sync_with_kernel()
     {
-        int64_t now = m_inst.get().get_virtual_clock();
-
         m_cpu.set_soft_stopped(true);
 
         m_inst.get().unlock_iothread();
@@ -290,8 +338,9 @@ protected:
             m_qk->start(); // we may have switched the QK off, so switch it on before setting
         }
         sc_core::sc_time sc_t = sc_core::sc_time_stamp();
-        if (sc_core::sc_time(now, sc_core::SC_NS) > sc_t) {
-            m_qk->set(sc_core::sc_time(now, sc_core::SC_NS) - sc_t);
+        sc_core::sc_time now = get_cpu_time();
+        if (now > sc_t) {
+            m_qk->set(now - sc_t);
         }
         // Important to allow QK to notify itself if it's waiting.
         m_qk->sync();
@@ -337,7 +386,6 @@ public:
     TargetSignalSocket<bool> halt;
     TargetSignalSocket<bool> reset;
 
-
     QemuCpu(const sc_core::sc_module_name& name, QemuInstance& inst, const std::string& type_name)
         : QemuDevice(name, inst, (type_name + "-cpu").c_str())
         , halt("halt")
@@ -346,6 +394,7 @@ public:
         , m_signaled(false)
         , p_gdb_port("gdb_port", 0, "Wait for gdb connection on TCP port <gdb_port>")
         , socket("mem", *this, inst)
+        , p_insn_per_second("insn_per_second", 1000000000, "number of instructions per second")
     {
         using namespace std::placeholders;
 
@@ -376,7 +425,7 @@ public:
         }
         m_inst.del_dev(this);
     }
-
+    uint64_t get_ips() override { return p_insn_per_second; }
     // Process shutting down the CPU's at end of simulation, check this was done on destruction.
     // This gives time for QEMU to exit etc.
     void end_of_simulation() override
@@ -516,7 +565,9 @@ public:
 
     virtual void start_of_simulation() override
     {
-        m_quantum_ns = int64_t(tlm_utils::tlm_quantumkeeper::get_global_quantum().to_seconds() * 1e9);
+        base_time = sc_core::SC_ZERO_TIME;
+        m_quantum_ns = static_cast<uint64_t>(
+            std::floor(tlm_utils::tlm_quantumkeeper::get_global_quantum().to_seconds() * NSEC_IN_ONE_SEC));
 
         QemuDevice::start_of_simulation();
         if (m_inst.get_tcg_mode() == QemuInstance::TCG_SINGLE) {
@@ -558,12 +609,10 @@ public:
         using sc_core::sc_time;
         using sc_core::SC_NS;
 
-        int64_t vclock_now;
-
-        vclock_now = m_inst.get().get_virtual_clock();
+        sc_core::sc_time now = get_cpu_time();
         sc_core::sc_time sc_t = sc_core::sc_time_stamp();
-        if (sc_time(vclock_now, SC_NS) > sc_t) {
-            m_qk->set(sc_time(vclock_now, SC_NS) - sc_t);
+        if (now > sc_t) {
+            m_qk->set(now - sc_t);
             return m_qk->get_local_time();
         } else {
             return sc_core::SC_ZERO_TIME;
