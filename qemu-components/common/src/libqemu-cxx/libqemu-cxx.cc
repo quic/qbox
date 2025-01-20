@@ -85,6 +85,114 @@ void LibQemu::init()
     }
 
     qemu_init = reinterpret_cast<LibQemuInitFct>(m_lib->get_symbol(LIBQEMU_INIT_SYM_STR));
+
+    p_api.qemu_plugin_uninstall = reinterpret_cast<qemu_plugin_uninstall_fn>(
+        m_lib->get_symbol("qemu_plugin_uninstall"));
+    p_api.qemu_plugin_reset = reinterpret_cast<qemu_plugin_reset_fn>(m_lib->get_symbol("qemu_plugin_reset"));
+    p_api.qemu_plugin_register_vcpu_init_cb = reinterpret_cast<qemu_plugin_register_vcpu_init_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_init_cb"));
+    p_api.qemu_plugin_register_vcpu_exit_cb = reinterpret_cast<qemu_plugin_register_vcpu_exit_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_exit_cb"));
+    p_api.qemu_plugin_register_vcpu_idle_cb = reinterpret_cast<qemu_plugin_register_vcpu_idle_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_idle_cb"));
+    p_api.qemu_plugin_register_vcpu_resume_cb = reinterpret_cast<qemu_plugin_register_vcpu_resume_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_resume_cb"));
+    p_api.qemu_plugin_register_vcpu_tb_trans_cb = reinterpret_cast<qemu_plugin_register_vcpu_tb_trans_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_tb_trans_cb"));
+    p_api.qemu_plugin_register_vcpu_tb_exec_cb = reinterpret_cast<qemu_plugin_register_vcpu_tb_exec_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_tb_exec_cb"));
+    p_api.qemu_plugin_register_vcpu_tb_exec_cond_cb = reinterpret_cast<qemu_plugin_register_vcpu_tb_exec_cond_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_tb_exec_cond_cb"));
+    p_api.qemu_plugin_register_vcpu_tb_exec_inline_per_vcpu = reinterpret_cast<
+        qemu_plugin_register_vcpu_tb_exec_inline_per_vcpu_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_tb_exec_inline_per_vcpu"));
+    p_api.qemu_plugin_register_vcpu_insn_exec_cb = reinterpret_cast<qemu_plugin_register_vcpu_insn_exec_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_insn_exec_cb"));
+    p_api
+        .qemu_plugin_register_vcpu_insn_exec_cond_cb = reinterpret_cast<qemu_plugin_register_vcpu_insn_exec_cond_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_insn_exec_cond_cb"));
+    p_api.qemu_plugin_register_vcpu_insn_exec_inline_per_vcpu = reinterpret_cast<
+        qemu_plugin_register_vcpu_insn_exec_inline_per_vcpu_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_insn_exec_inline_per_vcpu"));
+    p_api.qemu_plugin_tb_n_insns = reinterpret_cast<qemu_plugin_tb_n_insns_fn>(
+        m_lib->get_symbol("qemu_plugin_tb_n_insns"));
+    p_api.qemu_plugin_tb_vaddr = reinterpret_cast<qemu_plugin_tb_vaddr_fn>(m_lib->get_symbol("qemu_plugin_tb_vaddr"));
+    p_api.qemu_plugin_tb_get_insn = reinterpret_cast<qemu_plugin_tb_get_insn_fn>(
+        m_lib->get_symbol("qemu_plugin_tb_get_insn"));
+    p_api.qemu_plugin_insn_data = reinterpret_cast<qemu_plugin_insn_data_fn>(
+        m_lib->get_symbol("qemu_plugin_insn_data"));
+    p_api.qemu_plugin_insn_size = reinterpret_cast<qemu_plugin_insn_size_fn>(
+        m_lib->get_symbol("qemu_plugin_insn_size"));
+    p_api.qemu_plugin_insn_vaddr = reinterpret_cast<qemu_plugin_insn_vaddr_fn>(
+        m_lib->get_symbol("qemu_plugin_insn_vaddr"));
+    p_api.qemu_plugin_insn_haddr = reinterpret_cast<qemu_plugin_insn_haddr_fn>(
+        m_lib->get_symbol("qemu_plugin_insn_haddr"));
+    p_api.qemu_plugin_mem_size_shift = reinterpret_cast<qemu_plugin_mem_size_shift_fn>(
+        m_lib->get_symbol("qemu_plugin_mem_size_shift"));
+    p_api.qemu_plugin_mem_is_sign_extended = reinterpret_cast<qemu_plugin_mem_is_sign_extended_fn>(
+        m_lib->get_symbol("qemu_plugin_mem_is_sign_extended"));
+    p_api.qemu_plugin_mem_is_big_endian = reinterpret_cast<qemu_plugin_mem_is_big_endian_fn>(
+        m_lib->get_symbol("qemu_plugin_mem_is_big_endian"));
+    p_api.qemu_plugin_mem_is_store = reinterpret_cast<qemu_plugin_mem_is_store_fn>(
+        m_lib->get_symbol("qemu_plugin_mem_is_store"));
+    p_api.qemu_plugin_get_hwaddr = reinterpret_cast<qemu_plugin_get_hwaddr_fn>(
+        m_lib->get_symbol("qemu_plugin_get_hwaddr"));
+    p_api.qemu_plugin_hwaddr_is_io = reinterpret_cast<qemu_plugin_hwaddr_is_io_fn>(
+        m_lib->get_symbol("qemu_plugin_hwaddr_is_io"));
+    p_api.qemu_plugin_hwaddr_phys_addr = reinterpret_cast<qemu_plugin_hwaddr_phys_addr_fn>(
+        m_lib->get_symbol("qemu_plugin_hwaddr_phys_addr"));
+    p_api.qemu_plugin_hwaddr_device_name = reinterpret_cast<qemu_plugin_hwaddr_device_name_fn>(
+        m_lib->get_symbol("qemu_plugin_hwaddr_device_name"));
+    p_api.qemu_plugin_register_vcpu_mem_cb = reinterpret_cast<qemu_plugin_register_vcpu_mem_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_mem_cb"));
+    p_api.qemu_plugin_register_vcpu_mem_inline_per_vcpu = reinterpret_cast<
+        qemu_plugin_register_vcpu_mem_inline_per_vcpu_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_mem_inline_per_vcpu"));
+    p_api.qemu_plugin_request_time_control = reinterpret_cast<qemu_plugin_request_time_control_fn>(
+        m_lib->get_symbol("qemu_plugin_request_time_control"));
+    p_api.qemu_plugin_update_ns = reinterpret_cast<qemu_plugin_update_ns_fn>(
+        m_lib->get_symbol("qemu_plugin_update_ns"));
+    p_api.qemu_plugin_register_vcpu_syscall_cb = reinterpret_cast<qemu_plugin_register_vcpu_syscall_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_syscall_cb"));
+    p_api.qemu_plugin_register_vcpu_syscall_ret_cb = reinterpret_cast<qemu_plugin_register_vcpu_syscall_ret_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_vcpu_syscall_ret_cb"));
+    p_api.qemu_plugin_insn_disas = reinterpret_cast<qemu_plugin_insn_disas_fn>(
+        m_lib->get_symbol("qemu_plugin_insn_disas"));
+    p_api.qemu_plugin_insn_symbol = reinterpret_cast<qemu_plugin_insn_symbol_fn>(
+        m_lib->get_symbol("qemu_plugin_insn_symbol"));
+    p_api.qemu_plugin_vcpu_for_each = reinterpret_cast<qemu_plugin_vcpu_for_each_fn>(
+        m_lib->get_symbol("qemu_plugin_vcpu_for_each"));
+    p_api.qemu_plugin_register_flush_cb = reinterpret_cast<qemu_plugin_register_flush_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_flush_cb"));
+    p_api.qemu_plugin_register_atexit_cb = reinterpret_cast<qemu_plugin_register_atexit_cb_fn>(
+        m_lib->get_symbol("qemu_plugin_register_atexit_cb"));
+    p_api.qemu_plugin_num_vcpus = reinterpret_cast<qemu_plugin_num_vcpus_fn>(
+        m_lib->get_symbol("qemu_plugin_num_vcpus"));
+    p_api.qemu_plugin_outs = reinterpret_cast<qemu_plugin_outs_fn>(m_lib->get_symbol("qemu_plugin_outs"));
+    p_api.qemu_plugin_bool_parse = reinterpret_cast<qemu_plugin_bool_parse_fn>(
+        m_lib->get_symbol("qemu_plugin_bool_parse"));
+    p_api.qemu_plugin_path_to_binary = reinterpret_cast<qemu_plugin_path_to_binary_fn>(
+        m_lib->get_symbol("qemu_plugin_path_to_binary"));
+    p_api.qemu_plugin_start_code = reinterpret_cast<qemu_plugin_start_code_fn>(
+        m_lib->get_symbol("qemu_plugin_start_code"));
+    p_api.qemu_plugin_end_code = reinterpret_cast<qemu_plugin_end_code_fn>(m_lib->get_symbol("qemu_plugin_end_code"));
+    p_api.qemu_plugin_entry_code = reinterpret_cast<qemu_plugin_entry_code_fn>(
+        m_lib->get_symbol("qemu_plugin_entry_code"));
+    p_api.qemu_plugin_get_registers = reinterpret_cast<qemu_plugin_get_registers_fn>(
+        m_lib->get_symbol("qemu_plugin_get_registers"));
+    p_api.qemu_plugin_read_register = reinterpret_cast<qemu_plugin_read_register_fn>(
+        m_lib->get_symbol("qemu_plugin_read_register"));
+    p_api.qemu_plugin_scoreboard_new = reinterpret_cast<qemu_plugin_scoreboard_new_fn>(
+        m_lib->get_symbol("qemu_plugin_scoreboard_new"));
+    p_api.qemu_plugin_scoreboard_free = reinterpret_cast<qemu_plugin_scoreboard_free_fn>(
+        m_lib->get_symbol("qemu_plugin_scoreboard_free"));
+    p_api.qemu_plugin_scoreboard_find = reinterpret_cast<qemu_plugin_scoreboard_find_fn>(
+        m_lib->get_symbol("qemu_plugin_scoreboard_find"));
+    p_api.qemu_plugin_u64_add = reinterpret_cast<qemu_plugin_u64_add_fn>(m_lib->get_symbol("qemu_plugin_u64_add"));
+    p_api.qemu_plugin_u64_get = reinterpret_cast<qemu_plugin_u64_get_fn>(m_lib->get_symbol("qemu_plugin_u64_get"));
+    p_api.qemu_plugin_u64_set = reinterpret_cast<qemu_plugin_u64_set_fn>(m_lib->get_symbol("qemu_plugin_u64_set"));
+    p_api.qemu_plugin_u64_sum = reinterpret_cast<qemu_plugin_u64_sum_fn>(m_lib->get_symbol("qemu_plugin_u64_sum"));
+
     exports = qemu_init(m_qemu_argv.size(), &m_qemu_argv[0]);
 
     m_int = std::make_shared<LibQemuInternals>(*this, exports);

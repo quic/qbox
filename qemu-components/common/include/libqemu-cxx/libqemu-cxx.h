@@ -27,6 +27,8 @@
 #include <libqemu-cxx/exceptions.h>
 #include <libqemu-cxx/loader.h>
 
+#include <glib.h>
+
 #include <scp/report.h>
 
 /* libqemu types forward declaration */
@@ -51,6 +53,67 @@ struct QemuMemoryListener;
 struct QemuTimer;
 typedef void* QEMUGLContext;
 struct QEMUGLParams;
+struct qemu_plugin_tb;
+struct qemu_plugin_insn;
+struct qemu_plugin_hwaddr;
+struct qemu_plugin_scoreboard;
+struct qemu_plugin_register;
+
+typedef uint32_t qemu_plugin_meminfo_t;
+typedef uint64_t qemu_plugin_id_t;
+typedef enum {
+    QEMU_PLUGIN_CB_NO_REGS,
+    QEMU_PLUGIN_CB_R_REGS,
+    QEMU_PLUGIN_CB_RW_REGS,
+} qemu_plugin_cb_flags;
+
+typedef enum {
+    QEMU_PLUGIN_MEM_R = 1,
+    QEMU_PLUGIN_MEM_W,
+    QEMU_PLUGIN_MEM_RW,
+} qemu_plugin_mem_rw;
+typedef enum {
+    QEMU_PLUGIN_COND_NEVER,
+    QEMU_PLUGIN_COND_ALWAYS,
+    QEMU_PLUGIN_COND_EQ,
+    QEMU_PLUGIN_COND_NE,
+    QEMU_PLUGIN_COND_LT,
+    QEMU_PLUGIN_COND_LE,
+    QEMU_PLUGIN_COND_GT,
+    QEMU_PLUGIN_COND_GE,
+} qemu_plugin_cond;
+typedef enum {
+    QEMU_PLUGIN_INLINE_ADD_U64,
+    QEMU_PLUGIN_INLINE_STORE_U64,
+} qemu_plugin_op;
+
+typedef struct {
+    struct qemu_plugin_scoreboard* score;
+    size_t offset;
+} qemu_plugin_u64;
+
+/* Macros to define a qemu_plugin_u64 */
+#define qemu_plugin_scoreboard_u64(score) \
+    (qemu_plugin_u64) { score, 0 }
+#define qemu_plugin_scoreboard_u64_in_struct(score, type, member) \
+    (qemu_plugin_u64) { score, offsetof(type, member) }
+
+typedef void (*qemu_plugin_simple_cb_t)(qemu_plugin_id_t id);
+
+typedef void (*qemu_plugin_udata_cb_t)(qemu_plugin_id_t id, void* userdata);
+
+typedef void (*qemu_plugin_vcpu_simple_cb_t)(qemu_plugin_id_t id, unsigned int vcpu_index);
+
+typedef void (*qemu_plugin_vcpu_udata_cb_t)(unsigned int vcpu_index, void* userdata);
+
+typedef void (*qemu_plugin_vcpu_tb_trans_cb_t)(qemu_plugin_id_t id, struct qemu_plugin_tb* tb);
+typedef void (*qemu_plugin_vcpu_mem_cb_t)(unsigned int vcpu_index, qemu_plugin_meminfo_t info, uint64_t vaddr,
+                                          void* userdata);
+typedef void (*qemu_plugin_vcpu_syscall_cb_t)(qemu_plugin_id_t id, unsigned int vcpu_index, int64_t num, uint64_t a1,
+                                              uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5, uint64_t a6,
+                                              uint64_t a7, uint64_t a8);
+typedef void (*qemu_plugin_vcpu_syscall_ret_cb_t)(qemu_plugin_id_t id, unsigned int vcpu_idx, int64_t num, int64_t ret);
+
 typedef void (*LibQemuGfxUpdateFn)(DisplayChangeListener*, int, int, int, int);
 typedef void (*LibQemuGfxSwitchFn)(DisplayChangeListener*, DisplaySurface*);
 typedef void (*LibQemuRefreshFn)(DisplayChangeListener*);
@@ -67,6 +130,74 @@ typedef void (*LibQemuGLUpdateFn)(DisplayChangeListener*, uint32_t, uint32_t, ui
 
 typedef bool (*LibQemuIsCompatibleDclFn)(DisplayGLCtx*, DisplayChangeListener*);
 
+/* QEMU TCG Plugin API */
+typedef void (*qemu_plugin_uninstall_fn)(qemu_plugin_id_t id, qemu_plugin_simple_cb_t cb);
+typedef void (*qemu_plugin_reset_fn)(qemu_plugin_id_t id, qemu_plugin_simple_cb_t cb);
+typedef void (*qemu_plugin_register_vcpu_init_cb_fn)(qemu_plugin_id_t id, qemu_plugin_vcpu_simple_cb_t cb);
+typedef void (*qemu_plugin_register_vcpu_exit_cb_fn)(qemu_plugin_id_t id, qemu_plugin_vcpu_simple_cb_t cb);
+typedef void (*qemu_plugin_register_vcpu_idle_cb_fn)(qemu_plugin_id_t id, qemu_plugin_vcpu_simple_cb_t cb);
+typedef void (*qemu_plugin_register_vcpu_resume_cb_fn)(qemu_plugin_id_t id, qemu_plugin_vcpu_simple_cb_t cb);
+typedef void (*qemu_plugin_register_vcpu_tb_trans_cb_fn)(qemu_plugin_id_t id, qemu_plugin_vcpu_tb_trans_cb_t cb);
+typedef void (*qemu_plugin_register_vcpu_tb_exec_cb_fn)(qemu_plugin_tb* tb, qemu_plugin_vcpu_udata_cb_t cb,
+                                                        qemu_plugin_cb_flags flags, void* userdata);
+typedef void (*qemu_plugin_register_vcpu_tb_exec_cond_cb_fn)(qemu_plugin_tb* tb, qemu_plugin_vcpu_udata_cb_t cb,
+                                                             qemu_plugin_cb_flags flags, qemu_plugin_cond cond,
+                                                             qemu_plugin_u64 entry, uint64_t imm, void* userdata);
+typedef void (*qemu_plugin_register_vcpu_tb_exec_inline_per_vcpu_fn)(qemu_plugin_tb* tb, qemu_plugin_op op,
+                                                                     qemu_plugin_u64 entry, uint64_t imm);
+
+typedef void (*qemu_plugin_register_vcpu_insn_exec_cb_fn)(qemu_plugin_insn* insn, qemu_plugin_vcpu_udata_cb_t cb,
+                                                          qemu_plugin_cb_flags flags, void* userdata);
+typedef void (*qemu_plugin_register_vcpu_insn_exec_cond_cb_fn)(qemu_plugin_insn* insn, qemu_plugin_vcpu_udata_cb_t cb,
+                                                               qemu_plugin_cb_flags flags, qemu_plugin_cond cond,
+                                                               qemu_plugin_u64 entry, uint64_t imm, void* userdata);
+typedef void (*qemu_plugin_register_vcpu_insn_exec_inline_per_vcpu_fn)(qemu_plugin_insn* insn, qemu_plugin_op op,
+                                                                       qemu_plugin_u64 entry, uint64_t imm);
+typedef size_t (*qemu_plugin_tb_n_insns_fn)(const qemu_plugin_tb* tb);
+typedef uint64_t (*qemu_plugin_tb_vaddr_fn)(const qemu_plugin_tb* tb);
+typedef qemu_plugin_insn* (*qemu_plugin_tb_get_insn_fn)(const qemu_plugin_tb* tb, size_t idx);
+typedef size_t (*qemu_plugin_insn_data_fn)(const qemu_plugin_insn* insn, void* dest, size_t len);
+typedef size_t (*qemu_plugin_insn_size_fn)(const qemu_plugin_insn* insn);
+typedef uint64_t (*qemu_plugin_insn_vaddr_fn)(const qemu_plugin_insn* insn);
+typedef void* (*qemu_plugin_insn_haddr_fn)(const qemu_plugin_insn* insn);
+typedef unsigned int (*qemu_plugin_mem_size_shift_fn)(qemu_plugin_meminfo_t info);
+typedef bool (*qemu_plugin_mem_is_sign_extended_fn)(qemu_plugin_meminfo_t info);
+typedef bool (*qemu_plugin_mem_is_big_endian_fn)(qemu_plugin_meminfo_t info);
+typedef bool (*qemu_plugin_mem_is_store_fn)(qemu_plugin_meminfo_t info);
+typedef qemu_plugin_hwaddr* (*qemu_plugin_get_hwaddr_fn)(qemu_plugin_meminfo_t info, uint64_t vaddr);
+typedef bool (*qemu_plugin_hwaddr_is_io_fn)(const qemu_plugin_hwaddr* haddr);
+typedef uint64_t (*qemu_plugin_hwaddr_phys_addr_fn)(const qemu_plugin_hwaddr* haddr);
+typedef const char* (*qemu_plugin_hwaddr_device_name_fn)(const qemu_plugin_hwaddr* h);
+typedef void (*qemu_plugin_register_vcpu_mem_cb_fn)(qemu_plugin_insn* insn, qemu_plugin_vcpu_mem_cb_t cb,
+                                                    qemu_plugin_cb_flags flags, qemu_plugin_mem_rw rw, void* userdata);
+typedef void (*qemu_plugin_register_vcpu_mem_inline_per_vcpu_fn)(qemu_plugin_insn* insn, qemu_plugin_mem_rw rw,
+                                                                 qemu_plugin_op op, qemu_plugin_u64 entry,
+                                                                 uint64_t imm);
+typedef const void* (*qemu_plugin_request_time_control_fn)(void);
+typedef void (*qemu_plugin_update_ns_fn)(const void* handle, int64_t time);
+typedef void (*qemu_plugin_register_vcpu_syscall_cb_fn)(qemu_plugin_id_t id, qemu_plugin_vcpu_syscall_cb_t cb);
+typedef void (*qemu_plugin_register_vcpu_syscall_ret_cb_fn)(qemu_plugin_id_t id, qemu_plugin_vcpu_syscall_ret_cb_t cb);
+typedef char* (*qemu_plugin_insn_disas_fn)(const qemu_plugin_insn* insn);
+typedef const char* (*qemu_plugin_insn_symbol_fn)(const qemu_plugin_insn* insn);
+typedef void (*qemu_plugin_vcpu_for_each_fn)(qemu_plugin_id_t id, qemu_plugin_vcpu_simple_cb_t cb);
+typedef void (*qemu_plugin_register_flush_cb_fn)(qemu_plugin_id_t id, qemu_plugin_simple_cb_t cb);
+typedef void (*qemu_plugin_register_atexit_cb_fn)(qemu_plugin_id_t id, qemu_plugin_udata_cb_t cb, void* userdata);
+typedef int (*qemu_plugin_num_vcpus_fn)(void);
+typedef void (*qemu_plugin_outs_fn)(const char* string);
+typedef bool (*qemu_plugin_bool_parse_fn)(const char* name, const char* val, bool* ret);
+typedef const char* (*qemu_plugin_path_to_binary_fn)(void);
+typedef uint64_t (*qemu_plugin_start_code_fn)(void);
+typedef uint64_t (*qemu_plugin_end_code_fn)(void);
+typedef uint64_t (*qemu_plugin_entry_code_fn)(void);
+typedef GArray* (*qemu_plugin_get_registers_fn)(void);
+typedef int (*qemu_plugin_read_register_fn)(qemu_plugin_register* handle, GByteArray* buf);
+typedef qemu_plugin_scoreboard* (*qemu_plugin_scoreboard_new_fn)(size_t element_size);
+typedef void (*qemu_plugin_scoreboard_free_fn)(qemu_plugin_scoreboard* score);
+typedef void* (*qemu_plugin_scoreboard_find_fn)(qemu_plugin_scoreboard* score, unsigned int vcpu_index);
+typedef void (*qemu_plugin_u64_add_fn)(qemu_plugin_u64 entry, unsigned int vcpu_index, uint64_t added);
+typedef uint64_t (*qemu_plugin_u64_get_fn)(qemu_plugin_u64 entry, unsigned int vcpu_index);
+typedef void (*qemu_plugin_u64_set_fn)(qemu_plugin_u64 entry, unsigned int vcpu_index, uint64_t val);
+typedef uint64_t (*qemu_plugin_u64_sum_fn)(qemu_plugin_u64 entry);
 namespace qemu {
 
 class LibQemuInternals;
@@ -87,7 +218,65 @@ class SDL2Console;
 class Dcl;
 class DclOps;
 class RcuReadLock;
-
+class PluginAPI
+{
+public:
+    qemu_plugin_uninstall_fn qemu_plugin_uninstall;
+    qemu_plugin_reset_fn qemu_plugin_reset;
+    qemu_plugin_register_vcpu_init_cb_fn qemu_plugin_register_vcpu_init_cb;
+    qemu_plugin_register_vcpu_exit_cb_fn qemu_plugin_register_vcpu_exit_cb;
+    qemu_plugin_register_vcpu_idle_cb_fn qemu_plugin_register_vcpu_idle_cb;
+    qemu_plugin_register_vcpu_resume_cb_fn qemu_plugin_register_vcpu_resume_cb;
+    qemu_plugin_register_vcpu_tb_trans_cb_fn qemu_plugin_register_vcpu_tb_trans_cb;
+    qemu_plugin_register_vcpu_tb_exec_cb_fn qemu_plugin_register_vcpu_tb_exec_cb;
+    qemu_plugin_register_vcpu_tb_exec_cond_cb_fn qemu_plugin_register_vcpu_tb_exec_cond_cb;
+    qemu_plugin_register_vcpu_tb_exec_inline_per_vcpu_fn qemu_plugin_register_vcpu_tb_exec_inline_per_vcpu;
+    qemu_plugin_register_vcpu_insn_exec_cb_fn qemu_plugin_register_vcpu_insn_exec_cb;
+    qemu_plugin_register_vcpu_insn_exec_cond_cb_fn qemu_plugin_register_vcpu_insn_exec_cond_cb;
+    qemu_plugin_register_vcpu_insn_exec_inline_per_vcpu_fn qemu_plugin_register_vcpu_insn_exec_inline_per_vcpu;
+    qemu_plugin_tb_n_insns_fn qemu_plugin_tb_n_insns;
+    qemu_plugin_tb_vaddr_fn qemu_plugin_tb_vaddr;
+    qemu_plugin_tb_get_insn_fn qemu_plugin_tb_get_insn;
+    qemu_plugin_insn_data_fn qemu_plugin_insn_data;
+    qemu_plugin_insn_size_fn qemu_plugin_insn_size;
+    qemu_plugin_insn_vaddr_fn qemu_plugin_insn_vaddr;
+    qemu_plugin_insn_haddr_fn qemu_plugin_insn_haddr;
+    qemu_plugin_mem_size_shift_fn qemu_plugin_mem_size_shift;
+    qemu_plugin_mem_is_sign_extended_fn qemu_plugin_mem_is_sign_extended;
+    qemu_plugin_mem_is_big_endian_fn qemu_plugin_mem_is_big_endian;
+    qemu_plugin_mem_is_store_fn qemu_plugin_mem_is_store;
+    qemu_plugin_get_hwaddr_fn qemu_plugin_get_hwaddr;
+    qemu_plugin_hwaddr_is_io_fn qemu_plugin_hwaddr_is_io;
+    qemu_plugin_hwaddr_phys_addr_fn qemu_plugin_hwaddr_phys_addr;
+    qemu_plugin_hwaddr_device_name_fn qemu_plugin_hwaddr_device_name;
+    qemu_plugin_register_vcpu_mem_cb_fn qemu_plugin_register_vcpu_mem_cb;
+    qemu_plugin_register_vcpu_mem_inline_per_vcpu_fn qemu_plugin_register_vcpu_mem_inline_per_vcpu;
+    qemu_plugin_request_time_control_fn qemu_plugin_request_time_control;
+    qemu_plugin_update_ns_fn qemu_plugin_update_ns;
+    qemu_plugin_register_vcpu_syscall_cb_fn qemu_plugin_register_vcpu_syscall_cb;
+    qemu_plugin_register_vcpu_syscall_ret_cb_fn qemu_plugin_register_vcpu_syscall_ret_cb;
+    qemu_plugin_insn_disas_fn qemu_plugin_insn_disas;
+    qemu_plugin_insn_symbol_fn qemu_plugin_insn_symbol;
+    qemu_plugin_vcpu_for_each_fn qemu_plugin_vcpu_for_each;
+    qemu_plugin_register_flush_cb_fn qemu_plugin_register_flush_cb;
+    qemu_plugin_register_atexit_cb_fn qemu_plugin_register_atexit_cb;
+    qemu_plugin_num_vcpus_fn qemu_plugin_num_vcpus;
+    qemu_plugin_outs_fn qemu_plugin_outs;
+    qemu_plugin_bool_parse_fn qemu_plugin_bool_parse;
+    qemu_plugin_path_to_binary_fn qemu_plugin_path_to_binary;
+    qemu_plugin_start_code_fn qemu_plugin_start_code;
+    qemu_plugin_end_code_fn qemu_plugin_end_code;
+    qemu_plugin_entry_code_fn qemu_plugin_entry_code;
+    qemu_plugin_get_registers_fn qemu_plugin_get_registers;
+    qemu_plugin_read_register_fn qemu_plugin_read_register;
+    qemu_plugin_scoreboard_new_fn qemu_plugin_scoreboard_new;
+    qemu_plugin_scoreboard_free_fn qemu_plugin_scoreboard_free;
+    qemu_plugin_scoreboard_find_fn qemu_plugin_scoreboard_find;
+    qemu_plugin_u64_add_fn qemu_plugin_u64_add;
+    qemu_plugin_u64_get_fn qemu_plugin_u64_get;
+    qemu_plugin_u64_set_fn qemu_plugin_u64_set;
+    qemu_plugin_u64_sum_fn qemu_plugin_u64_sum;
+};
 class LibQemu
 {
 private:
@@ -115,6 +304,8 @@ public:
     LibQemu(LibraryLoaderIface& library_loader, const char* lib_path);
     LibQemu(LibraryLoaderIface& library_loader, Target t);
     ~LibQemu();
+
+    PluginAPI p_api;
 
     void push_qemu_arg(const char* arg);
     void push_qemu_arg(std::initializer_list<const char*> args);
