@@ -1,6 +1,6 @@
 /*
  * This file is part of libqemu-cxx
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All Rights Reserved.
  * Author: GreenSocs 2021
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -13,6 +13,25 @@
 #include <iostream>
 
 #include <libqemu-cxx/loader.h>
+#include <cci_configuration>
+
+extern "C" {
+/*
+ * This function sets the CCI parameter. It gets the broker and parameter handle,
+ * then sets the value if the handle is valid, or creates a new parameter if it is not.
+ */
+void global_set_cci_param(char* key, uint64_t val)
+{
+    auto b = cci::cci_get_broker();
+    auto b_key = b.get_param_handle(key);
+
+    if (b_key.is_valid()) {
+        b_key.set_cci_value(cci::cci_value(val));
+    } else {
+        b.set_preset_cci_value(key, cci::cci_value(val));
+    }
+}
+}
 
 static void copy_file(const char* src_file, const char* dest_file)
 {
