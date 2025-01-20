@@ -340,6 +340,9 @@ if (NOT WITHOUT_QEMU)
 
     set(CONFIGURE_ENVIRONMENT_VARIABLE "PKG_CONFIG_PATH=${libslirp_BINARY_DIR}/libslirp-prefix/lib/${CMAKE_LIBRARY_ARCHITECTURE}/pkgconfig/")
 
+    FIND_PACKAGE(PkgConfig REQUIRED)
+    PKG_CHECK_MODULES(GLIB REQUIRED glib-2.0)
+
     # TODO: Remove the "hack" in the future, once support for Ubuntu 20 can be
     # dropped. A fix for it was added in CMake 3.18, but the default version of
     # Ubuntu 20 is 3.16
@@ -438,6 +441,7 @@ target_include_directories(
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/systemc-components/common/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}>
     ${LIBELF_INCLUDE_DIR}
+    ${GLIB_INCLUDE_DIRS}
     )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -449,6 +453,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         zip
         ${PYBIND11_EMBED}
         ${CMAKE_DL_LIBS}  
+        ${GLIB_LDFLAGS}
 )
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/systemc-components" DESTINATION ${CMAKE_INSTALL_PREFIX})
