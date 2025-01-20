@@ -1,6 +1,6 @@
 /*
  * This file is part of libqbox
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All Rights Reserved.
  * Author: GreenSocs 2021
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -28,11 +28,13 @@
 #include <scp/report.h>
 
 #include "ports/qemu-target-signal-socket.h"
+#include "icount_plugin.h"
 
 class QemuDeviceBaseIF
 {
 public:
     virtual bool can_run() { return true; }
+    virtual uint64_t get_ips() { return std::numeric_limits<uint64_t>::max(); }
     SCP_LOGGER();
 };
 
@@ -131,6 +133,17 @@ public:
         }
         return can_run;
     }
+    /* This function returns the minimum number of instructions across all CPUs */
+    uint64_t get_min_insn_per_second()
+    {
+        uint64_t min_insn_per_second = std::numeric_limits<uint64_t>::max();
+        for (auto device : devices) {
+            if (device->get_ips() < min_insn_per_second) {
+                min_insn_per_second = device->get_ips();
+            }
+        }
+        return min_insn_per_second;
+    }
     using Target = qemu::Target;
     using LibLoader = qemu::LibraryLoaderIface;
 
@@ -152,6 +165,7 @@ public:
 protected:
     qemu::LibQemu m_inst;
     QemuInstanceDmiManager m_dmi_mgr;
+    icount_plugin m_icount_plugin;
 
     cci::cci_param<std::string> p_tcg_mode;
     cci::cci_param<std::string> p_sync_policy;
@@ -164,6 +178,8 @@ protected:
     bool p_display_argument_set;
 
     cci::cci_param<std::string> p_accel;
+    cci::cci_param<bool> p_plugin_sync_time;
+    cci::cci_param<std::string> p_plugin_path;
 
     void push_default_args()
     {
@@ -294,6 +310,7 @@ public:
         , m_inst(loader, t)
         , m_dmi_mgr(m_inst)
         , reset("reset")
+        , m_icount_plugin("icount_plugin", m_inst)
         , p_tcg_mode("tcg_mode", "MULTI", "The TCG mode required, SINGLE, COROUTINE or MULTI")
         , p_sync_policy("sync_policy", "multithread-quantum", "Synchronization Policy to use")
         , m_tcg_mode(StringToTcgMode(p_tcg_mode))
@@ -302,6 +319,10 @@ public:
         , p_args("qemu_args", "", "additional space separated arguments")
         , p_display_argument_set(false)
         , p_accel("accel", "tcg", "Virtualization accelerator")
+        , p_plugin_sync_time("plugin_sync_time", false,
+                             "If true, enable icount_plugin to calculate and sync time based on the number of "
+                             "instructions. Please provide the path to libidlinker.so in plugin_path.")
+        , p_plugin_path("plugin_path", " ", "path for the QEMU plugin: libidlinker.so")
     {
         SCP_DEBUG(()) << "Libqbox QemuInstance constructor";
 
@@ -311,6 +332,9 @@ public:
         m_running = true;
         p_tcg_mode.lock();
         push_default_args();
+        if (p_plugin_sync_time) {
+            m_icount_plugin.push_plugin_args(p_plugin_path.get_value());
+        }
     }
 
     QemuInstance(const QemuInstance&) = delete;
@@ -455,6 +479,20 @@ public:
     }
 
     /**
+     * @brief Returns the icount_plugin.
+     *
+     * @details Returns the icount_plugin for the current instance.
+     */
+    icount_plugin& get_icount_plugin() { return m_icount_plugin; }
+
+    /**
+     * @brief check if sync time is enabled.
+     *
+     * @details return the cci value of p_plugin_sync_time.
+     */
+    bool is_sync_time_enabled() const { return p_plugin_sync_time; }
+
+    /**
      * @brief Returns the locked QemuInstanceDmiManager instance
      *
      * Note: we rely on RVO here so no copy happen on return (this is enforced
@@ -466,6 +504,19 @@ public:
     int number_devices() { return devices.size(); }
 
 private:
+    void before_end_of_elaboration()
+    {
+        if (!is_inited()) {
+            init();
+        }
+        m_icount_plugin.set_sync_time(p_plugin_sync_time); /* If p_plugin_sync_time is true, the
+                             icount_plugin::end_of_elaboration will initialize the instruction count scoreboard for CPUs
+                             and register plugin callback functions. Otherwise, the plugin will be disabled. */
+        m_icount_plugin.set_max_insn_per_second(
+            get_min_insn_per_second()); /* Set the maximum number of instructions for the icount plugin to the minimum
+                                           number of instructions across all CPUs */
+        SCP_DEBUG(()) << "qemu-instance min_insn_per_second " << get_min_insn_per_second();
+    }
     void start_of_simulation(void) { get().finish_qemu_init(); }
 
     void reset_cb(const bool val)
