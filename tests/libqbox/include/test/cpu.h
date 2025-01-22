@@ -163,6 +163,7 @@ public:
         for (CPU& cpu : m_cpus) {
             cpu.p_mp_affinity = i++;
             m_router.add_initiator(cpu.socket);
+            cpu.p_has_el3 = false;
         }
     }
 

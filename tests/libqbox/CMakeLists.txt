@@ -47,40 +47,76 @@ function(qbox_add_cpu_test target timeout_s)
         return()
     endif()
 
+    list(APPEND QBOX_TEST_ACCELS "tcg")
+    if ("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "arm64")
+            list(APPEND QBOX_TEST_ACCELS "hvf")
+    endif()
+    if ("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
+            list(APPEND QBOX_TEST_ACCELS "kvm")
+    endif()
+
     add_executable(${target} ${ARGN})
+
+    # Apply HVF entitlements on MacOS
+    if(APPLE)
+        add_custom_command(
+            TARGET ${target}
+            POST_BUILD
+            COMMAND codesign
+                --entitlements ${libqemu_SOURCE_DIR}/accel/hvf/entitlements.plist
+                --force -s - $<TARGET_FILE:${target}>
+            COMMENT "Applying HVF entitlements to $<TARGET_FILE:${target}>"
+        )
+    endif()
+
     install(TARGETS ${target} DESTINATION bin)
 
     target_include_directories(${target} PRIVATE ${PROJECT_SOURCE_DIR}/tests/libqbox/include ${keystone_SOURCE_DIR}/include)
 
     target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 router gs_memory exclusive_monitor display ${TARGET_LIBS} keystone)
 
-    foreach(sync_pol ${QBOX_CPU_TEST_SYNC_POLICY_COMBINATION})
+    foreach (accel ${QBOX_TEST_ACCELS})
+      foreach(sync_pol ${QBOX_CPU_TEST_SYNC_POLICY_COMBINATION})
         if("${sync_pol}" STREQUAL "tlm2-icount")
-            set(sync_pol "tlm2")
-            set(icount "true")
+            if (${accel} STREQUAL "tcg")
+                set(sync_pol "tlm2")
+                set(icount "true")
+            else()
+                continue()
+            endif()
         else()
             set(icount "false")
         endif()
 
         if("${sync_pol}" STREQUAL "multithread-single")
-           set(sync_pol "multithread")
-           set(threading "SINGLE")
+            if (${accel} STREQUAL "tcg")
+                set(sync_pol "multithread")
+                set(threading "SINGLE")
+            else()
+                continue()
+            endif()
         else ()
             set(threading "MULTI")
         endif()
 
         if("${sync_pol}" STREQUAL "tlm2")
-            set(threading "COROUTINE")
+            if (${accel} STREQUAL "tcg")
+                set(threading "COROUTINE")
+            else()
+                continue()
+            endif()
         endif()
 
 
         foreach(num_cpu ${QBOX_CPU_TEST_NUM_CPU_COMBINATION})
-            set(test_name ${target}:sync-pol=${sync_pol}:num-cpu=${num_cpu}:icount=${icount}:threading=${threading})
+            set(test_name ${target}:sync-pol=${sync_pol}:num-cpu=${num_cpu}:icount=${icount}:threading=${threading}:accel=${accel})
 
             add_test(
                 NAME ${test_name}
                 COMMAND $<TARGET_FILE:${target}> -p test-bench.inst_a.sync_policy=\"${sync_pol}\"
                                                  -p test-bench.inst_b.sync_policy=\"${sync_pol}\"
+                                                 -p test-bench.inst_a.accel=\"${accel}\"
+                                                 -p test-bench.inst_b.accel=\"${accel}\"
                                                  -p test-bench.num_cpu=${num_cpu}
                                                  -p test-bench.inst_a.icount=${icount}
                                                  -p test-bench.inst_b.icount=${icount}
@@ -105,6 +141,7 @@ function(qbox_add_cpu_test target timeout_s)
             endif()
             # --------------------------------------------------------------------------------
         endforeach()
+      endforeach()
     endforeach()
 endfunction(qbox_add_cpu_test)
 
