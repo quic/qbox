@@ -1,0 +1,50 @@
+name: Full Ubuntu Build
+
+on: [ pull_request, push, workflow_dispatch ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-24.04 , ubuntu-22.04, ubuntu-20.04 ]
+        build_type: [ Debug , Release ]
+        c_compiler: [ gcc , clang ]
+        cpp_compiler: [ g++ , clang++ ]
+        exclude:
+          - c_compiler: gcc
+            cpp_compiler: clang++
+          - c_compiler: clang
+            cpp_compiler: g++
+
+    runs-on: "${{ matrix.os }}"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set reusable strings
+        id: strings
+        shell: sh
+        run: |
+          echo "build-output-dir=${{ github.workspace }}/build" >> "${GITHUB_OUTPUT}"
+
+      - name: Install dependencies
+        run: sudo scripts/install_dependencies.sh
+
+      - name: Configure
+        run: |
+          cmake \
+            -G Ninja \
+            -B "${{ steps.strings.outputs.build-output-dir }}" \
+            -S "${{ github.workspace }}" \
+            -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" \
+            -DCMAKE_C_COMPILER="${{ matrix.c_compiler }}" \
+            -DCMAKE_CXX_COMPILER="${{ matrix.cpp_compiler }}" \
+            -DGREENSOCS_GIT="https://github.com/quic/" \
+            -DLIBQEMU_TARGETS="aarch64;hexagon"
+
+      - name: Build
+        run: cmake --build "${{ steps.strings.outputs.build-output-dir }}" --parallel
+
+      - name: Test
+        run: ctest --test-dir "${{ steps.strings.outputs.build-output-dir }}" --output-on-failure
