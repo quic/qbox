@@ -1,0 +1,42 @@
+name: Full macOS Build
+
+on: [ pull_request, workflow_dispatch ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ macOS-14, macOS-15 ]
+        build_type: [ Debug , Release ]
+
+    runs-on: "${{ matrix.os }}"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set reusable strings
+        id: strings
+        shell: sh
+        run: |
+          echo "build-output-dir=${{ github.workspace }}/build" >> "${GITHUB_OUTPUT}"
+
+      - name: Install dependencies
+        run: scripts/install_dependencies.sh
+
+      - name: Configure
+        run: |
+          cmake \
+            -G Ninja \
+            -B "${{ steps.strings.outputs.build-output-dir }}" \
+            -S "${{ github.workspace }}" \
+            -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DGREENSOCS_GIT="https://github.com/quic/"
+
+      - name: Build
+        run: cmake --build "${{ steps.strings.outputs.build-output-dir }}" -j
+
+      - name: Test
+        run: ctest --test-dir "${{ steps.strings.outputs.build-output-dir }}" -j
