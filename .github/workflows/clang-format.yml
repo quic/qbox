@@ -1,0 +1,19 @@
+name: ClangFormat
+
+on: pull_request
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: sudo apt install clang-format
+
+      - name: Fetch target branch
+        run: git fetch origin "${{ github.base_ref }}"
+
+      - name: Run clang-format
+        run: git clang-format --diff --verbose FETCH_HEAD
