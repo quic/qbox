@@ -14,4 +14,33 @@
 template <class T>
 using InitiatorSignalSocket = sc_core::sc_port<sc_core::sc_signal_inout_if<T>, 1, sc_core::SC_ZERO_OR_MORE_BOUND>;
 
+template <typename T = bool>
+class MultiInitiatorSignalSocket
+    : public sc_core::sc_module,
+      public sc_core::sc_port<sc_core::sc_signal_inout_if<T>, 0, sc_core::SC_ZERO_OR_MORE_BOUND>
+{
+    std::vector<T> vals;
+    sc_core::sc_event ev;
+
+public:
+    MultiInitiatorSignalSocket(): sc_core::sc_module("MultiInitiatorSignalSocket") { SC_THREAD(writer); }
+    void writer()
+    {
+        while (1) {
+            wait(ev);
+            std::vector<T> vs = vals; // No race conditions, we are single threaded. COPY the vector
+            for (auto v : vs) {
+                for (int i = 0; i < this->size(); i++) {
+                    this->operator[](i)->write(v);
+                }
+            }
+        }
+    }
+    void async_write_vector(const std::vector<T>& vs)
+    {
+        vals = vs; // COPY the vector.
+        ev.notify();
+    }
+};
+
 #endif
