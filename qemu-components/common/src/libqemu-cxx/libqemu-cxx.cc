@@ -187,9 +187,7 @@ Chardev LibQemu::chardev_new(const char* label, const char* type)
     return ret;
 }
 
-void LibQemu::check_cast(Object& o, const char* type)
-{ /* TODO */
-}
+void LibQemu::check_cast(Object& o, const char* type) { /* TODO */ }
 
 void LibQemu::lock_iothread() { m_int->exports().qemu_mutex_lock_iothread(); }
 
@@ -204,6 +202,8 @@ RcuReadLock LibQemu::rcu_read_lock_new() { return RcuReadLock(m_int); }
 void LibQemu::coroutine_yield() { m_int->exports().coroutine_yield(); }
 
 void LibQemu::finish_qemu_init() { m_int->exports().finish_qemu_init(); }
+
+void LibQemu::system_reset() { m_int->exports().system_reset(); }
 
 Bus LibQemu::sysbus_get_default()
 {
@@ -302,26 +302,13 @@ void LibQemu::dcl_dpy_gfx_replace_surface(DisplayChangeListener* dcl, DisplaySur
 
 void LibQemu::sdl2_gl_refresh(DisplayChangeListener* dcl) { m_int->exports().sdl2_gl_refresh(dcl); }
 
-void LibQemu::sdl2_window_create(DisplayChangeListener* dcl)
-{
-    m_int->exports().sdl2_window_create(dcl);
-}
+void LibQemu::sdl2_window_create(DisplayChangeListener* dcl) { m_int->exports().sdl2_window_create(dcl); }
 
-void LibQemu::sdl2_window_destroy(DisplayChangeListener* dcl)
-{
-    m_int->exports().sdl2_window_destroy(dcl);
-}
+void LibQemu::sdl2_window_destroy(DisplayChangeListener* dcl) { m_int->exports().sdl2_window_destroy(dcl); }
 
-void LibQemu::sdl2_window_resize(DisplayChangeListener* dcl)
-{
-    m_int->exports().sdl2_window_resize(dcl);
-}
+void LibQemu::sdl2_window_resize(DisplayChangeListener* dcl) { m_int->exports().sdl2_window_resize(dcl); }
 
-void LibQemu::sdl2_poll_events(DisplayChangeListener* dcl)
-{
-    m_int->exports().sdl2_poll_events(dcl);
-}
-
+void LibQemu::sdl2_poll_events(DisplayChangeListener* dcl) { m_int->exports().sdl2_poll_events(dcl); }
 
 QEMUGLContext LibQemu::sdl2_gl_create_context(DisplayGLCtx* dgc, QEMUGLParams* p)
 {

@@ -19,6 +19,8 @@
 #include <ports/target-signal-socket.h>
 #include <tlm_sockets_buswidth.h>
 
+#include "onmethod.h"
+
 #include <cinttypes>
 #include <fcntl.h>
 #include <libelf.h>
@@ -104,6 +106,7 @@ class loader : public sc_core::sc_module
 public:
     simple_initiator_socket_zero<loader<BUSWIDTH>> initiator_socket;
     TargetSignalSocket<bool> reset;
+    onMethodHelper m_onMethod;
 
 private:
     uint64_t m_address = 0;
@@ -176,7 +179,10 @@ public:
         , reset("reset")
     {
         SCP_TRACE(())("default constructor");
-        reset.register_value_changed_cb([&](bool value) { doreset(value); });
+        // Respect the single function call semantics,
+        // but ensure execution happens on the main SystemC thread, not on a light weight process,
+        // as the loader uses a lot of stack
+        reset.register_value_changed_cb([&](bool value) { m_onMethod.run([&]() { doreset(value); }); });
     }
     void doreset(bool value)
     {
@@ -193,7 +199,7 @@ public:
     {
         SCP_TRACE(())("constructor with callback");
         m_use_callback = true;
-        reset.register_value_changed_cb([&](bool value) { doreset(value); });
+        reset.register_value_changed_cb([&](bool value) { m_onMethod.run([&]() { doreset(value); }); });
     }
 
     ~loader() {}

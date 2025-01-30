@@ -27,6 +27,8 @@
 
 #include <scp/report.h>
 
+#include "ports/qemu-target-signal-socket.h"
+
 class QemuDeviceBaseIF
 {
 public:
@@ -95,6 +97,8 @@ private:
     SCP_LOGGER();
 
 public:
+    TargetSignalSocket<bool> reset;
+
     // these will be used by wait_for_work when it needs a global lock
     std::mutex g_signaled_lock;
     std::condition_variable g_signaled_cond;
@@ -289,6 +293,7 @@ public:
         , m_conf_broker(cci::cci_get_broker())
         , m_inst(loader, t)
         , m_dmi_mgr(m_inst)
+        , reset("reset")
         , p_tcg_mode("tcg_mode", "MULTI", "The TCG mode required, SINGLE, COROUTINE or MULTI")
         , p_sync_policy("sync_policy", "multithread-quantum", "Synchronization Policy to use")
         , m_tcg_mode(StringToTcgMode(p_tcg_mode))
@@ -299,6 +304,10 @@ public:
         , p_accel("accel", "tcg", "Virtualization accelerator")
     {
         SCP_DEBUG(()) << "Libqbox QemuInstance constructor";
+
+        auto resetcb = std::bind(&QemuInstance::reset_cb, this, sc_unnamed::_1);
+        reset.register_value_changed_cb(resetcb);
+
         m_running = true;
         p_tcg_mode.lock();
         push_default_args();
@@ -458,6 +467,8 @@ public:
 
 private:
     void start_of_simulation(void) { get().finish_qemu_init(); }
+
+    void reset_cb(const bool& val) { m_inst.system_reset(); }
 };
 
 GSC_MODULE_REGISTER(QemuInstanceManager);

@@ -16,14 +16,19 @@ using InitiatorSignalSocket = sc_core::sc_port<sc_core::sc_signal_inout_if<T>, 1
 
 template <typename T = bool>
 class MultiInitiatorSignalSocket
-    : public sc_core::sc_module,
-      public sc_core::sc_port<sc_core::sc_signal_inout_if<T>, 0, sc_core::SC_ZERO_OR_MORE_BOUND>
+    : public sc_core::sc_port<sc_core::sc_signal_inout_if<T>, 0, sc_core::SC_ZERO_OR_MORE_BOUND>,
+      public sc_core::sc_module
 {
     std::vector<T> vals;
     sc_core::sc_event ev;
 
 public:
-    MultiInitiatorSignalSocket(): sc_core::sc_module("MultiInitiatorSignalSocket") { SC_THREAD(writer); }
+    MultiInitiatorSignalSocket(const char* name = "MultiInitiatorSignalSocket")
+        : sc_core::sc_port<sc_core::sc_signal_inout_if<T>, 0, sc_core::SC_ZERO_OR_MORE_BOUND>(name)
+        , sc_core::sc_module(sc_core::sc_module_name((std::string(name) + "_thread").c_str()))
+    {
+        SC_THREAD(writer);
+    }
     void writer()
     {
         while (1) {

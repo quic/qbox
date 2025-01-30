@@ -66,7 +66,7 @@ public:
 
 protected:
     std::vector<int> m_writes;
-    sc_core::sc_vector<sc_core::sc_out<bool>> reset;
+    MultiInitiatorSignalSocket<bool> reset;
     int finished = 0;
     int reset_id = 0;
     gs::async_event reset_ev;
@@ -74,16 +74,14 @@ protected:
 
 public:
     SC_HAS_PROCESS(CpuArmCortexA53SimpleReset);
-    CpuArmCortexA53SimpleReset(const sc_core::sc_module_name& n)
-        : CpuTestBench<cpu_arm_cortexA53, CpuTesterMmio>(n), reset("reset", p_num_cpu)
+    CpuArmCortexA53SimpleReset(const sc_core::sc_module_name& n): CpuTestBench<cpu_arm_cortexA53, CpuTesterMmio>(n)
     {
         char buf[1024];
-
-        map_reset_to_cpus(reset);
 
         for (int i = 0; i < m_cpus.size(); i++) {
             auto& cpu = m_cpus[i];
             cpu.p_start_powered_off = false;
+            reset.bind(cpu.reset);
         }
 
         std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterMmio::MMIO_ADDR, NUM_WRITES);
@@ -118,12 +116,7 @@ public:
     {
         if (finished < p_num_cpu) {
             SCP_INFO(SCMOD) << "Reset all CPU's";
-            for (int i = 0; i < p_num_cpu; i++) {
-                reset[i].write(1);
-            }
-            for (int i = 0; i < p_num_cpu; i++) {
-                reset[i].write(0);
-            }
+            reset.async_write_vector({ 1, 0 });
         }
         resetting = false;
     }

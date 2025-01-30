@@ -139,6 +139,8 @@ public:
 
     void coroutine_yield();
 
+    void system_reset();
+
     template <class T>
     T object_new()
     {
@@ -680,7 +682,7 @@ public:
 
     void set_soft_stopped(bool stopped);
     void halt(bool halted);
-    void reset();
+    void reset(bool reset);
 
     void set_unplug(bool unplug);
     void remove_sync();

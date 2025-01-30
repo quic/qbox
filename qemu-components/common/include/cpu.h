@@ -56,6 +56,9 @@ protected:
     std::shared_ptr<gs::tlm_quantumkeeper_extended> m_qk;
     std::atomic<bool> m_finished = false;
     std::atomic<bool> m_started = false;
+    enum { none, start_reset, hold_reset, finish_reset } m_resetting = none;
+    gs::async_event m_start_reset_done_ev;
+
     std::mutex m_can_delete;
     QemuCpuHintTlmExtension m_cpu_hint_ext;
 
@@ -362,6 +365,8 @@ public:
         }
 
         m_inst.add_dev(this);
+
+        m_start_reset_done_ev.async_detach_suspending();
     }
 
     virtual ~QemuCpu()
@@ -466,17 +471,37 @@ public:
             m_qemu_kick_ev.async_notify(); // notify the other thread so that the CPU is allowed to continue
         }
     }
+
+    /* NB _MUST_ be called from an SC_THREAD */
     void reset_cb(const bool& val)
     {
-        SCP_TRACE(())("Reset : {}", val);
-        if (!m_finished && val) {
-            m_qk->start();
-            SCP_WARN(())("calling reset");
-            m_cpu.reset();
-            socket.reset();
+        /* Assume this is on the SystemC thread, so no race condition issues */
+        if (m_finished) return;
+
+        if (val) {
+            if (m_resetting != none) return; // dont double reset!
+            SCP_WARN(())("Start reset");
+            m_resetting = start_reset;
+            m_cpu.async_safe_run([&] {
+                m_cpu.reset(true);
+                m_resetting = hold_reset;
+                m_start_reset_done_ev.async_notify();
+            }); // start the reset (which will pause the CPU)
+        } else {
+            if (m_resetting == none) return; // dont finish a finished reset!
+            while (m_resetting == start_reset) {
+                SCP_WARN(())("Hold reset");
+                sc_core::wait(m_start_reset_done_ev);
+            }
+            socket.reset();     // remove DMI's
+            m_cpu.reset(false); // call the end-of-reset (which will unpause the CPU)
+            m_qk->start();      // restart the QK if it's stopped
+            m_qk->reset();
             m_qemu_kick_ev.async_notify(); // notify the other thread so that the CPU is allowed to continue
+            SCP_WARN(())("Finished reset");
+            m_resetting = none;
         }
-        m_qk->reset();
+        m_qemu_kick_ev.async_notify(); // notify the other thread so that the CPU is allowed to process if required
     }
     virtual void end_of_elaboration() override
     {

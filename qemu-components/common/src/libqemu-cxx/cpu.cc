@@ -25,7 +25,7 @@ void Cpu::set_soft_stopped(bool stopped) { m_int->exports().cpu_set_soft_stopped
 
 void Cpu::halt(bool halted) { m_int->exports().cpu_halt(m_obj, halted); }
 
-void Cpu::reset() { m_int->exports().cpu_reset(m_obj); }
+void Cpu::reset(bool reset) { m_int->exports().cpu_reset(m_obj, reset); }
 
 void Cpu::set_unplug(bool unplug) { m_int->exports().cpu_set_unplug(m_obj, unplug); }
 
