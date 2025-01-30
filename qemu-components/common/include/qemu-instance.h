@@ -34,8 +34,6 @@ public:
     SCP_LOGGER();
 };
 
-class QemuInstance;
-
 /**
  * @class QemuInstanceManager
  *
@@ -78,8 +76,6 @@ public:
      */
     virtual ~QemuInstanceManager() { delete m_loader; }
 };
-
-// GSC_MODULE_REGISTER(QemuInstanceManager);
 
 /**
  * @class QemuInstance
