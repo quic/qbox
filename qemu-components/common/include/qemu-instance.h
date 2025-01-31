@@ -468,7 +468,12 @@ public:
 private:
     void start_of_simulation(void) { get().finish_qemu_init(); }
 
-    void reset_cb(const bool& val) { m_inst.system_reset(); }
+    void reset_cb(const bool& val)
+    {
+        if (val == 1) {
+            m_inst.system_reset();
+        }
+    }
 };
 
 GSC_MODULE_REGISTER(QemuInstanceManager);

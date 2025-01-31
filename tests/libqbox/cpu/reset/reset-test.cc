@@ -17,6 +17,7 @@
 
 #include "cortex-a53.h"
 #include "qemu-instance.h"
+#include "reset_gpio.h"
 
 using namespace sc_core;
 using namespace std;
@@ -71,18 +72,29 @@ protected:
     int reset_id = 0;
     gs::async_event reset_ev;
     std::thread m_thread;
+    reset_gpio reset_controller_a;
+    reset_gpio reset_controller_b;
 
 public:
     SC_HAS_PROCESS(CpuArmCortexA53SimpleReset);
-    CpuArmCortexA53SimpleReset(const sc_core::sc_module_name& n): CpuTestBench<cpu_arm_cortexA53, CpuTesterMmio>(n)
+    CpuArmCortexA53SimpleReset(const sc_core::sc_module_name& n)
+        : CpuTestBench<cpu_arm_cortexA53, CpuTesterMmio>(n)
+        , reset_controller_a("reset_a", m_inst_a)
+        , reset_controller_b("reset_b", m_inst_b)
     {
         char buf[1024];
 
         for (int i = 0; i < m_cpus.size(); i++) {
             auto& cpu = m_cpus[i];
             cpu.p_start_powered_off = false;
-            reset.bind(cpu.reset);
+            // make these into different options for this test....
+            //            reset.bind(cpu.reset);
         }
+        // reset.bind(m_inst_a.reset);
+        // reset.bind(m_inst_b.reset);
+
+        reset.bind(reset_controller_a.reset_in);
+        reset.bind(reset_controller_b.reset_in);
 
         std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterMmio::MMIO_ADDR, NUM_WRITES);
         set_firmware(buf);

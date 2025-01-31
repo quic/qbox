@@ -73,7 +73,7 @@ function(qbox_add_cpu_test target timeout_s)
 
     target_include_directories(${target} PRIVATE ${PROJECT_SOURCE_DIR}/tests/libqbox/include ${keystone_SOURCE_DIR}/include)
 
-    target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 router gs_memory exclusive_monitor display ${TARGET_LIBS} keystone)
+    target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 router reset_gpio gs_memory exclusive_monitor display ${TARGET_LIBS} keystone)
 
     foreach (accel ${QBOX_TEST_ACCELS})
       foreach(sync_pol ${QBOX_CPU_TEST_SYNC_POLICY_COMBINATION})

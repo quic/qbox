@@ -38,6 +38,7 @@ public:
                 for (int i = 0; i < this->size(); i++) {
                     this->operator[](i)->write(v);
                 }
+                wait(sc_core::SC_ZERO_TIME); // ensure all immediate events have been processed
             }
         }
     }

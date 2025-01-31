@@ -22,7 +22,7 @@ class onMethodHelper : public sc_core::sc_module
     }
 
 public:
-    onMethodHelper(): sc_core::sc_module("onMethodHelper")
+    onMethodHelper(): sc_core::sc_module(sc_core::sc_module_name("onMethodHelper"))
     {
         SC_METHOD(start_entry);
         sensitive << start;
