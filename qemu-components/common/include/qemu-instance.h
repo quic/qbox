@@ -382,7 +382,7 @@ public:
         assert(!is_inited());
 
         if (m_tcg_mode == TCG_UNSPECIFIED) {
-            SCP_FATAL(()) << "Unknow tcg mode : " << std::string(p_tcg_mode);
+            SCP_FATAL(()) << "Unknown tcg mode : " << std::string(p_tcg_mode);
         }
         // By now, if there is a CPU, it would be loaded into QEMU, and we would have a QK
         if (m_first_qk) {
