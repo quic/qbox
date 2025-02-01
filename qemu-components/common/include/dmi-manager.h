@@ -233,7 +233,6 @@ public:
     {
         DmiRegion::Key start = DmiRegion::key_from_tlm_dmi(info);
         uint64_t size = (info.get_end_address() - info.get_start_address()) + 1;
-        uint64_t end = start + size - 1;
 
         tlm::tlm_dmi dmi;
         dmi.set_start_address(info.get_start_address());
