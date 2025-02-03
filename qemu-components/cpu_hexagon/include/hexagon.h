@@ -128,6 +128,8 @@ public:
     {
         QemuCpu::end_of_elaboration();
 
+        get_cpu_hexagon().register_reset();
+
         for (int i = 0; i < irq_in.size(); ++i) {
             irq_in[i].init(m_dev, i);
         }

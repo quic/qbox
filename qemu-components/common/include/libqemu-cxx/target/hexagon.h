@@ -21,5 +21,6 @@ public:
     CpuHexagon() = default;
     CpuHexagon(const CpuHexagon&) = default;
     CpuHexagon(const Object& o): Cpu(o) {}
+    void register_reset();
 };
 } // namespace qemu
