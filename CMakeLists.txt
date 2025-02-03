@@ -279,6 +279,7 @@ if (NOT WITHOUT_QEMU)
             qemu-components/common/src/libqemu-cxx/target-info.cc
             qemu-components/common/src/libqemu-cxx/timer.cc
             qemu-components/common/src/libqemu-cxx/target/aarch64.cc
+            qemu-components/common/src/libqemu-cxx/target/hexagon.cc
             qemu-components/common/src/libqemu-cxx/target/riscv.cc
             qemu-components/common/src/libqemu-cxx/target/microblaze.cc
             qemu-components/common/src/libqemu-cxx/target-info.cc

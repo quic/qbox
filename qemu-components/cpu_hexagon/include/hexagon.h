@@ -122,6 +122,8 @@ public:
         cpu.set_prop_int("hvx-contexts", p_hvx_contexts);
     }
 
+    qemu::CpuHexagon get_cpu_hexagon() const { return qemu::CpuHexagon(m_cpu); }
+
     void end_of_elaboration() override
     {
         QemuCpu::end_of_elaboration();

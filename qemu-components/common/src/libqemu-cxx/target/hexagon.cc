@@ -9,6 +9,7 @@
 #include <libqemu/libqemu.h>
 
 #include <libqemu-cxx/target/hexagon.h>
+#include "internals.h"
 
 namespace qemu {
 }
