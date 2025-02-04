@@ -468,7 +468,7 @@ public:
 private:
     void start_of_simulation(void) { get().finish_qemu_init(); }
 
-    void reset_cb(const bool& val)
+    void reset_cb(const bool val)
     {
         if (val == 1) {
             m_inst.system_reset();

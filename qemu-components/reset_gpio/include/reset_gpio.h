@@ -13,6 +13,7 @@
 #include <device.h>
 #include <qemu-instance.h>
 #include <module_factory_registery.h>
+#include <ports/multiinitiator-signal-socket.h>
 
 class reset_gpio : public QemuDevice
 {
@@ -20,8 +21,8 @@ class reset_gpio : public QemuDevice
     QemuInitiatorSignalSocket m_reset_i;
     QemuTargetSignalSocket m_reset_t;
 
-    bool m_qemu_resetting;
-    bool m_systemc_resetting;
+    bool m_qemu_resetting = false;
+    bool m_systemc_resetting = false;
     sc_core::sc_event m_reset_ev;
 
 public:
@@ -46,22 +47,24 @@ public:
         m_reset_t.register_value_changed_cb([&](bool value) {
             if (value) {
                 if (!m_systemc_resetting && !m_qemu_resetting) {
-                    SCP_WARN(())("QEMU resetting");
+                    SCP_INFO(())("QEMU resetting");
                     m_qemu_resetting = true;
 
-                    SCP_WARN(())("Starting SystemC resetting");
+                    SCP_DEBUG(())("Starting SystemC reset");
                     m_systemc_resetting = true;
                     reset_out.async_write_vector({ 1, 0 }); // Async reset systemc
                 }
             } else {
+                assert(m_qemu_resetting);
                 // QEMU has done it's reset.
-                SCP_WARN(())("QEMU done resetting");
+                SCP_INFO(())("QEMU done resetting");
                 m_qemu_resetting = false;
                 m_reset_ev.notify();
                 while (m_systemc_resetting) {
-                    SCP_WARN(())("Waiting SystemC done resetting");
+                    SCP_DEBUG(())("Waiting for SystemC to be done resetting");
                     wait(m_reset_ev);
                 }
+                SCP_DEBUG(())("Finished waiting for SystemC reset");
             }
         });
 
@@ -69,21 +72,23 @@ public:
         reset_in.register_value_changed_cb([&](bool value) {
             if (value) {
                 if (!m_systemc_resetting && !m_qemu_resetting) {
-                    SCP_WARN(())("SystemC resetting");
+                    SCP_INFO(())("SystemC resetting");
                     m_systemc_resetting = true;
 
-                    SCP_WARN(())("Starting QEMU resetting");
+                    SCP_DEBUG(())("Starting QEMU reset");
                     m_qemu_resetting = true;
                     m_inst.get().system_reset(); // Async reset qemu
                 }
             } else {
-                SCP_WARN(())("SystemC done resetting");
+                assert(m_systemc_resetting);
+                SCP_INFO(())("SystemC done resetting");
                 m_systemc_resetting = false;
                 m_reset_ev.notify();
                 while (m_qemu_resetting) {
-                    SCP_WARN(())("Waiting Qemu done resetting");
+                    SCP_DEBUG(())("Waiting Qemu to be done resetting");
                     wait(m_reset_ev);
                 }
+                SCP_DEBUG(())("Finished waiting for QEMU reset");
             }
         });
     }
