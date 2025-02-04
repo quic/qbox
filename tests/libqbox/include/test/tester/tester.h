@@ -45,9 +45,6 @@ public:
 protected:
     CpuTesterCallbackIface& m_cbs;
 
-    uint64_t cpu_read(uint64_t addr, size_t len);
-    void cpu_write(uint64_t addr, uint64_t data, size_t len);
-
     void b_transport(int id, tlm::tlm_generic_payload& txn, sc_core::sc_time& delay)
     {
         uint64_t addr = txn.get_address();
