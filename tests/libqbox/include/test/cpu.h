@@ -113,8 +113,6 @@ public:
 
         sc_core::sc_time global_quantum(p_quantum_ns, sc_core::SC_NS);
         tlm_quantumkeeper::set_global_quantum(global_quantum);
-
-        set_firmware(EXCEPTION_FW, 0x200);
     }
 
     unsigned int get_num_cpus() { return p_num_cpu; }
