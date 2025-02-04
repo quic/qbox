@@ -46,6 +46,9 @@ private:
         case qemu::Target::AARCH64:
             return KS_ARCH_ARM64;
 
+        case qemu::Target::HEXAGON:
+            return KS_ARCH_HEXAGON;
+
         default:
             SCP_FATAL(SCMOD) << "Unsupported QEMU architecture for Keystone";
             return KS_ARCH_MAX; /* avoid compiler warning */
