@@ -86,6 +86,8 @@ protected:
 
         if (ks_asm(ks, assembly, addr, &fw, &size, &count) != KS_ERR_OK || size == 0) {
             std::cerr << assembly << "\n";
+            std::cerr << "errno: " << ks_errno(ks) << "\n";
+            std::cerr << "error: " << ks_strerror(ks_errno(ks)) << "\n";
             SCP_INFO() << assembly;
             TEST_FAIL("Unable to assemble the test firmware\n");
         }
