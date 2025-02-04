@@ -111,8 +111,6 @@ public:
         tlm_quantumkeeper::set_global_quantum(global_quantum);
     }
 
-    unsigned int get_num_cpus() { return p_num_cpu; }
-
     void map_target(tlm::tlm_target_socket<DEFAULT_TLM_BUSWIDTH>& s, uint64_t addr, uint64_t size)
     {
         m_router.add_target(s, addr, size);

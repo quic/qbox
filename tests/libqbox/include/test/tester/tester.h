@@ -24,8 +24,6 @@ class CpuTesterCallbackIface
 public:
     virtual ~CpuTesterCallbackIface() {}
 
-    virtual unsigned int get_num_cpus() = 0;
-
     virtual void map_target(tlm::tlm_target_socket<DEFAULT_TLM_BUSWIDTH>& s, uint64_t addr, uint64_t size) = 0;
     virtual void map_irqs_to_cpus(sc_core::sc_vector<InitiatorSignalSocket<bool> >& irqs) = 0;
 
