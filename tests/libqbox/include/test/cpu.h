@@ -168,20 +168,7 @@ public:
         }
     }
 
-    void map_irqs_to_cpus(sc_core::sc_vector<InitiatorSignalSocket<bool>>& irqs)
-    {
-        int i = 0;
-
-        for (auto& cpu : m_cpus) {
-            switch (CPU::ARCH) {
-            case qemu::Target::AARCH64:
-                irqs[i++].bind(cpu.irq_in);
-                break;
-            default:
-                SCP_FATAL(SCMOD) << "Don't know how to bind tester IRQs to CPU";
-            }
-        }
-    }
+    virtual void map_irqs_to_cpus(sc_core::sc_vector<InitiatorSignalSocket<bool>>& irqs) { abort(); }
 
     void map_halt_to_cpus(sc_core::sc_vector<sc_core::sc_out<bool>>& halt)
     {
@@ -212,6 +199,14 @@ public:
         for (CPU& cpu : CpuTestBench<CPU, TESTER>::m_cpus) {
             cpu.p_mp_affinity = i++;
             cpu.p_has_el3 = false;
+        }
+    }
+
+    virtual void map_irqs_to_cpus(sc_core::sc_vector<InitiatorSignalSocket<bool>>& irqs) override
+    {
+        int i = 0;
+        for (CPU& cpu : CpuTestBench<CPU, TESTER>::m_cpus) {
+            irqs[i++].bind(cpu.irq_in);
         }
     }
 };
