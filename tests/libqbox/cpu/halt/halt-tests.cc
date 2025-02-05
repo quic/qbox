@@ -31,7 +31,7 @@ using namespace std;
  * On each write, the test bench checks the written value. It also checks the
  * number of write at the end of the simulation.
  */
-class CpuArmCortexA53SimpleHalt : public CpuTestBench<cpu_arm_cortexA53, CpuTesterMmio>
+class CpuArmCortexA53SimpleHalt : public CpuArmTestBench<cpu_arm_cortexA53, CpuTesterMmio>
 {
 public:
     static constexpr int NUM_WRITES = 10;
@@ -72,7 +72,7 @@ protected:
 public:
     SC_HAS_PROCESS(CpuArmCortexA53SimpleHalt);
     CpuArmCortexA53SimpleHalt(const sc_core::sc_module_name& n)
-        : CpuTestBench<cpu_arm_cortexA53, CpuTesterMmio>(n), halt("halt", p_num_cpu)
+        : CpuArmTestBench<cpu_arm_cortexA53, CpuTesterMmio>(n), halt("halt", p_num_cpu)
     {
         char buf[1024];
 

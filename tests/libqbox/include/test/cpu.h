@@ -164,9 +164,7 @@ public:
     {
         int i = 0;
         for (CPU& cpu : m_cpus) {
-            cpu.p_mp_affinity = i++;
             m_router.add_initiator(cpu.socket);
-            cpu.p_has_el3 = false;
         }
     }
 
@@ -204,4 +202,17 @@ public:
     }
 };
 
+template <class CPU, class TESTER>
+class CpuArmTestBench : public CpuTestBench<CPU, TESTER>
+{
+public:
+    CpuArmTestBench(const sc_core::sc_module_name& n): CpuTestBench<CPU, TESTER>(n)
+    {
+        int i = 0;
+        for (CPU& cpu : CpuTestBench<CPU, TESTER>::m_cpus) {
+            cpu.p_mp_affinity = i++;
+            cpu.p_has_el3 = false;
+        }
+    }
+};
 #endif

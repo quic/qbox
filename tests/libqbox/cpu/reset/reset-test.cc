@@ -32,7 +32,7 @@ using namespace std;
  * On each write, the test bench checks the written value. It also checks the
  * number of write at the end of the simulation.
  */
-class CpuArmCortexA53SimpleReset : public CpuTestBench<cpu_arm_cortexA53, CpuTesterMmio>
+class CpuArmCortexA53SimpleReset : public CpuArmTestBench<cpu_arm_cortexA53, CpuTesterMmio>
 {
 public:
     static constexpr int NUM_WRITES = 1000;
