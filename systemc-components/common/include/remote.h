@@ -85,7 +85,8 @@ class PassRPC : public sc_core::sc_module, public transaction_forwarder_if<PASS>
             break;
         }
 
-        info << " " << cmd << " to address " << "0x" << std::hex << trans.get_address();
+        info << " " << cmd << " to address "
+             << "0x" << std::hex << trans.get_address();
 
         info << " len:" << trans.get_data_length();
         unsigned char* ptr = trans.get_data_ptr();
@@ -547,8 +548,8 @@ private:
 
     void fw_invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) override
     {
-        SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr " << " start address 0x" << std::hex << start
-                      << " end address 0x" << std::hex << end;
+        SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
+                      << " start address 0x" << std::hex << start << " end address 0x" << std::hex << end;
         for (int i = 0; i < target_sockets.size(); i++) {
             target_sockets[i]->invalidate_direct_mem_ptr(start, end);
         }
@@ -693,7 +694,8 @@ private:
             return m_container->fw_get_direct_mem_ptr(id, trans, dmi_data);
         }
         tlm::tlm_dmi* c;
-        SCP_DEBUG(()) << " " << name() << " get_direct_mem_ptr to address " << "0x" << std::hex << trans.get_address();
+        SCP_DEBUG(()) << " " << name() << " get_direct_mem_ptr to address "
+                      << "0x" << std::hex << trans.get_address();
 
 #ifdef DMICACHE
         c = in_cache(trans.get_address());
@@ -743,14 +745,14 @@ private:
         if (is_local_mode()) {
             m_container->fw_invalidate_direct_mem_ptr(start, end);
         }
-        SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr " << " start address 0x" << std::hex << start
-                      << " end address 0x" << std::hex << end;
+        SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
+                      << " start address 0x" << std::hex << start << " end address 0x" << std::hex << end;
         do_rpc_async_call("dmi_inv", start, end);
     }
     void invalidate_direct_mem_ptr_rpc(sc_dt::uint64 start, sc_dt::uint64 end)
     {
-        SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr " << " start address 0x" << std::hex << start
-                      << " end address 0x" << std::hex << end;
+        SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
+                      << " start address 0x" << std::hex << start << " end address 0x" << std::hex << end;
 #ifdef DMICACHE
         cache_clean(start, end);
 #endif
@@ -1054,7 +1056,7 @@ public:
             ul.unlock();
             send_status();
         }
-    } // namespace gs
+    }                                                                              // namespace gs
     PassRPC(const sc_core::sc_module_name& nm, int port): PassRPC(nm, "", port){}; // convenience constructor
 
     void send_status()
