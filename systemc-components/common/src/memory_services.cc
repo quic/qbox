@@ -71,14 +71,15 @@ void gs::MemoryServices::start_shm_cleaner_proc()
         SigHandler::get().add_sig_handler(SIGCHLD, SigHandler::Handler_CB::EXIT);
         child_cleaner_forked = true;
     } else if (m_cpid == 0) { /*child process*/
-        std::cerr << "(shm_cleaner) child pid: " << getpid() << std::endl;
+        // std::cerr << "(shm_cleaner) child pid: " << getpid() << std::endl; // Enable for debug
         /**
          * these signals are already handled on the parent process
          * block them here and wait for parent exit.
          */
         SigHandler::get().block_curr_handled_signals();
         pahandler.check_parent_conn_sth([&]() {
-            std::cerr << "shm_cleaner (" << getpid() << ") count of cl_info shm_names: " << cl_info->count << std::endl;
+            // std::cerr << "shm_cleaner (" << getpid() << ") count of cl_info shm_names: " << cl_info->count <<
+            // std::endl; // Enable for debug
             for (int i = 0; i < cl_info->count; i++) {
                 std::cerr << "shm_cleaner (" << getpid() << ")  Deleting : " << cl_info->name[i] << std::endl;
                 shm_unlink(cl_info->name[i]);
