@@ -29,8 +29,9 @@
 #include <vector>
 #include <atomic>
 #include <systemc>
-
+#include <unordered_map>
 #include <scp/report.h>
+#include <mutex>
 
 namespace gs {
 
@@ -53,7 +54,17 @@ public:
 
     void add_sig_handler(int signum, Handler_CB s_cb);
 
-    void register_on_exit_cb(std::function<void()> cb);
+    template <typename CONT_TYPE>
+    void register_cb(const std::string& name, std::unordered_map<std::string, std::function<CONT_TYPE>>& container,
+                     const std::function<CONT_TYPE>& cb, const std::string& type_of_cb);
+
+    template <typename CONT_TYPE>
+    void deregister_cb(const std::string& name, std::unordered_map<std::string, std::function<CONT_TYPE>>& container,
+                       const std::string& type_of_cb);
+
+    void register_on_exit_cb(const std::string& name, const std::function<void()>& cb);
+
+    void deregister_on_exit_cb(const std::string& name);
 
     void add_to_block_set(int signum);
 
@@ -75,7 +86,9 @@ public:
      */
     void block_curr_handled_signals();
 
-    void register_handler(std::function<void(int)> handler);
+    void register_handler(const std::string& name, const std::function<void(int)>& handler);
+
+    void deregister_handler(const std::string& name);
 
     int get_write_sock_end();
 
@@ -85,12 +98,7 @@ public:
 
     ~SigHandler();
 
-    void end_of_simulation()
-    {
-        std::unique_lock<std::mutex> lock(mutex);
-
-        stop_running = true;
-    }
+    void end_of_simulation();
 
 private:
     void _start_pass_signal_handler();
@@ -114,9 +122,9 @@ private:
     sigset_t m_sigs_to_block;
     struct pollfd self_pipe_monitor;
     std::thread pass_handler;
-    std::vector<std::function<void(int)>> handlers;
-    std::vector<std::function<void()>> exit_handlers;
-    bool is_pass_handler_requested;
+    std::unordered_map<std::string, std::function<void(int)>> handlers;
+    std::unordered_map<std::string, std::function<void()>> exit_handlers;
+    std::atomic_bool is_pass_handler_requested;
     std::atomic_bool stop_running;
     std::atomic_int32_t sig_num;
     int self_sockpair_fd[2];
@@ -125,7 +133,9 @@ private:
     struct sigaction force_exit_act;
     struct sigaction ign_act;
     struct sigaction dfl_act;
-    std::mutex mutex;
+    std::mutex cb_mutex;
+    std::mutex thread_start_mutex;
+    std::mutex signals_mutex;
 };
 
 class ProcAliveHandler

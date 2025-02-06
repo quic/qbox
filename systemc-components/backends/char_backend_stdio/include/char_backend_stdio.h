@@ -159,13 +159,15 @@ public:
             SCP_WARN(())("Processing expect string {}", ecmd);
         }
 
-        gs::SigHandler::get().register_on_exit_cb(tty_reset);
+        gs::SigHandler::get().register_on_exit_cb(std::string(this->name()) + ".char_backend_stdio::tty_reset",
+                                                  tty_reset);
         gs::SigHandler::get().add_sig_handler(SIGINT, gs::SigHandler::Handler_CB::PASS);
-        gs::SigHandler::get().register_handler([&](int signo) {
-            if (signo == SIGINT) {
-                c_flag = true;
-            }
-        });
+        gs::SigHandler::get().register_handler(std::string(this->name()) + ".char_backend_stdio::SIGINT_handler",
+                                               [&](int signo) {
+                                                   if (signo == SIGINT) {
+                                                       c_flag = true;
+                                                   }
+                                               });
         if (p_read_write) rcv_thread_id = std::thread(&char_backend_stdio::rcv_thread, this);
 
         socket.register_b_transport(this, &char_backend_stdio::writefn);
@@ -238,6 +240,8 @@ public:
 
     ~char_backend_stdio()
     {
+        gs::SigHandler::get().deregister_on_exit_cb(std::string(name()) + ".char_backend_stdio::tty_reset");
+        gs::SigHandler::get().deregister_handler(std::string(name()) + ".char_backend_stdio::SIGINT_handler");
         m_running = false;
         if (rcv_thread_id.joinable()) rcv_thread_id.join();
         tty_reset();

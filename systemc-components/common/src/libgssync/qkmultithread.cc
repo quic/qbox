@@ -54,7 +54,11 @@ void tlm_quantumkeeper_multithread::timehandler()
     cond.notify_all(); // nudge the sync thread, in case it's waiting for us
 }
 
-tlm_quantumkeeper_multithread::~tlm_quantumkeeper_multithread() { cond.notify_all(); }
+tlm_quantumkeeper_multithread::~tlm_quantumkeeper_multithread()
+{
+    SigHandler::get().deregister_on_exit_cb(std::string(name()) + ".gs::tlm_quantumkeeper_multithread::stop");
+    cond.notify_all();
+}
 
 // The quantum keeper should be instanced in SystemC
 // but it's functions may be called from other threads
@@ -70,7 +74,8 @@ tlm_quantumkeeper_multithread::tlm_quantumkeeper_multithread()
     sc_core::sc_spawn(sc_bind(&tlm_quantumkeeper_multithread::timehandler, this), "timehandler", &opt);
 
     reset();
-    SigHandler::get().register_on_exit_cb([this]() { stop(); });
+    SigHandler::get().register_on_exit_cb(std::string(name()) + ".gs::tlm_quantumkeeper_multithread::stop",
+                                          [this]() { stop(); });
 }
 
 bool tlm_quantumkeeper_multithread::is_sysc_thread() const

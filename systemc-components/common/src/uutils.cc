@@ -27,6 +27,7 @@ void gs::SigHandler::force_exit_sig_handler(int sig)
 
 void gs::SigHandler::add_sig_handler(int signum, Handler_CB s_cb = Handler_CB::EXIT)
 {
+    std::lock_guard<std::mutex> lock(signals_mutex);
     if (m_signals.find(signum) != m_signals.end())
         m_signals.at(signum) = s_cb;
     else {
@@ -39,7 +40,43 @@ void gs::SigHandler::add_sig_handler(int signum, Handler_CB s_cb = Handler_CB::E
     _update_sig_cb(signum, s_cb);
 }
 
-void gs::SigHandler::register_on_exit_cb(std::function<void()> cb) { exit_handlers.push_back(cb); }
+template <typename CONT_TYPE>
+void gs::SigHandler::register_cb(const std::string& name,
+                                 std::unordered_map<std::string, std::function<CONT_TYPE>>& container,
+                                 const std::function<CONT_TYPE>& cb, const std::string& type_of_cb)
+{
+    std::lock_guard<std::mutex> lock(cb_mutex);
+    bool ins_ok = container.insert(std::make_pair(name, cb)).second;
+    if (!ins_ok) {
+        std::cerr << "Failed to register gs::SigHandler " << type_of_cb
+                  << " callback function associated to the name: " << name
+                  << " the callback name argument should be unique!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+template <typename CONT_TYPE>
+void gs::SigHandler::deregister_cb(const std::string& name,
+                                   std::unordered_map<std::string, std::function<CONT_TYPE>>& container,
+                                   const std::string& type_of_cb)
+{
+    std::lock_guard<std::mutex> lock(cb_mutex);
+    if (!container.size()) return;
+    if (!container.erase(name)) {
+        std::cerr << "Failed to deregister a gs::SigHandler " << type_of_cb
+                  << " callback function associated to the name: " << name << std::endl;
+    }
+}
+
+void gs::SigHandler::register_on_exit_cb(const std::string& name, const std::function<void()>& cb)
+{
+    register_cb<void()>(name, exit_handlers, cb, "on_exit");
+}
+
+void gs::SigHandler::deregister_on_exit_cb(const std::string& name)
+{
+    deregister_cb<void(void)>(name, exit_handlers, "on_exit");
+}
 
 void gs::SigHandler::add_to_block_set(int signum) { sigaddset(&m_sigs_to_block, signum); }
 
@@ -56,10 +93,20 @@ void gs::SigHandler::block_curr_handled_signals()
     block_signal_set();
 }
 
-void gs::SigHandler::register_handler(std::function<void(int)> handler)
+void gs::SigHandler::register_handler(const std::string& name, const std::function<void(int)>& handler)
 {
-    handlers.push_back(handler);
+    register_cb<void(int)>(name, handlers, handler, "handler");
     _start_pass_signal_handler();
+}
+void gs::SigHandler::deregister_handler(const std::string& name)
+{
+    deregister_cb<void(int)>(name, handlers, "handler");
+}
+
+void gs::SigHandler::end_of_simulation()
+{
+    std::lock_guard<std::mutex> lock(cb_mutex);
+    stop_running = true;
 }
 
 int gs::SigHandler::get_write_sock_end()
@@ -85,6 +132,7 @@ void gs::SigHandler::set_sig_num(int val) { sig_num = val; }
 
 void gs::SigHandler::mark_error_signal(int signum, std::string error_msg)
 {
+    std::lock_guard<std::mutex> lock(signals_mutex);
     if (error_signals.find(signum) != error_signals.end())
         error_signals.at(signum) = error_msg;
     else {
@@ -99,7 +147,7 @@ void gs::SigHandler::mark_error_signal(int signum, std::string error_msg)
 gs::SigHandler::~SigHandler()
 {
     {
-        std::unique_lock<std::mutex> lock(mutex);
+        std::lock_guard<std::mutex> lock(cb_mutex);
         stop_running = true; // this should cause the pass_handler thread to exit next time it checks the flag.
 
         exit_handlers.clear();
@@ -113,6 +161,7 @@ gs::SigHandler::~SigHandler()
 
 void gs::SigHandler::_start_pass_signal_handler()
 {
+    std::lock_guard<std::mutex> lock(thread_start_mutex);
     if (is_pass_handler_requested) return;
     pass_handler = std::thread([this]() {
         self_pipe_monitor.fd = self_sockpair_fd[0];
@@ -125,7 +174,7 @@ void gs::SigHandler::_start_pass_signal_handler()
             else if (self_pipe_monitor.revents & (POLLHUP | POLLERR | POLLNVAL)) {
                 break;
             } else if (self_pipe_monitor.revents & POLLIN) {
-                std::unique_lock<std::mutex> lock(mutex);
+                std::lock_guard<std::mutex> lock(cb_mutex);
                 if (stop_running) break;
                 char ch[1];
                 if (read(self_pipe_monitor.fd, ch, 1) == -1) {
@@ -145,7 +194,7 @@ void gs::SigHandler::_start_pass_signal_handler()
                                                            // called and the order of destruction of objects may
                                                            // cause the exit callback functions to be called on
                                                            // non-existing objects
-                        for (auto on_exit_cb : exit_handlers) on_exit_cb();
+                        for (auto on_exit_cb_pair : exit_handlers) on_exit_cb_pair.second();
                         exit_handlers.clear();
                         handlers.clear();
                         async_request_update();
@@ -155,7 +204,7 @@ void gs::SigHandler::_start_pass_signal_handler()
                         _Exit(EXIT_FAILURE);
                     }
                 } else {
-                    for (auto handler : handlers) handler(sig_num);
+                    for (auto handler_pair : handlers) handler_pair.second(sig_num);
                 }
             } else {
                 exit(EXIT_FAILURE);
@@ -221,6 +270,7 @@ void gs::SigHandler::_update_sig_cb(int signum, Handler_CB s_cb)
 
 void gs::SigHandler::_update_all_sigs_cb()
 {
+    std::lock_guard<std::mutex> lock(signals_mutex);
     for (auto sig_cb_pair : m_signals) {
         _update_sig_cb(sig_cb_pair.first, sig_cb_pair.second);
     }
@@ -228,6 +278,7 @@ void gs::SigHandler::_update_all_sigs_cb()
 
 void gs::SigHandler::_change_sig_cbs_to_dfl()
 {
+    std::lock_guard<std::mutex> lock(signals_mutex);
     for (auto sig_cb_pair : m_signals) {
         if (sig_cb_pair.second != Handler_CB::DFL) _update_sig_cb(sig_cb_pair.first, Handler_CB::DFL);
     }

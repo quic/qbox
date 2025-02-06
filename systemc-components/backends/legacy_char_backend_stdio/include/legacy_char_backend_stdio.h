@@ -73,16 +73,18 @@ public:
 
         atexit(tty_reset);
 
-        gs::SigHandler::get().register_on_exit_cb(tty_reset);
+        gs::SigHandler::get().register_on_exit_cb(std::string(this->name()) + ".char_backend_stdio::tty_reset",
+                                                  tty_reset);
         gs::SigHandler::get().add_sig_handler(SIGINT, gs::SigHandler::Handler_CB::PASS);
-        gs::SigHandler::get().register_handler([&](int signo) {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            if (signo == SIGINT) {
-                char ch = '\x03';
-                m_queue.push(ch);
-                if (!m_queue.empty()) m_event.async_notify();
-            }
-        });
+        gs::SigHandler::get().register_handler(std::string(this->name()) + ".char_backend_stdio::SIGINT_handler",
+                                               [&](int signo) {
+                                                   std::lock_guard<std::mutex> lock(m_mutex);
+                                                   if (signo == SIGINT) {
+                                                       char ch = '\x03';
+                                                       m_queue.push(ch);
+                                                       if (!m_queue.empty()) m_event.async_notify();
+                                                   }
+                                               });
 #endif
         if (read_write) {
             rcv_thread_id = std::make_unique<std::thread>(&legacy_char_backend_stdio::rcv_thread, this);
@@ -151,6 +153,8 @@ public:
 
     ~legacy_char_backend_stdio()
     {
+        gs::SigHandler::get().deregister_on_exit_cb(std::string(name()) + ".char_backend_stdio::tty_reset");
+        gs::SigHandler::get().deregister_handler(std::string(name()) + ".char_backend_stdio::SIGINT_handler");
         m_running = false;
         if (rcv_pthread_id) pthread_kill(rcv_pthread_id, SIGURG);
         if (rcv_thread_id->joinable()) rcv_thread_id->join();

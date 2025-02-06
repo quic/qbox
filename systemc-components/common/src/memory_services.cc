@@ -9,7 +9,7 @@
 gs::MemoryServices::MemoryServices(): m_name("MemoryServices")
 {
     SCP_DEBUG(()) << "MemoryServices constructor";
-    SigHandler::get().register_on_exit_cb(MemoryServices::cleanupexit);
+    SigHandler::get().register_on_exit_cb("gs::MemoryServices::cleanupexit", MemoryServices::cleanupexit);
     SigHandler::get().add_sig_handler(SIGINT, SigHandler::Handler_CB::PASS);
 }
 
@@ -22,6 +22,7 @@ void gs::MemoryServices::die_sys_api(int error, const char* memname, const std::
 gs::MemoryServices::~MemoryServices()
 {
     SCP_DEBUG(()) << "MemoryServices Destructor";
+    SigHandler::get().deregister_on_exit_cb("gs::MemoryServices::cleanupexit");
     cleanup();
     if (cl_info) {
         if (munmap(cl_info, sizeof(shm_cleaner_info)) == -1) {
