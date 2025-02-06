@@ -179,9 +179,23 @@
                 const qkdata = await qkresponse.json();
                 populateQKTable(qkdata);
 
+                const dropdown = document.getElementById('biflowsDropdown');
+                const selectedBiflow = dropdown.value;
+                if ((!sock || sock.readyState>1) && selectedBiflow) {
+                    term.reset();
+                    if (sock) sock.close();
+                    sock = new WebSocket("ws://" + location.host + "/biflow/" + selectedBiflow);
+                    sock.onmessage = (e) => {
+                        term.write(e.data);
+                    }
+                    fitAddon.fit();
+                }
+
             } catch (error) {
                 const statusElement = document.getElementById('sc_time');
                 statusElement.textContent = "Not connected";
+                sock.close();
+                term.reset();
             }
         }
 
