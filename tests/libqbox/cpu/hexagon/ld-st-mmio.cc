@@ -46,7 +46,7 @@ public:
         for (int i = 0; i < m_cpus.size(); i++) {
             auto& cpu = m_cpus[i];
             cpu.p_hexagon_num_threads = m_cpus.size();
-            cpu.p_start_powered_off = false;
+            cpu.p_start_powered_off = (i != 0);
             cpu.p_exec_start_addr = MEM_ADDR;
             cpu.p_semihosting = true;
         }

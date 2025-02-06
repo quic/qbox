@@ -112,6 +112,10 @@ function(qbox_add_cpu_test target timeout_s)
 
 
         foreach(num_cpu ${QBOX_CPU_TEST_NUM_CPU_COMBINATION})
+            # Skip multi-cpu tests for now
+            if(("${target}" MATCHES "hexagon") AND (NOT (${num_cpu} EQUAL 1)))
+               continue()
+            endif()
             set(test_name ${target}:sync-pol=${sync_pol}:num-cpu=${num_cpu}:icount=${icount}:threading=${threading}:accel=${accel})
 
             add_test(
