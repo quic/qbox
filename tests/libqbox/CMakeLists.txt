@@ -48,10 +48,10 @@ function(qbox_add_cpu_test target timeout_s)
     endif()
 
     list(APPEND QBOX_TEST_ACCELS "tcg")
-    if ("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "arm64")
+    if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "arm64")
             list(APPEND QBOX_TEST_ACCELS "hvf")
     endif()
-    if ("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
+    if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
             list(APPEND QBOX_TEST_ACCELS "kvm")
     endif()
 
