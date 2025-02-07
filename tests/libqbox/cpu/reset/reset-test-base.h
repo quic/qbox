@@ -75,6 +75,7 @@ protected:
     int resets = 0;
     int reset_reqs = 0;
     gs::async_event reset_ev;
+    sc_core::sc_event done_ev;
     std::thread m_thread;
 #ifdef SYSTEMMODE
     reset_gpio reset_controller_a;
@@ -114,6 +115,10 @@ public:
 
         SC_METHOD(reset_method);
         sensitive << reset_ev;
+        dont_initialize();
+
+        SC_METHOD(done_method);
+        sensitive << done_ev;
         dont_initialize();
     }
     virtual void start_of_simulation() override
@@ -185,9 +190,14 @@ public:
         }
 
         if (finished >= p_num_cpu) {
-            reset_ev.async_detach_suspending();
-            SCP_INFO(SCMOD) << "Done !";
+            done_ev.notify(1, sc_core::SC_SEC);
         }
+    }
+
+    void done_method()
+    {
+        reset_ev.async_detach_suspending();
+        SCP_INFO(SCMOD) << "Done !";
     }
 
     virtual void end_of_simulation() override

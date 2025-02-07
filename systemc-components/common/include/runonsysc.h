@@ -161,7 +161,11 @@ public:
         running = false;
         m_jobs_handler_event.async_notify();
     }
-    void end_of_simulation() { cancel_all(); }
+    void end_of_simulation()
+    {
+        running = false;
+        cancel_all();
+    }
 
     void fork_on_systemc(std::function<void()> job_entry) { run_on_sysc(job_entry, false); }
 
@@ -177,6 +181,7 @@ public:
      */
     bool run_on_sysc(std::function<void()> job_entry, bool wait = true)
     {
+        if (!running) return false;
         if (is_on_sysc()) {
             job_entry();
             return true;
