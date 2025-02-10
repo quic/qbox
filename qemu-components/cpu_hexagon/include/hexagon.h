@@ -76,6 +76,7 @@ public:
         , p_num_coproc_instance("num_coproc_instance", 0, "number of coproc instances")
         , p_hvx_contexts("hvx_contexts", 0, "number of HVX contexts")
         , p_num_tlbs("num_tlbs", 0, "number of Joint TLB entries")
+        , p_num_dma_tlbs("num_dma_tlbs", 0, "number of DMA TLB entries")
     /*
      * We have no choice but to attach-suspend here. This is fixable but
      * non-trivial. It means that the SystemC kernel will never starve...
@@ -124,6 +125,9 @@ public:
         if (!p_num_tlbs.is_default_value()) {
             cpu.set_prop_int("jtlb-entries", p_num_tlbs);
         }
+        if (!p_num_dma_tlbs.is_default_value()) {
+            cpu.set_prop_int("dma-jtlb-entries", p_num_dma_tlbs);
+        }
     }
 
     qemu::CpuHexagon get_cpu_hexagon() const { return qemu::CpuHexagon(m_cpu); }
@@ -161,6 +165,7 @@ public:
     cci::cci_param<uint32_t> p_num_coproc_instance;
     cci::cci_param<uint32_t> p_hvx_contexts;
     cci::cci_param<uint32_t> p_num_tlbs;
+    cci::cci_param<uint32_t> p_num_dma_tlbs;
 };
 
 extern "C" void module_register();
