@@ -19,6 +19,7 @@ class MultiInitiatorSignalSocket
 {
     SCP_LOGGER();
     std::vector<T> vals;
+    bool vals_valid = false;
     sc_core::sc_event ev;
 
 public:
@@ -32,8 +33,11 @@ public:
     void writer()
     {
         while (1) {
-            wait(ev);
+            while (vals_valid == false) {
+                wait(ev);
+            }
             std::vector<T> vs = vals; // No race conditions, we are single threaded. COPY the vector
+            vals_valid = false;
             for (auto v : vs) {
                 for (int i = 0; i < this->size(); i++) {
                     if (auto t = dynamic_cast<TargetSignalSocketProxy<bool>*>(this->operator[](i))) {
@@ -47,7 +51,9 @@ public:
     }
     void async_write_vector(const std::vector<T>& vs)
     {
+        assert(vals_valid == false);
         vals = vs; // COPY the vector.
+        vals_valid = true;
         ev.notify();
     }
 };

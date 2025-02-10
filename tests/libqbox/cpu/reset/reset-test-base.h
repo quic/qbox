@@ -73,9 +73,11 @@ protected:
     MultiInitiatorSignalSocket<bool> reset;
     int finished = 0;
     int resets = 0;
+    int this_resets = 0;
     int reset_reqs = 0;
     gs::async_event reset_ev;
     sc_core::sc_event done_ev;
+    sc_core::sc_event resets_done_ev;
     std::thread m_thread;
 #ifdef SYSTEMMODE
     reset_gpio reset_controller_a;
@@ -117,9 +119,8 @@ public:
         sensitive << reset_ev;
         dont_initialize();
 
-        SC_METHOD(done_method);
+        SC_THREAD(done_method);
         sensitive << done_ev;
-        dont_initialize();
     }
     virtual void start_of_simulation() override
     {
@@ -139,7 +140,9 @@ public:
     }
     void reset_method()
     {
-        if (finished < p_num_cpu) {
+        if (this_resets == p_num_cpu) {
+            // Dont test for overlapping resets !!
+            this_resets = 0;
             reset_reqs++;
             SCP_INFO(SCMOD) << "Reset all CPU's";
             reset.async_write_vector({ 1, 0 });
@@ -159,8 +162,14 @@ public:
         int cpuid = addr >> 3;
 
         if (data >= 0x80000000ULL) {
-            SCP_INFO(SCMOD) << "Done RESET CPU " << cpuid;
+            this_resets++;
+            TEST_ASSERT(this_resets <= p_num_cpu);
+
+            SCP_INFO(SCMOD)("Done RESET CPU {} (Reset {}/{}) ", cpuid, this_resets, (int)p_num_cpu);
             resets++;
+            if (this_resets == p_num_cpu) {
+                resets_done_ev.notify();
+            }
             return;
         }
         SCP_INFO(SCMOD) << "CPU " << cpuid << " write " << m_writes[cpuid] + 1 << " at 0x" << std::hex << addr
@@ -190,12 +199,23 @@ public:
         }
 
         if (finished >= p_num_cpu) {
+            SCP_INFO(SCMOD)("All Done");
             done_ev.notify(1, sc_core::SC_SEC);
         }
     }
 
     void done_method()
     {
+        wait(done_ev);
+        if (this_resets < p_num_cpu) {
+            SCP_INFO(SCMOD)("wait for no active resets");
+            wait(resets_done_ev);
+        }
+        SCP_INFO(SCMOD)("Processing done");
+        reset_ev.notify();
+        wait(resets_done_ev);
+        SCP_INFO(SCMOD)("Resetting done\n");
+
         reset_ev.async_detach_suspending();
         SCP_INFO(SCMOD) << "Done !";
     }
@@ -211,8 +231,8 @@ public:
         }
 
         SCP_WARN(SCMOD)("Resets {} Reset requests {}", resets, reset_reqs);
-        TEST_ASSERT(reset_reqs >= 1 && resets >= p_num_cpu * 2);
+        TEST_ASSERT(reset_reqs >= 1);
+        TEST_ASSERT(resets == (reset_reqs + 1) * p_num_cpu);
         // We will see at least 1 reset at the start for each CPU and we should get at least 1 more reset per CPU
-        // We dont know how many async resets we get - specifically how many of them will overlap
     }
 };
