@@ -13,7 +13,7 @@
 #include <device.h>
 #include <ports/target.h>
 #include <ports/qemu-target-signal-socket.h>
-
+#include <ports/qemu-initiator-signal-socket.h>
 #include <module_factory_registery.h>
 
 class nvic_armv7m : public QemuDevice
@@ -22,9 +22,14 @@ protected:
     bool before_end_of_elaboration_done;
 
 public:
-    cci::cci_param<unsigned int> p_num_irq;
+    cci::cci_param<uint32_t> p_num_irq;
+    cci::cci_param<uint8_t> p_num_prio_bits;
     QemuTargetSocket<> socket;
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
+    QemuTargetSignalSocket nmi;
+    QemuTargetSignalSocket NS_SysTick; // Non secure SysTick
+    QemuTargetSignalSocket S_SysTick;  // Secure SysTick
+    QemuInitiatorSignalSocket irq_out;
 
     nvic_armv7m(const sc_core::sc_module_name& name, sc_core::sc_object* o)
         : nvic_armv7m(name, *(dynamic_cast<QemuInstance*>(o)))
@@ -34,8 +39,14 @@ public:
         : QemuDevice(n, inst, "armv7m_nvic")
         , before_end_of_elaboration_done(false)
         , p_num_irq("num_irq", 64, "Number of external interrupts")
+        , p_num_prio_bits("num_prio_bits", 0,
+                          "Number of the maximum priority bits that can be used. 0 means to use a reasonable default")
         , socket("mem", inst)
         , irq_in("irq_in", p_num_irq)
+        , nmi("nmi")
+        , NS_SysTick("NS_SysTick")
+        , S_SysTick("S_SysTick")
+        , irq_out("irq_out")
     {
     }
 
@@ -53,6 +64,7 @@ public:
         nvic.add_cpu_link();
 
         m_dev.set_prop_int("num-irq", p_num_irq);
+        m_dev.set_prop_int("num-prio-bits", p_num_prio_bits);
     }
 
     void end_of_elaboration() override
@@ -77,6 +89,12 @@ public:
         for (int i = 0; i < p_num_irq; i++) {
             irq_in[i].init(m_dev, i);
         }
+
+        /* Output lines */
+        irq_out.init_sbd(sbd, 0);
+        nmi.init_named(m_dev, "NMI", 0);
+        NS_SysTick.init_named(m_dev, "systick-trigger", 0);
+        S_SysTick.init_named(m_dev, "systick-trigger", 1);
     }
 };
 

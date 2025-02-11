@@ -12,7 +12,7 @@
 #include <libqemu-cxx/target/aarch64.h>
 
 #include <module_factory_registery.h>
-
+#include <ports/qemu-target-signal-socket.h>
 #include <irq-ctrl/armv7m_nvic/include/armv7m-nvic.h>
 #include <arm.h>
 
@@ -24,6 +24,7 @@ public:
     cci::cci_param<bool> p_start_powered_off;
     nvic_armv7m m_nvic;
     cci::cci_param<uint64_t> p_init_nsvtor;
+    QemuTargetSignalSocket irq_in;
     cpu_arm_cortexM55(const sc_core::sc_module_name& name, sc_core::sc_object* o)
         : cpu_arm_cortexM55(name, *(dynamic_cast<QemuInstance*>(o)))
     {
@@ -35,7 +36,9 @@ public:
                               "Start and reset the CPU "
                               "in powered-off state")
         , p_init_nsvtor("init_nsvtor", 0ull, "Reset vector base address")
+        , irq_in("irq_in")
     {
+        m_nvic.irq_out.bind(irq_in);
     }
 
     void before_end_of_elaboration() override
@@ -55,6 +58,13 @@ public:
         qemu::Device nvic = m_nvic.get_qemu_dev();
         cpu.set_prop_link("nvic", nvic);
         nvic.set_prop_link("cpu", cpu);
+    }
+
+    void end_of_elaboration() override
+    {
+        QemuCpuArm::end_of_elaboration();
+
+        irq_in.init(m_dev, 0);
     }
 };
 

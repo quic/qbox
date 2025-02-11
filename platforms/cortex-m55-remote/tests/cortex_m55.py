@@ -44,7 +44,10 @@ def vp_test():
 
     child = pexpect.spawn(vp_path.as_posix(), ["--gs_luafile", args.lua])
     child.logfile = stdout.buffer
-    child.expect("Hello from cortex-m55!")
+    child.expect("Test program is running. Listening for interrupts.")
+    child.expect("IRQ 17 happened")
+    child.expect("NMI happened")
+    child.expect("SysTick happened")
 
     # make sure to use SIGQUIT to terminate the child as this signal is handled in 
     # include/greensocs/gsutils/uutils.h and it should be called for VP proper cleanup.

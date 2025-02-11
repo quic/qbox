@@ -3,12 +3,15 @@
 .global _invalid_exception
 .global _disable_irq
 .global _enable_irq
+.global _handle_nmi
+.global _handle_irq
+.global _handle_systick
 .global _stop
 
 init_vectors:
   .word _initial_sp                 @ msp = _initial_sp
   .word _start + 1                  @ Starting Program address
-  .word _invalid_exception + 1	    @ NMI_Handler
+  .word _handle_nmi + 1	    @ NMI_Handler
   .word _invalid_exception + 1	    @ HardFault_Handler
   .word _invalid_exception + 1      @ MemManage_Handler
   .word _invalid_exception + 1      @ BusFault_Handler
@@ -21,7 +24,7 @@ init_vectors:
   .word _invalid_exception + 1	    @ DebugMon_Handler
   .word 0                           @ Reserved
   .word _invalid_exception + 1	    @ PendSV_Handler
-  .word _invalid_exception + 1	    @ SysTick_Handler
+  .word _handle_systick + 1	    @ SysTick_Handler
   .word _invalid_exception + 1	    @ IRQ0
   .word _invalid_exception + 1
   .word _invalid_exception + 1
@@ -39,7 +42,7 @@ init_vectors:
   .word _invalid_exception + 1
   .word _invalid_exception + 1
   .word _invalid_exception + 1
-  .word _invalid_exception + 1
+  .word _handle_irq + 1      @ IRQ17
   .word _invalid_exception + 1
   .word _invalid_exception + 1
   .word _invalid_exception + 1
