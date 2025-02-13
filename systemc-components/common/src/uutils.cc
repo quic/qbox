@@ -133,7 +133,7 @@ void gs::SigHandler::set_sig_num(int val) { sig_num = val; }
 void gs::SigHandler::mark_error_signal(int signum, std::string error_msg)
 {
     std::lock_guard<std::mutex> lock(signals_mutex);
-    if (error_signals.find(signum) != error_signals.end())
+    if (!error_signals.empty() && error_signals.find(signum) != error_signals.end())
         error_signals.at(signum) = error_msg;
     else {
         auto ret = error_signals.insert(std::make_pair(signum, error_msg));
@@ -185,7 +185,7 @@ void gs::SigHandler::_start_pass_signal_handler()
                     stop_running = true;
                     _change_sig_cbs_to_dfl();
                     if (sc_core::sc_get_status() < sc_core::SC_RUNNING) {
-                        _Exit(EXIT_SUCCESS); // FIXME: should the exit status be EXIT_FAILURE?
+                        _Exit(EXIT_FAILURE); // FIXME: should the exit status be EXIT_SUCCESS?
                     }
                     if ((sc_core::sc_get_status() != sc_core::SC_STOPPED) &&
                         (sc_core::sc_get_status() !=
@@ -199,7 +199,7 @@ void gs::SigHandler::_start_pass_signal_handler()
                         handlers.clear();
                         async_request_update();
                     }
-                    if (error_signals.find(sig_num) != error_signals.end()) {
+                    if (!error_signals.empty() && error_signals.find(sig_num) != error_signals.end()) {
                         std::cerr << "\nFatal error: " << error_signals[sig_num] << std::endl;
                         _Exit(EXIT_FAILURE);
                     }
@@ -221,11 +221,7 @@ void gs::SigHandler::update()
 
 gs::SigHandler::SigHandler()
     : sc_core::sc_prim_channel("SigHandler")
-    , m_signals{ { SIGINT, Handler_CB::EXIT },  { SIGTERM, Handler_CB::EXIT }, { SIGQUIT, Handler_CB::EXIT },
-                 { SIGSEGV, Handler_CB::EXIT }, { SIGABRT, Handler_CB::EXIT }, { SIGBUS, Handler_CB::EXIT } }
-    , error_signals{ { SIGSEGV, "segmentation fault (SIGSEGV)!" },
-                     { SIGBUS, "bus error (SIGBUS)!" },
-                     { SIGABRT, "abnormal termination (SIGABRT)!" } }
+    , m_signals{ { SIGINT, Handler_CB::EXIT }, { SIGQUIT, Handler_CB::EXIT } }
     , is_pass_handler_requested{ false }
     , stop_running{ false }
 {
