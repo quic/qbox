@@ -185,7 +185,7 @@ void gs::SigHandler::_start_pass_signal_handler()
                     stop_running = true;
                     _change_sig_cbs_to_dfl();
                     if (sc_core::sc_get_status() < sc_core::SC_RUNNING) {
-                        _Exit(EXIT_FAILURE); // FIXME: should the exit status be EXIT_SUCCESS?
+                        _Exit(EXIT_FAILURE);
                     }
                     if ((sc_core::sc_get_status() != sc_core::SC_STOPPED) &&
                         (sc_core::sc_get_status() !=
