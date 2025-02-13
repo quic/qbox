@@ -65,7 +65,7 @@ public:
             std::cerr << "Test failure: " << e.what() << "\n";
             m_test_success = false;
         } catch (...) {
-            std::cerr << "Test failure: Unkown exception\n";
+            std::cerr << "Test failure: Unknown exception\n";
             m_test_success = false;
         }
     }
