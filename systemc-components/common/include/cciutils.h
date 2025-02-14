@@ -15,6 +15,7 @@
 #include <unordered_set>
 
 #include "luafile_tool.h"
+#include "dump_graph.h"
 #include <cci_configuration>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include <systemc>
@@ -260,6 +261,11 @@ public:
         if (!path.empty() && !found_match) {
             SCP_FATAL("cciutils") << "No parameter matching '" << path << "'.";
         }
+    }
+
+    void print_graph(cci::cci_broker_handle broker, std::string fname)
+    {
+        gs::DumpGraphSingleton::GetInstance()->dump(fname);
     }
 
     void set_unused(const std::string& parname, const cci_originator& originator)

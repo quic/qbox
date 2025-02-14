@@ -8,6 +8,7 @@
 #define GREENSOCS_MODULE_FACTORY_H
 
 #include "cciutils.h"
+#include "dump_graph.h"
 #include <cci_configuration>
 #include <systemc>
 #include <tlm>
@@ -638,6 +639,8 @@ private:
         if (!try_bind_all<32>(i_obj, t_obj) && !try_bind_all<64>(i_obj, t_obj)) {
             SCP_FATAL(())("No bind found for: {} to {}", i_obj->name(), t_obj->name());
         }
+
+	gs::DumpGraphSingleton::GetInstance()->add_binding(i_obj->name(), t_obj->name());
     }
 
     void order_bind(sc_core::sc_module* module_obj, const std::string& target_order_str,

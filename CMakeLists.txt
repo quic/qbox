@@ -251,6 +251,7 @@ endif()
 
 set(systemc_srcs
     systemc-components/common/src/cciutils.cc
+    systemc-components/common/src/dump_graph.cc
     systemc-components/common/src/luautils.cc
     systemc-components/common/src/uutils.cc
     systemc-components/common/src/memory_services.cc
@@ -441,6 +442,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         rpc
         ${CROW_DEP}
         zip
+        cgraph
+        gvc
         ${PYBIND11_EMBED}
         ${CMAKE_DL_LIBS}  
 )
