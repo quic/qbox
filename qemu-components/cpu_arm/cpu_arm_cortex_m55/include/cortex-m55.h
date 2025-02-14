@@ -24,6 +24,7 @@ public:
     cci::cci_param<bool> p_start_powered_off;
     nvic_armv7m m_nvic;
     cci::cci_param<uint64_t> p_init_nsvtor;
+    cci::cci_param<uint64_t> p_init_svtor;
     QemuTargetSignalSocket irq_in;
     cpu_arm_cortexM55(const sc_core::sc_module_name& name, sc_core::sc_object* o)
         : cpu_arm_cortexM55(name, *(dynamic_cast<QemuInstance*>(o)))
@@ -35,7 +36,8 @@ public:
         , p_start_powered_off("start_powered_off", false,
                               "Start and reset the CPU "
                               "in powered-off state")
-        , p_init_nsvtor("init_nsvtor", 0ull, "Reset vector base address")
+        , p_init_nsvtor("init_nsvtor", 0ull, "Non Secure Reset vector base address")
+        , p_init_svtor("init_svtor", 0ull, "Secure Reset vector base address")
         , irq_in("irq_in")
     {
         m_nvic.irq_out.bind(irq_in);
@@ -50,6 +52,7 @@ public:
         cpu.add_nvic_link();
         cpu.set_prop_bool("start-powered-off", p_start_powered_off);
         cpu.set_prop_int("init-nsvtor", p_init_nsvtor);
+        cpu.set_prop_int("init-svtor", p_init_svtor);
 
         /* ensure the nvic is also created */
         m_nvic.before_end_of_elaboration();
