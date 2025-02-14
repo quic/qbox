@@ -72,7 +72,7 @@ public:
         : QemuDevice(name, inst, get_gicv3_type(inst))
         , p_num_cpu("num_cpus", num_cpus, "Number of CPU interfaces")
         , p_num_spi("num_spi", 0, "Number of shared peripheral interrupts")
-        , p_revision("revision", 3, "Revision of the GIC (3 -> v3, the only supported revision)")
+        , p_revision("revision", 3, "Revision of the GIC (3 -> v3, 4 -> v4)")
         // , p_redist_region("redist_region", std::vector<unsigned int>({}),
         //                   "Redistributor regions configuration")
         , p_redist_region("redist_region",
