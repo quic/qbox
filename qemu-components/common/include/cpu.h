@@ -337,7 +337,6 @@ public:
     TargetSignalSocket<bool> halt;
     TargetSignalSocket<bool> reset;
 
-    SC_HAS_PROCESS(QemuCpu);
 
     QemuCpu(const sc_core::sc_module_name& name, QemuInstance& inst, const std::string& type_name)
         : QemuDevice(name, inst, (type_name + "-cpu").c_str())

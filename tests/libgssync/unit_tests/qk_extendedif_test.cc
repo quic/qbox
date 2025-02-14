@@ -5,7 +5,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 
 #include <gtest/gtest.h>
@@ -17,7 +16,6 @@ class test_base : public sc_core::sc_module
 public:
     test_base(const sc_core::sc_module_name& nm): sc_core::sc_module(nm)
     {
-        SC_HAS_PROCESS(test_base);
         SC_THREAD(run);
     }
 

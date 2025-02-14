@@ -31,7 +31,6 @@ private:
     pthread_t rcv_pthread_id = 0;
 
 public:
-    SC_HAS_PROCESS(legacy_char_backend_stdio);
 
 #ifdef WIN32
 #pragma message("CharBackendStdio not yet implemented for WIN32")

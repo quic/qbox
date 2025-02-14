@@ -6,7 +6,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 
 #include <cstdio>
@@ -76,7 +75,6 @@ protected:
     reset_gpio reset_controller_b;
 
 public:
-    SC_HAS_PROCESS(CpuArmCortexA53SimpleReset);
     CpuArmCortexA53SimpleReset(const sc_core::sc_module_name& n)
         : CpuTestBench<cpu_arm_cortexA53, CpuTesterMmio>(n)
         , reset_controller_a("reset_a", m_inst_a)

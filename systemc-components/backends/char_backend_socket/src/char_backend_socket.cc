@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 
 #include <char_backend_socket.h>

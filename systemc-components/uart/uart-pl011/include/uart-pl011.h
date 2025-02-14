@@ -93,7 +93,6 @@ public:
 
     sc_core::sc_event update_event;
 
-    SC_HAS_PROCESS(Pl011);
     Pl011(sc_core::sc_module_name name)
         : irq("irq"), s(nullptr), socket("target_socket"), backend_socket("backend_socket")
     {

@@ -119,7 +119,6 @@ public:
         , m_thread_id(std::this_thread::get_id())
         , m_jobs_handler_event(false) // starve if no more jobs provided
     {
-        SC_HAS_PROCESS(runonsysc);
         SC_THREAD(jobs_handler);
     }
 

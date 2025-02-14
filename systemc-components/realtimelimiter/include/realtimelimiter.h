@@ -141,7 +141,6 @@ public:
         , tick(false) // handle attach manually
     {
         SCP_TRACE(())("realtimelimiter constructor");
-        SC_HAS_PROCESS(realtimelimiter);
         SC_METHOD(SCticker);
         dont_initialize();
         sensitive << tick;

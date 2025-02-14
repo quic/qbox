@@ -28,7 +28,6 @@ private:
     void close();
 
 public:
-    SC_HAS_PROCESS(NetworkBackendTap);
     NetworkBackendTap(sc_core::sc_module_name name, std::string tun);
 
     virtual ~NetworkBackendTap();

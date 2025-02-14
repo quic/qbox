@@ -10,7 +10,6 @@
  * the idea of the test is to redirect the stdin and stdout into pipes to test the stdio backend
  */
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 
 #include "uart-pl011.h"

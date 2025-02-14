@@ -504,7 +504,6 @@ public:
 
     Payload m_tx_frame;
 
-    SC_HAS_PROCESS(dwmac);
 
     dwmac(sc_core::sc_module_name name);
     virtual ~dwmac();

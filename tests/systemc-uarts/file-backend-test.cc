@@ -11,7 +11,6 @@
  * wtrite test:  write a string to the file "write_file"
  */
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc.h>
 
 #include "uart-pl011.h"

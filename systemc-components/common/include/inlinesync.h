@@ -27,7 +27,6 @@ public:
     tlm_utils::simple_target_socket<inlinesync, DEFAULT_TLM_BUSWIDTH> target_socket;
     tlm_utils::simple_initiator_socket<inlinesync, DEFAULT_TLM_BUSWIDTH> initiator_socket;
 
-    SC_HAS_PROCESS(inlinesync);
     inlinesync(const sc_core::sc_module_name& name)
         : sc_module(name), onSystemC(), target_socket("targetSocket"), initiator_socket("initiatorSocket")
     {

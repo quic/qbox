@@ -6,7 +6,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 
 #include <cstdio>
@@ -109,7 +108,6 @@ private:
     bool running = 0;
 
 public:
-    SC_HAS_PROCESS(CpuArmCortexA53DmiAsyncInvalTest);
 
     CpuArmCortexA53DmiAsyncInvalTest(const sc_core::sc_module_name& n)
         : CpuArmTestBench<cpu_arm_cortexA53, CpuTesterDmiSoak>(n)

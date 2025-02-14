@@ -5,7 +5,6 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 
 #include <cstdio>
@@ -117,7 +116,6 @@ private:
     std::mutex mutex;
 
 public:
-    SC_HAS_PROCESS(CpuArmCortexA53DmiConcurrentInvalTest);
 
     CpuArmCortexA53DmiConcurrentInvalTest(const sc_core::sc_module_name& n)
         : CpuArmTestBench<cpu_arm_cortexA53, CpuTesterDmi>(n), invalidated(p_num_cpu, false)

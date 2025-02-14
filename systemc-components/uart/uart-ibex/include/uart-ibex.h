@@ -89,7 +89,6 @@ public:
 
     sc_core::sc_event update_event;
 
-    SC_HAS_PROCESS(ibex_uart);
     ibex_uart(sc_core::sc_module_name name)
         : irq_rxwatermark("irq_rx_watermark"), socket("target_socket"), backend_socket("backend_socket")
     {

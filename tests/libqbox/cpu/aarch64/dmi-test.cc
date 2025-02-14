@@ -6,7 +6,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 
 #include <cstdio>
@@ -107,7 +106,6 @@ protected:
     void disable_dmi(int cpuid) { m_dmi_enabled[cpuid] = false; }
 
 public:
-    SC_HAS_PROCESS(CpuArmCortexA53DmiTest);
 
     CpuArmCortexA53DmiTest(const sc_core::sc_module_name& n): CpuArmTestBench<cpu_arm_cortexA53, CpuTesterDmi>(n)
     {

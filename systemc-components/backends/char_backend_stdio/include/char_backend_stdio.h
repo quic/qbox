@@ -138,7 +138,6 @@ public:
      *      wait [float]    : Wait for "float" (simulated) seconds, until processing continues.
      *      exit            : Cause the simulation to terminate normally.
      */
-    SC_HAS_PROCESS(char_backend_stdio);
     char_backend_stdio(sc_core::sc_module_name name)
         : sc_core::sc_module(name)
         , p_read_write("read_write", true, "read_write if true start rcv_thread")

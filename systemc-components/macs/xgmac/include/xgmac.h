@@ -70,7 +70,6 @@ private:
     sc_core::sc_event update_event;
 
 public:
-    SC_HAS_PROCESS(xgmac);
     xgmac(sc_core::sc_module_name name);
     virtual ~xgmac();
 

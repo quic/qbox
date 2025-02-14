@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 
 #include <tlm>
@@ -30,7 +29,6 @@ class RemoteTest : public sc_core::sc_module
     InitiatorTester* m_initiator;
 
 public:
-    SC_HAS_PROCESS(RemoteTest);
     RemoteTest(const sc_core::sc_module_name& n)
         : m_pass("remote_pass"), m_router("remote_router"), m_loopback("loopback"), m_mem2("mem2"), m_mem3("mem3")
     {

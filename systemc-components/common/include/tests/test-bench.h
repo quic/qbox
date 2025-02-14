@@ -82,7 +82,6 @@ protected:
     virtual void test_bench_body() = 0;
 
 public:
-    SC_HAS_PROCESS(TestBench);
     TestBench(const sc_core::sc_module_name& n): sc_core::sc_module(n) {}
 };
 template <class T>

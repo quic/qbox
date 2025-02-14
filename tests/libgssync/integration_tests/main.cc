@@ -5,7 +5,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 
 #ifdef _WIN32
@@ -21,7 +20,6 @@
 #ifndef SC_INCLUDE_DYNAMIC_PROCESSES
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 
 #endif
 #include <systemc>
@@ -288,7 +286,6 @@ public:
         , m_worker_thread_active(false)
     {
         SCP_DEBUG(SCMOD) << "In the constructor QemuLikeMaster";
-        SC_HAS_PROCESS(QemuLikeMaster);
         SC_METHOD(stop);
         dont_initialize();
         sensitive << checker.stopEvent;
@@ -371,7 +368,6 @@ public:
         , running(false)
     {
         SCP_DEBUG(SCMOD) << "In the constructor MasterSimple";
-        SC_HAS_PROCESS(MasterSimple);
         SC_METHOD(stop);
         dont_initialize();
         sensitive << checker.stopEvent;
@@ -475,7 +471,6 @@ public:
         , running(false)
     {
         SCP_DEBUG(SCMOD) << "In the constructor TLMClockedSlave";
-        SC_HAS_PROCESS(TLMClockedSlave);
         SC_METHOD(stop);
         dont_initialize();
         sensitive << checker.stopEvent;
@@ -531,7 +526,6 @@ public:
         , running(false)
     {
         SCP_DEBUG(SCMOD) << "In the constructor Clock";
-        SC_HAS_PROCESS(Clock);
         SC_METHOD(stop);
         dont_initialize();
         sensitive << checker.stopEvent;

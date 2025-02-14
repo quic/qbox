@@ -168,7 +168,6 @@ public:
     tlm_utils::simple_initiator_socket<biflow_socket, DEFAULT_TLM_BUSWIDTH> output_socket;
     tlm_utils::simple_target_socket<biflow_socket, DEFAULT_TLM_BUSWIDTH> output_control_socket;
 
-    SC_HAS_PROCESS(biflow_socket);
 
     /**
      * @brief Construct a new biflow socket object

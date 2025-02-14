@@ -26,7 +26,6 @@ protected:
     uint16_t m_adv;
 
 public:
-    SC_HAS_PROCESS(phy);
 
     const uint32_t m_id;
     const uint8_t m_addr;

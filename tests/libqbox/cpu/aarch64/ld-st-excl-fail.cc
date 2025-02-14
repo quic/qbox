@@ -6,7 +6,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 
 #include <cstdio>
@@ -52,7 +51,6 @@ public:
     )";
 
 public:
-    SC_HAS_PROCESS(CpuArmCortexA53LdStExclTest);
 
     CpuArmCortexA53LdStExclTest(const sc_core::sc_module_name& n)
         : CpuArmTestBench<cpu_arm_cortexA53, CpuTesterExclusive>(n)

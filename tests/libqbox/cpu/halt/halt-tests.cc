@@ -6,7 +6,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#define SC_ALLOW_DEPRECATED_IEEE_API
 #include <systemc>
 
 #include <cstdio>
@@ -70,7 +69,6 @@ protected:
     int finished = 0;
 
 public:
-    SC_HAS_PROCESS(CpuArmCortexA53SimpleHalt);
     CpuArmCortexA53SimpleHalt(const sc_core::sc_module_name& n)
         : CpuArmTestBench<cpu_arm_cortexA53, CpuTesterMmio>(n), halt("halt", p_num_cpu)
     {
