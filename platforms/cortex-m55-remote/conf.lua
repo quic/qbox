@@ -11,11 +11,10 @@ function top()
     end
  end
 
+EXECUTABLE_PATH = GET("executable_path")
 
- BUILD_DIRECTORY = GET("build_directory")
-
-if BUILD_DIRECTORY == nil then
-    BUILD_DIRECTORY = "@BUILD_DIRECTORY@"
+if EXECUTABLE_PATH == nil then
+    print("Error: executable_path is not set")
 end
 
 platform = {
@@ -61,7 +60,7 @@ platform = {
         
     plugin_0 = {
         moduletype = "RemotePass", -- can be replaced by 'Container'
-        exec_path = BUILD_DIRECTORY.."/platforms/cortex-m55-remote/remote_cpu",
+        exec_path = EXECUTABLE_PATH.."/platforms/cortex-m55-remote/remote_cpu",
         remote_argv = {"--param=log_level=4"},
         tlm_initiator_ports_num = 2,
         tlm_target_ports_num = 0,

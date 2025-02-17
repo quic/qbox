@@ -22,6 +22,12 @@
 #if SC_VERSION_MAJOR < 3
 #warning PLEASE UPDATE TO SYSTEMC 3.0, OLDER VERSIONS ARE DEPRECATED AND MAY NOT WORK
 #endif
+
+#ifndef EXECUTABLE_PATH
+#warning "EXECUTABLE_PATH is not defined"
+#define EXECUTABLE_PATH ""
+#endif
+
 class IrqGenerator : public sc_core::sc_module
 {
 public:
@@ -140,6 +146,8 @@ int sc_main(int argc, char* argv[])
     gs::ConfigurableBroker m_broker{};
     cci::cci_originator orig{ "sc_main" };
     auto broker_h = m_broker.create_broker_handle(orig);
+        cci::cci_param<std::string> p_executable_path{ "executable_path", EXECUTABLE_PATH, "expected build directory path",
+                                                    cci::CCI_ABSOLUTE_NAME, orig };
     ArgParser ap{ broker_h, argc, argv };
 
     GreenSocsPlatform platform("platform");

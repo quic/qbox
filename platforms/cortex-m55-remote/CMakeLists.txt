@@ -1,4 +1,9 @@
 set(LIBQEMU_TARGETS aarch64)
+set(EXECUTABLE_PATH "${CMAKE_BINARY_DIR}")
+
+message(STATUS "EXECUTABLE_PATH: ${EXECUTABLE_PATH}")
+
+add_definitions(-DEXECUTABLE_PATH="${EXECUTABLE_PATH}")
 
 add_executable(cortex-m55-vp
     src/main.cc
@@ -27,8 +32,5 @@ target_include_directories(
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/systemc-components>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/qemu-components>
   )
-
-set(BUILD_DIRECTORY "${CMAKE_BINARY_DIR}")
-configure_file(${PROJECT_SOURCE_DIR}/platforms/cortex-m55-remote/conf.lua.in ${PROJECT_SOURCE_DIR}/platforms/cortex-m55-remote/conf.lua)
 
 gs_enable_testing()
