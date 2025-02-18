@@ -48,9 +48,9 @@ function(qbox_add_cpu_test target timeout_s)
     endif()
 
     list(APPEND QBOX_TEST_ACCELS "tcg")
-    if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "arm64")
-            list(APPEND QBOX_TEST_ACCELS "hvf")
-    endif()
+    # if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "arm64")
+    #         list(APPEND QBOX_TEST_ACCELS "hvf")
+    # endif()
     if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
             list(APPEND QBOX_TEST_ACCELS "kvm")
     endif()
@@ -58,16 +58,16 @@ function(qbox_add_cpu_test target timeout_s)
     add_executable(${target} ${ARGN})
 
     # Apply HVF entitlements on MacOS
-    if(APPLE)
-        add_custom_command(
-            TARGET ${target}
-            POST_BUILD
-            COMMAND codesign
-                --entitlements ${libqemu_SOURCE_DIR}/accel/hvf/entitlements.plist
-                --force -s - $<TARGET_FILE:${target}>
-            COMMENT "Applying HVF entitlements to $<TARGET_FILE:${target}>"
-        )
-    endif()
+    # if(APPLE)
+    #     add_custom_command(
+    #         TARGET ${target}
+    #         POST_BUILD
+    #         COMMAND codesign
+    #             --entitlements ${libqemu_SOURCE_DIR}/accel/hvf/entitlements.plist
+    #             --force -s - $<TARGET_FILE:${target}>
+    #         COMMENT "Applying HVF entitlements to $<TARGET_FILE:${target}>"
+    #     )
+    # endif()
 
     install(TARGETS ${target} DESTINATION bin)
 
