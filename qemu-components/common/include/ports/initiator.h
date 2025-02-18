@@ -652,9 +652,13 @@ public:
     ~QemuInitiatorSocket()
     {
         cancel_all();
-        m_r->m_root->removeSubRegions();
-        delete m_r;
-        m_r = nullptr;
+        if (m_r) {
+            if (m_r->m_root) {
+                m_r->m_root->removeSubRegions();
+            }
+            delete m_r;
+            m_r = nullptr;
+        }
         //        dmimgr_unlock();
     }
 
