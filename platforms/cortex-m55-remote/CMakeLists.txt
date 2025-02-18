@@ -33,4 +33,7 @@ target_include_directories(
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/qemu-components>
   )
 
+install(TARGETS cortex-m55-vp DESTINATION bin/platforms/cortex-m55-remote)
+install(TARGETS remote_cpu DESTINATION bin/platforms/cortex-m55-remote)
+
 gs_enable_testing()
