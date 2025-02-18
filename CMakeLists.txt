@@ -32,6 +32,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
+# Generate a compile_commands.json file for our build,
+# for use by clang_complete, YouCompleteMe, vscode, etc.
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
 include(CMakePackageConfigHelpers)
 include(CTest)
 include(GNUInstallDirs)
