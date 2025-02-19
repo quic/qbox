@@ -20,6 +20,7 @@
 
 #include <gs_memory.h>
 #include <router.h>
+#include <global_peripheral_initiator.h>
 
 #include <ports/initiator-signal-socket.h>
 
@@ -145,6 +146,9 @@ protected:
     sc_core::sc_vector<CPU> m_cpus;
     TESTER m_tester;
 
+    global_peripheral_initiator m_gpi; // this is required for KVM/HVF that read from the GPI.
+                                       // We only need 1, because only inst_a will be accelerated.
+
 public:
     CpuTestBench(const sc_core::sc_module_name& n)
         : CpuTestBenchBase(n, CPU::ARCH)
@@ -156,11 +160,13 @@ public:
                      return new CPU(n, ab ? m_inst_a : m_inst_b);
                  })
         , m_tester("tester", *this)
+        , m_gpi("gpi", m_inst_a, m_cpus[0])
     {
         int i = 0;
         for (CPU& cpu : m_cpus) {
             m_router.add_initiator(cpu.socket);
         }
+        m_router.add_initiator(m_gpi.m_initiator);
     }
 
     virtual void map_irqs_to_cpus(sc_core::sc_vector<InitiatorSignalSocket<bool>>& irqs) { abort(); }
@@ -194,6 +200,7 @@ public:
         for (CPU& cpu : CpuTestBench<CPU, TESTER>::m_cpus) {
             cpu.p_mp_affinity = i++;
             cpu.p_has_el3 = false;
+            cpu.p_has_el2 = false; // Un-needed and unavailable for HVF/KVM
         }
     }
 

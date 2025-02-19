@@ -65,13 +65,14 @@ public:
 
 protected:
     std::vector<int> m_writes;
+    gs::async_event m_aev;
 
 public:
     CpuArmCortexA53SimpleWriteTest(const sc_core::sc_module_name& n)
-        : CpuArmTestBench<cpu_arm_cortexA53, CpuTesterMmio>(n)
+        : CpuArmTestBench<cpu_arm_cortexA53, CpuTesterMmio>(n), m_aev("aev")
     {
         char buf[1024];
-
+        m_aev.async_attach_suspending();
         std::snprintf(buf, sizeof(buf), FIRMWARE, CpuTesterMmio::MMIO_ADDR, NUM_WRITES);
         set_firmware(buf);
 
@@ -87,12 +88,17 @@ public:
     {
         int cpuid = addr >> 3;
 
-        SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data;
+        SCP_INFO(SCMOD) << "CPU " << cpuid << " write at 0x" << std::hex << addr << ", data: " << std::hex << data;
 
         TEST_ASSERT(cpuid < p_num_cpu);
         TEST_ASSERT(data == m_writes[cpuid]);
 
         m_writes[cpuid]++;
+        for (int i = 0; i < p_num_cpu; i++) {
+            if (m_writes[i] < NUM_WRITES) return;
+        }
+        m_aev.async_detach_suspending();
+        sc_core::sc_stop();
     }
 
     virtual void end_of_simulation() override

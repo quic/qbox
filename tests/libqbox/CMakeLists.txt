@@ -68,9 +68,9 @@ function(qbox_add_cpu_test target timeout_s)
     endif()
 
     list(APPEND QBOX_TEST_ACCELS "tcg")
-    # if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "arm64")
-    #         list(APPEND QBOX_TEST_ACCELS "hvf")
-    # endif()
+    if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "arm64")
+            list(APPEND QBOX_TEST_ACCELS "hvf")
+    endif()
     if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
             list(APPEND QBOX_TEST_ACCELS "kvm")
     endif()
@@ -78,23 +78,23 @@ function(qbox_add_cpu_test target timeout_s)
     add_executable(${target} ${ARGN})
 
     # Apply HVF entitlements on MacOS
-    # if(APPLE)
-    #     add_custom_command(
-    #         TARGET ${target}
-    #         POST_BUILD
-    #         COMMAND codesign
-    #             --entitlements ${libqemu_SOURCE_DIR}/accel/hvf/entitlements.plist
-    #             --force -s - $<TARGET_FILE:${target}>
-    #         COMMENT "Applying HVF entitlements to $<TARGET_FILE:${target}>"
-    #     )
-    # endif()
+    if(APPLE)
+        add_custom_command(
+            TARGET ${target}
+            POST_BUILD
+            COMMAND codesign
+                --entitlements ${libqemu_SOURCE_DIR}/accel/hvf/entitlements.plist
+                --force -s - $<TARGET_FILE:${target}>
+            COMMENT "Applying HVF entitlements to $<TARGET_FILE:${target}>"
+        )
+    endif()
 
 
     install(TARGETS ${target} DESTINATION bin)
 
     target_include_directories(${target} PRIVATE ${PROJECT_SOURCE_DIR}/tests/libqbox/include ${keystone_SOURCE_DIR}/include)
 
-    target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 qemu_cpu_hexagon cpu_riscv32 router reset_gpio gs_memory exclusive_monitor display plic_sifive ${TARGET_LIBS} keystone hexagon_globalreg)
+    target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 qemu_cpu_hexagon cpu_riscv32 global_peripheral_initiator router reset_gpio gs_memory pass exclusive_monitor display plic_sifive ${TARGET_LIBS} keystone hexagon_globalreg)
 
     foreach (accel ${QBOX_TEST_ACCELS})
       foreach(sync_pol ${QBOX_CPU_TEST_SYNC_POLICY_COMBINATION})
@@ -148,7 +148,7 @@ function(qbox_add_cpu_test target timeout_s)
                 COMMAND $<TARGET_FILE:${target}> -p test-bench.inst_a.sync_policy=\"${sync_pol}\"
                                                  -p test-bench.inst_b.sync_policy=\"${sync_pol}\"
                                                  -p test-bench.inst_a.accel=\"${accel}\"
-                                                 -p test-bench.inst_b.accel=\"${accel}\"
+                                                 -p test-bench.inst_b.accel=\"tcg\"
                                                  -p test-bench.num_cpu=${num_cpu}
                                                  -p test-bench.inst_a.icount=${icount}
                                                  -p test-bench.inst_b.icount=${icount}
