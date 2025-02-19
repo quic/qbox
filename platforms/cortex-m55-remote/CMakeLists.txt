@@ -1,9 +1,4 @@
 set(LIBQEMU_TARGETS aarch64)
-set(EXECUTABLE_PATH "${CMAKE_BINARY_DIR}")
-
-message(STATUS "EXECUTABLE_PATH: ${EXECUTABLE_PATH}")
-
-add_definitions(-DEXECUTABLE_PATH="${EXECUTABLE_PATH}")
 
 add_executable(cortex-m55-vp
     src/main.cc
@@ -33,7 +28,15 @@ target_include_directories(
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/qemu-components>
   )
 
-install(TARGETS cortex-m55-vp DESTINATION bin/platforms/cortex-m55-remote)
-install(TARGETS remote_cpu DESTINATION bin/platforms/cortex-m55-remote)
+set_target_properties(cortex-m55-vp PROPERTIES
+  INSTALL_RPATH "$ORIGIN/../lib;$ORIGIN/../lib/libqemu;$ORIGIN/../../../lib"
+)
+
+set_target_properties(remote_cpu PROPERTIES
+  INSTALL_RPATH "$ORIGIN/../lib;$ORIGIN/../lib/libqemu;$ORIGIN/../../../lib"
+)
+
+install(TARGETS cortex-m55-vp RUNTIME DESTINATION bin/platforms/cortex-m55-remote)
+install(TARGETS remote_cpu RUNTIME DESTINATION bin/platforms/cortex-m55-remote)
 
 gs_enable_testing()

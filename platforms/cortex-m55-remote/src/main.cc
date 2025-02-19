@@ -18,15 +18,56 @@
 #include "remote_cpu.h"
 #include <keep_alive/include/keep_alive.h>
 #include <module_factory_container.h>
+#include <filesystem>
+#include <limits.h> // For PATH_MAX
 
 #if SC_VERSION_MAJOR < 3
 #warning PLEASE UPDATE TO SYSTEMC 3.0, OLDER VERSIONS ARE DEPRECATED AND MAY NOT WORK
 #endif
 
-#ifndef EXECUTABLE_PATH
-#warning "EXECUTABLE_PATH is not defined"
-#define EXECUTABLE_PATH ""
+#if defined(__linux__)
+#include <unistd.h> // For readlink
+
+// Function to get the absolute path of the executable on Linux
+std::string getExecutablePath()
+{
+    char result[PATH_MAX];                                        // Buffer to store the path
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX); // Read the symbolic link
+    if (count > 0) {
+        return std::string(result, count); // Convert to std::string and return
+    } else {
+#warning "Could not get executable path for Linux"
+        return std::string(); // return empty string if the path cannot be obtained
+    }
+}
+
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h> // For _NSGetExecutablePath
+#include <unistd.h>      // For realpath
+
+// Function to get the absolute path of the executable on macOS
+std::string getExecutablePath()
+{
+    char result[PATH_MAX];                          // Buffer to store the path
+    uint32_t size = sizeof(result);                 // Size of the buffer
+    if (_NSGetExecutablePath(result, &size) == 0) { // Get the executable path
+        char resolved_path[PATH_MAX];               // Buffer for the resolved path
+        realpath(result, resolved_path);            // Resolve the symbolic link to an absolute path
+        return std::string(resolved_path);          // Convert to std::string and return
+    } else {
+#warning "Could not get executable path for MacOS"
+        return std::string(); // Return an empty string if the path cannot be obtained
+    }
+}
+
 #endif
+
+// Function to extract the directory from a given path
+std::string getDirectory(const std::string& path)
+{
+    return path.substr(0,
+                       path.find_last_of("/\\")); // Find the last '/' or '\' and return the substring up to that point
+}
 
 class IrqGenerator : public sc_core::sc_module
 {
@@ -153,10 +194,14 @@ int sc_main(int argc, char* argv[])
                           .logAsync(false)
                           .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
                           .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
+
+    std::string executable_path = getDirectory(getExecutablePath());
+    SCP_INFO() << "Executable Path: " << executable_path;
+
     gs::ConfigurableBroker m_broker{};
     cci::cci_originator orig{ "sc_main" };
     auto broker_h = m_broker.create_broker_handle(orig);
-    cci::cci_param<std::string> p_executable_path{ "executable_path", EXECUTABLE_PATH, "expected build directory path",
+    cci::cci_param<std::string> p_executable_path{ "executable_path", executable_path, "expected build directory path",
                                                    cci::CCI_ABSOLUTE_NAME, orig };
     cci::cci_param<int> p_log_level{ "log_level", 3, "Default log level", cci::CCI_ABSOLUTE_NAME, orig };
     ArgParser ap{ broker_h, argc, argv };
