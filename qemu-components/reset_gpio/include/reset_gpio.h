@@ -45,6 +45,8 @@ public:
 
         /* QEMU signalling reset*/
         m_reset_t.register_value_changed_cb([&](bool value) {
+            sc_core::sc_suspendable(); // we should never be in a situation where the caller is waiting for us to
+                                       // complete, so we can remove the unsuspendable restriction
             if (value) {
                 if (!m_systemc_resetting && !m_qemu_resetting) {
                     SCP_INFO(())("QEMU resetting");
