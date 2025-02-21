@@ -65,15 +65,6 @@ protected:
     gs::gs_memory<> m_mem;
     gs::gs_memory<> m_bulkmem;
 
-    static constexpr const char* EXCEPTION_FW = R"(
-        _start:
-            mov x0, -1
-            str x0, [x2]
-        end:
-            wfi
-            b end
-    )";
-
     void set_firmware(const char* assembly, uint64_t addr = 0)
     {
         ks_engine* ks;
