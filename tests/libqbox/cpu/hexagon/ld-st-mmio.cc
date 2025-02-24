@@ -48,7 +48,6 @@ public:
             cpu.p_hexagon_num_threads = m_cpus.size();
             cpu.p_start_powered_off = (i != 0);
             cpu.p_exec_start_addr = MEM_ADDR;
-            cpu.p_semihosting = true;
         }
 
         char buf[1024];

@@ -103,7 +103,7 @@ function(qbox_add_cpu_test target timeout_s)
         endif()
 
         if("${sync_pol}" STREQUAL "tlm2")
-            if (${accel} STREQUAL "tcg")
+            if (NOT ("${target}" STREQUAL "hexagon-reset-test"))
                 set(threading "COROUTINE")
             else()
                 continue()
