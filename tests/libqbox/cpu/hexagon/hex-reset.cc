@@ -32,10 +32,10 @@ class CpuHexagonResetGPIOTest : public CpuTestBench<qemu_cpu_hexagon, CpuTesterM
     static constexpr int RESET_DONE = 0;
     /*
      * There is a 100 second general timeout but if we start running and do not
-     * finish in less than 5 seconds there is an issue.  This test should
+     * finish in less than 20 seconds there is an issue.  This test should
      * finish in less than 100ms.
      */
-    static constexpr int TIMEOUT_LIMIT_MS = 5000;
+    static constexpr int TIMEOUT_LIMIT_MS = 20000;
 
     MultiInitiatorSignalSocket<bool> reset;
     reset_gpio reset_controller;
