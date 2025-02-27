@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * Copyright (c) 2025 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -8,8 +8,6 @@
 #define _LIBQBOX_TLM_EXTENSIONS_UNDERLYING_DMI_H
 
 #include <tlm>
-
-#include <libqemu-cxx/libqemu-cxx.h>
 namespace gs {
 
 /**
