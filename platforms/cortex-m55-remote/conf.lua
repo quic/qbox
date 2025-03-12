@@ -61,7 +61,7 @@ platform = {
     plugin_0 = {
         moduletype = "RemotePass", -- can be replaced by 'Container'
         exec_path = EXECUTABLE_PATH.."/platforms/cortex-m55-remote/remote_cpu",
-        remote_argv = {"--param=log_level=4"},
+        remote_argv = {tostring(1)},
         tlm_initiator_ports_num = 2,
         tlm_target_ports_num = 0,
         target_signals_num = 4,

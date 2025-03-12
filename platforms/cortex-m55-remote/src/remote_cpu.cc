@@ -41,13 +41,26 @@ public:
 
 int sc_main(int argc, char* argv[])
 {
-    std::cout << "RemoteCPU started\n";
-    std::cout << "Passed arguments: " << std::endl;
-    for (int i = 0; i < 2; i++) std::cout << "argv[" << i << "] = " << argv[i] << std::endl;
-    auto m_broker = new gs::ConfigurableBroker({
+    if (argc < 2) {
+        std::cerr << "Error: Expected log_level to be passed as cmdline argument to the remote cpu process!"
+                  << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    scp::init_logging(scp::LogConfig()
+                          .fileInfoFrom(sc_core::SC_ERROR)
+                          .logAsync(false)
+                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                          .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
+
+    gs::ConfigurableBroker m_broker{ {
         { "remote_platform.moduletype", cci::cci_value("ContainerDeferModulesConstruct") },
-        { "remote_platform.quantum_ns", cci::cci_value(10'000'000) },
-    });
+    } };
+
+    cci::cci_originator orig("sc_main");
+    auto broker_h = m_broker.create_broker_handle(orig);
+    cci::cci_param<int> p_log_level{ "log_level", std::stoi(argv[1]), "Default log level", cci::CCI_ABSOLUTE_NAME,
+                                     orig };
 
     RemotePlatform remote("remote_platform");
     try {

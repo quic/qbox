@@ -30,6 +30,11 @@
 
 class IrqGenerator : public sc_core::sc_module
 {
+    SCP_LOGGER(());
+
+private:
+    cci::cci_broker_handle m_broker;
+
 public:
     tlm_utils::simple_target_socket<IrqGenerator> target_socket;
     InitiatorSignalSocket<bool> m_irq;
@@ -46,33 +51,33 @@ public:
             switch (addr) {
             case 0x0:
                 if (*(data) == 0x1UL) {
-                    SCP_INFO() << "Clear IRQ";
+                    SCP_INFO(()) << "Clear IRQ";
                     m_irq->write(false);
                     ev.notify(sc_core::SC_ZERO_TIME);
                 }
                 break;
             case 0x4:
                 if (*(data) == 0x1UL) {
-                    SCP_INFO() << "Clear NMI";
+                    SCP_INFO(()) << "Clear NMI";
                     m_nmi->write(false);
                     ev.notify(sc_core::SC_ZERO_TIME);
                 }
                 break;
             case 0x8:
                 if (*(data) == 0x1UL) {
-                    SCP_INFO() << "Clear S_SysTick";
+                    SCP_INFO(()) << "Clear S_SysTick";
                     m_S_SysTick->write(false);
                     ev.notify(sc_core::SC_ZERO_TIME);
                 }
                 break;
             case 0xC:
                 if (*(data) == 0x1UL) {
-                    SCP_INFO() << "Start IRQ generation";
+                    SCP_INFO(()) << "Start IRQ generation";
                     ev.notify(sc_core::SC_ZERO_TIME);
                 }
                 break;
             default:
-                SCP_INFO() << "No register found at address: 0x" << std::hex << addr;
+                SCP_INFO(()) << "No register found at address: 0x" << std::hex << addr;
                 trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
                 sc_core::sc_stop();
             }
@@ -82,19 +87,19 @@ public:
 
     IrqGenerator(sc_core::sc_module_name const& my_name)
         : sc_core::sc_module(my_name)
+        , m_broker(cci::cci_get_broker())
         , target_socket("target_socket")
         , m_irq("irq")
         , m_nmi("nmi")
         , m_S_SysTick("S_SysTick")
     {
-        SCP_INFO() << "IrqGenerator: Constructor called";
+        SCP_INFO(()) << "IrqGenerator: Constructor called";
         SC_THREAD(test_thread);
         sensitive << ev;
         target_socket.register_b_transport(this, &IrqGenerator::b_transport);
     }
 
     SC_HAS_PROCESS(IrqGenerator);
-    SCP_LOGGER(());
 
 private:
     void test_thread()
@@ -110,6 +115,8 @@ private:
 
 class GreenSocsPlatform : public gs::ModuleFactory::ContainerDeferModulesConstruct
 {
+    SCP_LOGGER(());
+
 protected:
     cci::cci_param<int> p_quantum_ns;
     IrqGenerator irq_generator;
@@ -130,8 +137,6 @@ public:
         name_bind(&irq_generator);
     }
 
-    SCP_LOGGER(());
-
     ~GreenSocsPlatform() {}
 };
 
@@ -143,11 +148,17 @@ int sc_main(int argc, char* argv[])
          "UPGRADE\n********************************");
     }
 
+    scp::init_logging(scp::LogConfig()
+                          .fileInfoFrom(sc_core::SC_ERROR)
+                          .logAsync(false)
+                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                          .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
     gs::ConfigurableBroker m_broker{};
     cci::cci_originator orig{ "sc_main" };
     auto broker_h = m_broker.create_broker_handle(orig);
-        cci::cci_param<std::string> p_executable_path{ "executable_path", EXECUTABLE_PATH, "expected build directory path",
-                                                    cci::CCI_ABSOLUTE_NAME, orig };
+    cci::cci_param<std::string> p_executable_path{ "executable_path", EXECUTABLE_PATH, "expected build directory path",
+                                                   cci::CCI_ABSOLUTE_NAME, orig };
+    cci::cci_param<int> p_log_level{ "log_level", 3, "Default log level", cci::CCI_ABSOLUTE_NAME, orig };
     ArgParser ap{ broker_h, argc, argv };
 
     GreenSocsPlatform platform("platform");
