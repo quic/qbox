@@ -19,6 +19,7 @@
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include <systemc>
 #include <tlm>
+#include <tuple>
 
 /*********************
  * CCI Convenience
@@ -238,28 +239,35 @@ public:
         }
     }
 
-    void print_used_parameter(cci::cci_broker_handle broker, std::string path = "")
+    std::vector<std::tuple<std::string, std::string, std::string>> get_used_parameters(cci::cci_broker_handle broker,
+                                                                                       std::string path = "",
+                                                                                       bool print_params = true)
     {
+        std::vector<std::tuple<std::string, std::string, std::string>> ret; // tuple<param_name, param_val, param_desc>
         bool found_match = false;
         for (auto v : m_used) {
             if (v.rfind(path, 0) == 0) {
                 cci::cci_value c = cci_get(broker, v);
                 if (c.to_json() == "null") {
-                    std::cout << "Configurable Parameters: " << v << " the value is not set";
+                    if (print_params) std::cout << "Configurable Parameters: " << v << " the value is not set";
                 } else {
-                    std::cout << "Configurable Parameters: " << v << " the value is: " << c.to_json();
+                    if (print_params) std::cout << "Configurable Parameters: " << v << " the value is: " << c.to_json();
                 }
                 auto h = broker.get_param_handle(v);
+                std::string param_desc = "null";
                 if (h.is_valid()) {
-                    std::cout << " (" << h.get_description() << ")";
+                    param_desc = h.get_description();
+                    if (print_params) std::cout << " (" << param_desc << ")";
                 }
-                std::cout << std::endl;
+                if (print_params) std::cout << std::endl;
                 found_match = true;
+                ret.push_back(std::make_tuple(v, c.to_json(), param_desc));
             }
         }
         if (!path.empty() && !found_match) {
             SCP_FATAL("cciutils") << "No parameter matching '" << path << "'.";
         }
+        return ret;
     }
 
     void set_unused(const std::string& parname, const cci_originator& originator)

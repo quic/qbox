@@ -63,6 +63,8 @@ public:
         ti.name = s;
     }
 
+    std::vector<target_info> get_bound_targets() { return bound_targets; }
+
     virtual ~router_if() = default;
 
 protected:
