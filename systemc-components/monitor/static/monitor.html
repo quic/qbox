@@ -49,7 +49,7 @@
         <h3 id="detailsName"></h3>
         <h4>Child Modules:</h4>
         <ul id="childModulesList"></ul>
-
+        <div id="PortMapDiv"></div>
         <h4>CCI Parameters:</h4>
         <table id="cciParamsTable">
             <thead>
@@ -357,6 +357,43 @@
                 });
             } else {
                 childModulesList.innerHTML = '<li>No child modules</li>';
+            }
+
+            if (object.port_map) {
+                const PortMapDiv = document.getElementById('PortMapDiv');
+                const table = document.createElement('table');
+                const tbody = document.createElement('tbody');
+                const header = document.createElement('thead');
+                header.innerHTML = '<tr><th>Name</th><th>Address</th><th>Size</th><th>Priority</th></tr>';
+                table.appendChild(header);
+
+                object.port_map.forEach(port => {
+                    const row = document.createElement('tr');
+                    const nameCell = document.createElement('td');
+                    nameCell.style.cursor = 'pointer';
+                    nameCell.onclick = () => fetchObjectDetails(port.name); // Use child name for fetching details
+                    nameCell.textContent = port.name;
+                    row.appendChild(nameCell);
+
+                    const addCell = document.createElement('td');
+                    addCell.textContent = `0x${port.address.toString(16)}`;
+                    row.appendChild(addCell);
+
+                    const sizeCell = document.createElement('td');
+                    sizeCell.textContent = `0x${port.size.toString(16)}`;
+                    row.appendChild(sizeCell);
+
+                    const priorityCell = document.createElement('td');
+                    priorityCell.textContent = port.priority;
+                    row.appendChild(priorityCell);
+
+                    tbody.appendChild(row);
+                });
+                table.appendChild(tbody);
+                PortMapDiv.appendChild(table);
+            } else {
+                const PortMapDiv = document.getElementById('PortMapDiv');
+                PortMapDiv.innerHTML = '';
             }
 
             // Populate CCI Parameters

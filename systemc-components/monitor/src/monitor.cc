@@ -22,6 +22,7 @@ platform["monitor_0"] = {
 
 #include "monitor.h"
 #include <module_factory_registery.h>
+#include <router_if.h>
 #include <vector>
 #include <functional>
 #include <exception>
@@ -201,6 +202,18 @@ crow::json::wvalue json_object(sc_core::sc_object* obj)
     if (cs.size()) {
         r["child_dbg_ports"] = crow::json::wvalue::list(cs);
     }
+    if (dynamic_cast<router_if<>*>(obj)) {
+        auto router = dynamic_cast<router_if<>*>(obj);
+        std::vector<crow::json::wvalue> pm;
+        for (auto t : router->get_bound_targets()) {
+            crow::json::wvalue i = { { "name", gs::get_parent_name(t.name.c_str()) },
+                                     { "address", static_cast<uint64_t>(t.address) },
+                                     { "size", static_cast<uint64_t>(t.size) },
+                                     { "priority", t.priority } };
+            pm.push_back(i);
+        }
+        r["port_map"] = crow::json::wvalue::list(pm);
+    }
 
     return r;
 }
@@ -250,7 +263,11 @@ void monitor<BUSWIDTH>::init_monitor()
     ([&]() {
         std::vector<crow::json::wvalue> cr;
         m_sc.run_on_sysc([&] {
-            for (sc_core::sc_object* child : sc_core::sc_get_top_level_objects()) cr.push_back(json_object(child));
+            for (sc_core::sc_object* child : sc_core::sc_get_top_level_objects()) {
+                if (child->kind() == std::string("sc_module")) {
+                    cr.push_back(json_object(child));
+                }
+            }
         });
         crow::json::wvalue r = cr;
         return r;
