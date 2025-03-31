@@ -303,9 +303,7 @@ if (NOT WITHOUT_QEMU)
 
     CPMAddPackage(
         NAME libslirp
-	# TODO: return to https://gitlab.freedesktop.org/slirp/libslirp.git
-	# once this server is back online.
-        GIT_REPOSITORY https://gitlab.com/freedesktop-sdk/mirrors/freedesktop/slirp/libslirp.git
+        GIT_REPOSITORY https://gitlab.freedesktop.org/slirp/libslirp.git
         GIT_TAG v4.8.0
         GIT_SHALLOW TRUE
         DOWNLOAD_ONLY YES
