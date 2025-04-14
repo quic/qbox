@@ -243,7 +243,7 @@ if(NOT GS_ONLY)
     set(CROW_BUILD_EXAMPLES OFF CACHE STRING "Disable building Crow examples")
     set(DCROW_BUILD_TESTS OFF CACHE STRING "Disable building Crow tests")
     set(CROW_INSTALL ON CACHE STRING "Enable Crow install")
-    gs_addexpackage("gh:CrowCpp/Crow#v1.2.0")
+    gs_addexpackage("gh:CrowCpp/Crow#v1.2.1.2")
     set(CROW_DEP "Crow::Crow")
 endif()
 
