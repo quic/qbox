@@ -388,15 +388,6 @@ void monitor<BUSWIDTH>::end_of_elaboration()
 }
 
 template <unsigned int BUSWIDTH>
-void monitor<BUSWIDTH>::start_of_simulation()
-{
-    uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
-                       std::chrono::system_clock::now().time_since_epoch())
-                       .count();
-    m_now = now / 1000'000; // to seconds
-}
-
-template <unsigned int BUSWIDTH>
 void monitor<BUSWIDTH>::end_of_simulation()
 {
     m_app.stop();

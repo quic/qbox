@@ -109,8 +109,6 @@ private:
 
     void end_of_elaboration() override;
 
-    void start_of_simulation() override;
-
     void end_of_simulation() override;
 
 public:
@@ -118,14 +116,12 @@ public:
     cci::cci_param<std::string> p_html_doc_template_dir_path;
     cci::cci_param<std::string> p_html_doc_name;
     cci::cci_param<bool> p_use_html_presentation;
-    crow::SimpleApp m_app;
 
 private:
+    crow::SimpleApp m_app;
     std::future<void> m_app_future;
     gs::runonsysc m_sc;
     std::vector<tlm_quantumkeeper_multithread*> m_qks;
-    double m_now;
-    double m_qemu_timestamp_secs;
 };
 } // namespace gs
 
