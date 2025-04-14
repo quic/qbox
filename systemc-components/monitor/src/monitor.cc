@@ -361,7 +361,7 @@ void monitor<BUSWIDTH>::init_monitor()
             auto b = (static_cast<std::unique_ptr<biflow_ws>*>(conn.userdata()));
             m_sc.run_on_sysc([&] { (*b)->enqueue(data); });
         })
-        .onclose([&](crow::websocket::connection& conn, const std::string& reason) {
+        .onclose([&](crow::websocket::connection& conn, const std::string& reason, uint16_t) {
             auto b = (static_cast<std::unique_ptr<biflow_ws>*>(conn.userdata()));
             (*b)->clear_conn(&conn);
         })
