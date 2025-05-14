@@ -49,7 +49,7 @@ macro(install_systemc_dependencies)
         NAME SystemCCCI
         GIT_REPOSITORY https://github.com/accellera-official/cci.git
         GIT_TAG 2f70602c8753220e02778fcab040f197c0747f84
-        GIT_SHALLOW TRUE
+        GIT_SHALLOW FALSE
         OPTIONS "SYSTEMCCCI_BUILD_TESTS OFF"
     )
 
