@@ -37,6 +37,7 @@ class QemuDevice : public sc_core::sc_module, public QemuDeviceBaseIF
 {
 private:
     std::string m_qom_type;
+    std::string m_id;
 
 protected:
     QemuInstance& m_inst;
@@ -51,7 +52,7 @@ public:
             return;
         }
 
-        m_dev = m_inst.get().object_new(m_qom_type.c_str());
+        m_dev = m_inst.get().object_new(m_qom_type.c_str(), m_id.c_str());
         m_instanciated = true;
     }
 
@@ -78,6 +79,20 @@ public:
         SCP_WARN(())("QOM Device creation {}", qom_type);
     }
 
+    /**
+     * @brief Construct a QEMU device
+     *
+     * @param[in] name SystemC module name
+     * @param[in] inst QEMU instance the device will be created in
+     * @param[in] qom_type Device QOM type name
+     * @param[in] id Device QOM id
+     */
+    QemuDevice(const sc_core::sc_module_name& name, QemuInstance& inst, const char* qom_type, const char* id)
+        : sc_module(name), m_qom_type(qom_type), m_inst(inst), m_id(id)
+    {
+        SCP_WARN(())("QOM Device creation {} with id: {}", qom_type, id);
+    }
+
     virtual ~QemuDevice() {}
 
     virtual void before_end_of_elaboration() override { instantiate(); }
@@ -87,6 +102,8 @@ public:
     void set_qom_type(std::string const& qom_type) { m_qom_type = qom_type; }
 
     const char* get_qom_type() const { return m_qom_type.c_str(); }
+
+    const char* get_id() const { return m_id.c_str(); }
 
     qemu::Device get_qemu_dev() { return m_dev; }
 

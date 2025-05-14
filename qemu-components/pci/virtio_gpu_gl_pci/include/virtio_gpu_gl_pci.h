@@ -15,6 +15,9 @@
 
 class virtio_gpu_gl_pci : public QemuVirtioGpu
 {
+private:
+    static constexpr const char* _device_type = "virtio-gpu-gl-pci";
+
 public:
     cci::cci_param<uint64_t> p_hostmem_mb;
 

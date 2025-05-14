@@ -744,6 +744,42 @@ Finally, it has 2 uarts:
 
  
 
+### VNC
+Qbox provides an interface which allows users to configure VNC access to gpu outputs. <br>
+Multi-display can be enabled by setting the gpu output field as below.
+```lua
+                gpu = {
+                    moduletype = "virtio_gpu_gl_pci";
+                    outputs = 2;
+                    args = ...;
+                }
+```
+
+VNC configuration is part of the `display` module.
+Each VNC display can be separately configured by the configuration field ``vnc_<display_index>``
+
+The server is disabled by default and can be enabled by setting the parameter `enable` to `true`.
+
+The content of the optional configuration field `param` is passed to QEMU and provide additional VNC configuration(see Qemu VNC documentation). <br>
+Fields `:,head= and display=`, when provided by the users, are filtered out by Qbox and not passed to libqemu.
+
+Below is an example of dual head display exposed via websocket.
+```
+display = {
+            moduletype = "display",
+            vnc_0 = {enable = true, params = "websocket=on" },
+            vnc_1 = {enable = true, params = "websocket=on" },
+            args = {"&platform.gpu_0"}
+}
+```
+
+By default each display is available on port `5900 + display_idex` when using tcp
+or `5700 + display_index` when using websocket.
+
+Limitations:
+- VNC is only compatible with  `virtio-gpu-gl-pci` gpus.
+
+
 ### PORTS
 
 The library also provides socket initiators and targets for Qemu

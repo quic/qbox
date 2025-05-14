@@ -102,7 +102,7 @@ private:
     LibraryLoaderIface::LibraryIfacePtr m_lib;
 
     QemuObject* object_new_unparented(const char* type_name);
-    QemuObject* object_new_internal(const char* type_name);
+    QemuObject* object_new_internal(const char* type_name, const char* id);
 
     void check_cast(Object& o, const char* type);
 
@@ -144,7 +144,7 @@ public:
     template <class T>
     T object_new()
     {
-        T o(Object(object_new_internal(T::TYPE), m_int));
+        T o(Object(object_new_internal(T::TYPE, NULL), m_int));
         check_cast(o, T::TYPE);
 
         return o;
@@ -160,7 +160,7 @@ public:
     }
     int64_t get_virtual_clock();
 
-    Object object_new(const char* type_name);
+    Object object_new(const char* type_name, const char* id);
     std::shared_ptr<MemoryRegionOps> memory_region_ops_new();
     std::shared_ptr<AddressSpace> address_space_new();
     std::shared_ptr<AddressSpace> address_space_get_system_memory();

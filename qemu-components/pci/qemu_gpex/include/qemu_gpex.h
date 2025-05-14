@@ -41,6 +41,11 @@ public:
         {
         }
 
+        Device(const sc_core::sc_module_name& name, QemuInstance& inst, const char* qom_type, const char* id)
+            : QemuDevice(name, inst, qom_type, id)
+        {
+        }
+
         /*
          * We cannot do the end_of_elaboration at this point because
          * we need the pci bus (created only during the GPEX host realize

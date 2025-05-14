@@ -16,8 +16,9 @@ virtio_gpu_gl_pci::virtio_gpu_gl_pci(const sc_core::sc_module_name& name, sc_cor
 {
 }
 virtio_gpu_gl_pci::virtio_gpu_gl_pci(const sc_core::sc_module_name& name, QemuInstance& inst, qemu_gpex* gpex)
-    : QemuVirtioGpu(name, inst, "gl-pci", gpex)
+    : QemuVirtioGpu(name, inst, _device_type, gpex, std::string(name).append(".").append(_device_type).c_str())
     , p_hostmem_mb("hostmem_mb", 2048, "MB to allocate for host visible shared memory")
+
 {
 #ifndef __APPLE__
 #ifdef HAVE_VIRGL_RESOURCE_BLOB
@@ -45,12 +46,10 @@ void virtio_gpu_gl_pci::before_end_of_elaboration()
     get_qemu_dev().set_prop_bool("blob", true);
     get_qemu_dev().set_prop_int("hostmem", p_hostmem_mb);
 #endif // HAVE_VIRGL_RESOURCE_BLOB
-
     get_qemu_dev().set_prop_bool("context_init", true);
 #endif // NOT __APPLE__
 }
 
-void module_register()
-{
+void module_register() {
     GSC_MODULE_REGISTER_C(virtio_gpu_gl_pci, sc_core::sc_object*, sc_core::sc_object*);
 }

@@ -341,6 +341,19 @@ public:
     }
 
     /**
+     * @brief Add the VNC command line argument to the qemu instance.
+     *
+     * This method may only be called before the instance is initialized.
+     */
+    void set_vnc_args(std::vector<std::string>& vnc_options)
+    {
+        for (const std::string& option : vnc_options) {
+            m_inst.push_qemu_arg("-vnc");
+            m_inst.push_qemu_arg(option.c_str());
+        }
+    }
+
+    /**
      * @brief Get the TCG mode for this instance
      *
      * @details This method is called by CPU instances determin if to use

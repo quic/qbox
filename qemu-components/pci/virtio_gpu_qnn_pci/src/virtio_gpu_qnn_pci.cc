@@ -15,7 +15,7 @@ virtio_gpu_qnn_pci::virtio_gpu_qnn_pci(const sc_core::sc_module_name& name, sc_c
 {
 }
 virtio_gpu_qnn_pci::virtio_gpu_qnn_pci(const sc_core::sc_module_name& name, QemuInstance& inst, qemu_gpex* gpex)
-    : QemuVirtioGpu(name, inst, "qnn-pci", gpex)
+    : QemuVirtioGpu(name, inst, _device_type, gpex, std::string(name).append(".").append(_device_type).c_str())
     , p_hostmem_mb("hostmem_mb", 2048, "MB to allocate for host visible shared memory")
 {
 #ifndef __APPLE__

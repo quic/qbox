@@ -108,19 +108,25 @@ void LibQemu::tb_invalidate_phys_range(uint64_t start, uint64_t end)
     m_int->exports().tb_invalidate_phys_range(start, end);
 }
 QemuObject* LibQemu::object_new_unparented(const char* type_name) { return m_int->exports().object_new(type_name); }
-QemuObject* LibQemu::object_new_internal(const char* type_name)
+QemuObject* LibQemu::object_new_internal(const char* type_name, const char* id)
 {
     QemuObject* o = object_new_unparented(type_name);
     QemuObject* root = m_int->exports().object_get_root();
+
     char name[20]; // helpful for debugging.
     snprintf(name, sizeof(name), "qbox-%.10s[*]", type_name);
     m_int->exports().object_property_add_child(root, name, o);
+
+    if (id && (strlen(id))) {
+        m_int->exports().qdev_set_id(reinterpret_cast<QemuDevice*>(o), id);
+    }
+
     return o;
 }
 
-Object LibQemu::object_new(const char* type_name)
+Object LibQemu::object_new(const char* type_name, const char* id)
 {
-    Object o(object_new_internal(type_name), m_int);
+    Object o(object_new_internal(type_name, id), m_int);
     return o;
 }
 
