@@ -13,6 +13,7 @@
 #include <condition_variable>
 #include <queue>
 #include <future>
+#include <chrono>
 
 #include <async_event.h>
 #include <uutils.h>
@@ -59,7 +60,8 @@ protected:
         {
             auto future = m_task.get_future();
 
-            future.wait();
+            while (!m_cancelled && future.wait_for(std::chrono::milliseconds(500)) == std::future_status::timeout) {
+            }
 
             if (!m_cancelled) {
                 future.get();
@@ -85,7 +87,7 @@ protected:
         std::unique_lock<std::mutex> lock(m_async_jobs_mutex);
         running = true;
         for (; running;) {
-            while (!m_async_jobs.empty()) {
+            while (running && !m_async_jobs.empty()) {
                 m_running_job = m_async_jobs.front();
                 m_async_jobs.pop();
 
@@ -189,7 +191,10 @@ public:
 
             {
                 std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
-                m_async_jobs.push(job);
+                if (running)
+                    m_async_jobs.push(job);
+                else
+                    return false;
             }
 
             m_jobs_handler_event.async_notify();
