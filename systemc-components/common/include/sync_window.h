@@ -7,6 +7,7 @@
 #include <systemc>
 #include <tlm>
 #include <cci_configuration>
+#include <tlm_utils/tlm_quantumkeeper.h>
 #include <scp/report.h>
 #include <mutex>
 
@@ -24,35 +25,38 @@ namespace sc_core {
  * window should stay open indefinitely or detach when there are no more events.
  * A SC_ZERO_TIME quantum means sync on every time step
  */
-struct sync_policy_base {
+struct sc_sync_policy_base {
     virtual sc_core::sc_time quantum() = 0;
     virtual bool keep_alive() = 0;
 };
-struct sync_policy_sc_zero_time : public sync_policy_base {
-    sc_core::sc_time quantum() { return SC_ZERO_TIME; }
-    bool keep_alive() { return false; }
-};
-struct sync_policy_tlm_quantum : public sync_policy_base {
+struct sc_sync_policy_tlm_quantum : public sc_sync_policy_base {
     sc_core::sc_time quantum() { return tlm_utils::tlm_quantumkeeper::get_global_quantum(); }
     bool keep_alive() { return true; }
 };
-
+struct sc_sync_policy_in_sync : public sc_sync_policy_base {
+    sc_core::sc_time quantum()
+    {
+        return sc_core::sc_pending_activity() ? sc_core::sc_time_to_pending_activity() : sc_core::SC_ZERO_TIME;
+    }
+    bool keep_alive() { return false; }
+};
 /**
  * @brief windowed synchronizer, template SYNC_POLICY gives the quantum (dynamically) and specifies if the
  * window should stay open indefinitely or detach when there are no more events.
  *
- * @tparam SYNC_POLICY
+ * @tparam sc_sync_policy
  */
-template <class SYNC_POLICY = sync_policy_sc_zero_time>
-class sync_window : public sc_core::sc_module, public sc_core::sc_prim_channel
+template <class sc_sync_policy = sc_sync_policy_in_sync>
+class sc_sync_window : public sc_core::sc_module, public sc_core::sc_prim_channel
 {
-    static_assert(std::is_base_of<sync_policy_base, SYNC_POLICY>::value,
-                  "SYNC_POLICY must derive from sync_policy_base");
+    static_assert(std::is_base_of<sc_sync_policy_base, sc_sync_policy>::value,
+                  "sc_sync_policy must derive from sc_sync_policy_base");
 
     sc_core::sc_event m_sweep_ev;
     sc_ob_event m_step_ev;
+    sc_event m_update_ev;
     std::mutex m_mutex;
-    SYNC_POLICY policy;
+    sc_sync_policy policy;
 
 public:
     struct window {
@@ -66,12 +70,16 @@ public:
 
 private:
     window m_window;
+    window m_incomming_window; // used to hold the window values coming in from
+                               // the other side.
+
     std::function<void(const window&)> m_other_async_set_window_fn;
 
-    void do_other_async_set_window_fn(const window& p_w)
+    void do_other_async_set_window_fn()
     {
         if (m_other_async_set_window_fn) {
-            m_other_async_set_window_fn(p_w);
+            auto now = sc_core::sc_time_stamp();
+            m_other_async_set_window_fn({ now, now + policy.quantum() });
         }
     }
 
@@ -87,10 +95,8 @@ private:
             sc_core::sc_unsuspend_all(); // such that pending activity is valid if it's needed below.
 
             /* We should suspend at this point, and wait for the other side to catch up */
-            auto q = (policy.quantum() == sc_core::SC_ZERO_TIME) ? sc_core::sc_time_to_pending_activity()
-                                                                 : policy.quantum();
             SCP_TRACE(()) << "Suspend at: " << now << " quantum: " << q;
-            do_other_async_set_window_fn({ now, now + q });
+            do_other_async_set_window_fn();
 
             if (!policy.keep_alive()) async_attach_suspending();
             sc_core::sc_suspend_all();
@@ -100,12 +106,9 @@ private:
             if (!policy.keep_alive()) async_detach_suspending();
 
             SCP_TRACE(()) << "Resume, Step till: " << to;
-
-            auto q = (policy.quantum() == sc_core::SC_ZERO_TIME) ? sc_core::sc_time_to_pending_activity()
-                                                                 : policy.quantum();
-            do_other_async_set_window_fn({ now, now + q });
+            do_other_async_set_window_fn();
             /* Re-notify event - maybe presumably moved */
-            m_step_ev.notify(std::min(q, to - now));
+            m_step_ev.notify(to - now);
         }
     }
 
@@ -119,15 +122,15 @@ private:
         SCP_INFO(()) << "Done sweep"
                      << " their window " << m_window.from << " - " << m_window.to;
 
-        auto q = (policy.quantum() == sc_core::SC_ZERO_TIME) ? sc_core::sc_time_to_pending_activity()
-                                                             : policy.quantum();
-        do_other_async_set_window_fn({ now, now + q });
+        do_other_async_set_window_fn();
     }
 
     /* Manage the Sync aync update  */
     void update()
     {
         std::lock_guard<std::mutex> lg(m_mutex);
+        // Now we are on our thread, it's safe to update our window.
+        m_window = m_incomming_window;
         auto now = sc_core::sc_time_stamp();
         SCP_INFO(()) << "Update"
                      << " their window " << m_window.from << " - " << m_window.to;
@@ -137,14 +140,8 @@ private:
         } else {
             m_sweep_ev.cancel(); // no need to fire event.
         }
-
-        /* let stepper handle suspend/resume */
-        m_step_ev.notify(sc_core::SC_ZERO_TIME);
-        if (m_window == open_window) {
-            /* The other side is signalling that they have no more events */
-            SCP_DEBUG(())("Stopping");
-            sc_stop();
-        }
+        /* let stepper handle suspend/resume, must time notify */
+        m_update_ev.notify(sc_core::SC_ZERO_TIME);
     }
 
 public:
@@ -159,30 +156,36 @@ public:
     {
         /* Only accept updated windows so we dont re-send redundant updates */
         std::lock_guard<std::mutex> lg(m_mutex);
+        m_incomming_window = w;
         if (!(w == m_window)) {
             SCP_INFO(()) << "sync " << w.from << " " << w.to;
-            m_window = w;
             async_request_update();
         }
     }
-
-    void bind(sync_window* other)
+    void detach()
+    {
+        async_detach_suspending();
+        m_other_async_set_window_fn(open_window);
+    }
+    void bind(sc_sync_window* other)
     {
         if (m_other_async_set_window_fn) {
-            SCP_WARN(())
-            ("m_other_async_set_window_fn was already registered or other sync_window was already bound!");
+            SC_REPORT_WARNING("sc_sync_window",
+                              "m_other_async_set_window_fn was already registered or other "
+                              "sc_sync_window was already bound!");
         }
         m_other_async_set_window_fn = [other](const window& w) { other->async_set_window(w); };
     }
     void register_sync_cb(std::function<void(const window&)> fn)
     {
         if (m_other_async_set_window_fn) {
-            SCP_WARN(())
-            ("m_other_async_set_window_fn was already registered or other sync_window was already bound!");
+            SC_REPORT_WARNING("sc_sync_window",
+                              "m_other_async_set_window_fn was already registered or other "
+                              "sc_sync_window was already bound!");
         }
         m_other_async_set_window_fn = fn;
     }
-    SC_CTOR (sync_window) : m_window({sc_core::SC_ZERO_TIME, policy.quantum()})
+    SC_CTOR (sc_sync_window) : m_window({sc_core::SC_ZERO_TIME, policy.quantum()})
         {
             SCP_TRACE(())("Constructor");
             SC_METHOD(sweep_helper);
@@ -190,8 +193,10 @@ public:
             sensitive << m_sweep_ev;
 
             SC_METHOD(step_helper);
-            // Do initialize
-            sensitive << m_step_ev;
+            dont_initialize();
+            sensitive << m_step_ev << m_update_ev;
+
+            m_step_ev.notify(sc_core::SC_ZERO_TIME);
 
             this->sc_core::sc_prim_channel::async_attach_suspending();
         }
