@@ -10,6 +10,7 @@
 #include <tlm_utils/tlm_quantumkeeper.h>
 #include <scp/report.h>
 #include <mutex>
+#include <type_traits>
 
 #ifdef SC_HAS_OB_EVENT
 #include <sysc/utils/sc_ob_event.h>
@@ -75,11 +76,11 @@ private:
 
     std::function<void(const window&)> m_other_async_set_window_fn;
 
-    void do_other_async_set_window_fn()
+    void do_other_async_set_window_fn(window w)
     {
         if (m_other_async_set_window_fn) {
             auto now = sc_core::sc_time_stamp();
-            m_other_async_set_window_fn({ now, now + policy.quantum() });
+            m_other_async_set_window_fn(w);
         }
     }
 
@@ -95,8 +96,8 @@ private:
             sc_core::sc_unsuspend_all(); // such that pending activity is valid if it's needed below.
 
             /* We should suspend at this point, and wait for the other side to catch up */
-            SCP_TRACE(()) << "Suspend at: " << now << " quantum: " << q;
-            do_other_async_set_window_fn();
+            SCP_TRACE(()) << "Suspend at: " << now << " quantum: " << policy.quantum();
+            do_other_async_set_window_fn({ now, now + policy.quantum() });
 
             if (!policy.keep_alive()) async_attach_suspending();
             sc_core::sc_suspend_all();
@@ -106,7 +107,10 @@ private:
             if (!policy.keep_alive()) async_detach_suspending();
 
             SCP_TRACE(()) << "Resume, Step till: " << to;
-            do_other_async_set_window_fn();
+            do_other_async_set_window_fn(
+                { now +
+                      (sc_core::sc_pending_activity() ? sc_core::sc_time_to_pending_activity() : sc_core::SC_ZERO_TIME),
+                  now + policy.quantum() });
             /* Re-notify event - maybe presumably moved */
             m_step_ev.notify(to - now);
         }
@@ -122,7 +126,7 @@ private:
         SCP_INFO(()) << "Done sweep"
                      << " their window " << m_window.from << " - " << m_window.to;
 
-        do_other_async_set_window_fn();
+        do_other_async_set_window_fn({ now, now + policy.quantum() });
     }
 
     /* Manage the Sync aync update  */
