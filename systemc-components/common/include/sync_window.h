@@ -63,11 +63,11 @@ public:
     struct window {
         sc_core::sc_time from;
         sc_core::sc_time to;
-        bool operator==(window other) { return other.to == to && other.from == from; }
+        bool operator==(const window& other) const { return other.to == to && other.from == from; }
     };
 
-    const struct window zero_window = { sc_core::SC_ZERO_TIME, sc_core::SC_ZERO_TIME };
-    const struct window open_window = { sc_core::SC_ZERO_TIME, sc_core::sc_max_time() };
+    static inline const struct window zero_window = { sc_core::SC_ZERO_TIME, sc_core::SC_ZERO_TIME };
+    static inline const struct window open_window = { sc_core::SC_ZERO_TIME, sc_core::sc_max_time() };
 
 private:
     window m_window;
@@ -106,11 +106,6 @@ private:
             sc_core::sc_unsuspend_all();
             if (!policy.keep_alive()) async_detach_suspending();
 
-            SCP_TRACE(()) << "Resume, Step till: " << to;
-            do_other_async_set_window_fn(
-                { now +
-                      (sc_core::sc_pending_activity() ? sc_core::sc_time_to_pending_activity() : sc_core::SC_ZERO_TIME),
-                  now + policy.quantum() });
             /* Re-notify event - maybe presumably moved */
             m_step_ev.notify(to - now);
         }
@@ -156,7 +151,7 @@ public:
      *
      * Input: window  - Window to set for sync. Sweep till the 'from' and step to the 'to'.
      */
-    void async_set_window(window w)
+    void async_set_window(const window& w)
     {
         /* Only accept updated windows so we dont re-send redundant updates */
         std::lock_guard<std::mutex> lg(m_mutex);
@@ -178,7 +173,7 @@ public:
                               "m_other_async_set_window_fn was already registered or other "
                               "sc_sync_window was already bound!");
         }
-        m_other_async_set_window_fn = [other](const window& w) { other->async_set_window(w); };
+        m_other_async_set_window_fn = std::bind(&sc_sync_windowed::async_set_window, other, std::placeholders::_1);
     }
     void register_sync_cb(std::function<void(const window&)> fn)
     {
