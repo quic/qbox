@@ -173,7 +173,7 @@ public:
                               "m_other_async_set_window_fn was already registered or other "
                               "sc_sync_window was already bound!");
         }
-        m_other_async_set_window_fn = std::bind(&sc_sync_windowed::async_set_window, other, std::placeholders::_1);
+        m_other_async_set_window_fn = std::bind(&sc_sync_window::async_set_window, other, std::placeholders::_1);
     }
     void register_sync_cb(std::function<void(const window&)> fn)
     {
