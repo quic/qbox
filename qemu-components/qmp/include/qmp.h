@@ -95,8 +95,10 @@ public:
             buffer = "";
         }
         /* echo for the user */
-        for (int i = 0; i < txn.get_data_length(); i++) {
-            qmp_socket.enqueue(txn.get_data_ptr()[i]);
+        if (p_monitor) {
+            for (int i = 0; i < txn.get_data_length(); i++) {
+                qmp_socket.enqueue(txn.get_data_ptr()[i]);
+            }
         }
     }
 
