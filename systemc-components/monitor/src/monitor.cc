@@ -29,6 +29,7 @@ platform["monitor_0"] = {
 #include <cciutils.h>
 #include <algorithm>
 #include <unistd.h>
+#include <filesystem>
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #endif
@@ -233,6 +234,19 @@ void monitor<BUSWIDTH>::init_monitor()
                 "API:\n/sc_time\n/pause\n/continue\n/reset\n/object/\n//object/<str>\n/qk_status\n/sc_suspended\n/"
                 "transport_dbg/<int>/<str>";
             return ret;
+        }
+    });
+    CROW_ROUTE(m_app, "/res/<string>")
+    ([&](std::string file) {
+        std::string relative_file_path = "res/" + file;
+
+        if (!p_html_doc_template_dir_path.get_value().empty() &&
+            std::filesystem::exists(p_html_doc_template_dir_path.get_value() + "/" + relative_file_path)) {
+            crow::mustache::set_global_base(p_html_doc_template_dir_path.get_value());
+            auto page = crow::mustache::load(relative_file_path);
+            return page.render_string();
+        } else {
+            return "Invalid file: " + relative_file_path;
         }
     });
     CROW_ROUTE(m_app, "/sc_time")
