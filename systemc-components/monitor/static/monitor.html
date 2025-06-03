@@ -6,13 +6,107 @@
     <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+    <link rel=stylesheet href=https://cdn.jsdelivr.net/npm/pretty-print-json@3.0/dist/css/pretty-print-json.css>
+    <script src=https://cdn.jsdelivr.net/npm/pretty-print-json@3.0/dist/pretty-print-json.min.js></script>
 
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+
+        #terminal {
+            border: 1px solid #ccc;
+            background-color: #000;
+            color: #fff;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-top: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        select {
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            padding: 5px 0;
+            cursor: pointer;
+        }
+
+        li:hover {
+            background-color: #f1f1f1;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .clickable {
+            color: #007bff;
+            text-decoration: underline;
+        }
+
+        .clickable:hover {
+            text-decoration: none;
+        }
+
+        .dbg-result {
+            margin-left: 10px;
+        }
+    </style>
 </head>
 
 <body>
-    SystemC time : <span id="sc_time">Loading...</span> SystemC Running : <input type=checkbox id="sc_status" checked>
-    <br>
-    <br>
+    <h2>System Status</h2>
+    <h4>SystemC Time: <span id="sc_time">Loading...</span></h4>
+    <h4>SystemC Running: <input type=checkbox id="sc_status" checked></h4>
 
     <button id="openPopupButton">Open Terminal</button>
 
@@ -21,7 +115,24 @@
     </select>
 
     <div id="terminal" style="min-width:400px; width: 80% ; height:400px;"></div>
-
+    <button id="queryVncButton">Query VNC Servers</button>
+    <pre id=qmpInfo class=json-container></pre>
+    <pre id=vncInfo class=json-container></pre>
+    <h3>VNC Servers List</h3>
+    <table id="vnc-servers">
+        <thead>
+            <tr>
+                <th>Connect button</th>
+                <th>ID</th>
+                <th>Display</th>
+                <th>Port</th>
+                <th>Link</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data will be inserted here -->
+        </tbody>
+    </table>
     <br>
     <br>
     <h3>QK Status</h3>
@@ -72,6 +183,24 @@
 
         var sock;
         var term;
+        var vnc_file = "res/vnc.html"
+
+        // Simple counter to generate unique message ids for QMP messages
+        // The returned value doesn't need to be random.
+        class Counter {
+            constructor() {
+                this.count = 0;
+            }
+            next() {
+                return this.count++;
+            }
+        }
+
+
+        const qmpMsgIdGenerator = new Counter();
+
+        // Maps QMP request ids to response calls
+        const callbacksRegister = new Map()
 
         var term = new window.Terminal({
             cursorBlink: false,
@@ -91,11 +220,12 @@
             }
 
             tw.document.write(`
-<head><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css"></head>
-<body style="margin:0; padding:0; width: 100%; height:100%; background:black"">
-<div id="terminal" style="margin:0; padding:0; width: 100%; height:100%"></div>
-</body>
-`);
+                <head><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css"></head>
+                <body style="margin:0; padding:0; width: 100%; height:100%; background:black"">
+                <div id="terminal" style="margin:0; padding:0; width: 100%; height:100%"></div>
+                </body>
+                `
+            );
             tw.focus();
 
             // Initialize the terminal in the popup window
@@ -135,6 +265,283 @@
                 tw.sock.close();
             };
         }
+
+
+        let qmpSock;
+
+        function setupVnc(data) {
+            const qmpBiflow = data.biflows.find(biflow => biflow.startsWith("platform.qmp_json"));
+            if (qmpBiflow) {
+                qmpSock = new WebSocket("ws://" + location.host + "/biflow/" + qmpBiflow);
+                qmpSock.onopen = () => {
+                    console.log("WebSocket connection established");
+                };
+                qmpSock.onmessage = (event) => {
+                    handleIncomingWsQmpMsg(event.data);
+                };
+                qmpSock.onerror = (error) => {
+                    console.error("WebSocket error:", error);
+                };
+                qmpSock.onclose = () => {
+                    console.log("WebSocket closed");
+                };
+            } else {
+                console.log("qmp endpoint not found. Ensure that the qmp module named qmp_json is part of your platform.");
+                document.getElementById("queryVncButton").disabled = true;
+                document.getElementById("queryVncButton").style.pointerEvents = 'none';
+                document.getElementById("queryVncButton").style.opacity = 0.5;
+                document.getElementById("queryVncButton").style.backgroundColor = 'red';
+                document.getElementById("queryVncButton").innerHTML = "QMP json endpoint not found. Cannot retrieve VNC servers list.";
+            }
+        }
+
+        let incomingWsDataBuffer = "";
+        function handleIncomingWsQmpMsg(data) {
+            // QMP Messages can arrive fragmented. We must insure that we
+            // have a complete message before parsing it.
+            incomingWsDataBuffer += data;
+            if (incomingWsDataBuffer.endsWith("\r\n")) {
+                handleCompleteQmpMsg(incomingWsDataBuffer);
+                incomingWsDataBuffer = "";
+            }
+        }
+
+        function handleCompleteQmpMsg(msg) {
+            // A complete message might contain multiple responses
+            // We need to split the message into individual responses
+            // andparse them separately
+            msgList = msg.split("\r\n").filter(element => element !== "")
+            msgList.forEach((response) => {
+                //dump_content(data_line)
+                handleQmpResponse(response);
+            });
+        }
+
+        function handleQmpResponse(response) {
+            console.log("Parsing response:", response);
+            try {
+                const jsonData = JSON.parse(response);
+                dispatchJsonQmpResponse(jsonData)
+            } catch (error) {
+                console.log("Failed to parse string:", response, error)
+            }
+        }
+
+        function dispatchJsonQmpResponse(response) {
+            console.log("Dispatching response:", response);
+            if (response.return) {
+                handleQmpReturnResponse(response);
+            } else if (response.event) {
+                handleQmpEventResponse(response);
+            } else {
+                console.log("Unknown response type:", response);
+            }
+        }
+
+        function handleQmpReturnResponse(response) {
+            if (response.id && callbacksRegister.has(response.id)) {
+                const callback = callbacksRegister.get(response.id);
+                callbacksRegister.delete(response.id);
+                callback(response);
+            }
+        }
+
+        function handleQmpEventResponse(response) {
+            console.log("Event response:", response);
+        }
+
+        function enqueueQmpRequest(command, callback) {
+            const request_id = qmpMsgIdGenerator.next().toString();
+            command.id = request_id;
+            const qmpMessage = JSON.stringify(command) + "\r\n";
+
+            callbacksRegister.set(request_id, callback);
+            qmpSock.send(qmpMessage);
+        }
+
+
+        function sendQueryVncServersCommand() {
+            const queryVncServersCommand = { "execute": "query-vnc-servers" }
+            enqueueQmpRequest(queryVncServersCommand, handleVncQueryServers)
+        }
+
+
+        let serverInfo;
+        function handleVncQueryServers(vncServerInfo) {
+            console.log("Received data:", vncServerInfo);
+            servers_list = vncServerInfo.return;
+            serverInfo = filterVNCServers(servers_list);
+            //prettyPrintServerInfo(serverInfo)
+            populateVncTable(serverInfo)
+            //openVncClient(serverInfo)
+        }
+
+        function filterVNCServers(servers) {
+            try {
+                // Remove unused entries in server list and promote server data at root.
+                servers.forEach(vnc_servers_info => {
+                    console.log("JH: ", vnc_servers_info)
+                    vnc_servers_info.server.forEach(server => {
+                        if (server.family === "ipv4" && server.websocket === true) {
+                            for (const element in server) {
+                                console.log("JH: Replacing element:", element);
+                                vnc_servers_info[element] = server[element];
+                            }
+                        }
+                    });
+                    delete vnc_servers_info.server;
+
+                });
+                console.log("JH: Servers:", servers);
+                return servers;
+            } catch (error) {
+                console.log("Error filtering servers:", error);
+            }
+        }
+
+        function prettyPrintServerInfo(serverInfo) {
+            const vncInfoDiv = document.getElementById("vncInfo");
+            const prettyVncServerInfo = prettyPrintJson.toHtml(serverInfo);
+            vncInfoDiv.innerHTML = prettyVncServerInfo;
+        }
+
+        const vncWindows = {};
+
+        function populateVncTable(data) {
+            const tableBody = document.getElementById('vnc-servers').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            data.forEach(server_info => {
+                const row = tableBody.insertRow();
+
+                // Button cell
+                const buttonCell = row.insertCell(0);
+                const button = document.createElement('button');
+                button.textContent = 'Open VNC Client';
+                button.style.backgroundColor = 'green';
+                button.style.color = 'white';
+                button.style.border = 'none';
+                button.style.borderRadius = '5px';
+                button.style.cursor = 'pointer';
+
+                buttonCell.appendChild(button);
+
+                // Name cell
+                const nameCell = row.insertCell(1);
+                nameCell.textContent = server_info.id;
+
+                const displayCell = row.insertCell(2);
+                displayCell.textContent = server_info.display
+
+                const portCell = row.insertCell(3);
+                portCell.textContent = server_info.service
+
+                const linkCell = row.insertCell(4);
+                linkCell.textContent = `ws://${location.hostname}:${server_info.service}`
+
+                button.onclick = () => {
+                    if (button.textContent === 'Open VNC Client') {
+                        const host = window.location.hostname;
+                        const port = server_info.service;
+                        const id = server_info.id;
+
+                        // Check if the id entry is already stored in the object
+                        if (vncWindows[id]) {
+                            // Close the window related to the old id
+                            vncWindows[id].close();
+                            // Delete the old id
+                            delete vncWindows[id];
+                        }
+
+                        const url = new URL(vnc_file, window.location.origin);
+                        url.searchParams.append('host', host);
+                        url.searchParams.append('port', port);
+                        url.searchParams.append('id', id);
+
+                        const windowName = `VNC_Client_${id}`;
+                        const features = "width=800,height=600,resizable=yes";
+
+                        console.log("Opening popup:", windowName, url.toString());
+
+                        // Open the new window and store its reference in the object
+                        vncWindows[id] = window.open(url.toString(), windowName, features);
+
+                        // Change the button text and color
+                        button.textContent = 'Close VNC Client';
+                        button.style.backgroundColor = 'red';
+
+                        // Add an event listener to detect when the window is closed
+                        vncWindows[id].onbeforeunload = () => {
+                            // Change the button text and color back to original
+                            button.textContent = 'Open VNC Client';
+                            button.style.backgroundColor = 'green';
+
+                            // Delete the id from the object
+                            delete vncWindows[id];
+                        };
+                    } else {
+                        // Close the window
+                        vncWindows[server_info.id].close();
+
+                        // Change the button text and color back to original
+                        button.textContent = 'Open VNC Client';
+                        button.style.backgroundColor = 'green';
+
+                        // Delete the id from the object
+                        delete vncWindows[server_info.id];
+                    }
+                };
+
+
+            });
+        }
+
+
+        // Create a new object to store the pair of id and window object
+
+
+        function openVncClient(server) {
+            const host = window.location.hostname;
+            const port = server.service;
+            const id = server.id;
+
+            // Check if the id entry is already stored in the object
+            if (vncWindows[id]) {
+                // Close the window related to the old id
+                vncWindows[id].close();
+                // Delete the old id
+                delete vncWindows[id];
+            }
+
+            const filePath = 'vnc_lite.html';
+            const url = new URL(filePath, window.location.origin);
+            url.searchParams.append('host', host);
+            url.searchParams.append('port', port);
+            url.searchParams.append('id', id);
+
+            const windowName = `VNC_Client_${id}`;
+            const features = "width=800,height=600,resizable=yes";
+
+            console.log("Opening popup:", windowName, url.toString());
+
+            // Open the new window and store its reference in the object
+            vncWindows[id] = window.open(url.toString(), windowName, features);
+        }
+
+
+        function dump_content(string) {
+            const encoder = new TextEncoder();
+            const bytes = encoder.encode(string);
+
+            console.log("Bytes:");
+            bytes.forEach((byte, index) => {
+                const char = String.fromCharCode(byte);
+                console.log(`Byte ${index}: ${byte} (${char})`);
+            });
+        }
+
+        document.getElementById("queryVncButton").addEventListener("click", sendQueryVncServersCommand);
+
         function populateBiFlows(data) {
 
             document.getElementById('openPopupButton').addEventListener('click', function () {
@@ -152,6 +559,8 @@
                 option.textContent = biflow;
                 dropdown.appendChild(option);
             });
+
+            setupVnc(data);
 
             // Set up WebSocket connection when a biflow is selected
             dropdown.addEventListener('change', function () {
@@ -181,7 +590,7 @@
 
                 const dropdown = document.getElementById('biflowsDropdown');
                 const selectedBiflow = dropdown.value;
-                if ((!sock || sock.readyState>1) && selectedBiflow) {
+                if ((!sock || sock.readyState > 1) && selectedBiflow) {
                     term.reset();
                     if (sock) sock.close();
                     sock = new WebSocket("ws://" + location.host + "/biflow/" + selectedBiflow);
@@ -244,8 +653,6 @@
         }
         // Fetch the flag every 1 second
         setInterval(fetchFlag, 1000);
-
-
 
 
         async function fetchObjects() {

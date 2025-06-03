@@ -34,7 +34,7 @@ platform["monitor_0"] = {
 #include <mach-o/dyld.h>
 #endif
 
-std::string getexepath()
+std::string get_html_base_dir()
 {
     char result[1024] = { 0 };
 #ifdef __APPLE__
@@ -52,8 +52,10 @@ std::string getexepath()
 #else
 #error monitor supports only Mac OS and linux for now!
 #endif
-    std::string exec_path = result;
-    return exec_path.substr(0, exec_path.rfind("/"));
+    const std::filesystem::path base_exec_path = std::filesystem::path(result).parent_path();
+    const std::string static_html_base_dir = "static";
+    const std::filesystem::path html_base_path = base_exec_path / static_html_base_dir;
+    return html_base_path;
 }
 
 namespace gs {
@@ -62,7 +64,7 @@ template <unsigned int BUSWIDTH>
 monitor<BUSWIDTH>::monitor(const sc_core::sc_module_name& nm)
     : sc_core::sc_module(nm)
     , p_server_port("server_port", 18080, "monitor server port number")
-    , p_html_doc_template_dir_path("html_doc_template_dir_path", getexepath(),
+    , p_html_doc_template_dir_path("html_doc_template_dir_path", get_html_base_dir(),
                                    "path to a template directory where HTML document to call the REST API exist")
     , p_html_doc_name("html_doc_name", "monitor.html", "name of a HTML document to call the REST API")
     , p_use_html_presentation("use_html_presentation", true, "use HTML document to present the REST API")
@@ -237,7 +239,7 @@ void monitor<BUSWIDTH>::init_monitor()
         }
     });
     CROW_ROUTE(m_app, "/res/<string>")
-    ([&](std::string file) {
+    ([&](const std::string& file) {
         std::string relative_file_path = "res/" + file;
 
         if (!p_html_doc_template_dir_path.get_value().empty() &&
