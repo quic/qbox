@@ -784,22 +784,12 @@ Limitations:
 
 The library also provides socket initiators and targets for Qemu
 
-# Ubuntu image
+# Ubuntu linux example platform
 
-You can build a customized Ubuntu OS rootfs image with a script called `build_linux_dist_image.sh`.  
-Note:  
-- The script needs _and only tested on_ Ubuntu 22.04.5 LTS host machine
-- Currently only ubuntu [jammy, noble] and fedora [39, 40] are supported for aarch64
-and ubuntu [jammy, noble] for riscv64.
+Customized Ubuntu OS rootfs image can be built using this script: `platforms/ubuntu/fw/build_linux_dist_image.sh`.  
 
-## Run it by hand
-
-You can test this script with a virtual platform in `platforms/ubuntu/`.
-The script is in `platforms/ubuntu/fw/`.
-
-build_linux_dist_image.sh is used to build the Ubuntu OS artifacts.
-The output build artifacts are:
-- Image.bin (uncompressed AARch64 Linux kernel image with efi stub)
+The script generated artifacts are:
+- Image.bin (uncompressed AARch64 or RISCV64 Linux kernel image)
 - image_ext4_vmlinuz.bin (gzip compressed AARch64 Linux kernel image)
 - image_ext4.img (ext4 root file system image)
 - image_ext4_initrd.img (initramfs to bring up the root file system)
@@ -807,9 +797,19 @@ The output build artifacts are:
 - ubuntu.dts (device tree source file to build ubuntu.dtb)
 - ubuntu.dtb (device tree blob passed to the kernel Image by boot loader)
 
-So if you want to test this platform, you should go in `platforms/ubuntu/fw/`and generate the ubuntu images
-like that:
+To list the available options of the script, the `-h` option can be used.
 
+Please notice that:  
+- The script needs an ubuntu OS host machine and it is only tested on Ubuntu 22.04.5 LTS.
+- Currently only ubuntu [jammy, noble] and fedora [39, 40] are supported for aarch64
+and ubuntu [jammy, noble] for riscv64.
+
+## Run the platform by hand
+
+Generate the ubuntu image by executing the following commands:
+```
+cd platforms/ubuntu/fw/
+```
 For aarch64:  
 ```
 ./build_linux_dist_image.sh -s 4G -p xorg,pciutils -a aarch64
@@ -819,9 +819,10 @@ For riscv64:
 ./build_linux_dist_image.sh -s 4G -p xorg,pciutils -a riscv64
 ```
 
-It will create a `Artifacts` directory with all linux OS artifacts needed inside it.
-If you want to run and test this ubuntu platform, you should go back at the top level 
-of the repository and build the project:
+After the script finishes, the `Artifacts` directory with all the generated artifacts will be created.
+
+To run the built ubuntu OS, you should go back at the top level 
+of the repository and build Qbox first:
 
 For aarch64:  
 ```
@@ -836,23 +837,20 @@ cd build
 make -j
 ```
 
-And then run the platform in your build directory:
+And then run the virtual platform from your cmake build directory:
+For aarch64:
 ```
 ./platforms/platforms-vp -l ../platforms/ubuntu/conf_aarch64.lua
 ```
 
-For riscv64:
-```
-./build_linux_dist_image.sh -s 4G -p xorg,pciutils -a riscv64
-```
-Then, from the build directory, run:  
+For riscv64: 
 ```
 ./platforms/platforms-vp -l ../platforms/ubuntu/conf_riscv64.lua
 ```
 
-## Run the custom target 'ubuntu'
+## Use the custom cmake target 'ubuntu'
 
-More simple, you can just run the custom target 'ubuntu' to build and run a customized ubuntu platform.
+To build the ubuntu image and run the virtual platform in one step, the custom cmake target 'ubuntu' can be used.
 
 Execute the platform build step first from the top of the repository:  
 
@@ -869,12 +867,12 @@ cd build
 make -j
 ```
 
-Then, in your build directory run:
+Then, from your cmake build directory run:
 ```
 make ubuntu
 ```
 
-You will need to use these login info:
+Please notice that the login username and password for the ubuntu booted system are:
 
 ```
 username: root
