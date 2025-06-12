@@ -24,7 +24,7 @@ CPMDeclarePackage(SCP
 CPMDeclarePackage(qemu
     NAME libqemu
     GIT_REPOSITORY ${GREENSOCS_GIT}${QEMU_PATH_NAME}.git
-    GIT_TAG libqemu-v9.1-v0.10
+    GIT_TAG libqemu-v9.1-v0.10-icount
     GIT_SUBMODULES CMakeLists.txt
     GIT_SHALLOW on
 )
