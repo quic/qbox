@@ -56,8 +56,8 @@ macro(install_systemc_dependencies)
     gs_addexpackage(
         NAME SCP
         GIT_REPOSITORY https://github.com/accellera-official/systemc-common-practices.git
-        GIT_TAG main
-        GIT_SHALLOW TRUE
+        GIT_TAG 686c999f9dc15b17147a71f3de505dfe4ff3ec4d
+        GIT_SHALLOW FALSE
     )
 endmacro()
 
