@@ -21,8 +21,8 @@ macro(install_systemc)
         gs_addexpackage(
             NAME SystemCLanguage
             GIT_REPOSITORY https://github.com/accellera-official/systemc.git
-            GIT_TAG main
-            GIT_SHALLOW TRUE
+            GIT_TAG e80ef3a44722efb3980548665306fcc848728858
+            GIT_SHALLOW FALSE
             OPTIONS "ENABLE_SUSPEND_ALL" "ENABLE_PHASE_CALLBACKS"
         )
 
