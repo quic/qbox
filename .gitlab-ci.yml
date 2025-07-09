@@ -1,3 +1,4 @@
+
 include:
   - project: 'qqvp/cmake-boilerplate'
     file: 'gitlab-ci-template.yml'
@@ -15,7 +16,8 @@ repolinter:
     extends:
     - .general_build_job_template
     variables:
-      REPO_CMAKE_ARGS: -DLIBQEMU_TARGETS='aarch64;hexagon;xtensa;riscv64;riscv32'
+      REPO_CMAKE_ARGS: -DLIBQEMU_TARGETS='aarch64;hexagon;riscv64;riscv32'
+    image: $CI_REGISTRY/qqvp/containers/qqvp-dev-u24:latest
 
 qqvp-trigger:
   extends: .base-trigger
