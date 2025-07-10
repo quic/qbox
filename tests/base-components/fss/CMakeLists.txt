@@ -1,0 +1,11 @@
+add_library(fss_node SHARED fss_node.cc)
+set_target_properties(fss_node PROPERTIES PREFIX "")
+target_link_libraries(fss_node ${TARGET_LIBS})
+
+macro(gs_add_test test)
+    add_executable(${test} ${test}.cc)
+    target_link_libraries(${test} PRIVATE gtest gmock gs_memory router component_constructor ${TARGET_LIBS})
+    add_test(NAME ${test} COMMAND ${test})
+    set_tests_properties(${test} PROPERTIES TIMEOUT 10)
+endmacro()
+gs_add_test(fss-tests)
