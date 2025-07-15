@@ -53,14 +53,14 @@ public:
 
     virtual void bind(fss_channel_binder_if<CHANNEL_INTERFACE>& other)
     {
-        bind_cahnnel(other.get_channel_name(), other.get_channel_if_handle());
-        other.bind_cahnnel(get_channel_name(), get_channel_if_handle());
+        bind_channel(other.get_channel_name(), other.get_channel_if_handle());
+        other.bind_channel(get_channel_name(), get_channel_if_handle());
     }
 
     virtual ~fss_channel_binder_if() {}
 
 protected:
-    virtual void bind_cahnnel(fssString channel_name, CHANNEL_INTERFACE* channel_handle) = 0;
+    virtual void bind_channel(fssString channel_name, CHANNEL_INTERFACE* channel_handle) = 0;
 };
 
 template <typename T>
@@ -82,20 +82,20 @@ public:
         if (!channel_name) {
             die_null_ptr("fss_channel_binder_base", "channel_name");
         }
-        GET_CHANNEL_IF_FN_PTR<CHANNEL_IF> get_cahnnel_if;
+        GET_CHANNEL_IF_FN_PTR<CHANNEL_IF> get_channel_if;
         if constexpr (std::is_same_v<CHANNEL_IF, fssEventsIf>) {
-            get_cahnnel_if = bind_handle->getEventsIfHandle;
+            get_channel_if = bind_handle->getEventsIfHandle;
         } else if constexpr (std::is_same_v<CHANNEL_IF, fssTimeSyncIf>) {
-            get_cahnnel_if = bind_handle->getTimeSyncIfHandle;
+            get_channel_if = bind_handle->getTimeSyncIfHandle;
         } else if constexpr (std::is_same_v<CHANNEL_IF, fssControlIf>) {
-            get_cahnnel_if = bind_handle->getControlIfHandle;
+            get_channel_if = bind_handle->getControlIfHandle;
         } else {
-            get_cahnnel_if = bind_handle->getBusIfHandle;
+            get_channel_if = bind_handle->getBusIfHandle;
         }
-        if (!get_cahnnel_if) {
-            die_null_ptr("fss_channel_binder_base", "get_cahnnel_if");
+        if (!get_channel_if) {
+            die_null_ptr("fss_channel_binder_base", "get_channel_if");
         }
-        m_if_handle = get_cahnnel_if(bind_handle, channel_name);
+        m_if_handle = get_channel_if(bind_handle, channel_name);
         if (!m_if_handle) {
             die_null_ptr("fss_channel_binder_base", "m_if_handle");
         }
@@ -120,31 +120,31 @@ public:
     virtual ~fss_channel_binder_base() {}
 
 protected:
-    void bind_cahnnel(fssString channel_name, CHANNEL_IF* channel_handle) override
+    void bind_channel(fssString channel_name, CHANNEL_IF* channel_handle) override
     {
         if (!channel_name) {
-            die_null_ptr("bind_cahnnel", "channel_name");
+            die_null_ptr("bind_channel", "channel_name");
         }
         if (!channel_handle) {
-            die_null_ptr("bind_cahnnel", "channel_handle");
+            die_null_ptr("bind_channel", "channel_handle");
         }
         other_channel_name = channel_name;
         other_if_handle = channel_handle;
         if (m_bind_handle) {
-            BIND_CHANNEL_IF_FN_PTR<CHANNEL_IF> bind_cahnnel_if;
+            BIND_CHANNEL_IF_FN_PTR<CHANNEL_IF> bind_channel_if;
             if constexpr (std::is_same_v<CHANNEL_IF, fssEventsIf>) {
-                bind_cahnnel_if = m_bind_handle->bindEventsIf;
+                bind_channel_if = m_bind_handle->bindEventsIf;
             } else if constexpr (std::is_same_v<CHANNEL_IF, fssTimeSyncIf>) {
-                bind_cahnnel_if = m_bind_handle->bindTimeSyncIf;
+                bind_channel_if = m_bind_handle->bindTimeSyncIf;
             } else if constexpr (std::is_same_v<CHANNEL_IF, fssControlIf>) {
-                bind_cahnnel_if = m_bind_handle->bindControlIf;
+                bind_channel_if = m_bind_handle->bindControlIf;
             } else {
-                bind_cahnnel_if = m_bind_handle->bindBusIf;
+                bind_channel_if = m_bind_handle->bindBusIf;
             }
-            if (!bind_cahnnel_if) {
-                die_null_ptr("bind_cahnnel", "bind_cahnnel_if");
+            if (!bind_channel_if) {
+                die_null_ptr("bind_channel", "bind_channel_if");
             }
-            bind_cahnnel_if(m_bind_handle, channel_name, channel_handle);
+            bind_channel_if(m_bind_handle, channel_name, channel_handle);
         }
     }
 
@@ -172,10 +172,10 @@ public:
     void notify(fssUint64 event)
     {
         if (!other_if_handle) {
-            die_null_ptr("bind_cahnnel", "other_if_handle");
+            die_null_ptr("bind_channel", "other_if_handle");
         }
         if (!other_if_handle->handleEvents) {
-            die_null_ptr("bind_cahnnel", "other_if_handle->handleEvents");
+            die_null_ptr("bind_channel", "other_if_handle->handleEvents");
         }
         other_if_handle->handleEvents(other_if_handle, event);
     }

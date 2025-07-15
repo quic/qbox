@@ -95,7 +95,7 @@ FssTestBench::FssTestBench(const sc_core::sc_module_name& n)
         time_sync_binder1->update_time({ w.from.to_seconds(), w.to.to_seconds() });
     });
 
-    // bind data cahnnel of each node
+    // bind data channel of each node
     cmp0.data_binder[0].bind(cmp1.data_binder[0]);
 
     // bind control channel of each node
