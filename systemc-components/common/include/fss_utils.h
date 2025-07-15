@@ -19,15 +19,15 @@
 namespace gs {
 
 /**
- * Get the pointer of PARENT_TYPE instance containing the MEMMBER_TYPE member using a pointer to this member.
+ * Get the pointer of PARENT_TYPE instance containing the MEMBER_TYPE member using a pointer to this member.
  * Args:
- * member: pointer of type MEMMBER_TYPE* to the member.
+ * member: pointer of type MEMBER_TYPE* to the member.
  * member_ptr: pointer of type PARENT_TYPE::* to the specific member of the PARENT_TYPE.
  * Ret:
  * pointer to the parent instance of type PARENT_TYPE contaning the member pointer.
  */
-template <class PARENT_TYPE, class MEMMBER_TYPE>
-PARENT_TYPE* container_of(const MEMMBER_TYPE* member, const MEMMBER_TYPE PARENT_TYPE::*member_ptr)
+template <class PARENT_TYPE, class MEMBER_TYPE>
+PARENT_TYPE* container_of(const MEMBER_TYPE* member, const MEMBER_TYPE PARENT_TYPE::*member_ptr)
 {
     const PARENT_TYPE* const parent = 0;
     auto member_offset = reinterpret_cast<ptrdiff_t>(reinterpret_cast<const uint8_t*>(&(parent->*member_ptr)) -
@@ -43,139 +43,139 @@ void die_null_ptr(const std::string& fn_name, const std::string& ptr_name)
     exit(EXIT_FAILURE);
 }
 
-template <typename CHANNEL_INTERFACE>
-class fss_channel_binder_if
+template <typename INTERFACE>
+class fss_binder_if
 {
 public:
-    virtual CHANNEL_INTERFACE* get_channel_if_handle() const = 0;
+    virtual INTERFACE* get_if_handle() const = 0;
 
-    virtual fssString get_channel_name() const = 0;
+    virtual fssString get_if_name() const = 0;
 
-    virtual void bind(fss_channel_binder_if<CHANNEL_INTERFACE>& other)
+    virtual void bind(fss_binder_if<INTERFACE>& other)
     {
-        bind_channel(other.get_channel_name(), other.get_channel_if_handle());
-        other.bind_channel(get_channel_name(), get_channel_if_handle());
+        bind_if(other.get_if_name(), other.get_if_handle());
+        other.bind_if(get_if_name(), get_if_handle());
     }
 
-    virtual ~fss_channel_binder_if() {}
+    virtual ~fss_binder_if() {}
 
 protected:
-    virtual void bind_channel(fssString channel_name, CHANNEL_INTERFACE* channel_handle) = 0;
+    virtual void bind_if(fssString if_name, INTERFACE* if_handle) = 0;
 };
 
 template <typename T>
-using BIND_CHANNEL_IF_FN_PTR = fssRetStatus (*)(fssBindIFHandle, fssString, T*);
+using BIND_IF_FN_PTR = fssRetStatus (*)(fssBindIFHandle, fssString, T*);
 
 template <typename T>
-using GET_CHANNEL_IF_FN_PTR = T* (*)(fssBindIFHandle, fssString);
+using GET_IF_FN_PTR = T* (*)(fssBindIFHandle, fssString);
 
-template <typename CHANNEL_IF>
-class fss_channel_binder_base : public sc_core::sc_object, public fss_channel_binder_if<CHANNEL_IF>
+template <typename IF>
+class fss_binder_base : public sc_core::sc_object, public fss_binder_if<IF>
 {
 public:
-    fss_channel_binder_base(fssString obj_name, fssString channel_name, fssBindIFHandle bind_handle)
-        : sc_core::sc_object(obj_name), m_channel_name(channel_name), m_bind_handle(bind_handle)
+    fss_binder_base(fssString obj_name, fssString if_name, fssBindIFHandle bind_handle)
+        : sc_core::sc_object(obj_name), m_if_name(if_name), m_bind_handle(bind_handle)
     {
         if (!bind_handle) {
-            die_null_ptr("fss_channel_binder_base", "bind_handle");
+            die_null_ptr("fss_binder_base", "bind_handle");
         }
-        if (!channel_name) {
-            die_null_ptr("fss_channel_binder_base", "channel_name");
+        if (!if_name) {
+            die_null_ptr("fss_binder_base", "if_name");
         }
-        GET_CHANNEL_IF_FN_PTR<CHANNEL_IF> get_channel_if;
-        if constexpr (std::is_same_v<CHANNEL_IF, fssEventsIf>) {
-            get_channel_if = bind_handle->getEventsIfHandle;
-        } else if constexpr (std::is_same_v<CHANNEL_IF, fssTimeSyncIf>) {
-            get_channel_if = bind_handle->getTimeSyncIfHandle;
-        } else if constexpr (std::is_same_v<CHANNEL_IF, fssControlIf>) {
-            get_channel_if = bind_handle->getControlIfHandle;
+        GET_IF_FN_PTR<IF> get_if;
+        if constexpr (std::is_same_v<IF, fssEventsIf>) {
+            get_if = bind_handle->getEventsIfHandle;
+        } else if constexpr (std::is_same_v<IF, fssTimeSyncIf>) {
+            get_if = bind_handle->getTimeSyncIfHandle;
+        } else if constexpr (std::is_same_v<IF, fssControlIf>) {
+            get_if = bind_handle->getControlIfHandle;
         } else {
-            get_channel_if = bind_handle->getBusIfHandle;
+            get_if = bind_handle->getBusIfHandle;
         }
-        if (!get_channel_if) {
-            die_null_ptr("fss_channel_binder_base", "get_channel_if");
+        if (!get_if) {
+            die_null_ptr("fss_binder_base", "get_if");
         }
-        m_if_handle = get_channel_if(bind_handle, channel_name);
+        m_if_handle = get_if(bind_handle, if_name);
         if (!m_if_handle) {
-            die_null_ptr("fss_channel_binder_base", "m_if_handle");
+            die_null_ptr("fss_binder_base", "m_if_handle");
         }
     }
 
-    fss_channel_binder_base(fssString obj_name, fssString _channel_name, CHANNEL_IF* if_handle)
-        : sc_core::sc_object(obj_name), m_channel_name(_channel_name), m_if_handle(if_handle)
+    fss_binder_base(fssString obj_name, fssString _if_name, IF* if_handle)
+        : sc_core::sc_object(obj_name), m_if_name(_if_name), m_if_handle(if_handle)
     {
         if (!if_handle) {
-            die_null_ptr("fss_channel_binder_base", "if_handle");
+            die_null_ptr("fss_binder_base", "if_handle");
         }
-        if (!_channel_name) {
-            die_null_ptr("fss_channel_binder_base", "_channel_name");
+        if (!_if_name) {
+            die_null_ptr("fss_binder_base", "_if_name");
         }
         m_bind_handle = nullptr;
     }
 
-    CHANNEL_IF* get_channel_if_handle() const override { return m_if_handle; }
+    IF* get_if_handle() const override { return m_if_handle; }
 
-    fssString get_channel_name() const override { return m_channel_name; }
+    fssString get_if_name() const override { return m_if_name; }
 
-    virtual ~fss_channel_binder_base() {}
+    virtual ~fss_binder_base() {}
 
 protected:
-    void bind_channel(fssString channel_name, CHANNEL_IF* channel_handle) override
+    void bind_if(fssString if_name, IF* if_handle) override
     {
-        if (!channel_name) {
-            die_null_ptr("bind_channel", "channel_name");
+        if (!if_name) {
+            die_null_ptr("bind_if", "if_name");
         }
-        if (!channel_handle) {
-            die_null_ptr("bind_channel", "channel_handle");
+        if (!if_handle) {
+            die_null_ptr("bind_if", "if_handle");
         }
-        other_channel_name = channel_name;
-        other_if_handle = channel_handle;
+        other_if_name = if_name;
+        other_if_handle = if_handle;
         if (m_bind_handle) {
-            BIND_CHANNEL_IF_FN_PTR<CHANNEL_IF> bind_channel_if;
-            if constexpr (std::is_same_v<CHANNEL_IF, fssEventsIf>) {
-                bind_channel_if = m_bind_handle->bindEventsIf;
-            } else if constexpr (std::is_same_v<CHANNEL_IF, fssTimeSyncIf>) {
-                bind_channel_if = m_bind_handle->bindTimeSyncIf;
-            } else if constexpr (std::is_same_v<CHANNEL_IF, fssControlIf>) {
-                bind_channel_if = m_bind_handle->bindControlIf;
+            BIND_IF_FN_PTR<IF> bind_if_if;
+            if constexpr (std::is_same_v<IF, fssEventsIf>) {
+                bind_if_if = m_bind_handle->bindEventsIf;
+            } else if constexpr (std::is_same_v<IF, fssTimeSyncIf>) {
+                bind_if_if = m_bind_handle->bindTimeSyncIf;
+            } else if constexpr (std::is_same_v<IF, fssControlIf>) {
+                bind_if_if = m_bind_handle->bindControlIf;
             } else {
-                bind_channel_if = m_bind_handle->bindBusIf;
+                bind_if_if = m_bind_handle->bindBusIf;
             }
-            if (!bind_channel_if) {
-                die_null_ptr("bind_channel", "bind_channel_if");
+            if (!bind_if_if) {
+                die_null_ptr("bind_if", "bind_if_if");
             }
-            bind_channel_if(m_bind_handle, channel_name, channel_handle);
+            bind_if_if(m_bind_handle, if_name, if_handle);
         }
     }
 
 protected:
-    fssString m_channel_name;
+    fssString m_if_name;
     fssBindIFHandle m_bind_handle;
-    CHANNEL_IF* m_if_handle;
-    CHANNEL_IF* other_if_handle;
-    fssString other_channel_name;
+    IF* m_if_handle;
+    IF* other_if_handle;
+    fssString other_if_name;
 };
 
-class fss_events_binder : public fss_channel_binder_base<fssEventsIf>
+class fss_events_binder : public fss_binder_base<fssEventsIf>
 {
 public:
-    fss_events_binder(fssString obj_name, fssString events_channel_name, fssBindIFHandle bind_handle)
-        : fss_channel_binder_base<fssEventsIf>(obj_name, events_channel_name, bind_handle)
+    fss_events_binder(fssString obj_name, fssString events_if_name, fssBindIFHandle bind_handle)
+        : fss_binder_base<fssEventsIf>(obj_name, events_if_name, bind_handle)
     {
     }
 
-    fss_events_binder(fssString obj_name, fssString events_channel_name, fssEventsIfHandle events_if_handle)
-        : fss_channel_binder_base<fssEventsIf>(obj_name, events_channel_name, events_if_handle)
+    fss_events_binder(fssString obj_name, fssString events_if_name, fssEventsIfHandle events_if_handle)
+        : fss_binder_base<fssEventsIf>(obj_name, events_if_name, events_if_handle)
     {
     }
 
     void notify(fssUint64 event)
     {
         if (!other_if_handle) {
-            die_null_ptr("bind_channel", "other_if_handle");
+            die_null_ptr("bind_if", "other_if_handle");
         }
         if (!other_if_handle->handleEvents) {
-            die_null_ptr("bind_channel", "other_if_handle->handleEvents");
+            die_null_ptr("bind_if", "other_if_handle->handleEvents");
         }
         other_if_handle->handleEvents(other_if_handle, event);
     }
@@ -183,16 +183,16 @@ public:
     virtual ~fss_events_binder() {}
 };
 
-class fss_time_sync_binder : public fss_channel_binder_base<fssTimeSyncIf>
+class fss_time_sync_binder : public fss_binder_base<fssTimeSyncIf>
 {
 public:
-    fss_time_sync_binder(fssString obj_name, fssString time_sync_channel_name, fssBindIFHandle bind_handle)
-        : fss_channel_binder_base<fssTimeSyncIf>(obj_name, time_sync_channel_name, bind_handle)
+    fss_time_sync_binder(fssString obj_name, fssString time_sync_if_name, fssBindIFHandle bind_handle)
+        : fss_binder_base<fssTimeSyncIf>(obj_name, time_sync_if_name, bind_handle)
     {
     }
 
-    fss_time_sync_binder(fssString obj_name, fssString time_sync_channel_name, fssTimeSyncIfHandle time_sync_if_handle)
-        : fss_channel_binder_base<fssTimeSyncIf>(obj_name, time_sync_channel_name, time_sync_if_handle)
+    fss_time_sync_binder(fssString obj_name, fssString time_sync_if_name, fssTimeSyncIfHandle time_sync_if_handle)
+        : fss_binder_base<fssTimeSyncIf>(obj_name, time_sync_if_name, time_sync_if_handle)
     {
     }
 
@@ -210,16 +210,16 @@ public:
     virtual ~fss_time_sync_binder() {}
 };
 
-class fss_data_binder : public fss_channel_binder_base<fssBusIf>
+class fss_data_binder : public fss_binder_base<fssBusIf>
 {
 public:
-    fss_data_binder(fssString obj_name, fssString data_channel_name, fssBindIFHandle bind_handle)
-        : fss_channel_binder_base<fssBusIf>(obj_name, data_channel_name, bind_handle)
+    fss_data_binder(fssString obj_name, fssString data_if_name, fssBindIFHandle bind_handle)
+        : fss_binder_base<fssBusIf>(obj_name, data_if_name, bind_handle)
     {
     }
 
-    fss_data_binder(fssString obj_name, fssString data_channel_name, fssBusIfHandle data_if_handle)
-        : fss_channel_binder_base<fssBusIf>(obj_name, data_channel_name, data_if_handle)
+    fss_data_binder(fssString obj_name, fssString data_if_name, fssBusIfHandle data_if_handle)
+        : fss_binder_base<fssBusIf>(obj_name, data_if_name, data_if_handle)
     {
     }
 
@@ -308,16 +308,16 @@ public:
     virtual ~fss_data_binder() {}
 };
 
-class fss_control_binder : public fss_channel_binder_base<fssControlIf>
+class fss_control_binder : public fss_binder_base<fssControlIf>
 {
 public:
-    fss_control_binder(fssString obj_name, fssString control_channel_name, fssBindIFHandle bind_handle)
-        : fss_channel_binder_base<fssControlIf>(obj_name, control_channel_name, bind_handle)
+    fss_control_binder(fssString obj_name, fssString control_if_name, fssBindIFHandle bind_handle)
+        : fss_binder_base<fssControlIf>(obj_name, control_if_name, bind_handle)
     {
     }
 
-    fss_control_binder(fssString obj_name, fssString control_channel_name, fssControlIfHanlde control_if_handle)
-        : fss_channel_binder_base<fssControlIf>(obj_name, control_channel_name, control_if_handle)
+    fss_control_binder(fssString obj_name, fssString control_if_name, fssControlIfHanlde control_if_handle)
+        : fss_binder_base<fssControlIf>(obj_name, control_if_name, control_if_handle)
     {
     }
 
