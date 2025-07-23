@@ -49,6 +49,10 @@ private:
         case qemu::Target::HEXAGON:
             return KS_ARCH_HEXAGON;
 
+        case qemu::Target::RISCV32:
+            // RISC-V 32-bit not supported by Keystone, but we can compile firmware manually
+            return KS_ARCH_MAX;
+
         default:
             SCP_FATAL(SCMOD) << "Unsupported QEMU architecture for Keystone";
             return KS_ARCH_MAX; /* avoid compiler warning */
