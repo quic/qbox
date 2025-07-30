@@ -23,6 +23,7 @@ public:
     CpuRiscv(const Object& o): Cpu(o) {}
 
     void set_mip_update_callback(MipUpdateCallbackFn cb);
+    void register_reset();
 };
 
 class CpuRiscv32 : public CpuRiscv
