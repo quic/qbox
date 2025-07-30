@@ -271,6 +271,8 @@ protected:
             return QemuInstance::Target::AARCH64;
         } else if (s == "RISCV64") {
             return QemuInstance::Target::RISCV64;
+        } else if (s == "RISCV32") {
+            return QemuInstance::Target::RISCV32;
         } else if (s == "HEXAGON") {
             return QemuInstance::Target::HEXAGON;
         } else {
