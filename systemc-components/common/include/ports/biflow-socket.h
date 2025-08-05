@@ -81,7 +81,7 @@ class biflow_socket : public sc_core::sc_module, public biflow_bindable
     std::unique_ptr<tlm::tlm_generic_payload> m_txn;
 
     struct ctrl {
-        enum { DELTA_CHANGE, ABSOLUTE_VALUE, INFINITE } cmd;
+        enum { DELTA_CHANGE, ABSOLUTE_VALUE, INFINITE_VALUE } cmd;
         uint32_t can_send;
     };
 
@@ -128,7 +128,7 @@ class biflow_socket : public sc_core::sc_module, public biflow_bindable
             m_infinite = false;
             SCP_TRACE(())("Can send {}", m_can_send);
             break;
-        case ctrl::INFINITE:
+        case ctrl::INFINITE_VALUE:
             m_infinite = true;
             SCP_TRACE(())("Can send any");
             break;
@@ -167,7 +167,6 @@ public:
 
     tlm_utils::simple_initiator_socket<biflow_socket, DEFAULT_TLM_BUSWIDTH> output_socket;
     tlm_utils::simple_target_socket<biflow_socket, DEFAULT_TLM_BUSWIDTH> output_control_socket;
-
 
     /**
      * @brief Construct a new biflow socket object
@@ -264,7 +263,7 @@ public:
     void can_receive_any()
     {
         ctrl c;
-        c.cmd = ctrl::INFINITE;
+        c.cmd = ctrl::INFINITE_VALUE;
         send_ctrl(c);
     }
 
@@ -453,7 +452,7 @@ public:
      * @param name
      */
     struct ctrl {
-        enum { DELTA_CHANGE, ABSOLUTE_VALUE, INFINITE } cmd;
+        enum { DELTA_CHANGE, ABSOLUTE_VALUE, INFINITE_VALUE } cmd;
         uint32_t can_send;
     };
     biflow_router_socket(sc_core::sc_module_name name, std::string sendto = "")
