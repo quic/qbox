@@ -11,23 +11,12 @@
 #include <sstream>
 #include <string>
 #include <iostream>
+#include <map>
+#include <filesystem>
 
 #include <libqemu-cxx/loader.h>
 
-static void copy_file(const char* src_file, const char* dest_file)
-{
-    std::ifstream src(src_file, std::ios::binary);
-    std::ofstream dest(dest_file, std::ios::binary);
-    dest << src.rdbuf();
-    src.close();
-    dest.close();
-#if defined(__APPLE__)
-    std::stringstream libtool;
-    libtool << "install_name_tool -id " << dest_file << " " << dest_file;
-    system(libtool.str().c_str());
-#endif
-}
-
+namespace fs = std::filesystem;
 /*
  * WINDOWS support
  */
@@ -50,12 +39,20 @@ public:
         FARPROC symbol = GetProcAddress(m_lib, name);
         return *(void**)(&symbol);
     }
+
+    void unload()
+    {
+        if (m_lib) {
+            FreeLibrary(m_lib);
+            m_lib = nullptr;
+        }
+    }
+    ~Library() { unload(); }
 };
 
 class DefaultLibraryLoader : public qemu::LibraryLoaderIface
 {
 private:
-    const char* m_base;
     std::string m_last_error;
 
     std::string get_last_error_as_str()
@@ -78,52 +75,20 @@ private:
     }
 
 public:
-    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name)
+    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const std::string& lib_name)
     {
-        if (!m_base) {
-            HMODULE handle = LoadLibraryExA(lib_name, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-            if (handle == nullptr) {
-                m_last_error = get_last_error_as_str();
-                return nullptr;
-            }
-
-            char path[MAX_PATH];
-            if (GetModuleFileNameA(handle, path, sizeof(path)) != 0) {
-                m_base = _strdup(path);
-            }
-
-            return std::make_shared<Library>(handle);
-        }
-
-        char TMP[MAX_PATH];
-        if (GetTempPathA(MAX_PATH, TMP) == 0) {
-            std::string str = GetLastErrorAsString();
-            return nullptr;
-        }
-
-        static int counter = 0;
-        std::stringstream ss1;
-        ss1 << counter++;
-        std::string str = ss1.str();
-
-        std::stringstream ss;
-        ss << std::string(TMP);
-        std::string dir = ss.str();
-
-        std::string lib = dir + "\\" + std::string(lib_name) + "." + str;
-        copy_file(m_base, lib.c_str());
-
-        HMODULE handle = LoadLibraryExA(lib.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+        HMODULE handle = LoadLibraryExA(lib_name.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
         if (handle == nullptr) {
-            std::string str = GetLastErrorAsString();
+            m_last_error = get_last_error_as_str();
             return nullptr;
         }
+
         return std::make_shared<Library>(handle);
     }
 
     const char* get_lib_ext() { return "dll"; }
 
-    const char* get_last_error() {}
+    const char* get_last_error() { return m_last_error.c_str(); }
 };
 
 /*
@@ -179,34 +144,49 @@ public:
     bool symbol_exists(const char* name) { return get_symbol(name) != NULL; }
 
     void* get_symbol(const char* name) { return dlsym(m_lib, name); }
+
+    void unload()
+    {
+        if (m_lib) {
+            dlclose(m_lib);
+            m_lib = nullptr;
+        }
+    }
+    ~Library() { unload(); }
 };
 
 class DefaultLibraryLoader : public qemu::LibraryLoaderIface
 {
 private:
-    const char* m_base = nullptr;
+    std::unordered_map<std::string, fs::path> m_loaded_libs;
     std::string m_last_error;
 
 public:
-    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const char* lib_name)
+    qemu::LibraryLoaderIface::LibraryIfacePtr load_library(const std::string& lib_name)
     {
-        if (!m_base) {
-            std::cout << "Loading " << lib_name << "\n";
-            void* handle = dlopen(lib_name, RTLD_LOCAL | RTLD_NOW);
+        if (m_loaded_libs.count(lib_name) == 0) {
+            void* handle = dlopen(lib_name.c_str(), RTLD_LOCAL | RTLD_NOW);
             if (handle == nullptr) {
                 m_last_error = dlerror();
                 return nullptr;
             }
-            m_base = dlpath(handle);
+            m_loaded_libs[lib_name] = fs::path(dlpath(handle));
             return std::make_shared<Library>(handle);
         }
-        std::cout << "RE Loading " << m_base << "\n";
+
+        std::cout << "RE Loading " << m_loaded_libs[lib_name] << "\n";
         char tmp[] = "/tmp/qbox_lib.XXXXXX";
         if (mkstemp(tmp) < 0) {
             m_last_error = "Unable to create temp file";
             return nullptr;
         }
-        copy_file(m_base, tmp);
+
+        try {
+            fs::copy(m_loaded_libs[lib_name], fs::path(tmp), fs::copy_options::overwrite_existing);
+        } catch (const fs::filesystem_error& e) {
+            m_last_error = e.what();
+            return nullptr;
+        }
 
         void* handle = dlopen(tmp, RTLD_LOCAL | RTLD_NOW);
         if (handle == nullptr) {

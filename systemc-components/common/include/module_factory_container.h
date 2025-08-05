@@ -15,8 +15,7 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
 
-#include <dlfcn.h>
-
+#include <libqemu-cxx/loader.h>
 #include <scp/report.h>
 #include <scp/helpers.h>
 
@@ -311,50 +310,34 @@ public:
     void register_module_from_dylib(sc_core::sc_module_name name)
     {
         std::string libname;
-#ifdef __APPLE__
-        if (m_broker.has_preset_value(std::string(sc_module::name()) + "." + std::string(name) + ".moduletype")) {
-            libname = m_broker
-                          .get_preset_cci_value(std::string(sc_module::name()) + "." + std::string(name) +
-                                                ".moduletype")
-                          .get_string();
-            libname += ".dylib";
+        std::vector<std::string> lib_types = { ".moduletype", ".dylib_path" };
+
+        for (const auto& type : lib_types) {
+            const std::string base_name = std::string(sc_module::name()) + "." + std::string(name) + type;
+            if (m_broker.has_preset_value(base_name)) {
+                libname = std::string(m_broker.get_preset_cci_value(base_name).get_string()) + "." +
+                          std::string(m_library_loader->get_lib_ext());
+            }
         }
-        if (m_broker.has_preset_value(std::string(sc_module::name()) + "." + std::string(name) + ".dylib_path")) {
-            libname = m_broker
-                          .get_preset_cci_value(std::string(sc_module::name()) + "." + std::string(name) +
-                                                ".dylib_path")
-                          .get_string();
-            libname += ".dylib";
-        }
-#else
-        if (m_broker.has_preset_value(std::string(sc_module::name()) + "." + std::string(name) + ".moduletype")) {
-            libname = m_broker
-                          .get_preset_cci_value(std::string(sc_module::name()) + "." + std::string(name) +
-                                                ".moduletype")
-                          .get_string();
-            libname += ".so";
-        }
-        if (m_broker.has_preset_value(std::string(sc_module::name()) + "." + std::string(name) + ".dylib_path")) {
-            libname = m_broker
-                          .get_preset_cci_value(std::string(sc_module::name()) + "." + std::string(name) +
-                                                ".dylib_path")
-                          .get_string();
-            libname += ".so";
-        }
-#endif
-        std::cout << "libname =" << libname << std::endl;
-        void* libraryHandle = dlopen(libname.c_str(), RTLD_NOW | RTLD_GLOBAL);
+
+        qemu::LibraryLoaderIface::LibraryIfacePtr libraryHandle = m_library_loader->load_library(
+            libname);
         if (!libraryHandle) {
             SCP_FATAL(()) << "Impossible to load the library check the path in the lua file or if the library "
                              "exist in your system: "
-                          << dlerror();
+                          << m_library_loader->get_last_error();
         }
+
         m_dls.insert(libraryHandle);
-        void (*module_register)() = reinterpret_cast<void (*)()>(dlsym(libraryHandle, "module_register"));
-        if (!module_register) {
-            SCP_WARN(()) << "The method module_register has not been found in the class " << name;
+
+        void (*module_register)() = nullptr;
+        if (libraryHandle->symbol_exists("module_register")) {
+            SCP_INFO(()) << "Found module_register in the library " << name;
+            module_register = reinterpret_cast<void (*)()>(libraryHandle->get_symbol("module_register"));
+            module_register();
+        } else {
+            SCP_WARN(()) << "The method module_register has not been found in the library " << libname;
         }
-        module_register();
     }
 
     void ModulesConstruct(void)
@@ -415,7 +398,8 @@ private:
     std::list<sc_core::sc_module*> m_allModules;
     std::list<std::shared_ptr<sc_core::sc_module>> m_constructedModules;
 
-    std::set<void*> m_dls;
+    std::set<qemu::LibraryLoaderIface::LibraryIfacePtr> m_dls;
+    qemu::LibraryLoaderIface* m_library_loader;
 
 public:
     cci::cci_broker_handle m_broker;
@@ -439,7 +423,7 @@ public:
         m_constructedModules.reverse();
         m_constructedModules.clear();
         for (auto l : m_dls) {
-            dlclose(l);
+            l->unload();
         }
     }
 
@@ -520,6 +504,11 @@ public:
         }
 
         container_self_reset.register_value_changed_cb([this](bool value) { do_reset(value); });
+
+        m_library_loader = qemu::get_default_lib_loader();
+        if (!m_library_loader) {
+            SCP_FATAL(()) << "No library loader found";
+        }
 
         auto mods = gs::ModuleFactory::GetAvailableModuleList();
 
