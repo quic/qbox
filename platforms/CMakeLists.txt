@@ -45,4 +45,6 @@ else()
     message("The build is done from a non-Linux system.")
 endif()
 
-add_subdirectory(cortex-m55-remote)
+if(NOT WIN32)
+    add_subdirectory(cortex-m55-remote)
+endif()
