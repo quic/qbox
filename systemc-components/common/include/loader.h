@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <vector>
 #include <limits>
+#include <filesystem>
 #include <zip.h>
 
 #ifndef _WIN32
@@ -38,6 +39,12 @@
 #endif
 
 #define BINFILE_READ_CHUNK_SIZE (1024 * 1024)
+
+#ifdef _WIN32
+// On Windows,  libzip subsitutes close with _close.
+// We disable this behaviour that breaks calling close methods.
+#undef close
+#endif
 
 namespace gs {
 
@@ -228,15 +235,11 @@ protected:
                 uint64_t file_offset = 0, file_data_len = std::numeric_limits<uint64_t>::max();
                 if (!((gs::cci_get<uint64_t>(m_broker, name + ".bin_file_offset", file_offset) &&
                        gs::cci_get<uint64_t>(m_broker, name + ".bin_file_size", file_data_len)))) {
-                    struct stat file_stat;
-                    if (stat(file.c_str(), &file_stat) < 0) {
-                        SCP_FATAL(()) << "can't stat file " << file;
-                    }
-                    file_data_len = file_stat.st_size;
+                    file_data_len = std::filesystem::file_size(std::filesystem::path(file));
                     file_offset = 0;
                 }
-                SCP_INFO(()) << "Loading binary file: " << file << " starting at offset: " << file_offset
-                             << " with size: " << file_data_len << " to addr: " << addr;
+                SCP_INFO(())("Loading binary file: {} starting at offset: {:#x} with size: {:#x} to addr: {:#x}", file,
+                             file_offset, file_data_len, addr);
                 file_load(file, addr, file_offset, file_data_len);
                 read = true;
             }
@@ -310,26 +313,31 @@ public:
      * @param addr the address where the memory file is to be read
      * @return size_t
      */
-    void file_load(std::string filename, uint64_t addr, uint64_t file_offset = 0,
+    void file_load(std::string& filename, uint64_t addr, uint64_t file_offset = 0,
                    uint64_t file_data_len = std::numeric_limits<uint64_t>::max())
     {
         std::ifstream fin(filename, std::ios::in | std::ios::binary);
+
         if (!fin.good()) {
             SCP_FATAL(()) << "Memory::load(): error file not found (" << filename << ")";
         }
+
         uint64_t rem_len = file_data_len;
         uint64_t read_len = 0;
         fin.seekg(file_offset, std::ios::beg);
-        uint8_t buffer[BINFILE_READ_CHUNK_SIZE];
+
+        std::vector<uint8_t> buffer(BINFILE_READ_CHUNK_SIZE);
         uint64_t c = 0;
+
         while (!fin.eof() && (rem_len > 0)) {
             read_len = std::min(rem_len, static_cast<uint64_t>(BINFILE_READ_CHUNK_SIZE));
-            fin.read(reinterpret_cast<char*>(&buffer[0]), read_len);
+            fin.read(reinterpret_cast<char*>(buffer.data()), read_len);
             size_t r = fin.gcount();
-            send(addr + c, buffer, r);
+            send(addr + c, buffer.data(), r);
             c += r;
             rem_len = ((rem_len >= r) ? rem_len - r : 0);
         }
+
         fin.close();
     }
 
