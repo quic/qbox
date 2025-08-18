@@ -186,14 +186,32 @@ Components available:
     QemuNvmeDisk m_disk1("disk1", m_qemu_inst)
 ```
 The class `QemuNvmeDisk` has 3 parameters:
-The constructor : `QemuNvmeDisk(const sc_core::sc_module_name &name, QemuInstance &inst)`
+The constructor : `QemuNvmeDisk(const sc_core::sc_module_name &name, QemuInstance &inst, qemu_gpex &gpex)`
 - "name" : name of the disk
 - "inst" : instance Qemu
+- "gpex" : instance of PCIe GPEX
 
 The parameters :
 - "serial" : Serial name of the nvme disk
 - "bloc-file" : Blob file to load as data storage
 - "drive-id"
+
+Example of adding a nvme disk via the conf.lua.  Gpex_0 needs to be defined as well so that an instance is passed to the nvme disk so that it can the gpex.add_device(nvme_disk_0) is called.
+
+```lua
+platform = {
+    gpex_0={...};
+
+    nvme_disk_0 = {
+        moduletype = "nvme_disk",
+        dylib_path = "nvme",
+        args = {"&platform.qemu_inst", "&platform.gpex_0"},
+        serial = "nvme_serial_001",
+        blob_file=top().."fw/Artifacts/nvme_disk.img",
+        max_ioqpairs = 64
+    };
+};
+```
 
 ## How to add QEMU OpenCores Eth MAC
 ### SystemC Code
