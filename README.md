@@ -886,3 +886,8 @@ password: root
 
 
 [//]: # (PROCESSED BY doc_merge.pl)
+
+
+## Contributing to QBox
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
