@@ -26,11 +26,11 @@ protected:
     std::string m_drive_id;
 
 public:
-    nvme_disk(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : nvme_disk(name, *(dynamic_cast<QemuInstance*>(o)))
+    nvme_disk(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* gpex)
+        : nvme_disk(name, *(dynamic_cast<QemuInstance*>(o)), *(dynamic_cast<qemu_gpex*>(gpex)))
     {
     }
-    nvme_disk(const sc_core::sc_module_name& name, QemuInstance& inst)
+    nvme_disk(const sc_core::sc_module_name& name, QemuInstance& inst, qemu_gpex& gpex)
         : qemu_gpex::Device(name, inst, "nvme")
         , p_serial("serial", basename(), "Serial name of the nvme disk")
         , p_blob_file("blob_file", "", "Blob file to load as data storage")
@@ -44,6 +44,7 @@ public:
         opts << "if=sd,id=" << m_drive_id << ",file=" << file << ",format=raw";
         m_inst.add_arg("-drive");
         m_inst.add_arg(opts.str().c_str());
+        gpex.add_device(*this);
     }
 
     void before_end_of_elaboration() override
