@@ -42,6 +42,13 @@ include(GNUInstallDirs)
 include(FetchContent)
 include(FindPackageHandleStandardArgs)
 
+# Define _WIN32_WINNT to Windows 10
+# This macro definition is required by rpclib
+if (WIN32)
+    add_definitions(-D_WIN32_WINNT=0x0A00)
+endif()
+
+
 file(
     DOWNLOAD
     https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.40.5/CPM.cmake
@@ -233,8 +240,32 @@ find_package(Threads REQUIRED)
 gs_addexpackage("gh:google/googletest#v1.15.2")
 gs_addexpackage("gh:lua/lua#v5.4.2")
 gs_addexpackage("gh:nih-at/libzip#v1.10.1")
-gs_addexpackage("gh:rpclib/rpclib#v2.3.0")
 gs_addexpackage("gh:TheLartians/PackageProject.cmake@1.4.1")
+
+find_package(Git QUIET)
+if(Git_FOUND)
+    set(PATCH_EXEC_CMD ${GIT_EXECUTABLE})
+    set(PATCH_ARGS "am")
+else()
+    message(FATAL_ERROR "Couldn't find git executable for rpclib patching")
+endif()
+
+
+FILE(GLOB RPCLIB_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/patch/rpclib/*.patch")
+
+gs_addexpackage(
+    NAME rpclib
+    GIT_REPOSITORY
+    https://github.com/rpclib/rpclib.git
+    GIT_TAG
+    v2.3.0
+    GIT_SHALLOW
+    TRUE
+    PATCH_COMMAND
+    ${PATCH_EXEC_CMD} ${PATCH_ARGS} "${RPCLIB_PATCH_FILES}"
+    UPDATE_DISCONNECTED
+    1
+)
 
 gs_systemc()
 
