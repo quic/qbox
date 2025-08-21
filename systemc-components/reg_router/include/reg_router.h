@@ -40,19 +40,19 @@ class reg_router : public sc_core::sc_module, public gs::router_if<BUSWIDTH>
         reg_router<BUSWIDTH>>;
     using gs::router_if<BUSWIDTH>::bound_targets;
 
-    void register_boundto(std::string s)
+    void register_boundto(std::string s) override
     {
         s = gs::router_if<BUSWIDTH>::nameFromSocket(s);
-        target_info ti = { 0 };
-        ti.name = s;
-        ti.index = bound_targets.size();
-        SCP_DEBUG(()) << "Connecting : " << ti.name;
+        std::shared_ptr<target_info> ti_ptr = std::make_shared<target_info>(); // Create shared_ptr
+        ti_ptr->name = s;
+        ti_ptr->index = bound_targets.size();
+        SCP_DEBUG(()) << "Connecting : " << ti_ptr->name;
         auto tmp = name();
         int i;
         for (i = 0; i < s.length(); i++)
             if (s[i] != tmp[i]) break;
-        ti.shortname = s.substr(i);
-        bound_targets.push_back(ti);
+        ti_ptr->shortname = s.substr(i);
+        bound_targets.push_back(ti_ptr); // Add shared_ptr
     }
 
 public:
@@ -60,7 +60,7 @@ public:
     {
         sc_dt::uint64 addr = trans.get_address();
 
-        auto ti = decode_address(trans);
+        std::shared_ptr<target_info> ti = decode_address(trans); // Use shared_ptr
 
         if (!ti) {
             SCP_WARN(())("Attempt to access unknown location in register memory at offset 0x{:x}", addr);
@@ -98,7 +98,7 @@ public:
     {
         sc_dt::uint64 addr = trans.get_address();
         // transport_dbg transactions should only be handled by register memory
-        auto ti = decode_address(trans);
+        std::shared_ptr<target_info> ti = decode_address(trans); // Use shared_ptr
 
         if (!ti) {
             SCP_WARN(())("transport_dbg: Attempt to access unknown location in register memory at offset 0x{:x}", addr);
@@ -208,7 +208,7 @@ public:
 
         sc_dt::uint64 addr = trans.get_address();
         sc_dt::uint64 len = trans.get_data_length();
-        target_info* ti;
+        std::shared_ptr<target_info> ti; // Use shared_ptr
 
         auto search = cb_targets.equal_range(addr);
         if (search.first != cb_targets.end() && search.first->first == addr) {
@@ -237,14 +237,14 @@ public:
         return true;
     }
 
-    target_info* decode_address(tlm::tlm_generic_payload& trans)
+    std::shared_ptr<target_info> decode_address(tlm::tlm_generic_payload& trans) override
     {
         lazy_initialize();
 
         sc_dt::uint64 addr = trans.get_address();
         sc_dt::uint64 len = trans.get_data_length();
 
-        for (auto ti : mem_targets) {
+        for (auto ti : mem_targets) { // Iterate over shared_ptrs
             if (addr >= ti->address && (addr - ti->address) < ti->size) {
                 return ti;
             }
@@ -253,47 +253,47 @@ public:
     }
 
 protected:
-    virtual void before_end_of_elaboration()
+    virtual void before_end_of_elaboration() override
     {
         if (!lazy_init) lazy_initialize();
     }
 
 protected:
-    void lazy_initialize()
+    void lazy_initialize() override
     {
         if (initialized) return;
         initialized = true;
 
-        for (auto& ti : bound_targets) {
-            std::string name = ti.name;
+        for (auto& ti_ptr : bound_targets) { // Iterate over shared_ptrs
+            std::string name = ti_ptr->name;
             std::string src;
 
-            ti.address = gs::cci_get<uint64_t>(m_broker, name + ".address");
-            ti.size = gs::cci_get<uint64_t>(m_broker, name + ".size");
-            ti.use_offset = gs::cci_get_d<bool>(m_broker, name + ".relative_addresses", true);
-            ti.is_callback = gs::cci_get_d<bool>(m_broker, name + ".is_callback", false);
+            ti_ptr->address = gs::cci_get<uint64_t>(m_broker, name + ".address");
+            ti_ptr->size = gs::cci_get<uint64_t>(m_broker, name + ".size");
+            ti_ptr->use_offset = gs::cci_get_d<bool>(m_broker, name + ".relative_addresses", true);
+            ti_ptr->is_callback = gs::cci_get_d<bool>(m_broker, name + ".is_callback", false);
+            ti_ptr->priority = gs::cci_get_d<uint32_t>(m_broker, name + ".priority", 0); // Added missing priority
 
-            SCP_INFO(()) << "Address map " << ti.name + " at"
-                         << " address "
-                         << "0x" << std::hex << ti.address << " size "
-                         << "0x" << std::hex << ti.size << (ti.use_offset ? " (with relative address) " : "")
-                         << (ti.is_callback ? " (callback) " : "");
+            SCP_INFO(()) << "Address map " << ti_ptr->name + " at" << " address "
+                         << "0x" << std::hex << ti_ptr->address << " size "
+                         << "0x" << std::hex << ti_ptr->size << (ti_ptr->use_offset ? " (with relative address) " : "")
+                         << (ti_ptr->is_callback ? " (callback) " : "");
 
-            if (ti.is_callback) {
-                auto insertion_pair = cb_targets.insert(std::make_pair(ti.address, &ti));
+            if (ti_ptr->is_callback) {
+                auto insertion_pair = cb_targets.insert(std::make_pair(ti_ptr->address, ti_ptr)); // Insert shared_ptr
                 if (!insertion_pair.second)
-                    SCP_FATAL(()) << "a CB register with the same adress: 0x" << std::hex << ti.address
+                    SCP_FATAL(()) << "a CB register with the same adress: 0x" << std::hex << ti_ptr->address
                                   << " was already bound!";
             } else {
                 if (!mem_targets.empty()) {
-                    for (const auto& mem : mem_targets) {
-                        if (((ti.address >= mem->address) && ((ti.address - mem->address) < mem->size)) ||
-                            ((ti.address < mem->address) && ((ti.address + ti.size) > mem->address))) {
-                            SCP_WARN(()) << ti.name << " overlaps with " << mem->name;
+                    for (const auto& mem : mem_targets) { // Iterate over shared_ptrs
+                        if (((ti_ptr->address >= mem->address) && ((ti_ptr->address - mem->address) < mem->size)) ||
+                            ((ti_ptr->address < mem->address) && ((ti_ptr->address + ti_ptr->size) > mem->address))) {
+                            SCP_WARN(()) << ti_ptr->name << " overlaps with " << mem->name;
                         }
                     }
                 }
-                mem_targets.push_back(&ti);
+                mem_targets.push_back(ti_ptr); // Add shared_ptr
             }
         }
     }
@@ -336,8 +336,8 @@ public:
     cci::cci_param<bool> lazy_init;
 
 private:
-    std::vector<target_info*> mem_targets;
-    std::map<sc_dt::uint64, target_info*> cb_targets;
+    std::vector<std::shared_ptr<target_info>> mem_targets;
+    std::map<sc_dt::uint64, std::shared_ptr<target_info>> cb_targets;
     std::map<uint64_t, std::pair<uint64_t, const char*>> mod_addr_name_map;
     std::function<void(bool, uint64_t)> m_pre_b_transport_callback;
     bool initialized = false;

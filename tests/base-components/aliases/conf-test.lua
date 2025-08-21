@@ -1,10 +1,12 @@
-
 print ("Lua config running. . .");
 
 test_bench = {
-    target= { target_socket = {address=0x0000, size=0xFF, aliases={{address=0X0100, size=0xFF}, {address=0x0200, size=0xFF}}}};
-    ram=   { target_socket  = {address=0x0300, size=0xFF}};
-    rom=   { target_socket = {address=0x0400, size=0xFF, aliases={{address=0X0500, size=0xFF}, {address=0x0600, size=0xFF}}}};
+    target= { target_socket = {address=0x0000, size=0x1000, aliases={
+        {address=0x1000, size=0x1000}, -- Alias for m_memory at 0x1000
+        {address=0x4000, size=0x1000}  -- Alias for m_memory at 0x4000
+    }}};
+    ram=   { target_socket  = {address=0x5000, size=0x1000}}; -- m_ram moved to 0x5000
+    rom=   { target_socket = {address=0x2000, size=0x1000, aliases={{address=0x3000, size=0x1000}}}};
 };
 SimpleWriteRead = test_bench;
 SimpleOverlapWrite = test_bench;

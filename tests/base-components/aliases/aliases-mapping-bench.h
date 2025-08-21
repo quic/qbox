@@ -23,10 +23,11 @@ class AliasesMappingTest : public TestBench
 {
 protected:
     InitiatorTester m_initiator;
-    gs::router<> m_router;
+    gs::router<DEFAULT_TLM_BUSWIDTH> m_router;
     gs::gs_memory<> m_memory;
     gs::gs_memory<> m_ram;
     gs::gs_memory<> m_rom;
+    cci::cci_broker_handle m_broker; // Declare m_broker here
 
     void do_good_dmi_request_and_check(uint64_t addr, int64_t exp_start, uint64_t exp_end)
     {
@@ -67,16 +68,37 @@ protected:
 
     void do_bus_binding()
     {
-        m_router.initiator_socket.bind(m_memory.socket);
-        m_router.initiator_socket.bind(m_ram.socket);
-        m_router.initiator_socket.bind(m_rom.socket);
+        // These binds are redundant because m_router.add_target (called in do_target_binding)
+        // already performs initiator_socket.bind for each target.
+        // m_router.initiator_socket.bind(m_memory.socket);
+        // m_router.initiator_socket.bind(m_ram.socket);
+        // m_router.initiator_socket.bind(m_rom.socket);
+
+        // This binding is necessary to connect the test initiator to the router's target socket.
         m_router.add_initiator(m_initiator.socket);
+    }
+
+    void do_target_binding()
+    {
+        // Add targets to the router with their respective addresses and sizes, ensuring PAGEMASK alignment
+        // PAGEMASK = 0x1ff, so addresses must be aligned to 0x200 (512 bytes)
+        // Sizes should also be multiples of 0x200 for simplicity and to cover alias ranges
+        m_router.add_target(m_memory.socket, 0x0000, 0x1000); // Target 1 (main), covers 0x0000-0x0FFF
+        m_router.add_target(m_ram.socket, 0x1000, 0x1000);    // Target 2, covers 0x1000-0x1FFF
+        m_router.add_target(m_rom.socket, 0x2000, 0x1000);    // Target 3 (main), covers 0x2000-0x2FFF
     }
 
 public:
     AliasesMappingTest(const sc_core::sc_module_name& n)
-        : TestBench(n), m_initiator("initiator"), m_router("router"), m_memory("target"), m_ram("ram"), m_rom("rom")
+        : TestBench(n)
+        , m_initiator("initiator")
+        , m_router("router")
+        , m_memory("target")
+        , m_ram("ram")
+        , m_rom("rom")
+        , m_broker(cci::cci_get_broker()) // Initialize m_broker using cci::cci_get_broker()
     {
         do_bus_binding();
+        do_target_binding(); // Call the new target binding method
     }
 };

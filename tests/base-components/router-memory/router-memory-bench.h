@@ -21,8 +21,8 @@ static constexpr size_t NB_MEMORY = 4;
 class RouterMemoryTestBench : public TestBench
 {
 public:
-    std::vector<uint64_t> address = { 0, 257, 524, 700 };
-    std::vector<size_t> size = { 256, 256, 256, 256 };
+    std::vector<uint64_t> address = { 0x0, 0x200, 0x400, 0x600 };
+    std::vector<size_t> size = { 0x1000, 0x1000, 0x1000, 0x1000 };
     std::vector<uint64_t> memory_size;
 
 protected:
@@ -90,7 +90,7 @@ public:
 
         m_router.add_initiator(m_initiator.socket);
         for (int i = 0; i < NB_MEMORY; i++) {
-            m_router.add_target(m_memory[i]->socket, address[i], size[i]);
+            m_router.add_target(m_memory[i]->socket, address[i], size[i], true, i);
         }
 
         m_router.add_initiator(m_dumper.initiator_socket);

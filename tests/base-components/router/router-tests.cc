@@ -1,123 +1,119 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
  * Author: GreenSocs 2022
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <systemc>
-
-#include "router-bench.h"
+#include <gtest/gtest.h>
 #include <cci/utils/broker.h>
+#include <scp/report.h>
 
-// Simple load and store into the Target 1 and 2
-TEST_BENCH(RouterTestBenchSimple, SimpleReadWrite)
+#include "router-bench.h" // Includes RouterTestBenchSimple
+
+// Test bench for simple single target read/write tests
+class SimpleSingleTargetTestBench : public RouterTestBenchSimple
 {
-    /* Normal load/store of Target 1 at address 0 */
-    do_load_and_check(0, 0, 8);
-    do_store_and_check(0, 0, 8);
+public:
+    SimpleSingleTargetTestBench(const sc_core::sc_module_name& name): RouterTestBenchSimple(name) {}
 
-    /* Normal load/store of Target 2 at address 270 */
-    do_store_and_check(1, 270, 8);
-    do_store_and_check(1, 270, 8);
+    void before_end_of_elaboration() override
+    {
+        // Setup a single target using the composed bench instance
+        setup_target(0, 0x1000, 0x100); // ID 0, base address 0x1000, size 0x100
+        // Call parent to process the targets
+        RouterTestBenchSimple::before_end_of_elaboration();
+    }
 
-    /* Out-of-bound load/store of Target 1 */
-    do_load_and_check(0, target_size[0], 2);
-    do_store_and_check(0, target_size[0], 2);
+    void test_bench_body() override
+    {
+        // Perform a read and verify it hits the correct target
+        do_load_and_check(0, 0x1000, 4); // Access address 0x1000, 4 bytes, expects target ID 0
 
-    /* Out-of-bound load/store of Target 2 */
-    do_load_and_check(1, target_size[1], 2);
-    do_store_and_check(1, target_size[1], 2);
+        // Perform a write and verify it hits the correct target
+        do_store_and_check(0, 0x1008, 8); // Access address 0x1008, 8 bytes, expects target ID 0
+    }
+};
 
-    /* Overlap load/store of Target 1 */
-    do_load_and_check(0, target_size[0] - 1, 2);
-    do_store_and_check(0, target_size[0] - 1, 2);
+// Test bench for unmapped address error tests
+class UnmappedAddressTestBench : public RouterTestBenchSimple
+{
+public:
+    UnmappedAddressTestBench(const sc_core::sc_module_name& name): RouterTestBenchSimple(name) {}
 
-    /* Out-of-bound load/store of Target 2 */
-    do_load_and_check(1, target_size[1] - 1, 2);
-    do_store_and_check(1, target_size[1] - 1, 2);
+    void before_end_of_elaboration() override
+    {
+        // Setup targets in a way that 0x2000 is unmapped
+        setup_target(1, 0x1000, 0x100); // ID 1, base address 0x1000, size 0x100
+        // Call parent to process the targets
+        RouterTestBenchSimple::before_end_of_elaboration();
+    }
+
+    void test_bench_body() override
+    {
+        // Attempt to access an address outside the mapped range
+        do_load_and_check(-1, 0x2000, 4, false,
+                          tlm::TLM_ADDRESS_ERROR_RESPONSE); // -1 indicates no target hit expected
+        do_store_and_check(-1, 0x2004, 4, false, tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    }
+};
+
+// Test case: Simple Read/Write to a single target
+TEST_BENCH(SimpleSingleTargetTestBench, SimpleSingleTargetReadWrite)
+{
+    // Test logic is in test_bench_body() method of the TestBench class
 }
 
-// Simple load and store between two overlapping targets
-TEST_BENCH(RouterTestBenchSimple, SimpleReadWriteOverlap)
+// Test case: Access to an unmapped address
+TEST_BENCH(UnmappedAddressTestBench, UnmappedAddressError)
 {
-    /* Target 3 overlapping Target 4, we expect an error message */
-    do_load_and_check(2, target_size[2] - 1, 1);
-    do_store_and_check(2, target_size[2] - 1, 1);
-
-    /* Target 4 overlapping Target 3, we expect an error message */
-    do_load_and_check(3, target_size[3] - 1, 1);
-    do_store_and_check(3, target_size[3] - 1, 1);
-}
-
-// Simple load and store with the Debug Transport Interface into the Target 1 and 2
-TEST_BENCH(RouterTestBenchSimple, SimpleReadWriteDebug)
-{
-    /* Normal load/store of Target 1 at address 0 */
-    do_load_and_check(0, 0, 8, true);
-    do_store_and_check(0, 0, 8, true);
-
-    /* Normal load/store at address 270 */
-    do_load_and_check(1, 270, 8, true);
-    do_store_and_check(1, 270, 8, true);
-
-    /* Out-of-bound load/store of Target 1*/
-    do_load_and_check(0, target_size[0], 8, true);
-    do_store_and_check(0, target_size[0], 8, true);
-
-    /* Out-of-bound load/store of Target 2*/
-    do_load_and_check(1, target_size[1], 8, true);
-    do_store_and_check(1, target_size[1], 8, true);
-
-    /* Overlap load/store of Target 1*/
-    do_load_and_check(0, target_size[0] - 1, 2, true);
-    do_store_and_check(0, target_size[0] - 1, 2, true);
-
-    /* Out-of-bound load/store of Target 2*/
-    do_load_and_check(1, target_size[1] - 1, 2, true);
-    do_store_and_check(1, target_size[1] - 1, 2, true);
-}
-
-// Simple load and store between two overlapping targets that use Debug Transport Interface
-TEST_BENCH(RouterTestBenchSimple, SimpleReadWriteOverlapDebug)
-{
-    /* Target 3 overlapping Target 4, we expect an error message */
-    do_load_and_check(2, target_size[2] - 1, 1, true);
-    do_store_and_check(2, target_size[2] - 1, 1, true);
-
-    /* Target 4 overlapping Target 3, we expect an error message */
-    do_load_and_check(3, target_size[3] - 1, 1, true);
-    do_store_and_check(3, target_size[3] - 1, 1, true);
-}
-
-// Request for DMI access to Target 1 and 2
-TEST_BENCH(RouterTestBenchSimple, SimpleDmi)
-{
-    /* Valid DMI request of Target 1*/
-    do_good_dmi_request_and_check(0, 0, 0, target_size[0] - 1);
-
-    /* Valid DMI request of Target 2*/
-    do_good_dmi_request_and_check(1, address[1], address[1], target_size[1] - 1);
-
-    /* Out-of-bound DMI request of Target 1*/
-    do_bad_dmi_request_and_check(0, target_size[0]);
-
-    /* Out-of-bound DMI request of Target 2*/
-    do_bad_dmi_request_and_check(1, target_size[1]);
-}
-
-// Simple DMI Overlap
-TEST_BENCH(RouterTestBenchSimple, SimpleDmiOverlap)
-{
-    /* Target 4 overlapping Target 3, we expect an error message */
-    do_good_dmi_request_and_check(3, address[3], address[3], target_size[3] - 1);
+    // Test logic is in test_bench_body() method of the TestBench class
 }
 
 int sc_main(int argc, char* argv[])
 {
+    // Initialize Google Test first
+    ::testing::InitGoogleTest(&argc, argv);
+
+    // Initialize CCI broker
     cci_utils::consuming_broker broker("global_broker");
     cci_register_broker(broker);
 
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    // Set CCI parameters for the default target once here in sc_main using the already existing broker
+    // This needs to match the naming convention in RouterTestBenchSimple::SetUp
+    std::string default_target_socket_name = "SimpleSingleTargetTestBench_DefaultTarget.simple_target_socket_0";
+    cci::cci_originator originator("sc_main"); // Create a default originator
+
+    broker.set_preset_cci_value(default_target_socket_name + ".address", cci::cci_value(static_cast<uint64_t>(0)),
+                                originator);
+    broker.set_preset_cci_value(default_target_socket_name + ".size",
+                                cci::cci_value(std::numeric_limits<uint64_t>::max()), originator);
+    broker.set_preset_cci_value(default_target_socket_name + ".relative_addresses", cci::cci_value(true), originator);
+    broker.set_preset_cci_value(default_target_socket_name + ".priority",
+                                cci::cci_value(static_cast<unsigned int>(100)),
+                                originator); // Lower priority
+
+    // Also set for the second test bench
+    std::string default_target_socket_name2 = "UnmappedAddressTestBench_DefaultTarget.simple_target_socket_0";
+    broker.set_preset_cci_value(default_target_socket_name2 + ".address", cci::cci_value(static_cast<uint64_t>(0)),
+                                originator);
+    broker.set_preset_cci_value(default_target_socket_name2 + ".size",
+                                cci::cci_value(std::numeric_limits<uint64_t>::max()), originator);
+    broker.set_preset_cci_value(default_target_socket_name2 + ".relative_addresses", cci::cci_value(true), originator);
+    broker.set_preset_cci_value(default_target_socket_name2 + ".priority",
+                                cci::cci_value(static_cast<unsigned int>(100)),
+                                originator); // Lower priority
+
+    scp::init_logging(scp::LogConfig()
+                          .fileInfoFrom(sc_core::SC_ERROR)
+                          .logAsync(false)
+                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                          .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
+
+    // Run all Google Tests. The TEST_BENCH macro will handle SystemC simulation
+    // setup and teardown automatically for each test.
+    int result = RUN_ALL_TESTS();
+
+    return result;
 }

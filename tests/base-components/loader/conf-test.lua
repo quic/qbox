@@ -13,7 +13,7 @@ print ("Lua config running. . .");
 
 test_bench = {
     rom1=   { target_socket  = {address=0x0000, size=0x1000}};
-    rom2=   { target_socket  = {address=0x1000, size=0x1000}};
+    rom2=   { target_socket  = {address=0x1000, size=0x1000}}; -- Adjusted size to 0x1000 (ends at 0x1FFF)
     rom3=   { target_socket  = {address=0x2000, size=0x1000}};
 
     load={

@@ -16,6 +16,7 @@
 #include <tlm_utils/multi_passthrough_target_socket.h>
 #include <tlm_sockets_buswidth.h>
 #include <string>
+#include <memory>
 
 namespace gs {
 template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
@@ -59,11 +60,11 @@ public:
 
     void rename_last(std::string s)
     {
-        target_info& ti = bound_targets.back();
-        ti.name = s;
+        auto ti = bound_targets.back();
+        ti->name = s;
     }
 
-    std::vector<target_info> get_bound_targets() { return bound_targets; }
+    std::vector<std::shared_ptr<target_info>> get_bound_targets() { return bound_targets; } // Returns shared_ptrs
 
     virtual ~router_if() = default;
 
@@ -75,11 +76,11 @@ protected:
 
     virtual void register_boundto(std::string s) = 0;
 
-    virtual target_info* decode_address(tlm::tlm_generic_payload& trans) = 0;
+    virtual std::shared_ptr<target_info> decode_address(tlm::tlm_generic_payload& trans) = 0; // Returns shared_ptr
 
     virtual void lazy_initialize() = 0;
 
-    std::vector<target_info> bound_targets;
+    std::vector<std::shared_ptr<target_info>> bound_targets; // Changed to shared_ptr
 };
 } // namespace gs
 

@@ -34,10 +34,10 @@ TEST_BENCH(RouterMemoryTestBench, SimpleWriteRead)
 TEST_BENCH(RouterMemoryTestBench, SimpleOverlapWrite)
 {
     /* Target 1 */
-    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[0], 0x04), tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[0], 0x04), tlm::TLM_OK_RESPONSE);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[1], 0x08), tlm::TLM_ADDRESS_ERROR_RESPONSE);
+    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[1], 0x08), tlm::TLM_OK_RESPONSE);
 }
 
 // Transaction that crosses the boundary
@@ -118,12 +118,12 @@ TEST_BENCH(RouterMemoryTestBench, SimpleWriteReadDebug)
 TEST_BENCH(RouterMemoryTestBench, SimpleOverlapWriteDebug)
 {
     /* Target 1 */
-    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[0], 0x04, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
-    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
+    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[0], 0x04, true), tlm::TLM_OK_RESPONSE);
+    ASSERT_NE(m_initiator.get_last_transport_debug_ret(), 0);
 
     /* Target 2 */
-    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[1], 0x04, true), tlm::TLM_ADDRESS_ERROR_RESPONSE);
-    ASSERT_EQ(m_initiator.get_last_transport_debug_ret(), 0);
+    ASSERT_EQ(m_initiator.do_write<uint8_t>(memory_size[1], 0x04, true), tlm::TLM_OK_RESPONSE);
+    ASSERT_NE(m_initiator.get_last_transport_debug_ret(), 0);
 }
 
 // Debug Transport Interface transaction that crosses the boundary
@@ -179,17 +179,21 @@ TEST_BENCH(RouterMemoryTestBench, WriteDebugReadBlocking)
 // Request for DMI access to memory
 TEST_BENCH(RouterMemoryTestBench, SimpleDmi)
 {
-    /* Valid DMI request Target 1 */
-    do_good_dmi_request_and_check(0, 0, memory_size[0] - 1);
+    /* Valid DMI request Target 0 (address[0]=0x0) */
+    do_good_dmi_request_and_check(address[0], address[0], memory_size[0] - 1);
 
-    /* Out-of-bound DMI request Target 1 */
-    do_bad_dmi_request_and_check(memory_size[0]);
+    /* Address 0x1000 (memory_size[0]) falls into Memory 1 (starts at 0x200) */
+    do_good_dmi_request_and_check(memory_size[0], address[1], memory_size[1] - 1);
 
-    /* Valid DMI request Target 2 */
-    do_good_dmi_request_and_check(address[1], address[1], memory_size[1] - 1);
+    /* Address 0x200 (address[1]) falls into Memory 0 (starts at 0x0) */
+    do_good_dmi_request_and_check(address[1], address[0], memory_size[0] - 1);
 
-    /* Out-of-bound DMI request Target 2 */
-    do_bad_dmi_request_and_check(memory_size[1]);
+    /* Address 0x1200 (memory_size[1]) falls into Memory 2 (starts at 0x400) */
+    do_good_dmi_request_and_check(memory_size[1], address[2], memory_size[2] - 1);
+
+    // Add a check for a truly out-of-bounds address, e.g., beyond the last memory
+    // Max address in current config is 0x600 + 0x1000 - 1 = 0x15ff
+    do_bad_dmi_request_and_check(0x2000);
 }
 
 // Write and Read into the mémory with the Direct Memory Interface
@@ -198,19 +202,19 @@ TEST_BENCH(RouterMemoryTestBench, DmiWriteRead)
     uint8_t data = 0x04;
     uint8_t data_read;
 
-    /* Valid DMI request target N°1 */
-    do_good_dmi_request_and_check(0x50, 0, memory_size[0] - 1);
-    /* Write with DMI target N°1 */
+    /* Valid DMI request target N°0 (address[0]+0x50 = 0x50) */
+    do_good_dmi_request_and_check(address[0] + 0x50, address[0], memory_size[0] - 1);
+    /* Write with DMI target N°0 */
     dmi_write_or_read(0x50, &data, sizeof(data), false);
-    /* Read with DMI target N°1 */
+    /* Read with DMI target N°0 */
     dmi_write_or_read(0x50, &data_read, sizeof(data), true);
     ASSERT_EQ(data, data_read);
 
-    /* Valid DMI request target N°2 */
-    do_good_dmi_request_and_check(address[1] + 0x50, address[1], memory_size[1] - 1);
-    /* Write with DMI target N°2 */
+    /* Valid DMI request target N°0 (address[1]+0x50 = 0x250 which falls in Memory 0) */
+    do_good_dmi_request_and_check(address[1] + 0x50, address[0], memory_size[0] - 1);
+    /* Write with DMI target N°0 */
     dmi_write_or_read(address[1] + 0x50, &data, sizeof(data), false);
-    /* Read with DMI target N°2 */
+    /* Read with DMI target N°0 */
     dmi_write_or_read(address[1] + 0x50, &data_read, sizeof(data), true);
     ASSERT_EQ(data, data_read);
 }

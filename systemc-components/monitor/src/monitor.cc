@@ -209,10 +209,10 @@ crow::json::wvalue json_object(sc_core::sc_object* obj)
         auto router = dynamic_cast<router_if<>*>(obj);
         std::vector<crow::json::wvalue> pm;
         for (auto t : router->get_bound_targets()) {
-            crow::json::wvalue i = { { "name", gs::get_parent_name(t.name.c_str()) },
-                                     { "address", static_cast<uint64_t>(t.address) },
-                                     { "size", static_cast<uint64_t>(t.size) },
-                                     { "priority", t.priority } };
+            crow::json::wvalue i = { { "name", gs::get_parent_name(t->name.c_str()) },
+                                     { "address", static_cast<uint64_t>(t->address) },
+                                     { "size", static_cast<uint64_t>(t->size) },
+                                     { "priority", t->priority } };
             pm.push_back(i);
         }
         r["port_map"] = crow::json::wvalue::list(pm);
