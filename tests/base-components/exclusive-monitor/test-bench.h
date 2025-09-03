@@ -113,12 +113,15 @@ private:
         ExclusiveAccessTlmExtension ext;
         txn.set_extension(&ext);
 
+        uint8_t data[20];
+        sc_assert(len <= sizeof(data));
+
         // We could add the path ID here, but we will test the router's ability to do that.
         // So the ID will effectively be given by the initiator and it's socket being used.
         if (is_load) {
-            ret = m_initiators[id].do_read_with_txn_and_ptr(txn, addr, nullptr, len);
+            ret = m_initiators[id].do_read_with_txn_and_ptr(txn, addr, &data[0], len);
         } else {
-            ret = m_initiators[id].do_write_with_txn_and_ptr(txn, addr, nullptr, len);
+            ret = m_initiators[id].do_write_with_txn_and_ptr(txn, addr, &data[0], len);
         }
 
         check_txn(is_load, addr, len, ret);
@@ -157,11 +160,12 @@ private:
     void do_txn_and_check(bool is_load, uint64_t addr, size_t len)
     {
         TlmResponseStatus ret;
-
+        uint8_t data[20];
+        sc_assert(len <= sizeof(data));
         if (is_load) {
-            ret = m_initiator.do_read_with_ptr(addr, nullptr, len);
+            ret = m_initiator.do_read_with_ptr(addr, &data[0], len);
         } else {
-            ret = m_initiator.do_write_with_ptr(addr, nullptr, len);
+            ret = m_initiator.do_write_with_ptr(addr, &data[0], len);
         }
 
         check_txn(is_load, addr, len, ret);
