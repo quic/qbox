@@ -8,13 +8,6 @@
 
 #pragma once
 
-/*
- * it seems like there is a trade off between an unordered and ordered map for the cached iommu translations.
- * More experimentation is probably required. For now it looks like the unordered map is better,
- * but this is left as a convenience for testing the alternative.
- */
-#define USE_UNORD
-
 #include <string>
 #include <unordered_map>
 #include <memory>
@@ -476,11 +469,7 @@ public:
         IOMMUAccessFlags perm;
     };
 
-#ifdef USE_UNORD
     std::unordered_map<uint64_t, qemu::IOMMUMemoryRegion::IOMMUTLBEntry> m_mapped_te;
-#else
-    std::map<uint64_t, qemu::IOMMUMemoryRegion::IOMMUTLBEntry> m_mapped_te;
-#endif
 
     using IOMMUTranslateCallbackFn = std::function<void(IOMMUTLBEntry*, uint64_t, IOMMUAccessFlags, int)>;
     void init(const Object& owner, const char* name, uint64_t size, MemoryRegionOpsPtr ops,

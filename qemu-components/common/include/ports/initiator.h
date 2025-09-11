@@ -163,7 +163,6 @@ protected:
             // Really wish we didn't need the lock here
             std::lock_guard<std::mutex> lock(m_mutex);
 
-#ifdef USE_UNORD
             auto m = iommumr->m_mapped_te.find(addr >> iommumr->min_page_sz);
             if (m != iommumr->m_mapped_te.end()) {
                 *te = m->second;
@@ -172,27 +171,6 @@ protected:
                  te->translated_addr, te->addr_mask, te->perm);
                 return;
             }
-#else // USE_UNORD
-
-            if (iommumr->m_mapped_te.size() > 0) {
-                auto it = iommumr->m_mapped_te.upper_bound(addr);
-                if (it != iommumr->m_mapped_te.begin()) {
-                    it--;
-                    if (it != iommumr->m_mapped_te.end() && (it->first) == (addr & ~it->second.addr_mask)) {
-                        *te = it->second;
-#if DEBUG_CACHE
-                        tmpte = *te;
-                        incache = true;
-#endif // DEBUG_CACHE
-                        SCP_TRACE(())
-                        ("FAST translate for 0x{:x} :  0x{:x}->0x{:x} (mask 0x{:x}) perl={}", addr, te->iova,
-                         te->translated_addr, te->addr_mask, te->perm);
-
-                        return;
-                    }
-                }
-            }
-#endif // USE_UNORD
         }
 
         /*
@@ -276,11 +254,7 @@ protected:
             }
 #endif // DEBUG_CACHE
             std::lock_guard<std::mutex> lock(m_mutex);
-#ifdef USE_UNORD
             iommumr->m_mapped_te[(addr & ~te->addr_mask) >> iommumr->min_page_sz] = *te;
-#else  // USE_UNORD
-            iommumr->m_mapped_te[addr & ~te->addr_mask] = *te;
-#endif //  USE_UNORD
             SCP_DEBUG(())
             ("Caching TE at addr 0x{:x} (mask {:x})", addr & ~te->addr_mask, te->addr_mask);
 
@@ -839,12 +813,8 @@ public:
                 if ((mr_start >= start_range && mr_start <= end_range) ||
                     (mr_end >= start_range && mr_end <= end_range) || (mr_start < start_range && mr_end > end_range)) {
                     for (auto it = m.second->m_mapped_te.begin(); it != m.second->m_mapped_te.end();) {
-#ifdef USE_UNORD
                         if ((it->first << m.second->min_page_sz) + mr_start >= start_range &&
                             (it->first << m.second->min_page_sz) + mr_start < end_range) {
-#else
-                        if (it->first + mr_start >= start_range && it->first + mr_start < end_range) {
-#endif
                             m.second->iommu_unmap(&(it->second));
                             it = m.second->m_mapped_te.erase(it);
                         } else
