@@ -232,6 +232,7 @@ private:
 
     bool get_direct_mem_ptr(int id, tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
+        std::lock_guard<std::mutex> lock(m_dmi_mutex);
         sc_dt::uint64 addr = trans.get_address();
 
         tlm::tlm_dmi dmi_data_hole;
@@ -247,10 +248,6 @@ private:
         }
 
         if (!ti) {
-            return false;
-        }
-
-        if (!m_dmi_mutex.try_lock()) { // if we're busy invalidating, dont grant DMI's
             return false;
         }
 
@@ -277,7 +274,6 @@ private:
         }
         SCP_DEBUG(())
         ("Providing DMI (status {:x}) {:x} - {:x}", status, dmi_data.get_start_address(), dmi_data.get_end_address());
-        m_dmi_mutex.unlock();
         return status;
     }
 
