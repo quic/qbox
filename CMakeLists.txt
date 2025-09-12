@@ -36,6 +36,10 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 # for use by clang_complete, YouCompleteMe, vscode, etc.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
+if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
+
 include(CMakePackageConfigHelpers)
 include(CTest)
 include(GNUInstallDirs)

@@ -21,8 +21,8 @@ macro(install_systemc)
         gs_addexpackage(
             NAME SystemCLanguage
             GIT_REPOSITORY https://github.com/accellera-official/systemc.git
-            GIT_TAG e80ef3a44722efb3980548665306fcc848728858
-            GIT_SHALLOW FALSE
+            GIT_TAG febde7a3e007ce3030cf574a4cb6fcc13d0ed820
+            GIT_SHALLOW OFF
             OPTIONS "ENABLE_SUSPEND_ALL" "ENABLE_PHASE_CALLBACKS"
         )
 
@@ -45,19 +45,20 @@ macro(install_systemc)
 endmacro()
 
 macro(install_systemc_dependencies)
+
     gs_addexpackage(
         NAME SystemCCCI
         GIT_REPOSITORY https://github.com/accellera-official/cci.git
-        GIT_TAG 2f70602c8753220e02778fcab040f197c0747f84
-        GIT_SHALLOW FALSE
+        GIT_TAG 915c189f6916ab56db773b2da20ebc06fe8f24e9
+        GIT_SHALLOW True
         OPTIONS "SYSTEMCCCI_BUILD_TESTS OFF"
     )
 
     gs_addexpackage(
         NAME SCP
         GIT_REPOSITORY https://github.com/accellera-official/systemc-common-practices.git
-        GIT_TAG 686c999f9dc15b17147a71f3de505dfe4ff3ec4d
-        GIT_SHALLOW FALSE
+        GIT_TAG 6830c915bb691d9b505b17ac631f1ff305fe9c17
+        GIT_SHALLOW True
     )
 endmacro()
 
@@ -69,7 +70,7 @@ macro(configure_systemc)
     # upstream set INSTALL_NAME_DIR wrong !
     if(APPLE)
         set_target_properties(
-            cci
+            cci-config
             PROPERTIES
             INSTALL_NAME_DIR "@rpath"
         )
@@ -82,7 +83,7 @@ macro(configure_systemc)
     add_compile_definitions(HAS_CCI)
 
     if(NOT GS_ONLY)
-        list(APPEND TARGET_LIBS "SystemC::systemc;SystemC::cci;scp::reporting")
+        list(APPEND TARGET_LIBS SystemC::systemc SystemC::cci-config scp::reporting)
         set(TARGET_LIBS "${TARGET_LIBS}" CACHE INTERNAL "target_libs")
     endif()
 endmacro()
@@ -102,10 +103,13 @@ macro(gs_create_dymod MODULE_NAME)
 
   # Define where to install the dynamic library during building
   set_target_properties(${MODULE_NAME} PROPERTIES
+                        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
                         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
   # Avoid to have the "lib" prefix on the name of the library
   set_target_properties(${MODULE_NAME} PROPERTIES PREFIX "")
+
+
 
   if ( TARGET_LIBS )
     add_dependencies(${MODULE_NAME} ${TARGET_LIBS})
@@ -113,6 +117,10 @@ macro(gs_create_dymod MODULE_NAME)
         ${TARGET_LIBS}
     )
   endif()
+
+    if (WIN32)
+        target_link_libraries(${MODULE_NAME} PRIVATE ws2_32 mswsock)
+    endif()
 
   foreach(T IN LISTS TARGET_LIBS)
     target_include_directories(
@@ -147,7 +155,9 @@ macro(build_lua)
       FILE(GLOB lua_sources ${lua_SOURCE_DIR}/*.c)
       list(REMOVE_ITEM lua_sources "${lua_SOURCE_DIR}/lua.c" "${lua_SOURCE_DIR}/luac.c" "${lua_SOURCE_DIR}/ltests.c" "${lua_SOURCE_DIR}/onelua.c")
       add_library(lua SHARED ${lua_sources})
-      target_compile_definitions(lua PRIVATE LUA_USE_POSIX)
+      if(NOT WIN32)
+        target_compile_definitions(lua PRIVATE LUA_USE_POSIX)
+      endif()
       target_include_directories(lua PUBLIC $<BUILD_INTERFACE:${lua_SOURCE_DIR}>)
       target_compile_definitions(${PROJECT_NAME} INTERFACE HAS_LUA)
       target_link_libraries(${PROJECT_NAME} PUBLIC lua)
