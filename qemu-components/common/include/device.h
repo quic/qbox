@@ -105,6 +105,8 @@ public:
 
     const char* get_id() const { return m_id.c_str(); }
 
+    void set_id(const std::string& nm) { m_id = nm; }
+
     qemu::Device get_qemu_dev() { return m_dev; }
 
     QemuInstance& get_qemu_inst() { return m_inst; }
