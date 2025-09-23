@@ -17,6 +17,8 @@
 #include <module_factory_registery.h>
 
 #include <cpu.h>
+#include <ports/qemu-target-signal-socket.h>
+#include <ports/qemu-initiator-signal-socket.h>
 
 class QemuCpuRiscv32 : public QemuCpu
 {
@@ -32,6 +34,9 @@ protected:
     }
 
 public:
+    // IRQ input sockets - sc_vector of 32 IRQs
+    sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
+
     // CCI parameters for RISC-V CPU configuration
     cci::cci_param<uint64_t> p_hartid;
     cci::cci_param<bool> p_debug;
@@ -53,6 +58,8 @@ public:
          * non-trivial. It means that the SystemC kernel will never starve...
          */
         , m_irq_ev(true)
+        // Initialize IRQ vector with 32 sockets
+        , irq_in("irq_in", 32)
         // Initialize CCI parameters with default values
         , p_hartid("hartid", hartid, "Hardware thread ID")
         , p_debug("debug", true, "Enable debug support")
@@ -68,6 +75,9 @@ public:
         , p_resetvec("resetvec", 0x0, "Reset vector address")
     {
         m_external_ev |= m_irq_ev;
+        for (auto& irq : irq_in) {
+            m_external_ev |= irq->default_event();
+        }
     }
 
     void before_end_of_elaboration()
@@ -100,6 +110,11 @@ public:
     void end_of_elaboration() override
     {
         QemuCpu::end_of_elaboration();
+
+        // Initialize IRQ sockets with GPIO pin numbers 0-31
+        for (int i = 0; i < 32; i++) {
+            irq_in[i].init(m_dev, i);
+        }
 
         // Register reset handler - needed for proper reset behavior when system reset is requested
         qemu::CpuRiscv32 cpu(get_qemu_dev());
