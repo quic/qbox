@@ -69,11 +69,14 @@ function(qbox_add_cpu_test target timeout_s)
     #     )
     # endif()
 
+    set(SINGLE_CPU_TGTS "hexagon" "riscv32")
+
+
     install(TARGETS ${target} DESTINATION bin)
 
     target_include_directories(${target} PRIVATE ${PROJECT_SOURCE_DIR}/tests/libqbox/include ${keystone_SOURCE_DIR}/include)
 
-    target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 qemu_cpu_hexagon cpu_riscv32 router reset_gpio gs_memory exclusive_monitor display ${TARGET_LIBS} keystone)
+    target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 qemu_cpu_hexagon cpu_riscv32 router reset_gpio gs_memory exclusive_monitor display plic_sifive ${TARGET_LIBS} keystone)
 
     foreach (accel ${QBOX_TEST_ACCELS})
       if(("${target}" MATCHES "hexagon") AND (NOT ("${accel}" STREQUAL "tcg")))
@@ -113,7 +116,14 @@ function(qbox_add_cpu_test target timeout_s)
 
         foreach(num_cpu ${QBOX_CPU_TEST_NUM_CPU_COMBINATION})
             # Skip multi-cpu tests for now
-            if(("${target}" MATCHES "hexagon") AND (NOT (${num_cpu} EQUAL 1)))
+            set(skip_multi TRUE)
+            foreach(tgt_name IN LISTS SINGLE_CPU_TGTS)
+                if("${tgt_name}" MATCHES ".*${target}.*")
+                    set(skip_multi FALSE)
+                    break()
+                endif()
+            endforeach()
+            if((${skip_multi}) AND (NOT (${num_cpu} EQUAL 1)))
                continue()
             endif()
             set(test_name ${target}:sync-pol=${sync_pol}:num-cpu=${num_cpu}:icount=${icount}:threading=${threading}:accel=${accel})
@@ -127,6 +137,8 @@ function(qbox_add_cpu_test target timeout_s)
                                                  -p test-bench.num_cpu=${num_cpu}
                                                  -p test-bench.inst_a.icount=${icount}
                                                  -p test-bench.inst_b.icount=${icount}
+                                                 $<$<STREQUAL:${icount},true>:-p test-bench.inst_a.icount_mips_shift=3>
+                                                 $<$<STREQUAL:${icount},true>:-p test-bench.inst_b.icount_mips_shift=3>
                                                  -p test-bench.inst_a.tcg_mode=\"${threading}\"
                                                  -p test-bench.inst_b.tcg_mode=\"${threading}\"
 
@@ -137,8 +149,8 @@ function(qbox_add_cpu_test target timeout_s)
                                                  )
             set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout_s})
             if (GS_ENABLE_SANITIZERS)
-                # Please see this issue https://bugzilla.redhat.com/show_bug.cgi?id=1449604 
-                set_tests_properties(${test_name} PROPERTIES 
+                # Please see this issue https://bugzilla.redhat.com/show_bug.cgi?id=1449604
+                set_tests_properties(${test_name} PROPERTIES
                     ENVIRONMENT LD_LIBRARY_PATH="$ENV{LD_LIBRARY_PATH}":$ENV{LD_LIBRARY_PATH})
             endif()
             # Alternative solution until the problem is solved with the exclusive access tests
