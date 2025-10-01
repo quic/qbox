@@ -1,5 +1,6 @@
 add_subdirectory(arm_gicv2)
 add_subdirectory(arm_gicv3)
+add_subdirectory(arm_gicv3_its)
 add_subdirectory(armv7m_nvic)
 add_subdirectory(hexagon_l2vic)
 add_subdirectory(plic_sifive)
