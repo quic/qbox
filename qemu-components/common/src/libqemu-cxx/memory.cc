@@ -234,10 +234,11 @@ MemoryRegion::MemTxResult MemoryRegion::dispatch_write(uint64_t addr, uint64_t d
 void IOMMUMemoryRegion::init(const Object& owner, const char* name, uint64_t size, MemoryRegionOpsPtr ops,
                              IOMMUTranslateCallbackFn cb)
 {
+    // these areas cover all of the address space as we dont know where the VA or the PA will end up being.
     m_root_te.init(*this, "IOMMU translated root", std::numeric_limits<uint64_t>::max());
-    m_as_te->init(m_root_te, "IOMMU DMI AddressSpace");
-    m_root.init_io(*this, "IOMMU untranslated root", std::numeric_limits<uint64_t>::max(), ops);
-    m_as->init(m_root, "IOMMU untranslated DMI AddressSpace");
+    m_as_te->init(m_root_te, "IOMMU translated AddressSpace");
+    m_root_io.init_io(*this, "IOMMU untranslated root", std::numeric_limits<uint64_t>::max(), ops);
+    m_as_io->init(m_root_io, "IOMMU untranslated AddressSpace");
 
     QemuIOMMUMemoryRegion* mr = reinterpret_cast<QemuIOMMUMemoryRegion*>(m_obj);
     typedef std::function<int(uint64_t, uint64_t*, unsigned int, MemTxAttrs)> LibQemuIOMMUTranslateCallBack;
