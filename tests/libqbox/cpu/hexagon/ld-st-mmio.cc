@@ -13,6 +13,7 @@
 
 #include "hexagon.h"
 #include "qemu-instance.h"
+#include "hexagon_globalreg.h"
 
 /*
  * Hexagon MMIO load/store test.
@@ -20,6 +21,7 @@
 class CpuHexagonLdStTest : public CpuTestBench<qemu_cpu_hexagon, CpuTesterMmio>
 {
     bool passed = false;
+    hexagon_globalreg hex_gregs;
 
     static constexpr const char* FIRMWARE = R"(
 _start:
@@ -41,14 +43,15 @@ end:
     )";
 
 public:
-    CpuHexagonLdStTest(const sc_core::sc_module_name& n): CpuTestBench<qemu_cpu_hexagon, CpuTesterMmio>(n)
+    CpuHexagonLdStTest(const sc_core::sc_module_name& n)
+        : CpuTestBench<qemu_cpu_hexagon, CpuTesterMmio>(n), hex_gregs("hexagon_globalreg", &m_inst_a)
     {
         for (int i = 0; i < m_cpus.size(); i++) {
             auto& cpu = m_cpus[i];
             cpu.p_hexagon_num_threads = m_cpus.size();
             cpu.p_start_powered_off = (i != 0);
-            cpu.p_exec_start_addr = MEM_ADDR;
         }
+        hex_gregs.p_hexagon_start_addr = MEM_ADDR;
 
         char buf[1024];
         std::snprintf(buf, sizeof(buf), FIRMWARE, static_cast<uint32_t>(CpuTesterMmio::MMIO_ADDR));
@@ -56,6 +59,19 @@ public:
     }
 
     virtual ~CpuHexagonLdStTest() {}
+
+    void before_end_of_elaboration() override
+    {
+        CpuTestBench::before_end_of_elaboration();
+        hex_gregs.before_end_of_elaboration();
+        qemu::Device hex_gregs_dev = hex_gregs.get_qemu_dev();
+        for (int i = 0; i < m_cpus.size(); i++) {
+            auto& cpu = m_cpus[i];
+            cpu.before_end_of_elaboration();
+            qemu::Device cpu_dev = cpu.get_qemu_dev();
+            cpu_dev.set_prop_link("global-regs", hex_gregs_dev);
+        }
+    }
 
     virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override
     {

@@ -76,7 +76,7 @@ function(qbox_add_cpu_test target timeout_s)
 
     target_include_directories(${target} PRIVATE ${PROJECT_SOURCE_DIR}/tests/libqbox/include ${keystone_SOURCE_DIR}/include)
 
-    target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 qemu_cpu_hexagon cpu_riscv32 router reset_gpio gs_memory exclusive_monitor display plic_sifive ${TARGET_LIBS} keystone)
+    target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 qemu_cpu_hexagon cpu_riscv32 router reset_gpio gs_memory exclusive_monitor display plic_sifive ${TARGET_LIBS} keystone hexagon_globalreg)
 
     foreach (accel ${QBOX_TEST_ACCELS})
       if(("${target}" MATCHES "hexagon") AND (NOT ("${accel}" STREQUAL "tcg")))

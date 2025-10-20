@@ -18,45 +18,28 @@
 #include <libgssync.h>
 
 #include <cpu.h>
-
-#define DSP_REV(arch)     \
-    {                     \
-#arch, arch##_rev \
-    }
+#include <hexagon_globalreg.h>
 
 class qemu_cpu_hexagon : public QemuCpu
 {
     cci::cci_broker_handle m_broker;
+    hexagon_globalreg* p_hex_greg;
 
 public:
     static constexpr qemu::Target ARCH = qemu::Target::HEXAGON;
-
-    typedef enum {
-        v66_rev = 0xa666,
-        v68_rev = 0x8d68,
-        v69_rev = 0x8c69,
-        v73_rev = 0x8c73,
-        v79_rev = 0x8c79,
-        v81_rev = 0x8781,
-    } Rev_t;
-
-    const std::map<std::string, Rev_t> DSP_REVS = {
-        DSP_REV(v66), DSP_REV(v68), DSP_REV(v69), DSP_REV(v73), DSP_REV(v79), DSP_REV(v81)
-    };
     sc_core::sc_vector<QemuTargetSignalSocket> irq_in;
 
-    qemu_cpu_hexagon(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : qemu_cpu_hexagon(name, *(dynamic_cast<QemuInstance*>(o)))
+    qemu_cpu_hexagon(const sc_core::sc_module_name& name, sc_core::sc_object* o1, sc_core::sc_object* o2)
+        : qemu_cpu_hexagon(name, *(dynamic_cast<QemuInstance*>(o1)), dynamic_cast<hexagon_globalreg*>(o2))
     {
     }
-    qemu_cpu_hexagon(const sc_core::sc_module_name& name, QemuInstance& inst)
+    qemu_cpu_hexagon(const sc_core::sc_module_name& name, QemuInstance& inst, hexagon_globalreg* hex_greg = nullptr)
         : QemuCpu(name, inst, "v67-hexagon")
         , m_broker(cci::cci_get_broker())
         , irq_in("irq_in", 8, [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
         , p_cfgbase("config_table_addr", 0xffffffffULL, "config table address")
         , p_l2vic_base_addr("l2vic_base_addr", 0xffffffffULL, "l2vic base address")
         , p_qtimer_base_addr("qtimer_base_addr", 0xffffffffULL, "qtimer base address")
-        , p_exec_start_addr("hexagon_start_addr", 0xffffffffULL, "execution start address")
         , p_vp_mode("vp_mode", true, "override the vp_mode for testing")
         , p_semihosting("enable_semihosting", false, "enable semihosting for debugging/testing")
         , p_dsp_arch("dsp_arch", "v68", "DSP arch")
@@ -78,6 +61,7 @@ public:
         , p_hvx_contexts("hvx_contexts", 0, "number of HVX contexts")
         , p_num_tlbs("num_tlbs", 0, "number of Joint TLB entries")
         , p_num_dma_tlbs("num_dma_tlbs", 0, "number of DMA TLB entries")
+        , p_hex_greg(hex_greg)
     /*
      * We have no choice but to attach-suspend here. This is fixable but
      * non-trivial. It means that the SystemC kernel will never starve...
@@ -96,29 +80,19 @@ public:
         QemuCpu::before_end_of_elaboration();
         qemu::CpuHexagon cpu(get_qemu_dev());
 
-        Rev_t dsp_rev;
-        auto rev = DSP_REVS.find(dsp_arch);
-        if (rev != DSP_REVS.end()) {
-            dsp_rev = rev->second;
-        } else {
+        qemu::CpuHexagon::Rev_t dsp_rev = qemu::CpuHexagon::parse_dsp_arch(dsp_arch);
+        if (dsp_rev == qemu::CpuHexagon::unknown_rev) {
             SCP_FATAL(())("Unrecognized Architecture Revision: " + dsp_arch);
         }
-        cpu.set_prop_int("config-table-addr", p_cfgbase);
         cpu.set_prop_int("dsp-rev", dsp_rev);
         cpu.set_prop_int("l2vic-base-addr", p_l2vic_base_addr);
-        cpu.set_prop_int("qtimer-base-addr", p_qtimer_base_addr);
-        cpu.set_prop_int("exec-start-addr", p_exec_start_addr);
         cpu.set_prop_bool("start-powered-off", p_start_powered_off);
-        // in case of additional reset, this value will be loaded for PC
-        cpu.set_prop_int("start-evb", p_exec_start_addr);
         cpu.set_prop_bool("sched-limit", p_sched_limit);
         cpu.set_prop_bool("virtual-platform-mode", p_vp_mode);
         cpu.set_prop_bool("enable-semihosting", p_semihosting);
         cpu.set_prop_bool("paranoid-commit-state", p_paranoid);
         cpu.set_prop_int("subsystem-id", p_subsystem_id);
         cpu.set_prop_int("thread-count", p_hexagon_num_threads);
-        cpu.set_prop_bool("isdben-trusted", p_isdben_trusted);
-        cpu.set_prop_bool("isdben-secure", p_isdben_secure);
         cpu.set_prop_str("coproc", p_coproc.get_value().data());
         cpu.set_prop_str("cmdline", p_cmdline.get_value().data());
         cpu.set_prop_int("vtcm-base-addr", p_vtcm_base_addr);
@@ -130,6 +104,13 @@ public:
         }
         if (!p_num_dma_tlbs.is_default_value()) {
             cpu.set_prop_int("dma-jtlb-entries", p_num_dma_tlbs);
+        }
+
+        if (p_hex_greg) {
+            p_hex_greg->before_end_of_elaboration();
+            qemu::Device hex_greg_dev = p_hex_greg->get_qemu_dev();
+            qemu::Device cpu_dev = get_qemu_dev();
+            cpu_dev.set_prop_link("global-regs", hex_greg_dev);
         }
     }
 
@@ -150,7 +131,6 @@ public:
     cci::cci_param<uint64_t> p_cfgbase;
     cci::cci_param<uint32_t> p_l2vic_base_addr;
     cci::cci_param<uint32_t> p_qtimer_base_addr;
-    cci::cci_param<uint32_t> p_exec_start_addr;
     cci::cci_param<bool> p_vp_mode;
     cci::cci_param<bool> p_semihosting;
     cci::cci_param<bool> p_start_powered_off;

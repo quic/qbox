@@ -8,6 +8,7 @@
 #include "test.h"
 #include "hexagon.h"
 #include "mmio_probe.h"
+#include "hexagon_globalreg.h"
 
 class LoadStoreTest : public sc_core::sc_module, public MmioWriter, public MmioReader
 {
@@ -39,6 +40,7 @@ private:
     QemuInstance qemu_instance;
 
     qemu_cpu_hexagon cpu;
+    hexagon_globalreg hex_gregs;
     gs::gs_memory<> memory;
     gs::router<> router;
 
@@ -55,11 +57,12 @@ public:
         , router("router")
         , mmio_probe("mmio_probe", router)
         , test_passed(false)
+        , hex_gregs("hexagon_globalreg", &qemu_instance)
     {
         sc_core::sc_time global_quantum(QUANTUM, sc_core::SC_NS);
         tlm_utils::tlm_quantumkeeper::set_global_quantum(global_quantum);
 
-        cpu.p_exec_start_addr = MEM_ADDR;
+        hex_gregs.p_hexagon_start_addr = MEM_ADDR;
 
         router.add_target(memory.socket, MEM_ADDR, MEM_SIZE);
         router.add_initiator(cpu.socket);
@@ -73,6 +76,16 @@ public:
     }
 
     virtual ~LoadStoreTest() {}
+
+    void before_end_of_elaboration() override
+    {
+        sc_core::sc_module::before_end_of_elaboration();
+        hex_gregs.before_end_of_elaboration();
+        qemu::Device hex_gregs_dev = hex_gregs.get_qemu_dev();
+        cpu.before_end_of_elaboration();
+        qemu::Device cpu_dev = cpu.get_qemu_dev();
+        cpu_dev.set_prop_link("global-regs", hex_gregs_dev);
+    }
 
     virtual void mmio_write(int id, uint64_t addr, uint64_t data, size_t len) override
     {

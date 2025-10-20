@@ -16,6 +16,7 @@
 #include "hexagon.h"
 #include "qemu-instance.h"
 #include "reset_gpio.h"
+#include "hexagon_globalreg.h"
 
 /*
  * Hexagon RESET test.
@@ -39,6 +40,7 @@ class CpuHexagonResetGPIOTest : public CpuTestBench<qemu_cpu_hexagon, CpuTesterM
 
     MultiInitiatorSignalSocket<bool> reset;
     reset_gpio reset_controller;
+    hexagon_globalreg hex_gregs;
     std::thread m_thread;
     gs::async_event reset_event;
     int reset_count;
@@ -68,6 +70,7 @@ public:
     CpuHexagonResetGPIOTest(const sc_core::sc_module_name& n)
         : CpuTestBench<qemu_cpu_hexagon, CpuTesterMmio>(n)
         , reset_controller("reset", &m_inst_a)
+        , hex_gregs("hexagon_globalreg", &m_inst_a)
         , reset_count(0)
         , reset_done(0)
         , time_elapsed_ms(0)
@@ -76,8 +79,8 @@ public:
             auto& cpu = m_cpus[i];
             cpu.p_hexagon_num_threads = m_cpus.size();
             cpu.p_start_powered_off = (i != 0);
-            cpu.p_exec_start_addr = 0x0;
         }
+        hex_gregs.p_hexagon_start_addr = 0x0;
 
         reset.bind(reset_controller.reset_in);
 
@@ -89,6 +92,19 @@ public:
         std::snprintf(buf, sizeof(buf), FIRMWARE, static_cast<uint32_t>(CpuTesterMmio::MMIO_ADDR), RESET_TRIGGER,
                       RESET_DONE);
         set_firmware(buf, MEM_ADDR);
+    }
+
+    void before_end_of_elaboration() override
+    {
+        CpuTestBench::before_end_of_elaboration();
+        hex_gregs.before_end_of_elaboration();
+        qemu::Device hex_gregs_dev = hex_gregs.get_qemu_dev();
+        for (int i = 0; i < m_cpus.size(); i++) {
+            auto& cpu = m_cpus[i];
+            cpu.before_end_of_elaboration();
+            qemu::Device cpu_dev = cpu.get_qemu_dev();
+            cpu_dev.set_prop_link("global-regs", hex_gregs_dev);
+        }
     }
 
     virtual ~CpuHexagonResetGPIOTest() {}

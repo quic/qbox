@@ -22,6 +22,7 @@ target_link_libraries(
     gs_memory
     router
     qemu_cpu_hexagon
+    hexagon_globalreg
 )
 
 set(CTEST_PREFIX "hexagon")

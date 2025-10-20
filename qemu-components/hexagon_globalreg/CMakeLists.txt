@@ -1,0 +1,1 @@
+gs_create_dymod(hexagon_globalreg)
