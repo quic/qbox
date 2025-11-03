@@ -35,7 +35,7 @@ protected:
     cci::cci_param<unsigned int> p_revision;
     cci::cci_param<std::vector<unsigned int> > p_redist_region;
     cci::cci_param<bool> p_has_security_extensions;
-
+    cci::cci_param<bool> p_has_lpi; // Locality specific Peripheral Interrupts
 public:
     QemuTargetSocket<> dist_iface;
     sc_core::sc_vector<QemuTargetSocket<> > redist_iface;
@@ -80,6 +80,7 @@ public:
                               cci::cci_get_broker(), std::string(sc_module::name()) + ".redist_region")),
                           "Redistributor regions configuration")
         , p_has_security_extensions("has_security_extensions", false, "Enable security extensions")
+        , p_has_lpi("has_lpi", false, "Enable LPI")
         , dist_iface("dist_iface", inst)
         , redist_iface("redist_iface", p_redist_region.get_value().size(),
                        [&inst](const char* n, int i) { return new QemuTargetSocket<>(n, inst); })
@@ -103,7 +104,12 @@ public:
         m_dev.set_prop_int("revision", p_revision);
 
         bool has_security_extensions = m_inst.is_kvm_enabled() ? false : p_has_security_extensions.get_value();
+        bool has_lpi = m_inst.is_kvm_enabled() ? false : p_has_lpi.get_value();
         m_dev.set_prop_bool("has-security-extensions", has_security_extensions);
+        m_dev.set_prop_bool("has-lpi", has_lpi);
+        if (has_lpi) {
+            m_dev.set_prop_link("sysmem", *(this->get_qemu_inst().get().get_system_memory()));
+        }
         m_dev.set_prop_uint_array("redist-region-count", p_redist_region.get_value());
     }
 
