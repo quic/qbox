@@ -96,9 +96,10 @@ public:
     T* get() { return instance; }
 };
 
-#ifndef _WIN32
+#if !defined(_WIN32)
 #include <sys/types.h>
 #include <sys/wait.h>
+#endif
 #include <unistd.h>
 
 template <class T>
@@ -107,17 +108,6 @@ static inline void run_test_bench(T* instance)
     sc_spawn(sc_bind(&T::test_bench_body, instance));
     sc_core::sc_start();
 }
-
-#else /* _WIN32 */
-#include <iostream>
-
-static inline void run_test_bench()
-{
-    SCP_ERR("test_bench") << "Running tests on Windows is not supported.";
-    ASSERT_TRUE(false);
-}
-
-#endif
 
 #define TEST_BENCH_NAME(name) TestBench__##name
 
