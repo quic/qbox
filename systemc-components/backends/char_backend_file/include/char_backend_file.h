@@ -16,8 +16,6 @@
 #include <tlm.h>
 #include <tlm_utils/simple_target_socket.h>
 
-#include <unistd.h>
-
 #include <async_event.h>
 #include <uutils.h>
 #include <ports/biflow-socket.h>
@@ -34,8 +32,8 @@ protected:
     cci::cci_param<unsigned int> p_baudrate;
 
 private:
-    FILE* r_file;
-    FILE* w_file;
+    FILE* r_file = nullptr;
+    FILE* w_file = nullptr;
     double delay;
     SCP_LOGGER();
 
@@ -43,9 +41,6 @@ public:
     gs::biflow_socket<char_backend_file> socket;
     sc_core::sc_event update_event;
 
-#ifdef WIN32
-#pragma message("char_backend_file not yet implemented for WIN32")
-#endif
     /**
      * char_backend_file() - Construct the file-backend
      * @name: this backend's name
@@ -60,6 +55,10 @@ public:
     {
         SCP_TRACE(()) << "constructor";
 
+        if (p_write_file.get_value().empty() && p_read_file.get_value().empty()) {
+            SCP_ERR(()) << "At least one of read_file or write_file must be specified.\n";
+        }
+
         SC_THREAD(rcv_thread);
         sensitive << update_event;
 
@@ -70,20 +69,16 @@ public:
         if (!p_read_file.get_value().empty()) {
             r_file = fopen(p_read_file.get_value().c_str(), "r");
 
-            if (r_file == NULL) SCP_ERR(()) << "Error opening the file.\n";
+            if (r_file == NULL) SCP_ERR(()) << "Error opening the input file " << p_read_file.get_value() << ".\n";
             update_event.notify(sc_core::SC_ZERO_TIME);
-        } else {
-            SCP_ERR(()) << "Error reading the path of p_read_file.\n";
         }
 
         if (!p_write_file.get_value().empty()) {
             w_file = fopen(p_write_file.get_value().c_str(), "w");
 
-            if (w_file == NULL) SCP_ERR(()) << "Error opening the file.\n";
+            if (w_file == NULL) SCP_ERR(()) << "Error opening the output file " << p_write_file.get_value() << ".\n";
 
             socket.can_receive_any();
-        } else {
-            SCP_ERR(()) << "Error reading the path of p_write_file.\n";
         }
     }
     void end_of_elaboration() {}
@@ -101,6 +96,7 @@ public:
         }
         socket.enqueue(EOF);
         fclose(r_file);
+        r_file = nullptr;
     }
 
     void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
@@ -112,10 +108,19 @@ public:
                 SCP_ERR(()) << "Error writing to the file.\n";
             }
         }
-        fclose(w_file);
+        fflush(w_file);
     }
 
-    ~char_backend_file() {}
+    ~char_backend_file()
+    {
+        if (w_file != NULL) {
+            fclose(w_file);
+        }
+
+        if (r_file != NULL) {
+            fclose(r_file);
+        }
+    }
 };
 // GSC_MODULE_REGISTER(char_backend_file);
 extern "C" void module_register();

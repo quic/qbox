@@ -85,8 +85,14 @@ TEST_BENCH(TestFILE, FileReadWrite)
 
 int sc_main(int argc, char* argv[])
 {
-    gs::ConfigurableBroker m_broker({ { "FileReadWrite.backend.read_file", cci::cci_value("/dev/null") },
-                                      { "FileReadWrite.backend.write_file", cci::cci_value("/dev/null") },
+#ifdef _WIN32
+    const char* null_device = "NUL";
+#else
+    const char* null_device = "/dev/null";
+#endif
+
+    gs::ConfigurableBroker m_broker({ { "FileReadWrite.backend.read_file", cci::cci_value(std::string(null_device)) },
+                                      { "FileReadWrite.backend.write_file", cci::cci_value(std::string(null_device)) },
                                       { "FileReadWrite.backend.baudrate", cci::cci_value(0) } });
 
     ::testing::InitGoogleTest(&argc, argv);

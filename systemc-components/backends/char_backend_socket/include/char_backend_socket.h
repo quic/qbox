@@ -13,19 +13,13 @@
 #define _GS_UART_BACKEND_SOCKET_H_
 
 #include <unistd.h>
-#include <poll.h>
-#include <errno.h>
 #include <cstring>
 #include <stdio.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <sys/ioctl.h>
-#include <signal.h>
-#include <netdb.h>
+
+#include <asio.hpp>
+#include <thread>
+#include <chrono>
+#include <atomic>
 
 #include <scp/report.h>
 
@@ -34,6 +28,7 @@
 #include <ports/biflow-socket.h>
 #include <module_factory_registery.h>
 
+using asio::ip::tcp;
 class char_backend_socket : public sc_core::sc_module
 {
 protected:
@@ -43,57 +38,28 @@ protected:
     cci::cci_param<bool> p_sigquit;
 
 private:
+    asio::io_context m_io_context;
+    tcp::acceptor m_acceptor;
+    tcp::socket m_asio_socket;
+    std::thread m_rcv_thread;
+
+    tcp::endpoint m_local_endpoint;
+
+    static constexpr size_t m_buffer_size = 1024;
+    std::array<char, m_buffer_size> m_buffer;
+
+    // Allow only 1 connection at a time
+    const int m_tcp_backlog = 1;
+
+    // Flag to signal end of operation to receive thread
+    std::atomic<bool> m_stop_rcv_thread = false;
+
+    const std::chrono::milliseconds m_retry_delay = std::chrono::milliseconds(100);
+
     SCP_LOGGER();
-    std::string ip;
-    std::string port;
 
 public:
-    gs::biflow_socket<char_backend_socket> socket;
-
-#ifdef WIN32
-#pragma message("char_backend_socket not yet implemented for WIN32")
-#endif
-
-    int m_srv_socket;
-    int m_socket = -1;
-    uint8_t m_buf[256];
-
-    void sock_setup()
-    {
-        int flags = fcntl(m_socket, F_GETFL, 0);
-        flags |= O_NONBLOCK;
-        if (::fcntl(m_socket, F_SETFL, flags) != 0) {
-            SCP_ERR(()) << "setting socket in non-blocking mode failed: " << std::strerror(errno);
-        }
-
-        flags = 1;
-        if (::setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(flags))) {
-            SCP_WARN(()) << "setting up TCP_NODELAY option failed: " << std::strerror(errno);
-        }
-    }
-
-    void start_of_simulation()
-    {
-        size_t count = std::count(p_address.get_value().begin(), p_address.get_value().end(), ':');
-        if (count == 1) {
-            size_t first = p_address.get_value().find_first_of(':');
-            ip = p_address.get_value().substr(0, first);
-            port = p_address.get_value().substr(first + 1);
-        } else {
-            SCP_ERR(()) << "malformed address, expecting IP:PORT (e.g. 127.0.0.1:4001)";
-            return;
-        }
-
-        SCP_DEBUG(()) << "IP: " << ip << ", PORT: " << port;
-
-        if (p_server) {
-            setup_tcp_server(ip, port);
-        } else {
-            setup_tcp_client(ip, port);
-        }
-
-        new std::thread(&char_backend_socket::rcv_thread, this);
-    }
+    gs::biflow_socket<char_backend_socket> m_biflow_socket;
 
     char_backend_socket(sc_core::sc_module_name name)
         : sc_core::sc_module(name)
@@ -101,189 +67,254 @@ public:
         , p_server("server", true, "type of socket: true if server - false if client")
         , p_nowait("nowait", true, "setting socket in non-blocking mode")
         , p_sigquit("sigquit", false, "Interpret 0x1c in the data stream as a sigquit")
-        , socket("biflow_socket")
+        , m_biflow_socket("biflow_socket")
+        , m_acceptor(m_io_context)
+        , m_asio_socket(m_io_context)
     {
         SCP_TRACE(()) << "char_backend_socket constructor";
-        socket.register_b_transport(this, &char_backend_socket::writefn);
+
+        if (!set_endpoint()) {
+            SCP_FATAL(()) << "Failed to set local endpoint";
+        }
+
+        m_biflow_socket.register_b_transport(this, &char_backend_socket::writefn);
     }
 
-    void end_of_elaboration() { socket.can_receive_any(); }
+    ~char_backend_socket() { cleanup_receive_thread(); }
 
-    void* rcv_thread()
+    void end_of_simulation() { cleanup_receive_thread(); }
+
+    void cleanup_receive_thread()
     {
-        for (;;) {
-            if (p_server && m_socket < 0) {
-                socklen_t addr_len = sizeof(struct sockaddr_in);
-                struct sockaddr_in client_addr;
-                int flag;
+        m_stop_rcv_thread = true;
+        asio::error_code ignored_error;
 
-                m_socket = ::accept(m_srv_socket, (struct sockaddr*)&client_addr, &addr_len);
-                if (m_socket < 0) {
-                    continue;
-                }
-                sock_setup();
+        m_asio_socket.close(ignored_error);
+        m_acceptor.close(ignored_error);
 
-                char str[INET_ADDRSTRLEN];
-                inet_ntop(AF_INET, &(client_addr.sin_addr), str, INET_ADDRSTRLEN);
-                int cport = ntohs(client_addr.sin_port);
+        if (m_rcv_thread.joinable()) m_rcv_thread.join();
+    }
 
-                SCP_DEBUG(()) << "incoming connection from  " << str << ":" << cport;
-            } else if (!p_server && m_socket < 0) {
-                SCP_DEBUG(())("Waiting for connection");
-                sleep(1);
-                setup_tcp_client(ip, port);
-                continue;
-            }
+    bool set_endpoint()
+    {
+        std::string param_ip, param_port;
+        asio::ip::address ip;
+        unsigned short port;
 
-            struct pollfd fd;
-            int ret;
-            fd.fd = m_socket;
-            fd.events = POLLIN;
-            if (poll(&fd, 1, 1000) == 0) {
-                continue;
-            }
-            if (fd.revents > 0x4) {
-                close(m_socket);
-                m_socket = -1;
-                if (!p_nowait) {
-                    SCP_FATAL(())("Non waiting Socket closed");
-                } else {
-                    SCP_WARN(())("Socket closed, will wait for new connection");
-                }
-                continue;
-            }
-            ret = ::read(m_socket, m_buf, 1); // We can only guarantee 1 read will work
-            if (ret > 0) {
-                for (int i = 0; i < ret; i++) {
-                    unsigned char c = m_buf[i];
-                    if (p_sigquit && c == 0x1c) {
-                        sc_core::sc_stop();
-                    }
-                    socket.enqueue(c);
-                }
-            }
+        size_t count = std::count(p_address.get_value().begin(), p_address.get_value().end(), ':');
+        if (count == 1) {
+            size_t first = p_address.get_value().find_first_of(':');
+            param_ip = p_address.get_value().substr(0, first);
+            param_port = p_address.get_value().substr(first + 1);
+        } else {
+            SCP_ERR(()) << "malformed address, expecting IP:PORT (e.g. 127.0.0.1:4001)";
+            return false;
+        }
+
+        asio::error_code ec;
+        ip = asio::ip::make_address(param_ip, ec);
+        if (ec) {
+            SCP_ERR(()) << "Invalid IP address: " << param_ip << ", error: " << ec.message();
+            return false;
+        }
+
+        try {
+            port = static_cast<unsigned short>(std::stoi(param_port));
+        } catch (const std::invalid_argument& e) {
+            SCP_ERR(()) << "Invalid port: " << param_port << " (not a number)";
+            return false;
+        } catch (const std::out_of_range& e) {
+            SCP_ERR(()) << "Port out of range: " << param_port;
+            return false;
+        }
+
+        m_local_endpoint = tcp::endpoint(ip, port);
+
+        return true;
+    }
+
+    void start_of_simulation()
+    {
+        SCP_DEBUG(()) << "IP: " << m_local_endpoint.address() << ", PORT: " << m_local_endpoint.port();
+
+        if (p_server) {
+            setup_tcp_server();
+        }
+
+        m_rcv_thread = std::thread(&char_backend_socket::rcv_thread, this);
+    }
+
+    void end_of_elaboration() { m_biflow_socket.can_receive_any(); }
+
+    void setup_tcp_server()
+    {
+        asio::error_code ec;
+
+        m_acceptor.open(m_local_endpoint.protocol(), ec);
+        if (ec) {
+            SCP_ERR(()) << "Failed to open acceptor: " << ec.message();
+            return;
+        }
+
+        m_acceptor.set_option(asio::socket_base::reuse_address(true), ec);
+        if (ec) {
+            SCP_ERR(()) << "Failed to set reuse_address option: " << ec.message();
+            m_acceptor.close();
+            return;
+        }
+
+        m_acceptor.bind(m_local_endpoint, ec);
+        if (ec) {
+            SCP_ERR(()) << "Failed to bind acceptor: " << ec.message();
+            m_acceptor.close();
+            return;
+        }
+
+        m_acceptor.listen(m_tcp_backlog, ec);
+        if (ec) {
+            SCP_ERR(()) << "Failed to listen on acceptor: " << ec.message();
+            m_acceptor.close();
+            return;
+        }
+
+        m_acceptor.non_blocking(true, ec);
+        if (ec) {
+            SCP_ERR(()) << "Failed to set acceptor to non-blocking: " << ec.message();
+            m_acceptor.close();
+            return;
         }
     }
 
     void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
     {
-        while (m_socket < 0) {
+        while (!m_asio_socket.is_open()) {
             if (p_nowait) {
                 return;
             }
             SCP_WARN(()) << "waiting for socket connection on IP address: " << p_address.get_value();
-            sleep(1);
+            std::this_thread::sleep_for(m_retry_delay);
         }
+
+        asio::error_code ec;
 
         uint8_t* data = txn.get_data_ptr();
-        for (int i = 0; i < txn.get_streaming_width(); i++) {
-            do {
-                if ((::write(m_socket, &data[i], 1)) != 1) {
-                    if (errno == EAGAIN) {
-                        SCP_WARN(())("(Blocking) write did not complete (EAGAIN)");
-                        sleep(1);
-                    } else {
-                        if (p_nowait) {
-                            SCP_WARN(())("(Non blocking) socket closed");
-                            return;
-                        } else {
-                            SCP_FATAL(())("(Blocking) socket closed.");
-                        }
-                    }
-                } else {
-                    break; // Write completed normally
+        size_t bytes_to_send = txn.get_streaming_width();
+        size_t bytes_transferred = asio::write(m_asio_socket, asio::buffer(data, bytes_to_send), ec);
+        if (ec || (bytes_transferred != bytes_to_send)) {
+            if (p_nowait) {
+                SCP_WARN(())("(Non blocking) socket closed");
+                return;
+            } else {
+                SCP_WARN(())("(Blocking) socket closed.");
+            }
+        }
+    }
+
+    void rcv_thread()
+    {
+        try {
+            do_receive();
+        } catch (const asio::system_error& e) {
+            std::cout << "Caught exception: " << e.what() << std::endl;
+        }
+    }
+
+    void configure_socket()
+    {
+        asio::error_code ec;
+
+        m_asio_socket.non_blocking(true, ec);
+        if (ec) {
+            SCP_FATAL(()) << " Failed to set non blocking mode: " << ec.message();
+        }
+
+        // Disable Nagle's Algorithm
+        m_asio_socket.set_option(asio::ip::tcp::no_delay(true));
+        if (ec) {
+            SCP_FATAL(()) << " Failed to disable Nagle's Algorithm: " << ec.message();
+        }
+    }
+
+    void do_receive()
+    {
+        asio::error_code ec;
+
+        while (!m_stop_rcv_thread) {
+            if (p_server) {
+                // Server mode
+                m_acceptor.accept(m_asio_socket, ec);
+                switch (ec.value()) {
+                case 0: // Success
+                    configure_socket();
+                    SCP_DEBUG(()) << "Accepted connection from " << m_asio_socket.remote_endpoint().address() << ":"
+                                  << m_asio_socket.remote_endpoint().port();
+                    break;
+                case asio::error::would_block:
+                    SCP_INFO(()) << "Accept failed for non blocking:" << ec.message();
+                    std::this_thread::sleep_for(m_retry_delay);
+                    break;
+                default:
+                    SCP_WARN(()) << "Accept connection failed with error:" << ec.message();
+                    std::this_thread::sleep_for(m_retry_delay);
+                    break;
                 }
-            } while (true);
+            } else if (!p_server) {
+                // Client mode
+                m_asio_socket.connect(m_local_endpoint, ec);
+                if (!ec) {
+                    configure_socket();
+                } else {
+                    SCP_INFO(()) << "failed to connect to " << m_local_endpoint.address() << ":"
+                                 << m_local_endpoint.port() << " " << ec.message();
+                    m_asio_socket.close();
+                    std::this_thread::sleep_for(m_retry_delay);
+                    continue;
+                }
+            }
+
+            if (m_asio_socket.is_open()) receive_loop();
         }
+
+        SCP_DEBUG(()) << "Leaving receive thread";
     }
 
-    void setup_tcp_server(std::string ip, std::string port)
+    void receive_loop()
     {
-        int ret;
-        struct sockaddr_in addr_in;
-        int iport;
-        int flag;
+        asio::error_code ec;
 
-        SCP_DEBUG(()) << "setting up TCP server on " << ip << ":" << port;
-
-        socklen_t addr_len = sizeof(struct sockaddr_in);
-
-        m_srv_socket = ::socket(AF_INET, SOCK_STREAM, 0);
-        if (m_srv_socket < 0) {
-            SCP_ERR(()) << "socket failed: " << std::strerror(errno);
-            return;
+        while (m_asio_socket.is_open()) {
+            size_t read_count = m_asio_socket.read_some(asio::buffer(m_buffer), ec);
+            switch (ec.value()) {
+            case 0: // Success
+                forward_incoming_data(read_count);
+                break;
+            case asio::error::would_block:
+                // Retry reading after a short delay
+                std::this_thread::sleep_for(m_retry_delay);
+                break;
+            case asio::error::eof:
+                SCP_DEBUG(()) << "Remote endpoint disconnected";
+                m_asio_socket.close();
+                break;
+            default:
+                SCP_WARN(()) << "Read failed: " << ec.message();
+                m_asio_socket.close();
+                break;
+            }
         }
 
-        flag = 1;
-        ::setsockopt(m_srv_socket, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
-
-        iport = std::stoi(port);
-
-        ::memset((char*)&addr_in, 0, sizeof(addr_in));
-        addr_in.sin_family = AF_INET;
-        addr_in.sin_addr.s_addr = htonl(INADDR_ANY);
-        addr_in.sin_port = htons(iport);
-
-        ret = ::bind(m_srv_socket, (struct sockaddr*)&addr_in, sizeof(addr_in));
-        if (ret < 0) {
-            ::close(m_srv_socket);
-            m_srv_socket = -1;
-            SCP_ERR(()) << "bind to port '" << iport << "' failed: " << std::strerror(errno);
-            return;
-        }
-
-        ret = listen(m_srv_socket, 1);
-        if (ret < 0) {
-            ::close(m_srv_socket);
-            m_srv_socket = -1;
-            SCP_ERR(()) << "listen failed: " << std::strerror(errno);
-            return;
-        }
-        // the connection will be done in the rcv_thread
+        SCP_DEBUG(()) << "Leaving receive loop";
     }
 
-    void setup_tcp_client(std::string ip, std::string port)
+    void forward_incoming_data(size_t data_length)
     {
-        int flag = 1;
-        int status;
-        struct addrinfo hints;
-        struct addrinfo* servinfo;
-
-        SCP_INFO(()) << "setting up TCP client connection to " << ip << ":" << port;
-
-        m_socket = ::socket(AF_INET, SOCK_STREAM, 0);
-
-        if (m_socket == -1) {
-            SCP_ERR(()) << "socket failed: " << std::strerror(errno);
-            return;
+        for (size_t i = 0; i < data_length; i++) {
+            unsigned char c = m_buffer[i];
+            if (p_sigquit && c == 0x1c) {
+                sc_core::sc_stop();
+            }
+            m_biflow_socket.enqueue(c);
         }
-
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_UNSPEC;
-        hints.ai_socktype = SOCK_STREAM;
-
-        status = getaddrinfo(ip.c_str(), port.c_str(), &hints, &servinfo);
-        if (status == -1) {
-            SCP_ERR(()) << "getaddrinfo failed: " << std::strerror(errno);
-            close_sock();
-        }
-
-        if (::connect(m_socket, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
-            SCP_ERR(()) << "connect failed: " << std::strerror(errno);
-            freeaddrinfo(servinfo);
-            close_sock();
-        }
-        freeaddrinfo(servinfo);
-
-        sock_setup();
-
-        return;
-    }
-
-    void close_sock()
-    {
-        ::close(m_socket);
-        m_socket = -1;
     }
 };
 extern "C" void module_register();

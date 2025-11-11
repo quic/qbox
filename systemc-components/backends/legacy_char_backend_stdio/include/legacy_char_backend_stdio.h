@@ -31,7 +31,6 @@ private:
     pthread_t rcv_pthread_id = 0;
 
 public:
-
 #ifdef WIN32
 #pragma message("CharBackendStdio not yet implemented for WIN32")
 #endif
@@ -74,7 +73,7 @@ public:
 
         gs::SigHandler::get().register_on_exit_cb(std::string(this->name()) + ".char_backend_stdio::tty_reset",
                                                   tty_reset);
-        gs::SigHandler::get().add_sig_handler(SIGINT, gs::SigHandler::Handler_CB::PASS);
+        gs::SigHandler::get().add_sigint_handler(gs::Handler_CB::PASS);
         gs::SigHandler::get().register_handler(std::string(this->name()) + ".char_backend_stdio::SIGINT_handler",
                                                [&](int signo) {
                                                    std::lock_guard<std::mutex> lock(m_mutex);

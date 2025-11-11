@@ -7,7 +7,9 @@
 #include <systemc>
 
 #include "char_backend_stdio.h"
-struct termios char_backend_stdio::oldtty;
-bool char_backend_stdio::oldtty_valid = false;
+
+descriptor_t char_backend_stdio::stdin_fd;
+console_mode_t char_backend_stdio::old_console_mode;
+bool char_backend_stdio::old_console_mode_valid = false;
 
 void module_register() { GSC_MODULE_REGISTER_C(char_backend_stdio); }

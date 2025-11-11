@@ -20,15 +20,32 @@
 #include <tests/target-tester.h>
 #include <tests/test-bench.h>
 
-#include <fcntl.h>
 #include <stdlib.h>
 #include <string>
+
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#else
+#include <fcntl.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
+#endif
 
 #include <ports/target-signal-socket.h>
 #include <systemc.h>
+
+#ifdef _WIN32
+#define pipe(fds)      _pipe(fds, 4096, _O_BINARY)
+#define dup(fd)        _dup(fd)
+#define dup2(fd1, fd2) _dup2(fd1, fd2)
+#define close(fd)      _close(fd)
+#define read(fd, b, n) _read(fd, b, (unsigned int)(n))
+#ifndef STDOUT_FILENO
+#define STDOUT_FILENO _fileno(stdout)
+#endif
+#endif
 
 #define MAX_LEN 4096
 char stdout_buffer[MAX_LEN + 1] = { 0 };
@@ -101,6 +118,7 @@ TEST_BENCH(TestUart, IbexStdioBackend)
     fflush(stdout);
 
     std::cout << "the redirected string from stdout is: " << stdout_buffer << std::endl;
+    ASSERT_STREQ(stdout_buffer, str.c_str());
 
     //___________ redirect stdin ____________//
     char stdout_buffer[9] = "Qualcomm";
@@ -121,6 +139,7 @@ TEST_BENCH(TestUart, IbexStdioBackend)
     for (std::string::size_type i = 0; i < std::strlen(stdout_buffer); i++) {
         sc_core::wait(1, sc_core::SC_NS);
         ASSERT_EQ(m_initiator_2.do_read(ibex_uart::REG_RDATA, data), tlm::TLM_OK_RESPONSE);
+        ASSERT_EQ(data, stdout_buffer[i]);
         std::cout << "the recived character is: " << data << std::endl;
     }
 

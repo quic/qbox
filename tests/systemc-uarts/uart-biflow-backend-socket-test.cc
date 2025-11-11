@@ -48,8 +48,8 @@ public:
         , m_irq_trigger("irq_trigger")
         , m_initiator_2("initiator_2")
     {
-        m_uart_1.backend_socket.bind(server.socket);
-        m_uart_2.backend_socket.bind(client.socket);
+        m_uart_1.backend_socket.bind(server.m_biflow_socket);
+        m_uart_2.backend_socket.bind(client.m_biflow_socket);
 
         m_initiator_1.socket.bind(m_uart_1.socket);
         m_initiator_2.socket.bind(m_uart_2.socket);
@@ -82,11 +82,11 @@ TEST_BENCH(TestUart, SocketBackend)
     uint8_t data;
     ASSERT_EQ(m_initiator_2.do_read(0x00, data), tlm::TLM_OK_RESPONSE);
 
-    std::cout << "the recived string is: " << data << std::endl;
+    std::cout << "the received string is: " << data << std::endl;
 
     ASSERT_EQ(m_initiator_2.do_read(0x00, data), tlm::TLM_OK_RESPONSE);
 
-    std::cout << "the recived string is: " << data << std::endl;
+    std::cout << "the received string is: " << data << std::endl;
     sc_core::wait(1, sc_core::SC_NS);
     sc_core::sc_stop();
 }

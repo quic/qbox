@@ -19,11 +19,22 @@
 #include <module_factory_registery.h>
 #include <queue>
 #include <signal.h>
-#include <termios.h>
-#include <poll.h>
 #include <regex>
 #include <atomic>
 #include <cstdlib>
+
+// TODO convert scp warn to scp fatal
+
+#ifdef _WIN32
+#include <windows.h>
+typedef HANDLE descriptor_t;
+typedef DWORD console_mode_t;
+#else
+#include <termios.h>
+#include <poll.h>
+typedef int descriptor_t;
+typedef struct termios console_mode_t;
+#endif // _WIN32
 
 #define RCV_POLL_TIMEOUT_MS 300
 
@@ -37,36 +48,153 @@ protected:
 private:
     std::atomic_bool m_running;
     std::thread rcv_thread_id;
-    pthread_t rcv_pthread_id = 0;
     std::atomic<bool> c_flag;
     SCP_LOGGER();
     std::string line;
     std::string ecmd;
     sc_core::sc_event ecmdev;
     bool processing = false;
+    static descriptor_t stdin_fd;
+
+#ifdef _WIN32
+    const static size_t input_buffer_size = 128;
+    INPUT_RECORD irInBuf[input_buffer_size];
+#endif
 
 public:
     gs::biflow_socket<char_backend_stdio> socket;
-    static struct termios oldtty;
-    static bool oldtty_valid;
+    static console_mode_t old_console_mode;
+    static bool old_console_mode_valid;
 
-#ifdef WIN32
-#pragma message("CharBackendStdio not yet implemented for WIN32")
+private:
+#ifdef _WIN32
+    static void restore_old_mode()
+    {
+        BOOL res = SetConsoleMode(stdin_fd, old_console_mode);
+        if (!res) {
+            set_new_mode();
+        }
+    }
+
+    static void set_new_mode(bool save_current_mode = false)
+    {
+        if (save_current_mode && GetConsoleMode(stdin_fd, &old_console_mode)) {
+            old_console_mode_valid = true;
+        }
+
+        BOOL res = SetConsoleMode(stdin_fd, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
+    }
+
+    descriptor_t get_stdin_descriptor()
+    {
+        descriptor_t stdin_file_descriptor = GetStdHandle(STD_INPUT_HANDLE);
+        if (stdin_file_descriptor == INVALID_HANDLE_VALUE) {
+            SCP_WARN(())("char_backend_stdio: Failed to get standard input descriptor. Error: {}", GetLastError());
+        }
+
+        return stdin_file_descriptor;
+    }
+
+    void enqueue_multiple(const INPUT_RECORD irInBuf[], const DWORD cNumRead)
+    {
+        for (DWORD i = 0; i < cNumRead; ++i) {
+            const INPUT_RECORD& record = irInBuf[i];
+            if (record.EventType == KEY_EVENT && record.Event.KeyEvent.bKeyDown) {
+                enqueue(record.Event.KeyEvent.uChar.AsciiChar);
+            }
+        }
+    }
+
+    void rcv_thread()
+    {
+        DWORD cNumRead = 0;
+
+        while (m_running) {
+            DWORD waitResult = WaitForSingleObject(stdin_fd, RCV_POLL_TIMEOUT_MS);
+
+            if (waitResult == WAIT_TIMEOUT) {
+                if (c_flag) {
+                    c_flag = false;
+                    enqueue('\x03');
+                }
+                continue;
+            } else if (waitResult == WAIT_OBJECT_0) {
+                if (ReadConsoleInput(stdin_fd, irInBuf, input_buffer_size, &cNumRead)) {
+                    enqueue_multiple(irInBuf, cNumRead);
+                } else {
+                    SCP_WARN(())("char_backend_stdio: Failed to read console input. Error: {}", GetLastError());
+                }
+            } else {
+                break;
+            }
+        }
+    }
+#else
+    descriptor_t get_stdin_descriptor() { return STDIN_FILENO; } /* stdin */
+
+    static void restore_old_mode()
+    {
+        int res = tcsetattr(stdin_fd, TCSANOW, &old_console_mode);
+        if (errno != 0) {
+            set_new_mode();
+        }
+    }
+
+    static void set_new_mode(bool save_current_mode = false)
+    {
+        console_mode_t tty;
+        tcgetattr(stdin_fd, &tty);
+        if (save_current_mode) {
+            old_console_mode = tty;
+            old_console_mode_valid = true;
+        }
+        tty.c_lflag |= ECHO | ECHONL | ICANON | IEXTEN;
+        tcsetattr(stdin_fd, TCSANOW, &tty);
+    }
+
+    void rcv_thread()
+    {
+        int fd = STDIN_FILENO;
+        struct pollfd rcv_monitor;
+        rcv_monitor.fd = fd;
+        rcv_monitor.events = POLLIN;
+
+        while (m_running) {
+            int ret = poll(&rcv_monitor, 1, RCV_POLL_TIMEOUT_MS);
+            if ((ret == -1 && errno == EINTR) || (ret == 0) /*timeout*/) {
+                if (c_flag) {
+                    c_flag = false;
+                    enqueue('\x03');
+                }
+                continue;
+            } else if (rcv_monitor.revents & POLLIN) {
+                char c;
+                int r = read(fd, &c, 1);
+                if (r == 1) {
+                    enqueue(c);
+                }
+                if (r == 0) {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    }
 #endif
-    static void catch_fn(int signo) {}
+
+public:
+    void catch_fn(int signo) {}
 
     static void tty_reset()
     {
-        int fd = STDIN_FILENO; /* stdin */
-        if (char_backend_stdio::oldtty_valid) {
-            tcsetattr(fd, TCSANOW, &char_backend_stdio::oldtty);
+        if (old_console_mode_valid) {
+            restore_old_mode();
         } else {
-            struct termios tty;
-            tcgetattr(fd, &tty);
-            tty.c_lflag |= ECHO | ECHONL | ICANON | IEXTEN;
-            tcsetattr(fd, TCSANOW, &tty);
+            set_new_mode();
         }
     }
+
     // trim from end of string (right)
     std::string& rtrim(std::string& s)
     {
@@ -135,9 +263,9 @@ public:
      *   \param expect String : An 'expect' like string of commands, each command should be separated by \n
      *  The acceptable commands are:
      *      expect [string] : dont process any more commands until the "string" is seen on the output (STDIO)
-     *      send [string]   : send "string" to the input buffer (NB this will happen whether of not read_write is set)
-     *      wait [float]    : Wait for "float" (simulated) seconds, until processing continues.
-     *      exit            : Cause the simulation to terminate normally.
+     *      send [string]   : send "string" to the input buffer (NB this will happen whether of not read_write is
+     * set) wait [float]    : Wait for "float" (simulated) seconds, until processing continues. exit            :
+     * Cause the simulation to terminate normally.
      */
     char_backend_stdio(sc_core::sc_module_name name)
         : sc_core::sc_module(name)
@@ -150,6 +278,8 @@ public:
     {
         SCP_TRACE(()) << "CharBackendStdio constructor";
 
+        stdin_fd = get_stdin_descriptor();
+
         ecmd = p_expect;
         SC_METHOD(process);
         sensitive << ecmdev;
@@ -159,9 +289,9 @@ public:
             SCP_WARN(())("Processing expect string {}", ecmd);
         }
 
-        gs::SigHandler::get().register_on_exit_cb(std::string(this->name()) + ".char_backend_stdio::tty_reset",
-                                                  tty_reset);
-        gs::SigHandler::get().add_sig_handler(SIGINT, gs::SigHandler::Handler_CB::PASS);
+        // gs::SigHandler::get().register_on_exit_cb(std::string(this->name()) + ".char_backend_stdio::tty_reset",
+        //                                           tty_reset);
+        gs::SigHandler::get().add_sigint_handler(gs::Handler_CB::PASS);
         gs::SigHandler::get().register_handler(std::string(this->name()) + ".char_backend_stdio::SIGINT_handler",
                                                [&](int signo) {
                                                    if (signo == SIGINT) {
@@ -177,35 +307,6 @@ public:
     void end_of_elaboration() { socket.can_receive_any(); }
 
     void enqueue(char c) { socket.enqueue(c); }
-    void rcv_thread()
-    {
-        int fd = STDIN_FILENO;
-        struct pollfd rcv_monitor;
-        rcv_monitor.fd = fd;
-        rcv_monitor.events = POLLIN;
-
-        while (m_running) {
-            int ret = poll(&rcv_monitor, 1, RCV_POLL_TIMEOUT_MS);
-            if ((ret == -1 && errno == EINTR) || (ret == 0) /*timeout*/) {
-                if (c_flag) {
-                    c_flag = false;
-                    enqueue('\x03');
-                }
-                continue;
-            } else if (rcv_monitor.revents & POLLIN) {
-                char c;
-                int r = read(fd, &c, 1);
-                if (r == 1) {
-                    enqueue(c);
-                }
-                if (r == 0) {
-                    break;
-                }
-            } else {
-                break;
-            }
-        }
-    }
 
     void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
     {
@@ -226,14 +327,8 @@ public:
 
     void start_of_simulation()
     {
-        if (!char_backend_stdio::oldtty_valid) {
-            struct termios tty;
-            int fd = STDIN_FILENO; /* stdin */
-            tcgetattr(fd, &tty);
-            char_backend_stdio::oldtty = tty;
-            char_backend_stdio::oldtty_valid = true;
-            tty.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
-            tcsetattr(fd, TCSANOW, &tty);
+        if (!old_console_mode_valid) {
+            set_new_mode(true);
         }
     }
 
