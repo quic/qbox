@@ -33,6 +33,7 @@
 #include <thread>
 #include <algorithm>
 #include <list>
+#include <limits>
 #include <vector>
 #include <atomic>
 #include <future>
@@ -58,6 +59,99 @@
 #define RPC_TIMEOUT                500
 
 namespace gs {
+
+#ifdef _WIN32
+class PartnerProcessManager
+{
+private:
+    HANDLE m_current_process = NULL;
+    HANDLE m_partner_process = NULL;
+    HANDLE m_process_dup = NULL; // Duplicated handle
+    std::thread m_exit_waiter_thread;
+    std::atomic_bool m_exit_waiter_active{ false };
+
+public:
+    PartnerProcessManager() { m_current_process = GetCurrentProcess(); }
+    ~PartnerProcessManager()
+    {
+        m_exit_waiter_active = false;
+        if (m_exit_waiter_thread.joinable()) {
+            m_exit_waiter_thread.join();
+        }
+        if (m_partner_process) {
+            CloseHandle(m_partner_process);
+            m_partner_process = NULL;
+        }
+        if (m_process_dup) {
+            CloseHandle(m_process_dup);
+            m_process_dup = NULL;
+        }
+    }
+
+    // Create a process from executable path and arguments, and store its handle
+    bool create_partner_process(const std::string& exe_path, const std::list<std::string>& arguments)
+    {
+        STARTUPINFOA si;
+        PROCESS_INFORMATION pi;
+        ZeroMemory(&si, sizeof(si));
+        si.cb = sizeof(si);
+        ZeroMemory(&pi, sizeof(pi));
+
+        std::string serialized_arguments;
+        for (const auto& arg : arguments) {
+            serialized_arguments.append(arg).append(1, ' ');
+        }
+        // Trim trailing whitespace
+        serialized_arguments.pop_back();
+
+        // Create a duplicated handle of the current process.
+        // This handle can be used by child processes to detect the termination of the current process.
+        if (!DuplicateHandle(m_current_process, m_current_process, m_current_process, &m_process_dup, 0, TRUE,
+                             DUPLICATE_SAME_ACCESS)) {
+            // If duplication fails, still close thread handle and return false
+            CloseHandle(m_partner_process);
+            m_partner_process = NULL;
+            return false;
+        }
+
+        // Creates partner process and inherits duplicated handle
+        BOOL result = CreateProcessA(exe_path.c_str(), serialized_arguments.data(), NULL, NULL, TRUE, 0, NULL, NULL,
+                                     &si, &pi);
+        if (!result) {
+            SCP_FATAL("Remote process")("");
+        }
+        m_partner_process = pi.hProcess;
+
+        // Close thread handle, we only need process handle
+        CloseHandle(pi.hThread);
+        return true;
+    }
+
+    // Get the duplicated  process handle
+    HANDLE get_process_dup() const { return m_process_dup; }
+
+    // Set the partner process handle directly
+    // This setter is called from the child process
+    void set_partner_process(HANDLE h) { m_partner_process = h; }
+
+    // Get the partner process handle
+    HANDLE get_partner_process() const { return m_partner_process; }
+
+    // Wait for partner process termination in a separate thread and execute callback
+    void on_partner_exit(std::function<void()> callback)
+    {
+        if (!m_partner_process) return;
+        m_exit_waiter_active = true;
+        m_exit_waiter_thread = std::thread([this, callback]() {
+            DWORD res = WaitForSingleObject(m_partner_process, INFINITE);
+            if (!m_exit_waiter_active) return;
+            if (res == WAIT_OBJECT_0) {
+                callback();
+            }
+        });
+    }
+};
+#endif // _WIN32
 
 // #define DMICACHE switchthis on - then you need a mutex
 /* rpc pass through should pass through ONE forward connection ? */
@@ -181,7 +275,7 @@ class PassRPC : public sc_core::sc_module, public transaction_forwarder_if<PASS>
         void to_tlm(tlm::tlm_dmi& other)
         {
             if (m_shmem_size == 0) return;
-            other.set_dmi_ptr(m_shmem_offset + MemoryServices::get().map_mem_join(m_shmem_fn.c_str(), m_shmem_size));
+            other.set_dmi_ptr(m_shmem_offset + MemoryServices::get().map_mem_join(m_shmem_fn, m_shmem_size));
             other.set_start_address(m_dmi_start_address);
             other.set_end_address(m_dmi_end_address);
             other.set_granted_access((tlm::tlm_dmi::dmi_access_e)m_dmi_access);
@@ -335,8 +429,8 @@ public:
     sc_core::sc_vector<InitiatorSignalSocket<bool>> initiator_signal_sockets;
     sc_core::sc_vector<TargetSignalSocket<bool>> target_signal_sockets;
 
-    cci::cci_param<int> p_cport;
-    cci::cci_param<int> p_sport;
+    cci::cci_param<uint32_t> p_client_port;
+    cci::cci_param<uint32_t> p_server_port;
     cci::cci_param<std::string> p_exec_path;
     bool m_is_local;
     cci::cci_param<std::string> p_sync_policy;
@@ -349,7 +443,6 @@ private:
     rpc::client* client = nullptr;
     rpc::server* server = nullptr;
     int m_child_pid = 0;
-    ProcAliveHandler pahandler;
     std::condition_variable is_client_connected;
     std::condition_variable is_sc_status_set;
     std::mutex client_conncted_mut;
@@ -359,7 +452,6 @@ private:
     std::thread::id sc_tid;
     std::queue<std::pair<int, bool>> sig_queue;
     std::mutex sig_queue_mut;
-    std::vector<const char*> m_remote_args;
     sc_core::sc_status m_remote_status = static_cast<sc_core::sc_status>(0);
 
     int targets_bound = 0;
@@ -368,6 +460,11 @@ private:
     gs::runonsysc m_sc;
     gs::ModuleFactory::ContainerBase* m_container;
 
+#ifdef _WIN32
+    PartnerProcessManager m_partner_process_manager;
+#else // _WIN32
+    ProcAliveHandler pahandler;
+#endif
     class trans_waiter
     {
     private:
@@ -821,19 +918,6 @@ private:
         }
     }
 
-    std::vector<std::string> get_extra_argv()
-    {
-        std::vector<std::string> argv;
-        std::list<std::string> argv_cci_children = gs::sc_cci_children((std::string(name()) + ".remote_argv").c_str());
-        if (!argv_cci_children.empty())
-            std::transform(argv_cci_children.begin(), argv_cci_children.end(), std::back_inserter(argv),
-                           [this](const std::string& arg) {
-                               std::string arg_full_name = (std::string(name()) + ".remote_argv." + arg);
-                               return gs::cci_get<std::string>(cci::cci_get_broker(), arg_full_name);
-                           });
-        return argv;
-    }
-
 public:
     PassRPC(const sc_core::sc_module_name& nm, bool is_local = false)
         : sc_core::sc_module(nm)
@@ -842,10 +926,10 @@ public:
         , target_sockets("target_socket")
         , initiator_signal_sockets("initiator_signal_socket")
         , target_signal_sockets("target_signal_socket")
-        , p_cport("client_port", 0,
-                  "The port that should be used to connect this client to the "
-                  "remote server")
-        , p_sport("server_port", 0, "The port that should be used to server on")
+        , p_client_port("client_port", 0,
+                        "The port that should be used to connect this client to the "
+                        "remote server")
+        , p_server_port("server_port", 0, "The port that should be used to server on")
         , p_exec_path("exec_path", "",
                       "The path to the executable that should be started by "
                       "the bridge")
@@ -857,44 +941,52 @@ public:
         , p_target_signals_num("target_signals_num", 0, "number of target signals")
         , cancel_waiting(false)
     {
-        SigHandler::get().add_sig_handler(SIGINT, SigHandler::Handler_CB::PASS);
+        SigHandler::get().add_sigint_handler(Handler_CB::PASS);
         SigHandler::get().register_on_exit_cb(std::string(name()) + ".gs::PassRPC::stop", [this]() { stop(); });
+
         sc_tid = std::this_thread::get_id();
+
         SCP_DEBUG(()) << "PassRPC constructor";
         m_container = dynamic_cast<gs::ModuleFactory::ContainerBase*>(get_parent_object());
         if (is_local_mode()) {
             SCP_DEBUG(()) << "Working in LOCAL mode!";
         } else {
-            SCP_DEBUG(()) << getpid() << " IS THE RPC PID " << std::this_thread::get_id() << " is the thread ID";
-            // always serve on a new port.
-            server = new rpc::server(p_sport);
-            server->suppress_exceptions(true);
-            p_sport = server->port();
-            assert(p_sport > 0);
+            SCP_DEBUG(()) << get_current_process_id() << " IS THE RPC PID, " << std::this_thread::get_id()
+                          << " is the thread ID";
 
-            if (p_cport.get_value() == 0 &&
-                getenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str())) {
-                p_cport = std::stoi(
-                    std::string(getenv((std::string(GS_Process_Server_Port) + std::to_string(getpid())).c_str())));
+            // always serve on a new port
+            server = new rpc::server(p_server_port);
+            server->suppress_exceptions(true);
+            p_server_port = server->port();
+            assert(p_server_port > 0);
+
+            /* Get parent server port if current process is child */
+            if (!in_server() && p_client_port.get_value() == 0) {
+                p_client_port = get_rpc_server_port();
             }
 
             // other end contacted us, connect to their port
             // and return back the cci database
             server->bind("reg", [&](int port) {
-                SCP_DEBUG(()) << "reg " << name() << " pid: " << getpid();
-                assert(p_cport == 0 && client == nullptr);
-                p_cport = port;
-                if (!client) client = new rpc::client("localhost", p_cport);
+                SCP_DEBUG(()) << "reg " << name() << ", pid: " << get_current_process_id() << ", port: " << port;
+                assert(p_client_port == 0 && client == nullptr);
+                p_client_port = port;
+                if (!client) client = new rpc::client("127.0.0.1", p_client_port);
                 std::unique_lock<std::mutex> ul(client_conncted_mut);
                 is_client_connected.notify_one();
                 ul.unlock();
                 // we are not interested in the return future from async_call
+#ifdef _WIN32
+                // Send to partner process a duplicated copy of the current process handler.
+                do_rpc_async_call("partner_handle",
+                                  reinterpret_cast<uintptr_t>(m_partner_process_manager.get_process_dup()));
+#else
                 do_rpc_async_call("sock_pair", pahandler.get_sockpair_fd0(), pahandler.get_sockpair_fd1());
+#endif // _WIN32
                 return get_cci_db();
             });
 
             // would it be better to have a 'remote cci broker' that connected back,
-
             server->bind("cci_db", [&](str_pairs db) {
                 if (sc_core::sc_get_status() > sc_core::sc_status::SC_BEFORE_END_OF_ELABORATION) {
                     std::cerr << "Attempt to do cci_db() RPC after "
@@ -966,6 +1058,17 @@ public:
                 return;
             });
 
+#ifdef _WIN32
+            server->bind("partner_handle", [&](uintptr_t partner_handle_value) {
+                HANDLE partner_handle = reinterpret_cast<HANDLE>(partner_handle_value);
+                m_partner_process_manager.set_partner_process(partner_handle);
+                m_partner_process_manager.on_partner_exit([&]() {
+                    std::cerr << "remote process (" << get_current_process_id() << ") detected parent ("
+                              << GetProcessId(partner_handle) << ") exit!" << std::endl;
+                });
+                return;
+            });
+#else
             server->bind("sock_pair", [&](int sock_fd0, int sock_fd1) {
                 pahandler.recv_sockpair_fds_from_remote(sock_fd0, sock_fd1);
                 pahandler.check_parent_conn_nth([&]() {
@@ -974,13 +1077,14 @@ public:
                 });
                 return;
             });
+#endif //_WIN32
 
             server->async_run(1);
 
-            if (p_cport) {
-                SCP_INFO(()) << "Connecting client on port " << p_cport;
-                if (!client) client = new rpc::client("localhost", p_cport);
-                set_cci_db(do_rpc_as<str_pairs>(do_rpc_call("reg", (int)p_sport)));
+            if (p_client_port) {
+                SCP_INFO(()) << "Connecting client on port " << p_client_port;
+                if (!client) client = new rpc::client("127.0.0.1", p_client_port);
+                set_cci_db(do_rpc_as<str_pairs>(do_rpc_call("reg", (int)p_server_port)));
             }
         }
 
@@ -1017,47 +1121,79 @@ public:
         }
 
         if (!is_local_mode()) {
-            if (!p_exec_path.get_value().empty()) {
-                SCP_INFO(()) << "Forking remote " << p_exec_path.get_value();
-                pahandler.init_peer_conn_checker();
+            if (in_server()) {
+                std::list<std::string> remote_process_args;
 
-                std::vector<std::string> extra_args;
-                extra_args = get_extra_argv();
-                m_remote_args.reserve(extra_args.size() + 2);
-                m_remote_args.push_back(p_exec_path.get_value().c_str());
-                std::transform(extra_args.begin(), extra_args.end(), std::back_inserter(m_remote_args),
-                               [](const std::string& s) { return s.c_str(); });
-                m_remote_args.push_back(0);
-                char val[DECIMAL_PORT_NUM_STR_LEN + 1]; // can't be bigger than this.
-                snprintf(val, DECIMAL_PORT_NUM_STR_LEN + 1, "%d", p_sport.get_value());
-                m_child_pid = fork();
-                if (m_child_pid > 0) {
-                    pahandler.setup_parent_conn_checker();
-                    SigHandler::get().set_nosig_chld_stop();
-                    SigHandler::get().add_sig_handler(SIGCHLD, SigHandler::Handler_CB::EXIT);
-                } else if (m_child_pid == 0) {
-                    char key[GS_Process_Server_Port_Len + DECIMAL_PID_T_STR_LEN + 1]; // can't be bigger than this.
-                    snprintf(key, GS_Process_Server_Port_Len + DECIMAL_PID_T_STR_LEN + 1, "%s%d",
-                             GS_Process_Server_Port, getpid());
-                    setenv(key, val, 1);
-
-                    execv(p_exec_path.get_value().c_str(), const_cast<char**>(&m_remote_args[0]));
-
-                    SCP_FATAL(()) << "Unable to exec the remote child process, '" << p_exec_path.get_value()
-                                  << "', error: " << std::strerror(errno);
-                } else {
-                    SCP_FATAL(()) << "failed to fork remote process, error: " << std::strerror(errno);
-                }
+                build_remote_cmdline(remote_process_args);
+                launch_remote_process(remote_process_args);
             }
 
             // Make sure by now the client is connected so we can send/recieve.
             std::unique_lock<std::mutex> ul(client_conncted_mut);
-            is_client_connected.wait(ul, [&]() { return (p_cport > 0 || cancel_waiting); });
+            is_client_connected.wait(ul, [&]() { return (p_client_port > 0 || cancel_waiting); });
             ul.unlock();
             send_status();
         }
-    }                                                                              // namespace gs
-    PassRPC(const sc_core::sc_module_name& nm, int port): PassRPC(nm, "", port){}; // convenience constructor
+    } // namespace gs
+    PassRPC(const sc_core::sc_module_name& nm, int port): PassRPC(nm, "", port) {}; // convenience constructor
+
+#ifdef _WIN32
+    void launch_remote_process(const std::list<std::string>& remote_process_args)
+    {
+        m_partner_process_manager.create_partner_process(p_exec_path.get_value(), remote_process_args);
+    }
+
+    int get_current_process_id() { return static_cast<int>(GetCurrentProcessId()); }
+
+#else
+    void launch_remote_process(const std::list<std::string>& remote_process_args)
+    {
+        // Convert remote_process_args (list<string>) to a NULL-terminated argv-style array
+        std::vector<const char*> remote_argv_vec;
+        remote_argv_vec.reserve(remote_process_args.size() + 1);
+        for (const auto& arg : remote_process_args) {
+            remote_argv_vec.push_back(arg.c_str());
+        }
+        remote_argv_vec.push_back(nullptr); // exec* expects a terminating null
+
+        const char* const* remote_argv = remote_argv_vec.data();
+
+        m_child_pid = fork();
+
+        if (m_child_pid > 0) {
+            pahandler.setup_parent_conn_checker();
+            SigHandler::get().set_nosig_chld_stop();
+            SigHandler::get().add_sigchld_handler(Handler_CB::EXIT);
+        } else if (m_child_pid == 0) {
+            execv(p_exec_path.get_value().c_str(), const_cast<char**>(&remote_argv_vec[0]));
+
+            SCP_FATAL(()) << "Unable to exec the remote child process, '" << p_exec_path.get_value()
+                          << "', error: " << std::strerror(errno);
+        } else {
+            SCP_FATAL(()) << "failed to fork remote process, error: " << std::strerror(errno);
+        }
+    }
+
+    int get_current_process_id() { return getpid(); }
+#endif // _WIN32
+
+    bool in_server() { return !p_exec_path.get_value().empty(); }
+
+    void build_remote_cmdline(std::list<std::string>& remote_cmdline)
+    {
+        // Add executable path as first parameter
+        remote_cmdline.push_back(p_exec_path.get_value());
+
+        // Add server port as --param argument for ArgParser
+        remote_cmdline.push_back("--param");
+        remote_cmdline.push_back("rpc_server_port=" + std::to_string(p_server_port.get_value()));
+
+        // Get unconsumed preset parameters from the cci broker
+        auto argv_cci_children = gs::sc_cci_children((std::string(name()) + ".remote_argv").c_str());
+
+        // Add unconsumed preset parameters to the remote command line
+        remote_cmdline.insert(remote_cmdline.end(), argv_cci_children.begin(), argv_cci_children.end());
+    }
 
     void send_status()
     {
@@ -1077,6 +1213,24 @@ public:
             sig_queue.pop();
             m_sc.run_on_sysc([&] { initiator_signal_sockets[sig.first]->write(sig.second); }, false);
         }
+    }
+
+    uint32_t get_rpc_server_port()
+    {
+        auto handle = m_broker.get_param_handle("rpc_server_port");
+        uint32_t rpc_server_port = std::numeric_limits<uint32_t>::max();
+        assert(handle.is_valid());
+        try {
+            rpc_server_port = handle.get_cci_value().get_uint();
+        } catch (const std::exception& e) {
+            std::cerr << e.what() << '\n';
+        }
+
+        if (rpc_server_port > 65535) {
+            SCP_FATAL(())("rpc_server_port parameter value {} is out of range (0-65535)", rpc_server_port);
+        }
+
+        return rpc_server_port;
     }
 
     void stop()

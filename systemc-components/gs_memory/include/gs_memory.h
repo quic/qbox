@@ -26,7 +26,10 @@
 #include <tlm_sockets_buswidth.h>
 #include <unordered_map>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -77,6 +80,7 @@ class gs_memory : public sc_core::sc_module
 
         bool m_mapped = false;
         ShmemIDExtension m_shmemID;
+        bool m_aligned = false;
 
     public:
         SubBlock(uint64_t address, uint64_t len, gs_memory& mem): m_len(len), m_address(address), m_mem(mem)
@@ -94,6 +98,7 @@ class gs_memory : public sc_core::sc_module
                 memset(m_ptr, m_mem.p_init_mem_val, m_len);
             }
         }
+
         SubBlock& access(uint64_t address)
         {
             // address is the address of where we want to write/read
@@ -109,8 +114,8 @@ class gs_memory : public sc_core::sc_module
 
             if (!m_use_sub_blocks) {
                 if (!((std::string)m_mem.p_mapfile).empty()) {
-                    if ((m_ptr = MemoryServices::get().map_file(((std::string)(m_mem.p_mapfile)).c_str(), m_len,
-                                                                m_address)) != nullptr) {
+                    if ((m_ptr = MemoryServices::get().map_file(((std::string)(m_mem.p_mapfile)), m_len, m_address)) !=
+                        nullptr) {
                         m_mapped = true;
                         return *this;
                     }
@@ -130,13 +135,17 @@ class gs_memory : public sc_core::sc_module
                     }
                     std::string shmname = shmname_stream.str();
                     int shm_fd = -1;
-                    if ((m_ptr = MemoryServices::get().map_mem_create(shmname.c_str(), m_len, &shm_fd)) != nullptr) {
+                    if ((m_ptr = MemoryServices::get().map_mem_create(shmname, m_len, &shm_fd)) != nullptr) {
                         m_mapped = true;
                         m_shmemID = ShmemIDExtension(shmname, (uint64_t)m_ptr, m_len, shm_fd);
                         return *this;
                     }
                 }
-                if ((m_ptr = MemoryServices::get().alloc(m_len)) != nullptr) {
+
+                AllocatedMemory alloc_mem = MemoryServices::get().alloc(m_len);
+                if (alloc_mem.ptr != nullptr) {
+                    m_ptr = alloc_mem.ptr;
+                    m_aligned = alloc_mem.is_aligned;
                     if (m_mem.p_init_mem) memset(m_ptr, m_mem.p_init_mem_val, m_len);
                     return *this;
                 }
@@ -194,12 +203,29 @@ class gs_memory : public sc_core::sc_module
             return &m_shmemID;
         }
 
+        void free_raw_alloc()
+        {
+            if (!m_ptr) {
+                return;
+            }
+            if (m_aligned) {
+#ifdef _WIN32
+                /*WINDOWS aligned alloc/free are done using _aligned_malloc/_aligned_free */
+                _aligned_free(m_ptr);
+#else
+                free(m_ptr);
+#endif
+            } else {
+                free(m_ptr);
+            }
+        }
+
         ~SubBlock()
         {
             if (m_mapped) {
-                munmap(m_ptr, m_len);
+                MemoryServices::get().unmap_file(m_ptr, m_len);
             } else {
-                if (m_ptr) free(m_ptr);
+                free_raw_alloc();
             }
         }
     };
@@ -441,7 +467,7 @@ public:
         , p_latency("latency", sc_core::sc_time(10, sc_core::SC_NS), "Latency reported for DMI access")
         , p_mapfile("map_file", "", "(optional) file to map this memory")
         , p_max_block_size("max_block_size", 0x100000000, "Maximum size of the sub bloc")
-        , p_min_block_size("min_block_size", sysconf(_SC_PAGE_SIZE), "Minimum size of the sub bloc")
+        , p_min_block_size("min_block_size", get_page_size(), "Minimum size of the sub bloc")
         , p_shmem("shared_memory", false, "Allocate using shared memory")
         , p_shmem_prefix("shared_memory_prefix", "", "(optional) prefix_for shared memory file")
         , p_init_mem("init_mem", false, "Initialize allocated memory")
@@ -472,6 +498,18 @@ public:
                 load.doreset(value);
             }
         });
+    }
+    static size_t get_page_size()
+    {
+        size_t page_size;
+#ifdef _WIN32
+        SYSTEM_INFO si;
+        GetSystemInfo(&si);
+        page_size = si.dwPageSize;
+#else
+        page_size = sysconf(_SC_PAGE_SIZE);
+#endif
+        return page_size;
     }
 
     void before_end_of_elaboration()

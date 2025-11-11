@@ -12,32 +12,10 @@ gs::SigHandler& gs::SigHandler::get()
     return sh;
 }
 
-void gs::SigHandler::pass_sig_handler(int sig)
+void gs::SigHandler::end_of_simulation()
 {
-    SigHandler::get().set_sig_num(sig);
-    char ch[1] = { 's' };
-    ssize_t bytes_written = ::write(SigHandler::get().get_write_sock_end(), &ch, 1);
-    if (bytes_written < 0) _Exit(EXIT_FAILURE);
-}
-
-void gs::SigHandler::force_exit_sig_handler(int sig)
-{
-    _Exit(EXIT_SUCCESS); // FIXME: should the exit status be EXIT_FAILURE?
-}
-
-void gs::SigHandler::add_sig_handler(int signum, Handler_CB s_cb = Handler_CB::EXIT)
-{
-    std::lock_guard<std::mutex> lock(signals_mutex);
-    if (m_signals.find(signum) != m_signals.end())
-        m_signals.at(signum) = s_cb;
-    else {
-        auto ret = m_signals.insert(std::make_pair(signum, s_cb));
-        if (!ret.second) {
-            std::cerr << "Failed to insert signal: " << signum << std::endl;
-            exit(EXIT_FAILURE);
-        }
-    }
-    _update_sig_cb(signum, s_cb);
+    std::lock_guard<std::mutex> lock(cb_mutex);
+    stop_running = true;
 }
 
 template <typename CONT_TYPE>
@@ -78,6 +56,166 @@ void gs::SigHandler::deregister_on_exit_cb(const std::string& name)
     deregister_cb<void(void)>(name, exit_handlers, "on_exit");
 }
 
+void gs::SigHandler::register_handler(const std::string& name, const std::function<void(int)>& handler)
+{
+    register_cb<void(int)>(name, handlers, handler, "handler");
+}
+void gs::SigHandler::deregister_handler(const std::string& name)
+{
+    deregister_cb<void(int)>(name, handlers, "handler");
+}
+
+void gs::SigHandler::set_sig_num(int val) { sig_num = val; }
+
+void gs::SigHandler::update()
+{
+    if (stop_running) sc_core::sc_stop();
+}
+
+void gs::SigHandler::add_sig_handler(int signum, Handler_CB s_cb = Handler_CB::EXIT)
+{
+    std::lock_guard<std::mutex> lock(signals_mutex);
+    if (m_signals.find(signum) != m_signals.end())
+        m_signals.at(signum) = s_cb;
+    else {
+        auto ret = m_signals.insert(std::make_pair(signum, s_cb));
+        if (!ret.second) {
+            std::cerr << "Failed to insert signal: " << signum << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+#ifndef _WIN32
+    _update_sig_cb(signum, s_cb);
+#endif
+}
+
+void gs::SigHandler::add_sigint_handler(Handler_CB s_cb) { add_sig_handler(SIGINT, s_cb); }
+
+#ifdef _WIN32
+
+static void console_signal_handler(int sig_num) { gs::SigHandler::get().console_signal_dispatch(sig_num); }
+
+gs::SigHandler::~SigHandler()
+{
+    {
+        std::lock_guard<std::mutex> lock(cb_mutex);
+        stop_running = true; // this should cause the pass_handler thread to exit next time it checks the flag.
+
+        exit_handlers.clear();
+        handlers.clear();
+    }
+    if (pass_handler.joinable()) pass_handler.join();
+}
+
+void gs::SigHandler::register_signal_handler(int sig)
+{
+    if (std::signal(sig, console_signal_handler) == SIG_ERR) {
+        fprintf(stderr, "Error: Failed to set up signal handler for signal,%d\n", sig);
+        _exit(EXIT_FAILURE);
+    }
+}
+
+void gs::SigHandler::register_all_signal_handlers()
+{
+    for (auto sig : m_signals) {
+        register_signal_handler(sig.first);
+    }
+}
+
+gs::SigHandler::SigHandler()
+    : sc_core::sc_prim_channel("SigHandler")
+    , m_signals{ { SIGINT, Handler_CB::EXIT }, { SIGBREAK, Handler_CB::EXIT } }
+    , is_pass_handler_requested{ false }
+    , stop_running{ false }
+{
+    m_console_ctrl_event = CreateEvent(NULL,  // manual reset event
+                                       FALSE, // initially not signaled
+                                       FALSE, // initially not owned
+                                       "ConsoleControlEventSignal");
+    register_all_signal_handlers();
+    _start_pass_signal_handler();
+}
+
+void gs::SigHandler::console_signal_dispatch(int sig_num)
+{
+    switch (sig_num) {
+    case SIGINT:
+    case SIGBREAK:
+        set_sig_num(sig_num);
+        SetEvent(m_console_ctrl_event);
+
+        // Re-register signal handler
+        register_signal_handler(sig_num);
+        break;
+    default:
+        fprintf(stderr, "Unhandled signal %d gs::SigHandler::console_signal_dispatch\n", sig_num);
+        std::exit(EXIT_FAILURE);
+    }
+}
+
+void gs::SigHandler::_start_pass_signal_handler()
+{
+    std::lock_guard<std::mutex> lock(thread_start_mutex);
+    if (is_pass_handler_requested) return;
+    pass_handler = std::thread([this]() {
+        DWORD ret;
+        while (!stop_running) {
+            ret = WaitForSingleObject(m_console_ctrl_event, 500);
+            if (ret == WAIT_TIMEOUT) {
+                continue;
+            } else if (ret == WAIT_OBJECT_0) {
+                std::lock_guard<std::mutex> lock(cb_mutex);
+                if (stop_running) break;
+                if (m_signals.at(sig_num) == Handler_CB::EXIT) {
+                    stop_running = true;
+                    // Mask
+                    //_change_sig_cbs_to_dfl();
+                    if (sc_core::sc_get_status() < sc_core::SC_RUNNING) {
+                        _Exit(EXIT_FAILURE);
+                    }
+                    if ((sc_core::sc_get_status() != sc_core::SC_STOPPED) &&
+                        (sc_core::sc_get_status() !=
+                         sc_core::SC_END_OF_SIMULATION)) { // don't call if sc_stop was already called, because
+                                                           // destructors of other classes may have been already
+                                                           // called and the order of destruction of objects may
+                                                           // cause the exit callback functions to be called on
+                                                           // non-existing objects
+                        for (auto on_exit_cb_pair : exit_handlers) on_exit_cb_pair.second();
+                        exit_handlers.clear();
+                        handlers.clear();
+                        async_request_update();
+                    }
+                    if (!error_signals.empty() && error_signals.find(sig_num) != error_signals.end()) {
+                        std::cerr << "\nFatal error: " << error_signals[sig_num] << std::endl;
+                        _Exit(EXIT_FAILURE);
+                    }
+                } else {
+                    for (auto handler_pair : handlers) {
+                        handler_pair.second(sig_num);
+                    }
+                }
+            } else {
+                exit(EXIT_FAILURE);
+            }
+        }
+    });
+    is_pass_handler_requested = true;
+}
+
+#else
+void gs::SigHandler::pass_sig_handler(int sig)
+{
+    SigHandler::get().set_sig_num(sig);
+    char ch[1] = { 's' };
+    ssize_t bytes_written = ::write(SigHandler::get().get_write_sock_end(), &ch, 1);
+    if (bytes_written < 0) _Exit(EXIT_FAILURE);
+}
+
+void gs::SigHandler::force_exit_sig_handler(int sig)
+{
+    _Exit(EXIT_SUCCESS); // FIXME: should the exit status be EXIT_FAILURE?
+}
+
 void gs::SigHandler::add_to_block_set(int signum) { sigaddset(&m_sigs_to_block, signum); }
 
 void gs::SigHandler::reset_block_set() { sigemptyset(&m_sigs_to_block); }
@@ -91,22 +229,6 @@ void gs::SigHandler::block_curr_handled_signals()
     reset_block_set();
     for (auto sig_cb_pair : m_signals) add_to_block_set(sig_cb_pair.first);
     block_signal_set();
-}
-
-void gs::SigHandler::register_handler(const std::string& name, const std::function<void(int)>& handler)
-{
-    register_cb<void(int)>(name, handlers, handler, "handler");
-    _start_pass_signal_handler();
-}
-void gs::SigHandler::deregister_handler(const std::string& name)
-{
-    deregister_cb<void(int)>(name, handlers, "handler");
-}
-
-void gs::SigHandler::end_of_simulation()
-{
-    std::lock_guard<std::mutex> lock(cb_mutex);
-    stop_running = true;
 }
 
 int gs::SigHandler::get_write_sock_end()
@@ -127,8 +249,6 @@ int gs::SigHandler::get_write_sock_end()
     }
     return self_sockpair_fd[1];
 }
-
-void gs::SigHandler::set_sig_num(int val) { sig_num = val; }
 
 void gs::SigHandler::mark_error_signal(int signum, std::string error_msg)
 {
@@ -214,11 +334,6 @@ void gs::SigHandler::_start_pass_signal_handler()
     is_pass_handler_requested = true;
 }
 
-void gs::SigHandler::update()
-{
-    if (stop_running) sc_core::sc_stop();
-}
-
 gs::SigHandler::SigHandler()
     : sc_core::sc_prim_channel("SigHandler")
     , m_signals{ { SIGINT, Handler_CB::EXIT }, { SIGQUIT, Handler_CB::EXIT } }
@@ -235,6 +350,7 @@ gs::SigHandler::SigHandler()
     }
     reset_block_set();
     _update_all_sigs_cb();
+    _start_pass_signal_handler();
 }
 
 void gs::SigHandler::_update_sig_cb(int signum, Handler_CB s_cb)
@@ -243,7 +359,6 @@ void gs::SigHandler::_update_sig_cb(int signum, Handler_CB s_cb)
     case Handler_CB::EXIT:
         exit_act.sa_handler = SigHandler::pass_sig_handler;
         sigaction(signum, &exit_act, NULL);
-        _start_pass_signal_handler();
         break;
     case Handler_CB::PASS:
         pass_act.sa_handler = SigHandler::pass_sig_handler;
@@ -280,9 +395,13 @@ void gs::SigHandler::_change_sig_cbs_to_dfl()
     }
 }
 
-gs::ProcAliveHandler::ProcAliveHandler(): stop_running(false), m_is_ppid_set{ false }, m_is_parent_setup_called{ false }
-{
-}
+void gs::SigHandler::add_sigchld_handler(Handler_CB s_cb) { add_sig_handler(SIGCHLD, s_cb); }
+
+#endif //_WIN32
+
+// ProcAliveHandler is not available on Windows
+#ifndef _WIN32
+gs::ProcAliveHandler::ProcAliveHandler(): stop_running(false) { init_peer_conn_checker(); }
 
 gs::ProcAliveHandler::~ProcAliveHandler()
 {
@@ -323,27 +442,18 @@ int gs::ProcAliveHandler::get_sockpair_fd0() const { return m_sock_pair_fds[0]; 
 
 int gs::ProcAliveHandler::get_sockpair_fd1() const { return m_sock_pair_fds[1]; }
 
-pid_t gs::ProcAliveHandler::get_ppid() const
-{
-    if (m_is_ppid_set)
-        return m_ppid;
-    else
-        return -1;
-}
+pid_t gs::ProcAliveHandler::get_ppid() const { return m_ppid; }
 
 void gs::ProcAliveHandler::init_peer_conn_checker()
 {
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, m_sock_pair_fds) == -1) {
+    int res = socketpair(AF_UNIX, SOCK_STREAM, 0, m_sock_pair_fds);
+    if (res) {
         perror("ProcAliveHandler socketpair");
         std::exit(EXIT_FAILURE);
     }
 }
 
-void gs::ProcAliveHandler::setup_parent_conn_checker()
-{
-    m_is_parent_setup_called = true;
-    close(m_sock_pair_fds[1]);
-}
+void gs::ProcAliveHandler::setup_parent_conn_checker() { close(m_sock_pair_fds[1]); }
 
 /**
  * same thread parent connected checker
@@ -378,8 +488,5 @@ void gs::ProcAliveHandler::check_parent_conn_nth(std::function<void()> on_parent
     parent_alive_checker = std::thread(&ProcAliveHandler::check_parent_conn_sth, this, on_parent_exit);
 }
 
-void gs::ProcAliveHandler::_set_ppid()
-{
-    m_ppid = getppid();
-    m_is_ppid_set = true;
-}
+void gs::ProcAliveHandler::_set_ppid() { m_ppid = getppid(); }
+#endif //_WIN32
