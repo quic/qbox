@@ -27,10 +27,123 @@
 #include <ports/biflow-socket.h>
 #include <tlm_sockets_buswidth.h>
 #include <libgssync.h>
+#include <uutils.h>
 #include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
+#include <tuple>
+#include <unordered_map>
+#include <thread>
+#include <future>
+#include <mutex>
+#include <condition_variable>
+#include <sstream>
 
 namespace gs {
+
+unsigned char* get_pybind11_buffer_info_ptr(const pybind11::buffer& bytes);
+
+std::string txn_command_str(const tlm::tlm_generic_payload& trans);
+class generic_payload_data_buf
+{
+private:
+    tlm::tlm_generic_payload* txn;
+
+public:
+    generic_payload_data_buf(tlm::tlm_generic_payload* _txn): txn(_txn) {}
+    pybind11::buffer_info get_buffer()
+    {
+        return pybind11::buffer_info(txn->get_data_ptr(), sizeof(uint8_t),
+                                     pybind11::format_descriptor<uint8_t>::format(), 1,
+                                     { static_cast<ssize_t>(txn->get_data_length()) }, { sizeof(uint8_t) });
+    }
+};
+
+class generic_payload_be_buf
+{
+private:
+    tlm::tlm_generic_payload* txn;
+
+public:
+    generic_payload_be_buf(tlm::tlm_generic_payload* _txn): txn(_txn) {}
+    pybind11::buffer_info get_buffer()
+    {
+        return pybind11::buffer_info(txn->get_byte_enable_ptr(), sizeof(uint8_t),
+                                     pybind11::format_descriptor<uint8_t>::format(), 1,
+                                     { static_cast<ssize_t>(txn->get_byte_enable_length()) }, { sizeof(uint8_t) });
+    }
+};
+
+class tlm_generic_payload_wrapper
+{
+private:
+    tlm::tlm_generic_payload* txn;
+    bool txn_created;
+
+public:
+    tlm_generic_payload_wrapper(tlm::tlm_generic_payload* _txn): txn(_txn), txn_created(false) {}
+    tlm_generic_payload_wrapper(): txn_created(true) { txn = new tlm::tlm_generic_payload(); }
+    ~tlm_generic_payload_wrapper()
+    {
+        if (txn_created) delete txn;
+    }
+
+    tlm::tlm_generic_payload* get_payload() { return txn; }
+
+    bool is_read() const { return txn->is_read(); }
+    void set_read() { txn->set_read(); }
+    bool is_write() const { return txn->is_write(); }
+    void set_write() { txn->set_write(); }
+    tlm::tlm_command get_command() const { return txn->get_command(); }
+    void set_command(const tlm::tlm_command command) { txn->set_command(command); }
+    sc_dt::uint64 get_address() const { return txn->get_address(); }
+    void set_address(const sc_dt::uint64 address) { txn->set_address(address); }
+    void set_data(const pybind11::buffer& bytes)
+    {
+        unsigned char* data = get_pybind11_buffer_info_ptr(bytes);
+        std::memcpy(txn->get_data_ptr(), data, txn->get_data_length());
+    }
+    generic_payload_data_buf get_data() { return generic_payload_data_buf(txn); }
+    void set_data_ptr(const pybind11::buffer& bytes)
+    {
+        unsigned char* data = get_pybind11_buffer_info_ptr(bytes);
+        txn->set_data_ptr(data);
+    }
+    unsigned int get_data_length() const { return txn->get_data_length(); }
+    void set_data_length(const unsigned int length) { txn->set_data_length(length); }
+    bool is_response_ok() const { return txn->is_response_ok(); }
+    bool is_response_error() const { return txn->is_response_error(); }
+    tlm::tlm_response_status get_response_status() const { return txn->get_response_status(); }
+    void set_response_status(const tlm::tlm_response_status response_status)
+    {
+        txn->set_response_status(response_status);
+    }
+    std::string get_response_string() const { return txn->get_response_string(); };
+    unsigned int get_streaming_width() const { return txn->get_streaming_width(); }
+    void set_streaming_width(const unsigned int streaming_width) { txn->set_streaming_width(streaming_width); }
+    void set_byte_enable_ptr(const pybind11::buffer& bytes)
+    {
+        unsigned char* byte_enable = get_pybind11_buffer_info_ptr(bytes);
+        txn->set_data_ptr(byte_enable);
+    }
+    void set_byte_enable(const pybind11::buffer& bytes)
+    {
+        unsigned char* byte_enable = get_pybind11_buffer_info_ptr(bytes);
+        std::memcpy(txn->get_byte_enable_ptr(), byte_enable, txn->get_byte_enable_length());
+    }
+    generic_payload_be_buf get_byte_enable() { return generic_payload_be_buf(txn); }
+
+    unsigned int get_byte_enable_length() const { return txn->get_byte_enable_length(); }
+    void set_byte_enable_length(const unsigned int byte_enable_length)
+    {
+        txn->set_byte_enable_length(byte_enable_length);
+    }
+    std::string str()
+    {
+        std::stringstream ss;
+        ss << "txn type: " << txn->get_command() << " addr: 0x" << std::hex << txn->get_address()
+           << " data len: " << txn->get_data_length() << " response: " << txn->get_response_string();
+        return ss.str();
+    }
+};
 
 class PyInterpreterManager
 {
@@ -47,7 +160,7 @@ public:
 };
 
 template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
-class python_binder : public sc_core::sc_module
+class python_binder : public sc_core::sc_module, public sc_core::sc_stage_callback_if
 {
     SCP_LOGGER();
     using MOD = python_binder<BUSWIDTH>;
@@ -55,11 +168,15 @@ class python_binder : public sc_core::sc_module
                                                                         sc_core::SC_ZERO_OR_MORE_BOUND>;
     using tlm_target_socket_t = tlm_utils::simple_target_socket_tagged_b<MOD, BUSWIDTH, tlm::tlm_base_protocol_types,
                                                                          sc_core::SC_ZERO_OR_MORE_BOUND>;
+    using b_transport_info = std::tuple<tlm_generic_payload_wrapper, sc_core::sc_time,
+                                        std::shared_ptr<sc_core::sc_event>, std::shared_ptr<sc_core::sc_event>>;
+    using b_transport_th_info = std::tuple<int, tlm_generic_payload_wrapper, sc_core::sc_time, bool, std::string,
+                                           std::promise<void>>;
 
 public:
     python_binder(const sc_core::sc_module_name& nm);
 
-    ~python_binder(){};
+    ~python_binder();
 
 private:
     void init_binder();
@@ -69,6 +186,10 @@ private:
     void do_b_transport(int id, pybind11::object& py_trans, pybind11::object& py_delay);
 
     void b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay);
+
+    void do_target_b_transport(int id, tlm::tlm_generic_payload& trans, sc_core::sc_time& delay,
+                               const std::string& tspt_name, std::unordered_map<int, b_transport_info>& cont,
+                               bool is_id_used);
 
     void bf_b_transport(tlm::tlm_generic_payload& txn, sc_core::sc_time& delay);
 
@@ -89,6 +210,14 @@ private:
     void end_of_simulation() override;
 
     void target_signal_cb(int id, bool value);
+
+    void exec_py_b_transport();
+
+    void exec_py_spawned_sc_thread();
+
+    void stage_callback(const sc_core::sc_stage& stage) override;
+
+    void method_thread();
 
 public:
     cci::cci_param<std::string> p_py_mod_name;
@@ -112,6 +241,15 @@ private:
     pybind11::module_ m_biflow_socket_mod;
     pybind11::module_ m_initiator_signal_socket_mod;
     pybind11::module_ m_cpp_shared_vars_mod;
+    std::unordered_map<int, b_transport_info> m_btspt_cont;
+    std::unordered_map<int, b_transport_info> m_bftspt_cont;
+    std::unordered_map<int, std::pair<bool, std::shared_ptr<sc_core::sc_event>>> m_target_signals_cont;
+    std::unique_ptr<std::thread> m_btspt_method_thread;
+    b_transport_th_info m_btspt_info;
+    std::condition_variable m_btspt_cv;
+    std::mutex m_btspt_mutex;
+    bool m_btspt_ready;
+    bool m_btspt_thread_stop;
 };
 } // namespace gs
 

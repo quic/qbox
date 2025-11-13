@@ -38,7 +38,7 @@ apt update && apt upgrade -y
 
 apt install -y make cmake g++ wget flex bison unzip python3 python3-dev python3-pip pkg-config libpixman-1-dev libglib2.0-dev ninja-build
 
-pip3 install numpy meson
+pip3 install meson
 
 ```
 
@@ -414,14 +414,14 @@ The set of modules exposed from C++ to python are:
         * set_streaming_width(width:int) -> None
         * set_data_length(len:int) -> None
         * get_data_length() -> int
-        * set_data_ptr(numpy.typing.NDArray[uint8]) -> None: if the transaction will be created in python land.
-        * set_data(numpy.typing.NDArray[uint8]) -> None: if the transaction is created in C++ land and reused from python.
-        * get_data() -> numpy.typing.NDArray[uint8]
+        * set_data_ptr(<python type supports buffer protocol>) -> None: if the transaction will be created in python land.
+        * set_data(<python type supports buffer protocol>) -> None: if the transaction is created in C++ land and reused from python.
+        * get_data() -> generic_payload_data_buf
         * set_byte_enable_length(len:int) -> None
         * get_byte_enable_length() -> int
-        * set_byte_enable_ptr(numpy.typing.NDArray[uint8]) -> None: if the transaction will be created in python land.
-        * set_byte_enable(numpy.typing.NDArray[uint8]) -> None: if the transaction is created in C++ land and reused from python.
-        * get_byte_enable() -> numpy.typing.NDArray[uint8]
+        * set_byte_enable_ptr(<python type supports buffer protocol>) -> None: if the transaction will be created in python land.
+        * set_byte_enable(<python type supports buffer protocol>) -> None: if the transaction is created in C++ land and reused from python.
+        * get_byte_enable() -> generic_payload_be_buf
         * \__repr\__() -> str
     * cpp_shared_vars: it has these python global variables shared from C++ land:
         * module_args: a python string which includes the command line arguments passed to the PythonBinder modeule as a CCI parameter named: py_module_args
@@ -433,7 +433,7 @@ The set of modules exposed from C++ to python are:
         * can_receive_more(int) -> None: biflow_socket can_receive_more function.
         * can_receive_set(int) -> None: biflow_socket can_receive_set function.
         * can_receive_any() -> None: biflow_socket can_receive_any function.
-        * enqueue(numpy.typing.NDArray[uint8]) -> None: biflow_socket enqueue function.
+        * enqueue(int) -> None: biflow_socket enqueue function.
         * set_default_txn(tlm_generic_payload) -> None: biflow_socket set_default_txn function.
         * force_send(tlm_generic_payload) -> None: biflow_socket force_send function.
         * reset() -> None: biflow_socket reset function.

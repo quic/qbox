@@ -17,7 +17,7 @@ import i2c_cpp_shared_vars
 import argparse
 import shlex
 from queue import Queue
-import sys
+import array
 
 q = Queue()
 
@@ -79,7 +79,7 @@ def i2c_read(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
 def i2c_write(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
     log("i2c_write -> Master sending data to slave")
     # read data from master and write it to slave queue
-    data = trans.get_data()
+    data = array.array('B', memoryview(trans.get_data()))
     data_len = trans.get_streaming_width()
     log(f"i2c_slvae, recived data: {data}")
     log(f"i2c_slvae, data_len: {data_len}")

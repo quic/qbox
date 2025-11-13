@@ -8,14 +8,14 @@ from sc_core import (
     sc_time_unit,
     sc_spawn,
     sc_spawn_options,
-    wait,
+    next_trigger,
     sc_event,
     sc_time_stamp,
 )
 import test_tlm_do_b_transport
 import test_cpp_shared_vars
 import functools
-import numpy as np
+import array
 from typing import List, Callable
 import argparse
 import shlex
@@ -54,36 +54,38 @@ def sc_thread(func):
 
     def wrapper(*args, **kwargs):
         if not inspect.isgeneratorfunction(func):
-            return func()
-        if not hasattr(wrapper, "g"):
-            wrapper.g = func()
-        return next(wrapper.g)
+            return func(*args, **kwargs)
+        if (not hasattr(wrapper, "g")) or (
+            inspect.getgeneratorstate(wrapper.g) == "GEN_CLOSED"
+        ):
+            wrapper.g = func(*args, **kwargs)
+        return next(wrapper.g, None)
 
     return functools.update_wrapper(wrapper, func)
 
 
-def to_uint8_nparray(func):
+def to_uint8_array(func):
     """decorator to convert list of numbers to uint8 np array"""
 
     def wrapper(*args, **kwargs):
         lst: List[int]
         lst = func(*args, **kwargs)
-        return np.array(lst, dtype=np.uint8)
+        return array.array("B", lst)
 
     return functools.update_wrapper(wrapper, func)
 
 
-@to_uint8_nparray
+@to_uint8_array
 def generate_test_data1() -> List[int]:
     return [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7]
 
 
-@to_uint8_nparray
+@to_uint8_array
 def generate_test_data2() -> List[int]:
     return [0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80]
 
 
-@to_uint8_nparray
+@to_uint8_array
 def generate_test_data3() -> List[int]:
     return [
         0x00,
@@ -140,9 +142,10 @@ def dummy_thread1():
     log(f"after execute systemc wait time 100 ms, simulation time: {sc_time_stamp()}")
 
 
-@sc_thread
-def dummy_thread2():
-    log(f"log a msg and exit thread, simulation time: {sc_time_stamp()}")
+def dummy_method2():
+    log(f"log a msg and exit method, simulation time: {sc_time_stamp()}")
+    if sc_time_stamp() < sc_time(600, sc_time_unit.SC_MS):
+        next_trigger(sc_time(200, sc_time_unit.SC_MS))
 
 
 @sc_thread
@@ -157,8 +160,12 @@ def dummy_thread3():
     assert sc_time_stamp() == sc_time(600, sc_time_unit.SC_MS)
 
 
-def spawn_sc_thread(
-    thread: Callable, thread_name: str, event: sc_event = None, donot_init: bool = False
+def spawn_sc_process(
+    process: Callable,
+    process_name: str,
+    event: sc_event = None,
+    donot_init: bool = False,
+    is_process: bool = False,
 ) -> None:
     try:
         options = sc_spawn_options()
@@ -166,21 +173,29 @@ def spawn_sc_thread(
             options.set_sensitivity(event)
         if donot_init:
             options.dont_initialize()
-        sc_spawn(thread, thread_name, options)
+        if is_process:
+            options.spawn_method()
+        sc_spawn(process, process_name, options)
     except Exception as e:
-        log(f"spawn_sc_thread error: {e}")
+        log(f"spawn_sc_process error: {e}")
 
 
 def end_of_elaboration() -> None:
-    spawn_sc_thread(
-        thread=signal_writer,
-        thread_name="signal_writer",
+    spawn_sc_process(
+        process=signal_writer,
+        process_name="signal_writer",
         event=signal_writer_event,
         donot_init=True,
     )
-    spawn_sc_thread(thread=dummy_thread1, thread_name="dummy_thread1")
-    spawn_sc_thread(thread=dummy_thread2, thread_name="dummy_thread2")
-    spawn_sc_thread(thread=dummy_thread3, thread_name="dummy_thread3")
+    spawn_sc_process(process=dummy_thread1, process_name="dummy_thread1")
+    spawn_sc_process(
+        process=dummy_method2,
+        process_name="dummy_method2",
+        event=None,
+        donot_init=False,
+        is_process=True,
+    )
+    spawn_sc_process(process=dummy_thread3, process_name="dummy_thread3")
 
 
 def target_signal_cb(id: int, value: bool) -> None:
@@ -193,13 +208,13 @@ def end_of_simulation() -> None:
     assert test_signal_write_values == signal_write_values
 
 
-def test1(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
+def test1(id: int, trans: tlm_generic_payload, delay: sc_time):
     log("test1 -> testing important transation attributes getting")
     # systemc wait
-    wait(sc_time(1000, sc_time_unit.SC_NS))
+    yield sc_time(1000, sc_time_unit.SC_NS)
     assert trans.get_data_length() == 8
     assert trans.get_command() == tlm_command.TLM_WRITE_COMMAND
-    assert (trans.get_data() == generate_test_data1()).all()
+    assert array.array("B", memoryview(trans.get_data())) == generate_test_data1()
     assert trans.get_response_status() == tlm_response_status.TLM_INCOMPLETE_RESPONSE
     assert delay == sc_time(100, sc_time_unit.SC_NS)
     log(f"delay: {delay}")
@@ -212,12 +227,12 @@ def test1(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
     trans.set_response_status(tlm_response_status.TLM_OK_RESPONSE)
 
 
-def test2(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
+def test2(id: int, trans: tlm_generic_payload, delay: sc_time):
     log(
-        "test2 -> testing important transation attributes setting and transaction initiation"
+        "test2 -> testing important transaction attributes setting and transaction initiation"
     )
     # systemc wait
-    wait(sc_time(1000, sc_time_unit.SC_NS))
+    yield sc_time(1000, sc_time_unit.SC_NS)
     # write data to memory model
     trans.set_address(0x1000)
     trans.set_data_length(8)
@@ -228,10 +243,10 @@ def test2(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
     test_tlm_do_b_transport.do_b_transport(0, trans, delay)
 
 
-def test3(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
+def test3(id: int, trans: tlm_generic_payload, delay: sc_time):
     log("test3 -> testing a read transaction")
     # systemc wait
-    wait(sc_time(1000, sc_time_unit.SC_NS))
+    yield sc_time(1000, sc_time_unit.SC_NS)
     data = generate_test_data3()
     assert trans.get_data_length() == 16
     assert trans.get_command() == tlm_command.TLM_READ_COMMAND
@@ -240,14 +255,16 @@ def test3(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
 
 
 # Entry point of the script, this function will be called from the PythonBinder module.
-def b_transport(id: int, trans: tlm_generic_payload, delay: sc_time) -> None:
+@sc_thread
+def b_transport(id: int, trans: tlm_generic_payload, delay: sc_time):
     log(f"transaction: {trans}")
     if trans.get_address() == 0x2000:
-        test1(id, trans, delay)
+        yield from test1(id, trans, delay)
+        print(f"finished test1, new address: {trans.get_address()}")
     elif trans.get_address() == 0x2100:
-        test2(id, trans, delay)
+        yield from test2(id, trans, delay)
     elif trans.get_address() == 0x2200:
-        test3(id, trans, delay)
+        yield from test3(id, trans, delay)
     else:
         raise RuntimeError(
             f"address: 0x{trans.get_address():x} is not supported in test"

@@ -30,6 +30,7 @@ TEST_BENCH(PythonBinderTestBench, test_bench)
     print_dashes();
     // write to  python-binder
     do_basic_trans_check(trans, delay, 0x2100, w_data, nullptr, 8, tlm::tlm_command::TLM_WRITE_COMMAND);
+    sc_core::wait(10, sc_core::sc_time_unit::SC_NS);
     // read from memory
     do_basic_trans_check(trans, delay, 0x1000, r_data1, &w_data[8], 16, tlm::tlm_command::TLM_READ_COMMAND);
     print_dashes();
@@ -40,13 +41,14 @@ TEST_BENCH(PythonBinderTestBench, test_bench)
     sc_core::wait(sc_core::sc_time(1, sc_core::sc_time_unit::SC_US));
     print_dashes();
     SCP_INFO(()) << "Simulation time = " << sc_core::sc_time_stamp();
-    ASSERT_EQ(sc_core::sc_time_stamp(), sc_core::sc_time(4, sc_core::sc_time_unit::SC_US));
+    ASSERT_EQ(sc_core::sc_time_stamp(), sc_core::sc_time(4010, sc_core::sc_time_unit::SC_NS));
 }
 
 int sc_main(int argc, char* argv[])
 {
     gs::ConfigurableBroker m_broker(
-        { { "test_bench.mem.target_socket.address", cci::cci_value(0x1000) },
+        { { "test_bench.log_level", cci::cci_value(5) },
+          { "test_bench.mem.target_socket.address", cci::cci_value(0x1000) },
           { "test_bench.mem.target_socket.size", cci::cci_value(0x1000) },
           { "test_bench.mem.verbose", cci::cci_value(true) },
 
