@@ -103,15 +103,8 @@ public:
         m_dev.set_prop_int("num-irq", p_num_spi + NUM_PPI);
         m_dev.set_prop_int("revision", p_revision);
 
-        // LPI support for ITS
-        m_dev.set_prop_bool("has-lpi", true);  // Enable LPI support
-        //m_dev.set_prop_int("lpi-id-bits", 16); // Number of LPI ID bits
-        
-        std::shared_ptr<qemu::MemoryRegion> sysmem = get_qemu_inst().get().get_system_memory();
-        m_dev.set_prop_link("sysmem", *sysmem);
-
         bool has_security_extensions = m_inst.is_kvm_enabled() ? false : p_has_security_extensions.get_value();
-        bool has_lpi = p_has_lpi.get_value();
+        bool has_lpi = m_inst.is_kvm_enabled() ? false : p_has_lpi.get_value();
         m_dev.set_prop_bool("has-security-extensions", has_security_extensions);
         m_dev.set_prop_bool("has-lpi", has_lpi);
         if (has_lpi) {
