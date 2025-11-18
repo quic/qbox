@@ -9,6 +9,7 @@
 /* Quic Module Cortex-M55 */
 #include "remote_cpu.h"
 #include <module_factory_container.h>
+#include <argparser.h>
 
 class RemotePlatform : public gs::ModuleFactory::ContainerDeferModulesConstruct
 {
@@ -41,17 +42,11 @@ public:
 
 int sc_main(int argc, char* argv[])
 {
-    if (argc < 2) {
-        std::cerr << "Error: Expected log_level to be passed as cmdline argument to the remote cpu process!"
-                  << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-                          .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                                        .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
 
     gs::ConfigurableBroker m_broker{ {
         { "remote_platform.moduletype", cci::cci_value("ContainerDeferModulesConstruct") },
@@ -59,8 +54,11 @@ int sc_main(int argc, char* argv[])
 
     cci::cci_originator orig("sc_main");
     auto broker_h = m_broker.create_broker_handle(orig);
-    cci::cci_param<int> p_log_level{ "log_level", std::stoi(argv[1]), "Default log level", cci::CCI_ABSOLUTE_NAME,
-                                     orig };
+
+    ArgParser arg_parser(broker_h, argc, argv);
+
+    cci::cci_param<int> p_rpc_server_port{ "rpc_server_port", 0, "RPC server port", cci::CCI_ABSOLUTE_NAME, orig };
+    cci::cci_param<int> p_log_level{ "log_level", 0, "Default log level", cci::CCI_ABSOLUTE_NAME, orig };
 
     RemotePlatform remote("remote_platform");
     try {

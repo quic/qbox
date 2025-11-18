@@ -2,18 +2,20 @@
 # Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 
-import argparse, pprint
+import argparse
 import os
-from os import sched_get_priority_max
+import platform
 from pathlib import Path
 import sys
 from sys import exit, stdout
 import pexpect
-from pexpect import *
-import getpass
 import subprocess
-from subprocess import Popen, PIPE
 import signal
+
+IS_WINDOWS = platform.system() == "Windows"
+
+if IS_WINDOWS:
+    from pexpect.popen_spawn import PopenSpawn
 
 
 def vp_test():
@@ -32,27 +34,40 @@ def vp_test():
     vp_path = Path(args.exe)
     lua_path = Path(args.lua)
 
-    # start vp platform
-    cmd = ["ip", "tuntap", "add", "qbox0", "mode", "tap"]
-    proc = subprocess.Popen(
-        cmd,
-        shell=True,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    # start vp platform - tuntap setup is Linux-specific
+    if not IS_WINDOWS:
+        cmd = ["ip", "tuntap", "add", "qbox0", "mode", "tap"]
+        proc = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
-    child = pexpect.spawn(vp_path.as_posix(), ["--gs_luafile", args.lua])
-    child.logfile = stdout.buffer
+    if IS_WINDOWS:
+        # On Windows, use PopenSpawn which works with subprocess
+        vp_cmd = f'"{vp_path.as_posix()}" --gs_luafile "{args.lua}"'
+        child = PopenSpawn(vp_cmd)
+        child.logfile = stdout.buffer
+    else:
+        child = pexpect.spawn(vp_path.as_posix(), ["--gs_luafile", args.lua])
+        child.logfile = stdout.buffer
+
     child.expect("Test program is running. Listening for interrupts.")
     child.expect("IRQ 17 happened")
     child.expect("NMI happened")
     child.expect("SysTick happened")
 
-    # make sure to use SIGQUIT to terminate the child as this signal is handled in 
-    # include/greensocs/gsutils/uutils.h and it should be called for VP proper cleanup.
-    child.kill(signal.SIGQUIT)
-    child.wait()
+    # Terminate the child process
+    if IS_WINDOWS:
+        # On Windows, send EOF and kill the process
+        child.kill(signal.SIGTERM)
+    else:
+        # On Unix, use SIGQUIT which is handled in
+        # include/greensocs/gsutils/uutils.h for VP proper cleanup.
+        child.kill(signal.SIGQUIT)
+        child.wait()
 
     test = True
     return test

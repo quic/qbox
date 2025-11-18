@@ -17,6 +17,17 @@ if EXECUTABLE_PATH == nil then
     print("Error: executable_path is not set")
 end
 
+function formatExecutable(executable)
+    local isWindows = package.config:sub(1,1) == '\\'
+
+    if isWindows then
+        return "\\" .. executable .. ".exe"
+    else
+        return "/" .. executable
+    end
+end
+
+
 platform = {
     moduletype = "ContainerDeferModulesConstruct";
     quantum_ns = 10000000;
@@ -60,8 +71,8 @@ platform = {
         
     plugin_0 = {
         moduletype = "RemotePass", -- can be replaced by 'Container'
-        exec_path = EXECUTABLE_PATH.."/remote_cpu",
-        remote_argv = {tostring(1)},
+        exec_path = EXECUTABLE_PATH..formatExecutable("remote_cpu"),
+        remote_argv = {"--param", "log_level=1"},
         tlm_initiator_ports_num = 2,
         tlm_target_ports_num = 0,
         target_signals_num = 4,

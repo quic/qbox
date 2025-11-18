@@ -19,7 +19,6 @@
 #include <keep_alive/include/keep_alive.h>
 #include <module_factory_container.h>
 #include <filesystem>
-#include <limits.h> // For PATH_MAX
 
 #if SC_VERSION_MAJOR < 3
 #warning PLEASE UPDATE TO SYSTEMC 3.0, OLDER VERSIONS ARE DEPRECATED AND MAY NOT WORK
@@ -27,6 +26,7 @@
 
 #if defined(__linux__)
 #include <unistd.h> // For readlink
+#include <limits.h> // For PATH_MAX
 
 // Function to get the absolute path of the executable on Linux
 std::string getExecutablePath()
@@ -44,6 +44,7 @@ std::string getExecutablePath()
 #elif defined(__APPLE__)
 #include <mach-o/dyld.h> // For _NSGetExecutablePath
 #include <unistd.h>      // For realpath
+#include <limits.h>      // For PATH_MAX
 
 // Function to get the absolute path of the executable on macOS
 std::string getExecutablePath()
@@ -60,8 +61,26 @@ std::string getExecutablePath()
     }
 }
 
-#endif
+#elif defined(_WIN32)
+#include <windows.h>
+std::string getExecutablePath()
+{
+    std::string path;
+    std::vector<char> buf;
+    size_t size;
+    buf.resize(MAX_PATH); // Initial size, typical for Windows
+    size = GetModuleFileNameA(NULL, buf.data(), buf.size());
+    if (size <= MAX_PATH) {
+        path.assign(buf.data(), size);
+    } else {
+        std::cerr << "Executable path is bigger than MAX_PATH: " << path << std::endl;
+    }
 
+    return path;
+}
+#else
+#error "Unsupported platform"
+#endif
 // Function to extract the directory from a given path
 std::string getDirectory(const std::string& path)
 {
