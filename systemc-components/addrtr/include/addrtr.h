@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All Rights Reserved.
- * Author: GreenSocs 2022
+ * Copyright (c) 2025 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -16,6 +15,7 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
 #include <cci_configuration>
+#include <scp/report.h>
 
 #include <libgsutils.h>
 #include <module_factory_registery.h>
@@ -27,72 +27,143 @@
  * @brief A Addrtr component that can add addrtr to a virtual platform project to manage the various
  * transactions
  *
- * @details This component models a addrtr. It has a single multi-target socket so any other
+ * @details This component models a addrtr. It has a single target socket so another
  * component with an initiator socket can connect to this component. It behaves as follows:
- *    - Manages exclusive accesses, adding this addrtr as a 'hop' in the exclusive access extension
- * (see GreenSocs/libgsutils).
- *    - Manages connections to multiple initiators and targets with the method `add_initiator` and
- * `add_target`.
- *    - Allows to manage read and write transactions with `b_transport` and `transport_dbg` methods.
- *    - Supports passing through DMI requests with the method `get_direct_mem_ptr`.
- *    - Handles invalidation of multiple DMI pointers with the method `invalidate_direct_mem_ptr`
- * which passes the invalidate back to *all* initiators.
- *    - It checks for each transaction if the address is valid or not and returns an error if the
- * address is invalid with the method `decode_address`.
+ * translate the target_socket address to the mapped_base_addr (CCI parameter) and reinitiate the transaction
+ * using the initiator_socket.
  */
 
 class addrtr : public sc_core::sc_module
 {
 private:
-    sc_dt::uint64 addr_fw(sc_dt::uint64 addr) { return addr + offset; }
-    sc_dt::uint64 addr_bw(sc_dt::uint64 addr) { return addr - offset; }
-    void translate_fw(tlm::tlm_generic_payload& trans) { trans.set_address(addr_fw(trans.get_address())); }
-    void translate_bw(tlm::tlm_generic_payload& trans) { trans.set_address(addr_bw(trans.get_address())); }
+    SCP_LOGGER();
+
+    sc_dt::uint64 addr_fw(sc_dt::uint64 addr)
+    {
+        auto offset = addr - m_base_addr;
+        return p_mapped_base_addr.get_value() + offset;
+    }
+
+    sc_dt::uint64 addr_bw(sc_dt::uint64 addr)
+    {
+        auto offset = addr - p_mapped_base_addr.get_value();
+        return m_base_addr + offset;
+    }
+
+    uint64_t map_txn_addr(tlm::tlm_generic_payload& trans)
+    {
+        uint64_t addr = trans.get_address();
+        uint64_t len = trans.get_data_length();
+        uint64_t mapped_addr = addr;
+        if ((addr >= m_base_addr) && ((addr + len - 1) < (m_base_addr + m_mapping_size))) {
+            mapped_addr = addr_fw(addr);
+            trans.set_address(mapped_addr);
+        } else {
+            SCP_FATAL(()) << "The txn [addr: 0x" << std::hex << addr << "] len: 0x" << std::hex << len
+                          << ", doesn't belong to the target_socket base address: 0x" << std::hex << m_base_addr
+                          << " size: 0x" << std::hex << m_mapping_size;
+        }
+        return mapped_addr;
+    }
+
+    void map_dmi_start_end_addr(uint64_t& start_addr, uint64_t& end_addr)
+    {
+        if (start_addr < p_mapped_base_addr.get_value()) {
+            start_addr = m_base_addr;
+        } else if ((start_addr >= p_mapped_base_addr.get_value()) &&
+                   (start_addr < (p_mapped_base_addr.get_value() + m_mapping_size))) {
+            start_addr = addr_bw(start_addr);
+        } else {
+            SCP_FATAL(()) << "DMI granted start address 0x" << std::hex << start_addr
+                          << " is bigger than the mapped area 0x" << std::hex << p_mapped_base_addr.get_value()
+                          << " size: 0x" << std::hex << m_mapping_size;
+        }
+        if (end_addr >= (p_mapped_base_addr.get_value() + m_mapping_size)) {
+            end_addr = m_base_addr + m_mapping_size;
+        } else if ((end_addr > start_addr) && (end_addr < (p_mapped_base_addr.get_value() + m_mapping_size))) {
+            end_addr = addr_bw(end_addr);
+        } else {
+            SCP_FATAL(()) << "DMI granted end address 0x" << std::hex << start_addr
+                          << " is smaller than the mapped area 0x" << std::hex << p_mapped_base_addr.get_value()
+                          << " size: 0x" << std::hex << m_mapping_size;
+        }
+    }
 
     void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay)
     {
-        translate_fw(trans);
-        back_socket->b_transport(trans, delay);
-        translate_bw(trans);
+        uint64_t orig_addr = trans.get_address();
+        uint64_t mapped_addr = map_txn_addr(trans);
+        SCP_DEBUG(()) << "b_transport to addr: 0x" << std::hex << orig_addr << " will be mapped to addr: 0x" << std::hex
+                      << mapped_addr;
+        initiator_socket->b_transport(trans, delay);
+        trans.set_address(orig_addr);
     }
 
     unsigned int transport_dbg(tlm::tlm_generic_payload& trans)
     {
-        sc_dt::uint64 addr = trans.get_address();
-
-        translate_fw(trans);
-        unsigned int r = back_socket->transport_dbg(trans);
-        translate_bw(trans);
-        return r;
+        uint64_t orig_addr = trans.get_address();
+        uint64_t mapped_addr = map_txn_addr(trans);
+        SCP_DEBUG(()) << "transport_dbg to addr: 0x" << std::hex << orig_addr << " will be mapped to addr: 0x"
+                      << std::hex << mapped_addr;
+        unsigned int ret = initiator_socket->transport_dbg(trans);
+        trans.set_address(orig_addr);
+        return ret;
     }
 
     bool get_direct_mem_ptr(tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi_data)
     {
-        sc_dt::uint64 addr = trans.get_address();
-
-        translate_fw(trans);
-        bool r = back_socket->get_direct_mem_ptr(trans, dmi_data);
-        translate_bw(trans);
-        return r;
+        uint64_t orig_addr = trans.get_address();
+        uint64_t mapped_addr = map_txn_addr(trans);
+        bool ret = initiator_socket->get_direct_mem_ptr(trans, dmi_data);
+        trans.set_address(orig_addr);
+        if (ret) {
+            uint64_t start_addr = dmi_data.get_start_address();
+            uint64_t end_addr = dmi_data.get_end_address();
+            map_dmi_start_end_addr(start_addr, end_addr);
+            dmi_data.set_start_address(start_addr);
+            dmi_data.set_end_address(end_addr);
+            SCP_DEBUG(()) << "DMI was granted to range 0x" << std::hex << start_addr << " - 0x" << std::hex << end_addr;
+        }
+        return ret;
     }
 
     void invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end)
     {
-        front_socket->invalidate_direct_mem_ptr(addr_bw(start), addr_bw(end));
+        uint64_t start_addr = start;
+        uint64_t end_addr = end;
+        map_dmi_start_end_addr(start_addr, end_addr);
+        SCP_DEBUG(()) << "invalidate_direct_mem_ptr request to range 0x" << std::hex << start_addr << " - 0x"
+                      << std::hex << end_addr;
+        target_socket->invalidate_direct_mem_ptr(start_addr, end_addr);
     }
 
-public:
-    tlm_utils::simple_target_socket<addrtr, DEFAULT_TLM_BUSWIDTH> front_socket;
-    tlm_utils::simple_initiator_socket<addrtr, DEFAULT_TLM_BUSWIDTH> back_socket;
-    cci::cci_param<uint64_t> offset;
+private:
+    cci::cci_broker_handle m_broker;
+    uint64_t m_base_addr;
+    uint64_t m_mapping_size;
 
+public:
+    tlm_utils::simple_target_socket<addrtr, DEFAULT_TLM_BUSWIDTH> target_socket;
+    tlm_utils::simple_initiator_socket<addrtr, DEFAULT_TLM_BUSWIDTH> initiator_socket;
+    cci::cci_param<uint64_t> p_mapped_base_addr;
+
+public:
     explicit addrtr(const sc_core::sc_module_name& nm)
-        : sc_core::sc_module(nm), back_socket("initiator"), front_socket("target"), offset("offset", 0)
+        : sc_core::sc_module(nm)
+        , m_broker(cci::cci_get_broker())
+        , initiator_socket("initiator_socket")
+        , target_socket("target_socket")
+        , p_mapped_base_addr("mapped_base_addr", 0, "base adress for mapping")
     {
-        front_socket.register_b_transport(this, &addrtr::b_transport);
-        front_socket.register_transport_dbg(this, &addrtr::transport_dbg);
-        front_socket.register_get_direct_mem_ptr(this, &addrtr::get_direct_mem_ptr);
-        back_socket.register_invalidate_direct_mem_ptr(this, &addrtr::invalidate_direct_mem_ptr);
+        SCP_TRACE(())("addrtr constructor");
+        target_socket.register_b_transport(this, &addrtr::b_transport);
+        target_socket.register_transport_dbg(this, &addrtr::transport_dbg);
+        target_socket.register_get_direct_mem_ptr(this, &addrtr::get_direct_mem_ptr);
+        initiator_socket.register_invalidate_direct_mem_ptr(this, &addrtr::invalidate_direct_mem_ptr);
+        m_base_addr = gs::cci_get<uint64_t>(m_broker,
+                                            std::string(sc_core::sc_module::name()) + ".target_socket.address");
+        m_mapping_size = gs::cci_get<uint64_t>(m_broker,
+                                               std::string(sc_core::sc_module::name()) + ".target_socket.size");
     }
 
     addrtr() = delete;

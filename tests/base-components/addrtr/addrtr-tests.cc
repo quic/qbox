@@ -14,12 +14,21 @@
  * Regular load and stores. Check that the monitor does not introduce bugs when
  * no exclusive transaction are in use.
  */
-TEST_BENCH(AddrtrTestBench, simlpletxn) { do_txn(0, 100, 0); }
-TEST_BENCH(AddrtrTestBench, dbgtxn) { do_txn(1, 100, 1); }
-TEST_BENCH(AddrtrTestBench, dmiinv) { do_dmi(2, 100); }
+TEST_BENCH(AddrtrTestBench, Tester)
+{
+    do_txn(0x100ULL, 0);
+    do_txn(0x100ULL, 1);
+    do_dmi(0x100ULL);
+}
+
 int sc_main(int argc, char* argv[])
 {
-    auto m_broker = new gs::ConfigurableBroker();
+    gs::ConfigurableBroker m_broker({
+        { "log_level", cci::cci_value(5) },
+        { "Tester.exclusive_addrtr.target_socket.address", cci::cci_value(0x100ULL) },
+        { "Tester.exclusive_addrtr.target_socket.size", cci::cci_value(AddrtrTestBench::TARGET_MMIO_SIZE) },
+        { "Tester.exclusive_addrtr.mapped_base_addr", cci::cci_value(0x110ULL) },
+    });
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

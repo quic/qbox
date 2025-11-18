@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
- * Author: GreenSocs 2022
+ * Copyright (c) 2025 Qualcomm Innovation Center, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -21,6 +20,7 @@
 
 class AddrtrTestBench : public TestBench
 {
+public:
     static constexpr size_t TARGET_MMIO_SIZE = 1024;
 
     class TargetTesterDMIinv : public TargetTester
@@ -43,7 +43,7 @@ private:
     TargetTesterDMIinv m_target;
 
     uint64_t sent_addr;
-    uint64_t offset = 0xDEAD;
+    uint64_t offset = 0xDEADULL;
 
     /* Initiator callback */
     void invalidate_direct_mem_ptr(uint64_t start_range, uint64_t end_range)
@@ -66,9 +66,9 @@ private:
     }
 
 protected:
-    void do_txn(int id, uint64_t addr, bool dbg)
+    void do_txn(uint64_t addr, bool dbg)
     {
-        uint64_t data = 0x42;
+        uint64_t data = 0x42ULL;
         TlmGenericPayload txn;
         sent_addr = addr;
         if (!dbg) {
@@ -78,9 +78,9 @@ protected:
         }
     }
 
-    void do_dmi(int id, uint64_t addr)
+    void do_dmi(uint64_t addr)
     {
-        uint64_t data = 0x42;
+        uint64_t data = 0x42ULL;
         TlmGenericPayload txn;
         sent_addr = addr;
         m_initiator.do_dmi_request(addr);
@@ -90,14 +90,13 @@ protected:
 public:
     AddrtrTestBench(const sc_core::sc_module_name& n)
         : TestBench(n)
-        , m_addrtr("exclusive-addrtr")
+        , m_addrtr("exclusive_addrtr")
         , m_initiator("initiator-tester")
         , m_target("target-tester", TARGET_MMIO_SIZE)
     {
         using namespace std::placeholders;
 
-        offset = 10;
-        m_addrtr.offset = offset;
+        offset = 0x10ULL;
 
         m_initiator.register_invalidate_direct_mem_ptr(
             std::bind(&AddrtrTestBench::invalidate_direct_mem_ptr, this, _1, _2));
@@ -106,8 +105,8 @@ public:
         m_target.register_debug_write_cb(std::bind(&AddrtrTestBench::target_access, this, _1, _2, _3));
         m_target.register_get_direct_mem_ptr_cb(std::bind(&AddrtrTestBench::get_direct_mem_ptr, this, _1, _2));
 
-        m_addrtr.front_socket.bind(m_initiator.socket);
-        m_addrtr.back_socket.bind(m_target.socket);
+        m_addrtr.target_socket.bind(m_initiator.socket);
+        m_addrtr.initiator_socket.bind(m_target.socket);
     }
 
     virtual ~AddrtrTestBench() {}
