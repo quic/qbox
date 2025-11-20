@@ -27,7 +27,7 @@ std::string getexepath()
 {
     char result[1024] = { 0 };
 #ifdef _WIN32
-    GetModuleFileNameW(NULL, result, 1024);
+    GetModuleFileNameA(NULL, result, 1024);
     return result;
 #elif __APPLE__
     uint32_t size = sizeof(result);
