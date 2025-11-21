@@ -220,6 +220,13 @@ macro(gs_enable_testing)
   if (NOT GS_ONLY)
     if(BUILD_TESTING AND ("${PROJECT_NAME}" STREQUAL "${CMAKE_PROJECT_NAME}"))
       if (googletest_ADDED)
+        # Force gtest DLLs to CMAKE_BINARY_DIR instead of CMAKE_BINARY_DIR/bin
+        if(WIN32)
+          set_target_properties(gtest gtest_main gmock gmock_main
+            PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+          )
+        endif()
         target_link_libraries(${PROJECT_NAME} INTERFACE gtest gmock)
       endif()
       enable_testing()
