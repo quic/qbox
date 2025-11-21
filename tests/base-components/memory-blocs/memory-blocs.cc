@@ -6,12 +6,15 @@
  */
 
 #include <systemc>
+#include <vector>
+#include <algorithm>
 
 #include <tlm>
 #include <scp/report.h>
 
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
+#include <gtest/gtest.h>
 
 #include "gs_memory.h"
 #include "loader.h"
@@ -21,136 +24,113 @@
 class MemoryBlocs : public sc_core::sc_module
 {
 public:
-    // static constexpr size_t MEMORY_SIZE = 0x1000;
-
     void test_write_one_bloc()
     {
-        int tab[0x200] = { 0 };
+        constexpr size_t block_size = 0x200;
+        std::vector<int> tab(block_size, 4);
+        std::vector<int> data1(block_size, 0);
 
-        int data1[0x200] = { 0 };
-
-        for (int i = 0; i < 0x200; i++) {
-            tab[i] = 4;
-        }
-
-        m_initiator.do_write(0x450, tab);
-        m_initiator.do_read(0x450, data1);
-
-        for (int i = 0; i < 0x200; i++) {
-            assert(data1[i] == tab[i]);
-        }
+        m_initiator.do_write_with_ptr(0x450, reinterpret_cast<const uint8_t*>(tab.data()), tab.size() * sizeof(int));
+        m_initiator.do_read_with_ptr(0x450, reinterpret_cast<uint8_t*>(data1.data()), data1.size() * sizeof(int));
+        ASSERT_EQ(data1, tab);
 
         uint8_t data_8t = 0;
         m_initiator.do_write<uint8_t>(0x10000, 0xFF);
         m_initiator.do_read(0x10000, data_8t);
-        assert(0xFF == data_8t);
+        ASSERT_TRUE(0xFF == data_8t);
 
         uint16_t data_16t = 0;
         m_initiator.do_write<uint16_t>(0x20000, 0xABCD);
         m_initiator.do_read(0x20000, data_16t);
-        assert(0xABCD == data_16t);
+        ASSERT_TRUE(0xABCD == data_16t);
 
         uint32_t data_32t = 0;
         m_initiator.do_write<uint32_t>(0x30000, 0xABCDEF);
         m_initiator.do_read(0x30000, data_32t);
-        assert(0xABCDEF == data_32t);
+        ASSERT_TRUE(0xABCDEF == data_32t);
 
         uint64_t data_64t = 0;
         m_initiator.do_write<uint64_t>(0x50000, 0xABCDEFAF);
         m_initiator.do_read(0x50000, data_64t);
-        assert(0xABCDEFAF == data_64t);
+        ASSERT_TRUE(0xABCDEFAF == data_64t);
     }
 
     void test_write_two_blocs()
     {
-        int tab[0x80000] = { 0 };
-        int data1[0x80000] = { 0 };
+        constexpr size_t block_size = 0x80000;
+        const std::vector<int> tab(block_size, 4);
+        std::vector<int> data1(block_size, 0);
+
+        m_initiator.do_write_with_ptr(0x33FFFFF00, reinterpret_cast<const uint8_t*>(tab.data()),
+                                      tab.size() * sizeof(int));
+        m_initiator.do_read_with_ptr(0x33FFFFF00, reinterpret_cast<uint8_t*>(data1.data()), data1.size() * sizeof(int));
+
+        ASSERT_EQ(data1, tab);
+
         uint8_t data = 0;
-
-        for (int i = 0; i < 0x80000; i++) {
-            tab[i] = 4;
-        }
-
-        m_initiator.do_write(0x33FFFFF00, tab);
-        m_initiator.do_read(0x33FFFFF00, data1);
-
-        for (int i = 0; i < 0x80000; i++) {
-            assert(data1[i] == tab[i]);
-            // SCP_INFO(SCMOD) << " i= "<< i << endl;
-            // SCP_INFO(SCMOD) << "data1 = "<< data1[i] << endl;
-            // SCP_INFO(SCMOD) << "tab = "<< tab[i] << endl;
-        }
-
         m_initiator.do_write<uint8_t>(0x400000000, 0x66);
         m_initiator.do_read(0x400000000, data);
-        assert(0x66 == data);
+        ASSERT_TRUE(0x66 == data);
     }
 
     void test_write_debug_one_bloc()
     {
-        int tab[0x200] = { 0 };
-        int data1[0x200] = { 0 };
-        uint64_t data = 0;
+        constexpr size_t block_size = 0x200;
+        std::vector<int> tab(block_size, 4);
+        std::vector<int> data1(block_size, 0);
 
-        for (int i = 0; i < 0x200; i++) {
-            tab[i] = 4;
-        }
+        m_initiator.do_write_with_ptr(0x100000, reinterpret_cast<const uint8_t*>(tab.data()), tab.size() * sizeof(int),
+                                      true);
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == tab.size() * sizeof(int));
+        m_initiator.do_read_with_ptr(0x100000, reinterpret_cast<uint8_t*>(data1.data()), data1.size() * sizeof(int),
+                                     true);
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == data1.size() * sizeof(int));
 
-        m_initiator.do_write(0x100000, tab, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(tab));
-        m_initiator.do_read(0x100000, data1, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data1));
-
-        for (int i = 0; i < 0x200; i++) {
-            assert(data1[i] == tab[i]);
-        }
+        ASSERT_EQ(data1, tab);
 
         uint8_t data_8t = 0;
         m_initiator.do_write<uint8_t>(0x200000, 0x90, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(uint8_t));
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == sizeof(uint8_t));
         m_initiator.do_read(0x200000, data_8t, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data_8t));
-        assert(0x90 == data_8t);
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == sizeof(data_8t));
+        ASSERT_TRUE(0x90 == data_8t);
 
         uint16_t data_16t = 0;
         m_initiator.do_write<uint16_t>(0x300000, 0xABCD, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(uint16_t));
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == sizeof(uint16_t));
         m_initiator.do_read(0x300000, data_16t, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data_16t));
-        assert(0xABCD == data_16t);
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == sizeof(data_16t));
+        ASSERT_TRUE(0xABCD == data_16t);
 
         uint32_t data_32t = 0;
         m_initiator.do_write<uint32_t>(0x400000, 0xFFABEF, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(uint32_t));
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == sizeof(uint32_t));
         m_initiator.do_read(0x400000, data_32t, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data_32t));
-        assert(0xFFABEF == data_32t);
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == sizeof(data_32t));
+        ASSERT_TRUE(0xFFABEF == data_32t);
 
         uint64_t data_64t = 0;
         m_initiator.do_write<uint64_t>(0x500000, 0x12345678, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(uint64_t));
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == sizeof(uint64_t));
         m_initiator.do_read(0x500000, data_64t, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data_64t));
-        assert(0x12345678 == data_64t);
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == sizeof(data_64t));
+        ASSERT_TRUE(0x12345678 == data_64t);
     }
 
     void test_write_debug_two_blocs()
     {
-        int tab[0x200] = { 0 };
-        int data[0x200] = { 0 };
+        constexpr size_t block_size = 0x200;
+        std::vector<int> tab(block_size, 4);
+        std::vector<int> data(block_size, 0);
 
-        for (int i = 0; i < 0x200; i++) {
-            tab[i] = 8;
-        }
+        m_initiator.do_write_with_ptr(0x33FFFFF00, reinterpret_cast<const uint8_t*>(tab.data()),
+                                      tab.size() * sizeof(int), true);
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == tab.size() * sizeof(int));
+        m_initiator.do_read_with_ptr(0x33FFFFF00, reinterpret_cast<uint8_t*>(data.data()), data.size() * sizeof(int),
+                                     true);
+        ASSERT_TRUE(m_initiator.get_last_transport_debug_ret() == data.size() * sizeof(int));
 
-        m_initiator.do_write(0x33FFFFF00, tab, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(tab));
-        m_initiator.do_read(0x33FFFFF00, data, true);
-        assert(m_initiator.get_last_transport_debug_ret() == sizeof(data));
-
-        for (int i = 0; i < 0x200; i++) {
-            assert(data[i] == tab[i]);
-        }
+        ASSERT_EQ(data, tab);
     }
 
     void do_good_dmi_request_and_check(uint64_t addr)
@@ -159,7 +139,7 @@ public:
 
         bool ret = m_initiator.do_dmi_request(addr);
 
-        assert(ret);
+        ASSERT_TRUE(ret);
     }
 
     void dmi_write_or_read(uint64_t addr, uint8_t* data, size_t data_len, bool is_read)
@@ -182,10 +162,10 @@ public:
             len = (data_len < bloc_len) ? data_len : bloc_len;
 
             if (is_read == TLM_READ_COMMAND) {
-                assert(dmi_data.is_read_allowed());
+                ASSERT_TRUE(dmi_data.is_read_allowed());
                 memcpy(&data[data_ptr_index], dmi_data.get_dmi_ptr() + bloc_offset, len);
             } else {
-                assert(dmi_data.is_write_allowed());
+                ASSERT_TRUE(dmi_data.is_write_allowed());
                 memcpy(dmi_data.get_dmi_ptr() + bloc_offset, &data[data_ptr_index], len);
             }
 
@@ -198,31 +178,25 @@ public:
     void test_write_with_DMI()
     {
         uint8_t data = 0xFF;
-        uint8_t tab[0x80000] = { 0 };
-        uint8_t data1[0x80000] = { 0 };
+        std::vector<uint8_t> tab(0x80000, 8);
+        std::vector<uint8_t> data1(0x80000, 0);
         uint8_t data_read = 0;
-
-        for (int i = 0; i < 0x80000; i++) {
-            tab[i] = 8;
-        }
 
         /* Simple send/read data block 0*/
         dmi_write_or_read(0x100, &data, sizeof(data), true);
         dmi_write_or_read(0x100, &data_read, sizeof(data), false);
-        assert(data == data_read);
+        ASSERT_TRUE(data == data_read);
 
         data = 0x04;
         /* Simple send/read data block 1 */
         dmi_write_or_read(0x400000000, &data, sizeof(data), true);
         dmi_write_or_read(0x400000000, &data_read, sizeof(data), false);
-        assert(data == data_read);
+        ASSERT_TRUE(data == data_read);
 
-        dmi_write_or_read(0x33FFFFF00, tab, sizeof(tab), true);
-        dmi_write_or_read(0x33FFFFF00, data1, sizeof(data1), false);
+        dmi_write_or_read(0x33FFFFF00, tab.data(), tab.size(), true);
+        dmi_write_or_read(0x33FFFFF00, data1.data(), data1.size(), false);
 
-        for (int i = 0; i < 0x80000; i++) {
-            assert(data1[i] == tab[i]);
-        }
+        ASSERT_EQ(data1, tab);
     }
 
     template <class T>
@@ -233,15 +207,15 @@ public:
         for (int i = 1; i < 30; i++) {
             for (int a = 0; a < 16; a++) {
                 uint64_t addr = ((i * 0x1000) - (8 * sizeof(T))) + (a * sizeof(T));
-                assert(m_initiator.do_write(addr, seed * a, false) == tlm::TLM_OK_RESPONSE);
+                ASSERT_TRUE(m_initiator.do_write(addr, seed * a, false) == tlm::TLM_OK_RESPONSE);
             }
         }
         for (int i = 1; i < 3; i++) {
             for (int a = 0; a < 16; a++) {
                 T d;
                 uint64_t addr = ((i * 0x1000) - (8 * sizeof(T))) + (a * sizeof(T));
-                assert(m_initiator.do_read(addr, d, false) == tlm::TLM_OK_RESPONSE);
-                assert(d == (seed * a));
+                ASSERT_TRUE(m_initiator.do_read(addr, d, false) == tlm::TLM_OK_RESPONSE);
+                ASSERT_TRUE(d == (seed * a));
             }
         }
     }
@@ -264,14 +238,14 @@ public:
                 uint64_t end_addr = dmi_data.get_end_address();
                 uint8_t* ptr = dmi_data.get_dmi_ptr();
                 if (old_ptr != ptr) {
-                    assert(a == 0 || a == 8);
+                    ASSERT_TRUE(a == 0 || a == 8);
                     if (a == 8) {
                         boundry++;
                     }
                 }
                 old_ptr = ptr;
-                assert(start_addr <= addr);
-                assert(addr <= end_addr);
+                ASSERT_TRUE(start_addr <= addr);
+                ASSERT_TRUE(addr <= end_addr);
                 T data = seed * a;
                 memcpy(dmi_data.get_dmi_ptr() + (addr - start_addr), &data, sizeof(T));
             }
@@ -280,11 +254,11 @@ public:
             for (int a = 0; a < 16; a++) {
                 T d;
                 uint64_t addr = ((i * 0x1000) - (8 * sizeof(T))) + (a * sizeof(T));
-                assert(m_initiator.do_read(addr, d, false) == tlm::TLM_OK_RESPONSE);
-                assert(d == (seed * a));
+                ASSERT_TRUE(m_initiator.do_read(addr, d, false) == tlm::TLM_OK_RESPONSE);
+                ASSERT_TRUE(d == (seed * a));
             }
         }
-        assert(boundry > 0);
+        ASSERT_TRUE(boundry > 0);
     }
 
 protected:
