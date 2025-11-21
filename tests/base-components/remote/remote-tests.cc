@@ -66,7 +66,7 @@ int sc_main(int argc, char* argv[])
         { "test_bench.pass.target_socket_0.address", cci::cci_value(0x20000) },
         { "test_bench.pass.target_socket_0.size", cci::cci_value(0x10000) },
         { "test_bench.pass.target_socket_0.relative_addresses", cci::cci_value(false) },
-        { "test_bench.pass.exec_path", cci::cci_value(getexepath() + "-remote") },
+        { "test_bench.pass.exec_path", cci::cci_value(add_suffix_to_executable(getexepath(), "-remote")) },
     });
 
     ::testing::InitGoogleTest(&argc, argv);

@@ -23,6 +23,19 @@
 #include <mach-o/dyld.h>
 #endif
 
+std::string add_suffix_to_executable(const std::string& exe_path, const std::string& suffix)
+{
+#ifdef _WIN32
+    size_t pos = exe_path.rfind(".exe");
+    if (pos != std::string::npos) {
+        return exe_path.substr(0, pos) + suffix + ".exe";
+    }
+    return exe_path + suffix;
+#else
+    return exe_path + suffix;
+#endif
+}
+
 std::string getexepath()
 {
     char result[1024] = { 0 };
