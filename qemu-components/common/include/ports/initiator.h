@@ -364,7 +364,7 @@ protected:
             tlm::tlm_dmi first_map = u_dmi.get_first(gs::tlm_dmi_ex::dmi_mapped);
 
             uint64_t start = first_map.get_start_address();
-            uint64_t size = first_map.get_end_address() - first_map.get_start_address();
+            uint64_t size = first_map.get_end_address() - first_map.get_start_address() + 1;
 
             auto itr = m_mmio_mrs.find(start);
             if (itr == m_mmio_mrs.end()) {
