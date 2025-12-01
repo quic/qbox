@@ -17,7 +17,10 @@ CPMDeclarePackage(SCP
   NAME SCP
   GIT_TAG 686c999f9dc15b17147a71f3de505dfe4ff3ec4d
   GIT_REPOSITORY https://github.com/accellera-official/systemc-common-practices.git
-  GIT_SHALLOW on
+  # https://cmake.org/cmake/help/latest/module/ExternalProject.html#git
+  # If GIT_SHALLOW is enabled then GIT_TAG works only with branch names
+  # and tags. A commit hash is not allowed.
+  GIT_SHALLOW OFF
 )
 
 # qemu (unversioned)
