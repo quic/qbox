@@ -320,12 +320,12 @@ public:
             }
         }
 
-        qemu::LibraryLoaderIface::LibraryIfacePtr libraryHandle = m_library_loader->load_library(
-            libname);
+        qemu::LibraryLoaderIface::LibraryIfacePtr libraryHandle = m_library_loader->load_library(libname);
         if (!libraryHandle) {
-            SCP_FATAL(()) << "Impossible to load the library check the path in the lua file or if the library "
-                             "exist in your system: "
-                          << m_library_loader->get_last_error();
+            SCP_FATAL(())(
+                "Impossible to load the library {}, check the path in the lua file or if the library "
+                "exist in your system. Error:  {}",
+                libname, m_library_loader->get_last_error());
         }
 
         m_dls.insert(libraryHandle);
