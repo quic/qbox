@@ -11,7 +11,7 @@
 
 #include <functional>
 #include <cassert>
-
+#include <async_event.h>
 #include <systemc>
 
 template <class T>
@@ -29,10 +29,10 @@ protected:
 
     T m_val;
     ValueChangedCallback m_cb;
-    sc_core::sc_event m_ev;
+    gs::async_event m_ev;
 
 public:
-    TargetSignalSocketProxy(TargetSignalSocket<T>& parent): m_parent{ parent }, m_val{}, m_cb{ nullptr }, m_ev{} {}
+    TargetSignalSocketProxy(TargetSignalSocket<T>& parent): m_parent(parent), m_cb(nullptr), m_ev(false) {}
 
     void register_value_changed_cb(const ValueChangedCallback& cb) { m_cb = cb; }
 
@@ -87,13 +87,13 @@ protected:
 
     bool m_val;
     ValueChangedCallback m_cb;
-    sc_core::sc_event m_ev;
-    sc_core::sc_event m_posedge_ev;
-    sc_core::sc_event m_negedge_ev;
+    gs::async_event m_ev;
+    gs::async_event m_posedge_ev;
+    gs::async_event m_negedge_ev;
 
 public:
     TargetSignalSocketProxy<bool>(TargetSignalSocket<bool>& parent)
-        : m_parent{ parent }, m_val{ false }, m_cb{ nullptr }, m_ev{}
+        : m_parent(parent), m_val(false), m_cb(nullptr), m_ev(false), m_posedge_ev(false), m_negedge_ev(false)
     {
     }
 
