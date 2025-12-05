@@ -74,7 +74,7 @@ void LibQemu::init()
         libname = m_lib_path;
     }
 
-    m_lib = m_library_loader.load_library(libname);
+    m_lib = m_library_loader.load_library(libname, true);
 
     if (m_lib == nullptr) {
         throw LibraryLoadErrorException(libname, m_library_loader.get_last_error());

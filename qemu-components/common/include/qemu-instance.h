@@ -52,31 +52,28 @@ public:
     using LibLoader = qemu::LibraryLoaderIface;
 
 protected:
-    LibLoader* m_loader;
+    LibLoader& m_loader = qemu::get_default_lib_loader();
 
 public:
     /**
      * @brief Construct a QemuInstanceManager. The manager will use the default
      * library loader provided by libqemu-cxx.
      */
-    QemuInstanceManager(const sc_core::sc_module_name& n = "QemuInstanceManager")
-        : sc_core::sc_module(n), m_loader(qemu::get_default_lib_loader())
-    {
-    }
+    QemuInstanceManager(const sc_core::sc_module_name& n = "QemuInstanceManager"): sc_core::sc_module(n) {}
 
     /**
      * @brief Construct a QemuInstanceManager by providing a custom library loader
      *
      * @param[in] loader The custom loader
      */
-    QemuInstanceManager(const sc_core::sc_module_name& n, LibLoader* loader): sc_core::sc_module(n), m_loader(loader) {}
+    QemuInstanceManager(const sc_core::sc_module_name& n, LibLoader& loader): sc_core::sc_module(n), m_loader(loader) {}
 
-    LibLoader& get_loader() { return *m_loader; }
+    LibLoader& get_loader() { return m_loader; }
 
     /* Destructor should only be called at the end of the program, if it is called before, then all
      * Qemu instances that it manages will, of course, be destroyed too
      */
-    virtual ~QemuInstanceManager() { delete m_loader; }
+    virtual ~QemuInstanceManager() {}
 };
 
 /**

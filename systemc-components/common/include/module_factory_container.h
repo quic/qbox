@@ -316,16 +316,16 @@ public:
             const std::string base_name = std::string(sc_module::name()) + "." + std::string(name) + type;
             if (m_broker.has_preset_value(base_name)) {
                 libname = std::string(m_broker.get_preset_cci_value(base_name).get_string()) + "." +
-                          std::string(m_library_loader->get_lib_ext());
+                          std::string(m_library_loader.get_lib_ext());
             }
         }
 
-        qemu::LibraryLoaderIface::LibraryIfacePtr libraryHandle = m_library_loader->load_library(libname);
+        qemu::LibraryLoaderIface::LibraryIfacePtr libraryHandle = m_library_loader.load_library(libname);
         if (!libraryHandle) {
             SCP_FATAL(())(
                 "Impossible to load the library {}, check the path in the lua file or if the library "
                 "exist in your system. Error:  {}",
-                libname, m_library_loader->get_last_error());
+                libname, m_library_loader.get_last_error());
         }
 
         m_dls.insert(libraryHandle);
@@ -399,7 +399,7 @@ private:
     std::list<std::shared_ptr<sc_core::sc_module>> m_constructedModules;
 
     std::set<qemu::LibraryLoaderIface::LibraryIfacePtr> m_dls;
-    qemu::LibraryLoaderIface* m_library_loader;
+    qemu::LibraryLoaderIface& m_library_loader = qemu::get_default_lib_loader();
 
 public:
     cci::cci_broker_handle m_broker;
@@ -422,9 +422,6 @@ public:
     {
         m_constructedModules.reverse();
         m_constructedModules.clear();
-        for (auto l : m_dls) {
-            l->unload();
-        }
     }
 
     std::shared_ptr<sc_core::sc_module> find_module_by_name(const std::string& mod_name)
@@ -504,11 +501,6 @@ public:
         }
 
         container_self_reset.register_value_changed_cb([this](bool value) { do_reset(value); });
-
-        m_library_loader = qemu::get_default_lib_loader();
-        if (!m_library_loader) {
-            SCP_FATAL(()) << "No library loader found";
-        }
 
         auto mods = gs::ModuleFactory::GetAvailableModuleList();
 
