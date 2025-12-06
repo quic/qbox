@@ -318,6 +318,8 @@ public:
     struct MemTxAttrs {
         bool secure = false;
         bool debug = false;
+        /* Requester ID (for MSI for example) */
+        unsigned int requester_id:16;
 
         MemTxAttrs() = default;
         MemTxAttrs(const ::MemTxAttrs& qemu_attrs);
