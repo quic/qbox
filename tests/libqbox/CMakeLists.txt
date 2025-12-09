@@ -18,6 +18,18 @@ list(APPEND QBOX_CPU_TEST_NUM_CPU_COMBINATION
     # 128
     )
 
+    list(APPEND SKIP_TESTS
+        "riscv32.*num-cpu=[^2]"
+        "hexagon-reset-test.*num-cpu=[^1]"
+        "hexagon-smmu-stress-test-v2:.*num-cpu=[^1].*:threading=COROUTINE"        # takes too long to execute
+        "hexagon-smmu-stress-test-v2:.*num-cpu=[^1].*:threading=SINGLE"           # takes too long to execute
+        # Bugs?
+        "halt-tests:.*num-cpu=[^1].*:threading=COROUTINE"                         # hangs during init
+        "hexagon-ld-st-mmio-test:.*num-cpu=[^1].*:threading=COROUTINE"            # hangs during init
+        "hexagon-ld-st-mmio-test:.*num-cpu=[^1].*:threading=SINGLE"               # hangs during init
+    )
+
+
     find_package(Git QUIET)
     if(Git_FOUND)
         set(PATCH_EXEC_CMD ${GIT_EXECUTABLE})
@@ -69,8 +81,6 @@ function(qbox_add_cpu_test target timeout_s)
     #     )
     # endif()
 
-    set(SINGLE_CPU_TGTS "hexagon" "riscv32")
-
 
     install(TARGETS ${target} DESTINATION bin)
 
@@ -115,18 +125,18 @@ function(qbox_add_cpu_test target timeout_s)
 
 
         foreach(num_cpu ${QBOX_CPU_TEST_NUM_CPU_COMBINATION})
-            # Skip multi-cpu tests for now
-            set(skip_multi TRUE)
-            foreach(tgt_name IN LISTS SINGLE_CPU_TGTS)
-                if("${tgt_name}" MATCHES ".*${target}.*")
-                    set(skip_multi FALSE)
+            set(test_name ${target}:sync-pol=${sync_pol}:num-cpu=${num_cpu}:icount=${icount}:threading=${threading}:accel=${accel})
+
+            set (skip FALSE)
+            foreach(tgt_name IN LISTS SKIP_TESTS)
+                if("${test_name}" MATCHES "${tgt_name}")
+                    set(skip TRUE)
                     break()
                 endif()
             endforeach()
-            if((${skip_multi}) AND (NOT (${num_cpu} EQUAL 1)))
-               continue()
+            if (${skip})
+                continue()
             endif()
-            set(test_name ${target}:sync-pol=${sync_pol}:num-cpu=${num_cpu}:icount=${icount}:threading=${threading}:accel=${accel})
 
             add_test(
                 NAME ${test_name}

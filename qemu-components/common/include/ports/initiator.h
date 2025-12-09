@@ -85,7 +85,7 @@ protected:
     gs::runonsysc m_on_sysc;
     int reentrancy = 0;
 
-    bool m_finished = false;
+    std::atomic<bool> m_finished = false;
 
     std::shared_ptr<qemu::AddressSpace> m_as;
     std::shared_ptr<qemu::MemoryListener> m_listener;
@@ -621,11 +621,12 @@ public:
         cancel_all();
     }
 
-    // This could happen during void end_of_simulation() but there is a race with other units trying
-    // to pull down their DMI's
     ~QemuInitiatorSocket()
     {
         cancel_all();
+#if 0
+    // This could happen during void end_of_simulation() but there is a race with other units trying
+    // to pull down their DMI's
         if (m_r) {
             if (m_r->m_root) {
                 m_r->m_root->removeSubRegions();
@@ -633,6 +634,7 @@ public:
             delete m_r;
             m_r = nullptr;
         }
+#endif
         //        dmimgr_unlock();
     }
 
@@ -788,6 +790,7 @@ private:
 
     void invalidate_ranges_safe_cb()
     {
+        if (m_finished) return;
         std::lock_guard<std::mutex> lock(m_mutex);
 
         SCP_DEBUG(()) << "Invalidating " << m_ranges.size() << " ranges";

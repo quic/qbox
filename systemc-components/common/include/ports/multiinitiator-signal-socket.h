@@ -11,6 +11,7 @@
 
 #include <systemc>
 #include <scp/report.h>
+#include "sysc/kernel/sc_time.h"
 #include "target-signal-socket.h"
 template <typename T = bool>
 class MultiInitiatorSignalSocket
@@ -51,8 +52,7 @@ public:
     }
     void async_write_vector(const std::vector<T>& vs)
     {
-        assert(vals_valid == false);
-        vals = vs; // COPY the vector.
+        vals.insert(vals.end(), vs.begin(), vs.end()); // COPY the vector to the end.
         vals_valid = true;
         ev.notify();
     }
