@@ -230,9 +230,10 @@ macro(gs_enable_testing)
         target_link_libraries(${PROJECT_NAME} INTERFACE gtest gmock)
       endif()
       enable_testing()
-
       cmake_host_system_information(RESULT _nproc QUERY NUMBER_OF_LOGICAL_CORES)
       math(EXPR _test_jobs "${_nproc} * 3 / 4")
+
+      # On Windows, parallel test execution can lead to issues with duplicated shared libraries, so we limit it to 1.
       if(_test_jobs LESS 1)
           set(_test_jobs 1)
       endif()
