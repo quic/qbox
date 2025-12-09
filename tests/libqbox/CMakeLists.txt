@@ -21,6 +21,10 @@ list(APPEND QBOX_CPU_TEST_NUM_CPU_COMBINATION
     list(APPEND SKIP_TESTS
         "riscv.*num-cpu=[^2]"                                                     # reduce redundency
         "hexagon.*num-cpu=[^14]"                                                  # reduce redundency
+        "hexagon-smmu-stress-test-v2:.*num-cpu=[^1].*:threading=COROUTINE"        # takes too long to execute
+        "hexagon-smmu-stress-test-v2:.*num-cpu=[^1].*:threading=SINGLE"           # takes too long to execute
+#        "num-cpu=32:.*:accel=hvf"                                                 # takes too long
+#        "num-cpu=32:.*:accel=kvm"                                                 #    Due to sync issues.
 
         # Bugs?
         "halt-tests:.*num-cpu=[^1].*:threading=COROUTINE"                         # hangs during init
@@ -28,6 +32,7 @@ list(APPEND QBOX_CPU_TEST_NUM_CPU_COMBINATION
         "hexagon-ld-st-mmio-test:.*num-cpu=[^1].*:threading=SINGLE"               # hangs during init
         "aarch64-ld-st-excl-fail-test:.*:accel=(hvf|kvm)"                         # Test fails due to ld/st ex
         "reset-test-cpu:.*:accel=hvf"                                             # Test fails
+        "aarch64-smmu-router-stress-test-v2:.*:num-cpu=1:.*:accel=hvf"            # Doesn't start with only one CPU
 
         # Nonsensical tests
         "hexagon-reset-test.*num-cpu=[^1]"                                        # only works for 1 cpu

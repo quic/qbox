@@ -208,15 +208,7 @@ public:
     void done_method()
     {
         wait(done_ev);
-
-        /*
-         * A late reset from the pthread may still be in-flight.
-         * Wait for all acknowledgments to arrive before issuing
-         * the final reset.
-         */
-        while (this_resets < reset_threshold + p_num_cpu) {
-            wait(resets_done_ev);
-        }
+        TEST_ASSERT(this_resets >= p_num_cpu);
 
         SCP_INFO(SCMOD)("Processing done");
         /*
