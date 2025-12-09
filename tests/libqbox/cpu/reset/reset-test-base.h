@@ -205,10 +205,8 @@ public:
     void done_method()
     {
         wait(done_ev);
-        if (this_resets < p_num_cpu) {
-            SCP_INFO(SCMOD)("wait for no active resets");
-            wait(resets_done_ev);
-        }
+        TEST_ASSERT(this_resets >= p_num_cpu);
+
         SCP_INFO(SCMOD)("Processing done");
         reset_ev.notify();
         wait(resets_done_ev);
@@ -216,6 +214,7 @@ public:
 
         reset_ev.async_detach_suspending();
         SCP_INFO(SCMOD) << "Done !";
+        sc_stop();
     }
 
     virtual void end_of_simulation() override

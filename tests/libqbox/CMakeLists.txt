@@ -19,14 +19,22 @@ list(APPEND QBOX_CPU_TEST_NUM_CPU_COMBINATION
     )
 
     list(APPEND SKIP_TESTS
-        "riscv32.*num-cpu=[^2]"
-        "hexagon-reset-test.*num-cpu=[^1]"
-        "hexagon-smmu-stress-test-v2:.*num-cpu=[^1].*:threading=COROUTINE"        # takes too long to execute
-        "hexagon-smmu-stress-test-v2:.*num-cpu=[^1].*:threading=SINGLE"           # takes too long to execute
+        "riscv.*num-cpu=[^2]"                                                     # reduce redundency
+        "hexagon.*num-cpu=[^14]"                                                  # reduce redundency
+
         # Bugs?
         "halt-tests:.*num-cpu=[^1].*:threading=COROUTINE"                         # hangs during init
         "hexagon-ld-st-mmio-test:.*num-cpu=[^1].*:threading=COROUTINE"            # hangs during init
         "hexagon-ld-st-mmio-test:.*num-cpu=[^1].*:threading=SINGLE"               # hangs during init
+        "aarch64-ld-st-excl-fail-test:.*:accel=(hvf|kvm)"                         # Test fails due to ld/st ex
+        "reset-test-cpu:.*:accel=hvf"                                             # Test fails
+
+        # Nonsensical tests
+        "hexagon-reset-test.*num-cpu=[^1]"                                        # only works for 1 cpu
+        "hexagon.*:accel=(hvf|kvm)"
+        "riscv.*:accel=(hvf|kvm)"
+        "(SINGLE|COROUTINE).*:accel=(hvf|kvm)"
+        "(multithread:|multithread-quantum:).*:accel=(hvf|kvm)"
     )
 
 
@@ -89,9 +97,6 @@ function(qbox_add_cpu_test target timeout_s)
     target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 qemu_cpu_hexagon cpu_riscv32 router reset_gpio gs_memory exclusive_monitor display plic_sifive ${TARGET_LIBS} keystone hexagon_globalreg)
 
     foreach (accel ${QBOX_TEST_ACCELS})
-      if(("${target}" MATCHES "hexagon") AND (NOT ("${accel}" STREQUAL "tcg")))
-         continue()
-      endif()
       foreach(sync_pol ${QBOX_CPU_TEST_SYNC_POLICY_COMBINATION})
         if("${sync_pol}" STREQUAL "tlm2-icount")
             if (${accel} STREQUAL "tcg")

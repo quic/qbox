@@ -90,6 +90,8 @@ public:
 
         end:
             wfi
+            mov x0, #0
+            str x0, [x2]
             b end
 
         fail:
@@ -108,7 +110,6 @@ private:
     bool running = 0;
 
 public:
-
     CpuArmCortexA53DmiAsyncInvalTest(const sc_core::sc_module_name& n)
         : CpuArmTestBench<cpu_arm_cortexA53, CpuTesterDmiSoak>(n)
     {
@@ -158,6 +159,8 @@ public:
                         << len;
         if (data == 0) {
             SCP_INFO(SCMOD) << "cpu_" << cpuid << " DONE";
+            // for CPU to shut down (accelerators may not WFI idle, and if they wake up, they may keep each other awake)
+            m_cpus[cpuid].halt_cb(true);
         }
         TEST_ASSERT(data != -1);
         TEST_ASSERT(data != -2);

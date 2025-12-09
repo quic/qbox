@@ -73,9 +73,9 @@ public:
             b.ne loop2
 
         end:
+            wfi
             mov x0, #0
             str x0, [x1]
-            wfi
             b end
 
         fail:
@@ -110,6 +110,11 @@ public:
         }
 
         SCP_INFO(SCMOD) << "CPU write at 0x" << std::hex << addr << ", data: " << std::hex << data;
+
+        // for CPU to shut down (accelerators may not WFI idle, and if they wake up, they may keep each other awake)
+        if (data == 0 && cpuid < p_num_cpu) {
+            m_cpus[cpuid].halt_cb(true);
+        }
     }
 
     virtual void end_of_simulation() override

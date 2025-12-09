@@ -72,6 +72,8 @@ public:
 
         end:
             wfi
+            ldr x5, =0x80000000
+            str x5, [x2]
             b end
     )";
 
@@ -106,7 +108,6 @@ protected:
     void disable_dmi(int cpuid) { m_dmi_enabled[cpuid] = false; }
 
 public:
-
     CpuArmCortexA53DmiTest(const sc_core::sc_module_name& n): CpuArmTestBench<cpu_arm_cortexA53, CpuTesterDmi>(n)
     {
         char buf[1024];
@@ -137,6 +138,12 @@ public:
 
         SCP_INFO(SCMOD) << "CPU " << (addr >> 3) << " write at 0x" << std::hex << addr << ", data: " << std::hex << data
                         << ", len: " << len;
+
+        // for CPU to shut down (accelerators may not WFI idle, and if they wake up, they may keep each other awake)
+        if (data == 0x80000000 && cpuid < p_num_cpu && m_tester.get_buf_value(cpuid) == m_num_write_per_cpu) {
+            m_cpus[cpuid].halt_cb(true);
+            return;
+        }
 
         if (m_dmi_ok[cpuid]) {
             if (m_dmi_ok[cpuid] > 1) {

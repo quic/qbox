@@ -95,6 +95,8 @@ public:
 
         end:
             wfi
+            ldr x5, =0x80000000
+            str x5, [x2]
             b end
 
         fail:
@@ -116,7 +118,6 @@ private:
     std::mutex mutex;
 
 public:
-
     CpuArmCortexA53DmiConcurrentInvalTest(const sc_core::sc_module_name& n)
         : CpuArmTestBench<cpu_arm_cortexA53, CpuTesterDmi>(n), invalidated(p_num_cpu, false)
     {
@@ -150,6 +151,11 @@ public:
         SCP_INFO(SCMOD) << "cpu_" << cpuid << " b_transport write at 0x" << std::hex << addr << ", data: " << std::hex
                         << data << ", len: " << len;
 
+        // for CPU to shut down (accelerators may not WFI idle, and if they wake up, they may keep each other awake)
+        if (data == 0x80000000 && cpuid < p_num_cpu) {
+            m_cpus[cpuid].halt_cb(true);
+            return;
+        }
         TEST_ASSERT(data != -1); // -1 indicated a fail from the ASM
         int count = 0;
         {
