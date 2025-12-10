@@ -1,3 +1,14 @@
+From 5bd6b93052102a251ed0e18923471d821d36827e Mon Sep 17 00:00:00 2001
+From: Jerome Haxhiaj <jhaxhiaj@qti.qualcomm.com>
+Date: Wed, 10 Dec 2025 09:20:21 +0100
+Subject: [PATCH 1/2] CMake: Add support for modern CMake
+
+---
+ CMakeLists.txt        | 35 ++++++++++-------------------------
+ kstool/CMakeLists.txt |  2 +-
+ llvm/CMakeLists.txt   | 15 +--------------
+ 3 files changed, 12 insertions(+), 40 deletions(-)
+
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 index eb52c19..32f1bff 100644
 --- a/CMakeLists.txt
@@ -103,3 +114,6 @@ index e324ef3..8ef8e27 100644
  if(CMAKE_VERSION VERSION_LESS 3.1.20141117)
    set(cmake_3_2_USES_TERMINAL)
  else()
+-- 
+2.51.0
+

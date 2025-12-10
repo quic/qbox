@@ -43,28 +43,18 @@ list(APPEND QBOX_CPU_TEST_NUM_CPU_COMBINATION
     )
 
 
-    find_package(Git QUIET)
-    if(Git_FOUND)
-        set(PATCH_EXEC_CMD ${GIT_EXECUTABLE})
-        set(PATCH_ARGS "apply")
-    else()
-        message(FATAL_ERROR "Couldn't find git executable for keystone patching")
-    endif()
+    FILE(GLOB KEYSTONE_PATCH_FILES "${PROJECT_SOURCE_DIR}/patch/keystone/*.patch")
+
+    message(STATUS "Applying patches to keystone: ${KEYSTONE_PATCH_FILES}")
+
     cpmfindpackage(
-        NAME
-        keystone
-        GIT_REPOSITORY
-        https://github.com/keystone-engine/keystone.git
-        GIT_TAG
-        0.9.2
-        GIT_SHALLOW
-        TRUE
-        PATCH_COMMAND
-        ${PATCH_EXEC_CMD} ${PATCH_ARGS} "${CMAKE_CURRENT_SOURCE_DIR}/patch-keystone.patch"
-        UPDATE_DISCONNECTED
-        1
-        OPTIONS
-        "BUILD_LIBS_ONLY"
+        NAME keystone
+        GIT_REPOSITORY https://github.com/keystone-engine/keystone.git
+        GIT_TAG 0.9.2
+        GIT_SHALLOW TRUE
+        PATCH_COMMAND ${PATCH_EXEC_CMD} ${PATCH_ARGS} "${KEYSTONE_PATCH_FILES}"
+        UPDATE_DISCONNECTED 1
+        OPTIONS "BUILD_LIBS_ONLY"
     )
 
 function(qbox_add_cpu_test target timeout_s)

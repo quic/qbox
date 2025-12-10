@@ -1,0 +1,28 @@
+From 8d0519fff7d36800d43d17579c6a37377f5298c1 Mon Sep 17 00:00:00 2001
+From: Jerome Haxhiaj <jhaxhiaj@qti.qualcomm.com>
+Date: Wed, 10 Dec 2025 15:22:38 +0100
+Subject: [PATCH 2/2] Honor parents projects CMAKE_RUNTIME_OUTPUT_DIRECTORY
+
+---
+ llvm/CMakeLists.txt | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/llvm/CMakeLists.txt b/llvm/CMakeLists.txt
+index 8ef8e27..1e88d47 100644
+--- a/llvm/CMakeLists.txt
++++ b/llvm/CMakeLists.txt
+@@ -436,7 +436,10 @@ configure_file(
+   ${LLVM_INCLUDE_DIR}/llvm/Support/DataTypes.h)
+ 
+ # They are not referenced. See set_output_directory().
+-set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
++if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
++  set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
++endif (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
++
+ set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+ set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+ 
+-- 
+2.51.0
+
