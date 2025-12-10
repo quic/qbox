@@ -14,6 +14,7 @@
 #include "qemu-instance.h"
 #include "tlm-extensions/qemu-cpu-hint.h"
 #include "tlm-extensions/qemu-mr-hint.h"
+#include "tlm-extensions/pcie_extension.h"
 #include <tlm_sockets_buswidth.h>
 
 class TlmTargetToQemuBridge : public tlm::tlm_fw_transport_if<>
@@ -91,6 +92,13 @@ public:
         if (trans.get_command() == tlm::TLM_IGNORE_COMMAND) {
             trans.set_response_status(tlm::TLM_OK_RESPONSE);
             return;
+        }
+
+        // Extract PCIe extension if present
+        gs::PcieExtension* pcie_ext = nullptr;
+        trans.get_extension(pcie_ext);
+        if (pcie_ext) {
+            attrs.requester_id = pcie_ext->requester_id;
         }
 
         current_cpu_save = push_current_cpu(trans);
