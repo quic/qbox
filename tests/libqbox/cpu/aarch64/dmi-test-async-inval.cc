@@ -130,7 +130,7 @@ public:
     void inval()
     {
         while (running) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
             uint64_t l = CpuTesterDmiSoak::DMI_SIZE;
             uint64_t s = (std::rand() + 1u) % l;
             l -= s;

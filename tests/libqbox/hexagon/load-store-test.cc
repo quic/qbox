@@ -1,6 +1,7 @@
 // Copyright (c) 2025 Qualcomm Innovation Center, Inc. All Rights Reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 
+#include "async_event.h"
 #include "router.h"
 #include "tlm_utils/tlm_quantumkeeper.h"
 #include "tlm_utils/simple_target_socket.h"
@@ -48,6 +49,8 @@ private:
 
     bool test_passed;
 
+    gs::async_event m_aev;
+
 public:
     LoadStoreTest(const sc_core::sc_module_name& module_name)
         : sc_core::sc_module(module_name)
@@ -73,6 +76,8 @@ public:
 
         mmio_probe.connect_to_mmio_writer(this);
         mmio_probe.connect_to_mmio_reader(this);
+
+        m_aev.async_attach_suspending();
     }
 
     virtual ~LoadStoreTest() {}
@@ -91,6 +96,7 @@ public:
     {
         SCP_INFO() << "write, data: 0x" << std::hex << data << ", len: 0x" << len;
         test_passed = (addr == 0 && data == 0x0f0f0f0f && len == sizeof(int32_t));
+        m_aev.async_detach_suspending();
     }
 
     virtual uint64_t mmio_read(int id, uint64_t addr, size_t len) override { return 0; }

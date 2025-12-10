@@ -101,7 +101,9 @@ public:
         : TestBench(n)
         , m_arch(arch)
         , p_num_cpu("num_cpu", 1, "Number of CPUs to instantiate in the test")
-        , p_quantum_ns("quantum_ns", 1000000, "Value of the global TLM-2.0 quantum in ns")
+        , p_quantum_ns("quantum_ns", 10000000, "Value of the global TLM-2.0 quantum in ns")
+        // NB it's important the quantum is bigger that the time it takes for QEMU to run all it's
+        // realtime updates etc (every 100ms)
         , m_router("router")
         , m_mem("mem", MEM_SIZE)
         , m_bulkmem("bulkmem", BULKMEM_SIZE)
