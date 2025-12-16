@@ -251,7 +251,7 @@ find_package(Threads REQUIRED)
 
 gs_addexpackage("gh:google/googletest#v1.15.2")
 gs_addexpackage("gh:lua/lua#v5.4.2")
-gs_addexpackage("gh:nih-at/libzip#v1.10.1")
+gs_addexpackage("gh:nih-at/libzip#v1.11.3")
 gs_addexpackage("gh:TheLartians/PackageProject.cmake@1.4.1")
 
 find_package(Git QUIET)
