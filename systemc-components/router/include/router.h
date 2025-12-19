@@ -19,8 +19,16 @@
 #include <list>          // Required for std::list
 #include <functional>    // Required for std::less
 
+/* Theoretically a DMI request can be failed with no ill effects, and to protect against re-entrant code
+ * between a DMI invalidate and a DMI request on separate threads, effectively requiring work to be done
+ * on the same thread, we make use of this by 'try_lock'ing and failing the DMI. However this has the
+ * negative side effect that up-stream models may not get DMI's when they expect them, which at the very
+ * least would be a performance hit.
+ * Define this as true if you require protection against re-entrant models.
+ */
+#define THREAD_SAFE_REENTRANT false
 #define THREAD_SAFE true
-#if THREAD_SAFE == true
+#if defined(THREAD_SAFE) and THREAD_SAFE
 #include <mutex>
 #include <shared_mutex>
 #endif
@@ -435,7 +443,7 @@ class router : public sc_core::sc_module, public gs::router_if<BUSWIDTH>
     SCP_LOGGER((DMI), "dmi");
 
 private:
-#if THREAD_SAFE == true
+#if defined(THREAD_SAFE) and THREAD_SAFE
     /// @brief Mutex for protecting DMI-related operations.
     std::mutex m_dmi_mutex;
 #endif
@@ -592,7 +600,7 @@ private:
 
     /// @brief Pool of PathIDExtension objects to reuse.
     std::vector<PathIDExtension*> m_pathIDPool;
-#if THREAD_SAFE == true
+#if defined(THREAD_SAFE) and THREAD_SAFE
     /// @brief Mutex for protecting the PathIDExtension pool in a thread-safe environment.
     std::mutex m_pool_mutex;
 #endif
@@ -611,7 +619,7 @@ private:
         PathIDExtension* ext = nullptr;
         txn.get_extension(ext);
         if (ext == nullptr) {
-#if THREAD_SAFE == true
+#if defined(THREAD_SAFE) and THREAD_SAFE
             std::lock_guard<std::mutex> l(m_pool_mutex);
 #endif
             if (m_pathIDPool.size() == 0) {
@@ -642,7 +650,7 @@ private:
         assert(ext->back() == id);
         ext->pop_back();
         if (ext->size() == 0) {
-#if THREAD_SAFE == true
+#if defined(THREAD_SAFE) and THREAD_SAFE
             std::lock_guard<std::mutex> l(m_pool_mutex);
 #endif
             txn.clear_extension(ext);
@@ -753,10 +761,12 @@ private:
         if (!ti) {
             return false;
         }
-#if THREAD_SAFE == true
+#if defined(THREAD_SAFE_REENTRANT) and THREAD_SAFE_REENTRANT
         if (!m_dmi_mutex.try_lock()) { // if we're busy invalidating, dont grant DMI's
             return false;
         }
+#else
+        m_dmi_mutex.lock();
 #endif
 
         if (ti->use_offset) trans.set_address(addr - ti->address);
@@ -782,7 +792,7 @@ private:
         }
         SCP_DEBUG(())
         ("Providing DMI (status {:x}) {:x} - {:x}", status, dmi_data.get_start_address(), dmi_data.get_end_address());
-#if THREAD_SAFE == true
+#if defined(THREAD_SAFE) and THREAD_SAFE
         m_dmi_mutex.unlock();
 #endif
         return status;
@@ -804,7 +814,7 @@ private:
             start = id_targets[id]->address + start;
             end = id_targets[id]->address + end;
         }
-#if THREAD_SAFE == true
+#if defined(THREAD_SAFE) and THREAD_SAFE
         std::lock_guard<std::mutex> lock(m_dmi_mutex);
 #endif
         invalidate_direct_mem_ptr_ts(id, start, end);
@@ -894,7 +904,7 @@ private:
     /// @brief Atomic flag to track if lazy initialization has occurred (thread-safe).
     std::atomic<bool> m_initialized{ false };
     /// @brief Mutex to protect lazy initialization.
-#if THREAD_SAFE == true
+#if defined(THREAD_SAFE) and THREAD_SAFE
     std::mutex m_init_mutex;
 #endif
     std::list<std::string> get_matching_children(cci::cci_broker_handle broker, const std::string& prefix,
@@ -934,7 +944,7 @@ private:
             return;
         }
 
-#if THREAD_SAFE == true
+#if defined(THREAD_SAFE) and THREAD_SAFE
         // Slow path: acquire lock and initialize
         std::lock_guard<std::mutex> lock(m_init_mutex);
 #endif
