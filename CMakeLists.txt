@@ -249,6 +249,7 @@ endif()
 
 if((NOT WITHOUT_PYTHON_BINDER) AND (NOT GS_ONLY))
     find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+    set(PYBIND11_FINDPYTHON ON)
     gs_addexpackage("gh:pybind/pybind11#v3.0.1")
     set(PYBIND11_EMBED "pybind11::embed")
 endif()
