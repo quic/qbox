@@ -2,16 +2,16 @@ qbox_add_cpu_test(aarch64-simple-write-test 100 simple-write-test.cc)
 qbox_add_cpu_test(aarch64-dmi-test 100 dmi-test.cc)
 qbox_add_cpu_test(aarch64-dmi-test-concurrent-inval 100 dmi-test-concurrent-inval.cc)
 # Build assembly firmware for DMI reset test
-find_program(LLVM_MC llvm-mc)
+find_program(LLVM_MC llvm-mc HINTS /opt/homebrew/opt/llvm/bin)
 find_program(LLD ld.lld)
-find_program(LLVM_OBJCOPY llvm-objcopy)
+find_program(LLVM_OBJCOPY llvm-objcopy HINTS /opt/homebrew/opt/llvm/bin)
 
 # "and APPLE" workaround: QQVPQSP-714
 if(LLVM_MC AND LLD AND LLVM_OBJCOPY AND APPLE)
     # Assemble the ARM64 assembly file
     add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dmi-test-reset.o
-        COMMAND ${LLVM_MC} -arch=aarch64 -filetype=obj
+        COMMAND ${LLVM_MC} -arch=aarch64 -filetype=obj -triple=aarch64-none-elf
                 ${CMAKE_CURRENT_SOURCE_DIR}/dmi-test-reset.S
                 -o ${CMAKE_CURRENT_BINARY_DIR}/dmi-test-reset.o
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dmi-test-reset.S
