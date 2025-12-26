@@ -101,6 +101,7 @@ public:
         }
         socket.enqueue(EOF);
         fclose(r_file);
+        r_file = NULL;
     }
 
     void writefn(tlm::tlm_generic_payload& txn, sc_core::sc_time& t)
@@ -112,10 +113,21 @@ public:
                 SCP_ERR(()) << "Error writing to the file.\n";
             }
         }
-        fclose(w_file);
+        fflush(w_file);
     }
 
-    ~char_backend_file() {}
+    // Add destructor to clean up file handles
+    ~char_backend_file() 
+    {
+        if (w_file != NULL) {
+            fclose(w_file);
+            w_file = NULL;
+        }
+        if (r_file != NULL) {
+            fclose(r_file);
+            r_file = NULL;
+        }
+    }
 };
 // GSC_MODULE_REGISTER(char_backend_file);
 extern "C" void module_register();
