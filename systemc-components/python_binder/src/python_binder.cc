@@ -362,7 +362,7 @@ python_binder<BUSWIDTH>::python_binder(const sc_core::sc_module_name& nm)
     }
     sc_core::sc_register_stage_callback(*this, sc_core::SC_POST_UPDATE);
 
-    gs::SigHandler::get().add_sig_handler(SIGINT, gs::SigHandler::Handler_CB::PASS);
+    gs::SigHandler::get().add_sigint_handler(gs::Handler_CB::PASS);
     gs::SigHandler::get().register_handler(std::string(this->name()) + ".python_binder::SIGINT_handler",
                                            [&](int signo) {
                                                pybind11::gil_scoped_acquire gil;
