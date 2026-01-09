@@ -14,6 +14,7 @@ target_include_directories(
     ${keystone_SOURCE_DIR}/include
 )
 
+
 target_link_libraries(
     ${TEST_NAME}
     PRIVATE
@@ -27,4 +28,4 @@ target_link_libraries(
 
 set(CTEST_PREFIX "hexagon")
 
-add_test(${CTEST_PREFIX}-${TEST_NAME} ${TEST_NAME})
+add_test(NAME ${CTEST_PREFIX}-${TEST_NAME} COMMAND ${TEST_NAME})
