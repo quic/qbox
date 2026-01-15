@@ -16,7 +16,7 @@
 
 #include <qemu_gpex.h>
 
-class nvme_disk : public qemu_gpex::Device
+class nvme : public qemu_gpex::Device
 {
     // TODO: use a real backend object
 protected:
@@ -26,24 +26,29 @@ protected:
     std::string m_drive_id;
 
 public:
-    nvme_disk(const sc_core::sc_module_name& name, sc_core::sc_object* o)
-        : nvme_disk(name, *(dynamic_cast<QemuInstance*>(o)))
+    nvme(const sc_core::sc_module_name& name, sc_core::sc_object* o, sc_core::sc_object* t)
+        : nvme(name, *(dynamic_cast<QemuInstance*>(o)), (dynamic_cast<qemu_gpex*>(t)))
     {
     }
-    nvme_disk(const sc_core::sc_module_name& name, QemuInstance& inst)
+    nvme(const sc_core::sc_module_name& name, QemuInstance& inst, qemu_gpex* gpex)
         : qemu_gpex::Device(name, inst, "nvme")
         , p_serial("serial", basename(), "Serial name of the nvme disk")
         , p_blob_file("blob_file", "", "Blob file to load as data storage")
         , max_ioqpairs("max_ioqpairs", 64, "Passed through to QEMU max_ioqpairs")
         , m_drive_id(basename())
     {
+        if (p_blob_file.get_value().empty()) {
+            SCP_FATAL(()) << "the nvme device needs blob_file CCI parameter!";
+        }
         m_drive_id += "_drive";
-        std::string file = p_blob_file;
+        std::string file = p_blob_file.get_value();
 
         std::stringstream opts;
         opts << "if=sd,id=" << m_drive_id << ",file=" << file << ",format=raw";
         m_inst.add_arg("-drive");
         m_inst.add_arg(opts.str().c_str());
+
+        gpex->add_device(*this);
     }
 
     void before_end_of_elaboration() override
