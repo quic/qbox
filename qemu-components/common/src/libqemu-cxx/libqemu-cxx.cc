@@ -333,4 +333,27 @@ int LibQemu::sdl2_gl_make_context_current(DisplayGLCtx* dgc, QEMUGLContext gl_ct
 
 bool LibQemu::virgl_has_blob() const { return m_int->exports().virgl_has_blob(); }
 
+FWCfgState* LibQemu::fw_cfg_find() { return m_int->exports().fw_cfg_find(); }
+
+void LibQemu::fw_cfg_set_dma_as(FWCfgState* s)
+{
+    auto as = address_space_get_system_memory();
+    return m_int->exports().fw_cfg_set_dma_as(s, as->get_ptr());
+}
+
+void LibQemu::fw_cfg_add_i16(FWCfgState* s, uint16_t key, uint16_t value)
+{
+    return m_int->exports().fw_cfg_add_i16(s, key, value);
+}
+
+void LibQemu::fw_cfg_add_file(FWCfgState* s, const char* filename, void* data, size_t len)
+{
+    return m_int->exports().fw_cfg_add_file(s, filename, data, len);
+}
+
+void* LibQemu::fw_cfg_modify_file(FWCfgState* s, const char* filename, void* data, size_t len)
+{
+    return m_int->exports().fw_cfg_modify_file(s, filename, data, len);
+}
+
 } // namespace qemu

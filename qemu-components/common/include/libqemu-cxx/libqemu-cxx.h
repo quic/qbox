@@ -25,6 +25,7 @@
 /* libqemu types forward declaration */
 struct LibQemuExports;
 struct QemuObject;
+struct ObjectClass;
 struct DisplayGLCtxOps;
 struct DisplayGLCtx;
 struct QemuConsole;
@@ -42,6 +43,7 @@ struct QemuIOMMUMemoryRegion;
 struct QemuAddressSpace;
 struct QemuMemoryListener;
 struct QemuTimer;
+struct FWCfgState;
 typedef void* QEMUGLContext;
 struct QEMUGLParams;
 typedef void (*LibQemuGfxUpdateFn)(DisplayChangeListener*, int, int, int, int);
@@ -200,6 +202,12 @@ public:
     int sdl2_gl_make_context_current(DisplayGLCtx* dgc, QEMUGLContext gl_ctx);
 
     bool virgl_has_blob() const;
+
+    FWCfgState* fw_cfg_find();
+    void fw_cfg_set_dma_as(FWCfgState* s);
+    void fw_cfg_add_i16(FWCfgState* s, uint16_t key, uint16_t value);
+    void fw_cfg_add_file(FWCfgState* s, const char* filename, void* data, size_t len);
+    void* fw_cfg_modify_file(FWCfgState* s, const char* filename, void* data, size_t len);
 };
 
 class RcuReadLock
