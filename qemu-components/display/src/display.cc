@@ -49,6 +49,8 @@ QemuDevice* MainThreadQemuDisplay::selectGpu(sc_core::sc_object* o)
         return dynamic_cast<QemuVirtioMMIOGpuGl*>(o);
     } else if (dynamic_cast<QemuVirtioGpu*>(o) != nullptr) {
         return dynamic_cast<QemuVirtioGpu*>(o);
+    } else if (dynamic_cast<ramfb*>(o) != nullptr) {
+        return dynamic_cast<ramfb*>(o);
     } else {
         SCP_FATAL() << "The type of the object 'o' is not a QemuVirtioMMIOGpuGl or QemuVirtioGpu";
         return nullptr;

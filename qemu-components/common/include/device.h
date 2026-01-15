@@ -66,6 +66,16 @@ public:
         m_realized = true;
     }
 
+    void unrealize()
+    {
+        if (!m_realized) {
+            return;
+        }
+
+        m_dev.set_prop_bool("realized", false);
+        m_realized = false;
+    }
+
     /**
      * @brief Construct a QEMU device
      *

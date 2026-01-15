@@ -19,6 +19,7 @@
 #include <qemu-instance.h>
 #include <virtio/virtio-mmio-gpugl.h>
 #include <virtio_gpu.h>
+#include <ramfb.h>
 
 /**
  * @class MainThreadQemuDisplay
