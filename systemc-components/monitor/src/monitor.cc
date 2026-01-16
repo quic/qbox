@@ -20,6 +20,13 @@ platform["monitor_0"] = {
 
  */
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#undef WIN32_LEAN_AND_MEAN
+#endif
 #include "monitor.h"
 #include <module_factory_registery.h>
 #include <router_if.h>
@@ -28,7 +35,9 @@ platform["monitor_0"] = {
 #include <exception>
 #include <cciutils.h>
 #include <algorithm>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 #include <filesystem>
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
@@ -49,13 +58,19 @@ std::string get_html_base_dir()
         std::cerr << "error executing readlink(\"/proc/self/exe\") in monitor.cc: " << strerror(errno) << std::endl;
         exit(EXIT_FAILURE);
     }
+#elif defined(_WIN32)
+    DWORD count = GetModuleFileNameA(NULL, result, sizeof(result));
+    if (count == 0 || count == sizeof(result)) {
+        std::cerr << "error executing GetModuleFileNameA() in monitor.cc" << std::endl;
+        exit(EXIT_FAILURE);
+    }
 #else
-#error monitor supports only Mac OS and linux for now!
+#error monitor supports only Mac OS, Linux, and Windows!
 #endif
     const std::filesystem::path base_exec_path = std::filesystem::path(result).parent_path();
     const std::string static_html_base_dir = "static";
     const std::filesystem::path html_base_path = base_exec_path / static_html_base_dir;
-    return html_base_path;
+    return html_base_path.string();
 }
 
 namespace gs {
