@@ -692,13 +692,13 @@ public:
         // for flatview, and to reflect that we can just update the topology
         m_as->update_topology();
 
-        /* this code seems like it was trying to add a remapping step for the global initiator,
-         * only I am not sure it would ever have worked, and it could be very expensive
-         * if it is needed, it shoudl probably also be added to the normal port?
-         *        m_listener = inst.memory_listener_new();
-         *       m_listener->set_map_callback(std::bind(&QemuInitiatorSocket::qemu_map, this, _1, _2, _3));
-         *       m_listener->register_as(m_as);
+        /* Sometimes memory regions are added to the global address space by (for instance) virt devices rempaiing
+         * system memory such that they can directly access it. The mapped memory region needs it's DMI pointers
+         * adjusted. qemu_map will do that remapping of the DMI.
          */
+        m_listener = inst.memory_listener_new();
+        m_listener->set_map_callback(std::bind(&QemuInitiatorSocket::qemu_map, this, _1, _2, _3));
+        m_listener->register_as(m_as);
 
         m_dev = dev;
     }
