@@ -226,6 +226,8 @@ private:
 
 class display : public sc_core::sc_module
 {
+    SCP_LOGGER();
+
 protected:
     sc_core::sc_vector<VncConfiguration> vnc;
 
@@ -234,7 +236,7 @@ private:
     MainThreadQemuDisplay m_main_display;
 #endif
 
-    display (const sc_core::sc_module_name& name, QemuDevice& gpu);
+    display(const sc_core::sc_module_name& name, QemuDevice& gpu);
 
     bool is_vnc_enabled()
     {
