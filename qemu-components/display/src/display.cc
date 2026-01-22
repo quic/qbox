@@ -220,24 +220,13 @@ display::display(const sc_core::sc_module_name& _name, sc_core::sc_object* o)
 #ifdef __APPLE__
     // On MacOS use libqbox's display SystemC module.
     , m_main_display(o)
-#else
-    , vnc("vnc", dynamic_cast<QemuVirtioGpu*>(o)->outputs(),
-          [o](const char* n, size_t i) { return new VncConfiguration(n, i, dynamic_cast<QemuDevice*>(o)->get_id()); })
 #endif
 {
 #ifndef __APPLE__
     // Use QEMU's integrated display only if we are NOT on MacOS.
     // On MacOS use libqbox's display SystemC module.
     QemuDevice* gpu = (dynamic_cast<QemuDevice*>(o));
-
-    if (is_vnc_enabled()) {
-        std::vector<std::string> vnc_options;
-        fill_vnc_options(vnc_options);
-        gpu->get_qemu_inst().set_display_arg("egl-headless");
-        gpu->get_qemu_inst().set_vnc_args(vnc_options);
-    } else {
-        gpu->get_qemu_inst().set_display_arg("sdl,gl=on");
-    }
+    gpu->get_qemu_inst().set_display_arg("sdl,gl=on");
 #endif
 }
 

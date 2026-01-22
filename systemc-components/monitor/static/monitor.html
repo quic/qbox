@@ -382,7 +382,7 @@
                 servers.forEach(vnc_servers_info => {
                     console.log("JH: ", vnc_servers_info)
                     vnc_servers_info.server.forEach(server => {
-                        if (server.family === "ipv4" && server.websocket === true) {
+                        if (server.websocket === true) {
                             for (const element in server) {
                                 console.log("JH: Replacing element:", element);
                                 vnc_servers_info[element] = server[element];

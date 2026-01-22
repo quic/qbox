@@ -161,7 +161,7 @@ protected:
     cci::cci_param<int> p_icount_mips;
 
     cci::cci_param<std::string> p_args;
-    bool p_display_argument_set;
+    std::string m_display_argument;
 
     cci::cci_param<std::string> p_accel;
 
@@ -302,7 +302,6 @@ public:
         , p_icount("icount", false, "Enable virtual instruction counter")
         , p_icount_mips("icount_mips_shift", 0, "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
         , p_args("qemu_args", "", "additional space separated arguments")
-        , p_display_argument_set(false)
         , p_accel("accel", "tcg", "Virtualization accelerator")
     {
         SCP_DEBUG(()) << "Libqbox QemuInstance constructor";
@@ -334,12 +333,26 @@ public:
      * @brief Add a the display command line argument to the qemu instance.
      *
      * This method may only be called before the instance is initialized.
+     *
      */
-    void set_display_arg(const char* arg)
+    void set_display_arg(const std::string& arg)
     {
-        p_display_argument_set = true;
+        // If already set to the same value, nothing to do
+        if (arg == m_display_argument) {
+            return;
+        }
+
+        // If already set to a different value, it's an error
+        if (!m_display_argument.empty()) {
+            SCP_FATAL(()) << "Display argument has already been set to '" << m_display_argument
+                          << "' and cannot be changed to '" << arg
+                          << "'. This may occur when mixed display modules are created (display/vnc).";
+        }
+
+        // Set the display argument for the first time
+        m_display_argument = arg;
         m_inst.push_qemu_arg("-display");
-        m_inst.push_qemu_arg(arg);
+        m_inst.push_qemu_arg(m_display_argument.c_str());
     }
 
     /**
@@ -347,12 +360,10 @@ public:
      *
      * This method may only be called before the instance is initialized.
      */
-    void set_vnc_args(std::vector<std::string>& vnc_options)
+    void set_vnc_args(const std::string& vnc_options)
     {
-        for (const std::string& option : vnc_options) {
             m_inst.push_qemu_arg("-vnc");
-            m_inst.push_qemu_arg(option.c_str());
-        }
+            m_inst.push_qemu_arg(vnc_options.c_str());
     }
 
     /**
@@ -426,7 +437,7 @@ public:
         push_accelerator_args();
         push_icount_mode_args();
 
-        if (!p_display_argument_set) {
+        if (m_display_argument.empty()) {
             m_inst.push_qemu_arg({
                 "-display", "none", /* no GUI */
             });
