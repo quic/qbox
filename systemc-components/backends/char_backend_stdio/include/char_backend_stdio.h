@@ -23,6 +23,7 @@
 #include <poll.h>
 #include <regex>
 #include <atomic>
+#include <cstdlib>
 
 #define RCV_POLL_TIMEOUT_MS 300
 
@@ -170,6 +171,7 @@ public:
         if (p_read_write) rcv_thread_id = std::thread(&char_backend_stdio::rcv_thread, this);
 
         socket.register_b_transport(this, &char_backend_stdio::writefn);
+        std::atexit(tty_reset);
     }
 
     void end_of_elaboration() { socket.can_receive_any(); }
