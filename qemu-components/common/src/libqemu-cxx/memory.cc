@@ -301,6 +301,7 @@ AddressSpace::MemTxResult AddressSpace::write(uint64_t addr, const void* data, s
     ::MemTxResult qemu_res;
 
     qemu_attrs.secure = attrs.secure;
+    qemu_attrs.requester_id = attrs.requester_id;
 
     qemu_res = m_int->exports().address_space_write(m_as, addr, qemu_attrs, data, size);
 

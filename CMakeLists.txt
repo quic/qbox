@@ -302,6 +302,68 @@ build_lua()
 
 if (NOT WITHOUT_QEMU)
 
+    # TODO(Jhieb) pull request changes to make sure capabilities are DWORD aligned.
+    CPMAddPackage(
+        NAME pcie_model
+        GIT_REPOSITORY "https://github.com/joshwhieb/pcie-model.git"
+        GIT_TAG "master"
+        GIT_SHALLOW TRUE
+    )
+
+
+    set(LIBPCIE_DIR ${pcie_model_SOURCE_DIR}/libpcie)
+    set(LIBPCIE_C_SOURCES
+        ${LIBPCIE_DIR}/src/pcie/cosim_common.c
+        ${LIBPCIE_DIR}/src/pcie/cosim_socket.c
+        ${LIBPCIE_DIR}/src/pcie/cosim_tlp.c
+        ${LIBPCIE_DIR}/src/pcie/pcie.c
+        ${LIBPCIE_DIR}/src/pcie/pseudocore.c
+        ${LIBPCIE_DIR}/src/pcie/platform.c
+        ${LIBPCIE_DIR}/src/pcie/pcie_cfgspc.c
+        ${LIBPCIE_DIR}/src/pcie/pcie_cfgutil.c
+        ${LIBPCIE_DIR}/src/pcie/pcie_msix.c
+    )
+
+    # C++ sources from the TLM modules
+    set(LIBPCIE_CXX_SOURCES
+        ${pcie_model_SOURCE_DIR}/tlm-modules/pcie-controller.cc
+        ${pcie_model_SOURCE_DIR}/tlm-modules/libpcie-callbacks.cc
+    )
+
+    # Create the static library
+    add_library(libpcie STATIC 
+        ${LIBPCIE_C_SOURCES}
+        ${LIBPCIE_CXX_SOURCES}
+    )
+
+    # Set the output name to libpcie.a (without the extra 'lib' prefix)
+    set_target_properties(libpcie PROPERTIES OUTPUT_NAME pcie)
+
+    # Add compile definitions
+    target_compile_definitions(libpcie PRIVATE
+        __STDC_WANT_LIB_EXT2__=1
+        CONFIG_TLM=1
+    )
+
+    # Set include directories
+    target_include_directories(libpcie PUBLIC
+        ${LIBPCIE_DIR}/src
+        ${pcie_model_SOURCE_DIR}
+        ${systemclanguage_SOURCE_DIR}/src
+    )
+
+    # Set compile options (matching the original Makefile)
+    target_compile_options(libpcie PRIVATE
+        -fPIC
+        $<$<CONFIG:Debug>:-g3 -O0>
+        $<$<CONFIG:Release>:-O2>
+    )
+
+    # Link against SystemC
+    target_link_libraries(libpcie PUBLIC
+        SystemC::systemc
+    )
+
     CPMAddPackage(
         NAME libslirp
         GIT_REPOSITORY https://gitlab.freedesktop.org/slirp/libslirp.git
@@ -437,6 +499,8 @@ target_include_directories(
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/systemc-components/common/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}>
     ${LIBELF_INCLUDE_DIR}
+    ${pcie_model_SOURCE_DIR}
+    ${pcie_model_SOURCE_DIR}/libpcie/src
     )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -447,7 +511,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         ${CROW_DEP}
         zip
         ${PYBIND11_EMBED}
-        ${CMAKE_DL_LIBS}  
+        ${CMAKE_DL_LIBS}
+        libpcie
 )
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/systemc-components" DESTINATION ${CMAKE_INSTALL_PREFIX})
