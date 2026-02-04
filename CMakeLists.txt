@@ -301,44 +301,6 @@ add_library(${PROJECT_NAME} SHARED
 build_lua()
 
 if (NOT WITHOUT_QEMU)
-
-    CPMAddPackage(
-        NAME libslirp
-        GIT_REPOSITORY https://gitlab.freedesktop.org/slirp/libslirp.git
-        GIT_TAG v4.8.0
-        GIT_SHALLOW TRUE
-        DOWNLOAD_ONLY YES
-    )
-
-    find_program(MESON meson)
-    if(NOT MESON)
-        message(FATAL_ERROR "meson not found")
-    endif()
-
-    execute_process(
-        COMMAND ${MESON} setup --default-library static --prefix ${libslirp_BINARY_DIR}/libslirp-prefix/ ${libslirp_BINARY_DIR} ${libslirp_SOURCE_DIR}
-        WORKING_DIRECTORY ${libslirp_SOURCE_DIR}
-        RESULT_VARIABLE result
-        ERROR_VARIABLE error_output
-    )
-
-    if(result)
-        message(FATAL_ERROR "The command 'meson setup' failed with the output error: \n${error_output}")
-    endif()
-
-    execute_process(
-        COMMAND ${MESON} install -C ${libslirp_BINARY_DIR}
-        WORKING_DIRECTORY ${libslirp_SOURCE_DIR}
-        RESULT_VARIABLE result
-        ERROR_VARIABLE error_output
-    )
-
-    if(result)
-        message(FATAL_ERROR "The command 'meson install' failed with the output error: \n${error_output}")
-    endif()
-
-    set(CONFIGURE_ENVIRONMENT_VARIABLE "PKG_CONFIG_PATH=${libslirp_BINARY_DIR}/libslirp-prefix/lib/${CMAKE_LIBRARY_ARCHITECTURE}/pkgconfig/")
-
     # TODO: Remove the "hack" in the future, once support for Ubuntu 20 can be
     # dropped. A fix for it was added in CMake 3.18, but the default version of
     # Ubuntu 20 is 3.16
@@ -407,7 +369,7 @@ if (NOT WITHOUT_QEMU)
 
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/qemu-components" DESTINATION ${CMAKE_INSTALL_PREFIX})
     set(QEMU_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/qemu-components")
-   
+
 endif() # WITHOUT_QEMU
 
 if(CMAKE_COMPILER_IS_GNUCC)
@@ -447,7 +409,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         ${CROW_DEP}
         zip
         ${PYBIND11_EMBED}
-        ${CMAKE_DL_LIBS}  
+        ${CMAKE_DL_LIBS}
 )
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/systemc-components" DESTINATION ${CMAKE_INSTALL_PREFIX})
@@ -458,7 +420,7 @@ gs_export(${PROJECT_NAME} ${QBOX_INCLUDE_DIR})
 if (NOT DEFINED GS_ONLY)
     install(TARGETS rpc zip DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 endif()
-    
+
 list(APPEND TARGET_LIBS ${PROJECT_NAME})
 
 if(NOT WITHOUT_QEMU)

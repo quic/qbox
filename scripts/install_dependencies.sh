@@ -18,17 +18,17 @@ if { [ -e /etc/os-release ] && OS_RELEASE="/etc/os-release"; } || \
 
         if [ "${VERSION_ID}" = "24.04" ]; then
             apt install cmake g++ gcc git libasio-dev libelf-dev libepoxy-dev \
-                libglib2.0-dev libpixman-1-dev libsdl2-dev \
+                libglib2.0-dev libpixman-1-dev libsdl2-dev libslirp-dev libasio-dev \
                 libvirglrenderer-dev meson ninja-build ocl-icd-opencl-dev \
                 python3 python3-dev python3-numpy python3-venv
         elif [ "${VERSION_ID}" = "22.04" ]; then
             apt install cmake g++ gcc git libasio-dev libelf-dev libepoxy-dev \
-                libglib2.0-dev libpixman-1-dev libsdl2-dev \
+                libglib2.0-dev libpixman-1-dev libsdl2-dev libslirp-dev libasio-dev \
                 libvirglrenderer-dev meson ninja-build ocl-icd-opencl-dev \
                 python3 python3-dev python3-numpy python3-tomli python3-venv
         elif [ "${VERSION_ID}" = "20.04" ]; then
             apt install cmake g++ gcc git libasio-dev libelf-dev libepoxy-dev \
-                libglib2.0-dev libpixman-1-dev libsdl2-dev \
+                libglib2.0-dev libpixman-1-dev libsdl2-dev libslirp-dev libasio-dev \
                 libvirglrenderer-dev meson ninja-build ocl-icd-opencl-dev \
                 python3 python3-dev python3-numpy python3-pip python3-venv
             pip install --user tomli
@@ -43,10 +43,10 @@ else
             readonly MAJOR_VERSION
 
             if [ "${MAJOR_VERSION}" = "15" ]; then
-                brew install asio bison cmake libelf meson ninja python3 sdl2
+                brew install asio bison cmake libelf libslirp asio meson ninja python3 sdl2
                 pip install --user numpy pexpect
             elif [ "${MAJOR_VERSION}" = "14" ]; then
-                brew install asio bison cmake libelf meson ninja python3 sdl2
+                brew install asio bison cmake libelf libslirp asio meson ninja python3 sdl2
                 pip install --user numpy pexpect
             fi
 
