@@ -1,5 +1,6 @@
 /build*/
 /debug*/
+/install*/
 tags
 TAGS
 *~
@@ -7,3 +8,4 @@ TAGS
 .vscode
 .DS_Store
 __pycache__
+.worktrees
