@@ -492,7 +492,9 @@ public:
                 SCP_WARN(())("Hold reset");
                 sc_core::wait(m_start_reset_done_ev);
             }
-            socket.reset();     // remove DMI's
+            m_inst.get().lock_iothread();
+            socket.reset(); // remove DMI's (needs BQL for memory region updates)
+            m_inst.get().unlock_iothread();
             m_cpu.reset(false); // call the end-of-reset (which will unpause the CPU)
             m_qk->start();      // restart the QK if it's stopped
             m_qk->reset();
