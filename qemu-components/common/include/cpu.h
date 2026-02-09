@@ -525,6 +525,16 @@ public:
             }
         }
         if (!m_coroutines) {
+            /*
+             * Start the quantum keeper before kicking the CPU to ensure
+             * its tick event is attached as suspending. Without this, a
+             * fast CPU could complete and stop its QK before a slow CPU
+             * ever calls sync_with_kernel() (where start() was previously
+             * first called), leaving no suspending events and causing
+             * premature simulation exit due to starvation.
+             */
+            m_qk->start();
+
             /* Prepare the CPU for its first run and release it */
             m_cpu.set_soft_stopped(false);
             rearm_deadline_timer();
