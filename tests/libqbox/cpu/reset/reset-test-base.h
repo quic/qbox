@@ -73,7 +73,9 @@ protected:
     int finished = 0;
     int resets = 0;
     int this_resets = 0;
+    int reset_threshold = 0;
     int reset_reqs = 0;
+    std::vector<int> resets_per_iter;
     gs::async_event reset_ev;
     sc_core::sc_event done_ev;
     sc_core::sc_event resets_done_ev;
@@ -138,9 +140,10 @@ public:
     }
     void reset_method()
     {
-        if (this_resets >= p_num_cpu) {
+        if (this_resets >= reset_threshold + p_num_cpu) {
             // Dont test for overlapping resets !!
-            this_resets = 0;
+            resets_per_iter.push_back(this_resets - reset_threshold);
+            reset_threshold = this_resets;
             reset_reqs++;
             SCP_INFO(SCMOD) << "Reset all CPU's";
             reset.async_write_vector({ 1, 0 });
@@ -160,11 +163,11 @@ public:
 
         if (data >= 0x80000000ULL) {
             this_resets++;
-            TEST_ASSERT(this_resets <= p_num_cpu * 10); // We get double hits sometimes.
+            TEST_ASSERT(this_resets <= reset_threshold + p_num_cpu * 10); // We get double hits sometimes.
 
-            SCP_INFO(SCMOD)("Done RESET CPU {} (Reset {}/{}) ", cpuid, this_resets, (int)p_num_cpu);
+            SCP_INFO(SCMOD)("Done RESET CPU {} (Reset {}/{}) ", cpuid, this_resets - reset_threshold, (int)p_num_cpu);
             resets++;
-            if (this_resets == p_num_cpu) {
+            if (this_resets >= reset_threshold + p_num_cpu) {
                 resetting = false;
                 resets_done_ev.notify();
             }
@@ -205,11 +208,26 @@ public:
     void done_method()
     {
         wait(done_ev);
-        TEST_ASSERT(this_resets >= p_num_cpu);
+
+        /*
+         * A late reset from the pthread may still be in-flight.
+         * Wait for all acknowledgments to arrive before issuing
+         * the final reset.
+         */
+        while (this_resets < reset_threshold + p_num_cpu) {
+            wait(resets_done_ev);
+        }
 
         SCP_INFO(SCMOD)("Processing done");
+        /*
+         * Trigger the final reset through reset_method(). Do NOT update
+         * reset_threshold here -- reset_method() will record the iteration
+         * and update the threshold itself before issuing the reset.
+         */
         reset_ev.notify();
         wait(resets_done_ev);
+        /* Record the final reset iteration */
+        resets_per_iter.push_back(this_resets - reset_threshold);
         SCP_INFO(SCMOD)("Resetting done\n");
 
         reset_ev.async_detach_suspending();
@@ -228,8 +246,12 @@ public:
             TEST_ASSERT(m_writes[i] >= NUM_WRITES);
         }
 
-        SCP_WARN(SCMOD)("Resets {} Reset requests {}", resets, reset_reqs);
+        SCP_WARN(SCMOD)("Resets {} Reset requests {} Iterations {}", resets, reset_reqs, (int)resets_per_iter.size());
         TEST_ASSERT(reset_reqs >= 1);
+        for (size_t i = 0; i < resets_per_iter.size(); i++) {
+            SCP_INFO(SCMOD)("  iter {}: {} resets (expected >= {})", i, resets_per_iter[i], (int)p_num_cpu);
+            TEST_ASSERT(resets_per_iter[i] >= p_num_cpu);
+        }
         TEST_ASSERT(resets >= (reset_reqs + 1) * p_num_cpu);
         // We will see double resets sometimes due to the 2 reset mechanisms in QEMU.
     }
