@@ -34,6 +34,14 @@ void tlm_quantumkeeper_multithread::timehandler()
         m_systemc_waiting = false;
         SCP_TRACE(())("Unsuspending (stopped)");
         sc_core::sc_unsuspend_all();
+        /*
+         * Detach the suspending state here on the SystemC thread (immediate
+         * effect) rather than in stop() on the QEMU thread (deferred). This
+         * avoids a race where a start()+stop() sequence from the QEMU thread
+         * causes the deferred detach to overwrite the deferred attach due to
+         * async_event's last-one-wins pending state semantics.
+         */
+        m_tick.async_detach_suspending();
         return;
     }
     if ((get_current_time() > sc_core::sc_time_stamp())) {
@@ -111,7 +119,13 @@ void tlm_quantumkeeper_multithread::stop()
             status = STOPPED;
             m_tick.notify(sc_core::SC_ZERO_TIME);
             cond.notify_all();
-            m_tick.async_detach_suspending();
+            /*
+             * Don't call m_tick.async_detach_suspending() here. When called
+             * from the QEMU thread, it's deferred and can race with a
+             * preceding start()'s deferred attach (last-one-wins). Instead,
+             * the timehandler (running on the SystemC thread) detaches
+             * immediately when it detects status != RUNNING.
+             */
         }
 
         if (m_worker_thread.joinable()) {
