@@ -64,6 +64,7 @@ class QemuInitiatorSocket
 private:
     std::mutex m_mutex;
     std::vector<std::pair<sc_dt::uint64, sc_dt::uint64>> m_ranges;
+    std::thread::id m_thread_id;
 
 public:
     SCP_LOGGER(());
@@ -536,7 +537,7 @@ protected:
              */
             do_direct_access(trans);
         } else {
-            if (!m_inst.g_rec_qemu_io_lock.try_lock()) {
+            if (!m_inst.g_rec_qemu_io_lock.try_lock() && !is_on_sysc()) {
                 /* Allow only a single access, but handle re-entrant code,
                  * while allowing side-effects in SystemC (e.g. calling wait)
                  * [NB re-entrant code caused via memory listeners to
@@ -585,10 +586,13 @@ public:
         return qemu_io_access(tlm::TLM_WRITE_COMMAND, addr, &val, size, attrs);
     }
 
+    bool is_on_sysc() const { return std::this_thread::get_id() == m_thread_id; }
+
     QemuInitiatorSocket(const char* name, QemuInitiatorIface& initiator, QemuInstance& inst)
         : TlmInitiatorSocket(name)
         , m_inst(inst)
         , m_initiator(initiator)
+        , m_thread_id(std::this_thread::get_id())
         , m_on_sysc(sc_core::sc_gen_unique_name("initiator_run_on_sysc"))
     {
         SCP_DEBUG(()) << "QemuInitiatorSocket constructor";
