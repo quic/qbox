@@ -11,11 +11,25 @@
 
 MainThreadQemuDisplay::~MainThreadQemuDisplay()
 {
-    // TODO: need a better strategy for teardown
+    /*
+     * Prevent display callbacks from performing BQL unlock/lock operations
+     * during teardown.  On macOS, sdl2_cleanup() calls
+     * SDL_QuitSubSystem(SDL_INIT_VIDEO) which can trigger window close
+     * events that flow through QEMU's display system and invoke our
+     * callbacks.  Without this, the callbacks would call
+     * unlock_iothread() while the BQL is not held, hitting the
+     * bql_locked() assertion.
+     */
+    m_simulation_started = false;
+
     m_ops.set_name("deleted");
     m_ops.set_gfx_switch(nullptr);
     m_ops.set_gfx_update(nullptr);
     m_ops.set_refresh(nullptr);
+    m_ops.set_window_create(nullptr);
+    m_ops.set_window_destroy(nullptr);
+    m_ops.set_window_resize(nullptr);
+    m_ops.set_poll_events(nullptr);
     inst->get().sdl2_cleanup();
 }
 
