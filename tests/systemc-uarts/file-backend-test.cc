@@ -77,9 +77,12 @@ TEST_BENCH(TestFILE, FileReadWrite)
     m_initiator.do_write(0, 'o');
     m_initiator.do_write(0, 'm');
     m_initiator.do_write(0, 'm');
-    m_initiator.do_write(0, '\n');
-
+    
     sc_core::wait(1, sc_core::SC_NS);
+
+    m_initiator.do_write(0, '\n');
+    sc_core::wait(1, sc_core::SC_NS);
+
     sc_core::sc_stop();
 }
 
