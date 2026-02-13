@@ -236,10 +236,12 @@ protected:
             }
         } else {
             while (!m_cpu.can_run() && !m_finished) {
-                if (!m_coroutines) {
-                    // In the case of accelerators, allow them to handle signals etc.
-                    SCP_TRACE(())("Stopping QK");
-                    m_qk->stop(); // Stop the QK, it will be enabled when we next see work to do.
+                if (!m_coroutines && !m_inst.is_tcg_enabled()) {
+                    // For hardware accelerators (KVM/HVF), break back into the
+                    // QEMU loop so the vCPU thread can handle signals delivered
+                    // via ioctl. TCG does not need this.
+                    SCP_TRACE(())("Stopping QK (accelerator)");
+                    m_qk->stop();
                     break;
                 }
                 wait_for_work();
@@ -306,6 +308,13 @@ protected:
     {
         SCP_TRACE(())("End of loop");
         if (m_finished) return;
+        /*
+         * In MTTCG mode, vCPU threads are created during elaboration and can
+         * call this callback before start_of_simulation() has completed.
+         * Skip sync_with_kernel/prepare_run_cpu until fully initialized.
+         */
+        if (!m_started) return;
+
         if (m_coroutines) {
             m_inst.get().coroutine_yield();
         } else {
@@ -525,7 +534,19 @@ public:
             if (m_inst.can_run()) {
                 m_qk->start();
             }
+        } else if (!m_coroutines) {
+            /*
+             * In MTTCG mode, start the QK to register a suspending channel
+             * with the SystemC kernel. Without this, async_suspend() returns
+             * true (exit) whenever there are no pending events, which can
+             * happen in the gap between MMIO transactions processed by
+             * run_on_sysc(). The QK will be stopped later in wait_for_work()
+             * when the CPU halts (e.g. WFI), allowing normal starvation exit.
+             */
+            m_qk->start();
         }
+
+        m_started = true;
         if (!m_coroutines) {
             /*
              * Start the quantum keeper before kicking the CPU to ensure
@@ -537,10 +558,19 @@ public:
              */
             m_qk->start();
 
-            /* Prepare the CPU for its first run and release it */
+            /* Prepare the CPU for its first run and release it
+             * Hold BQL to synchronize with the vCPU thread's idle-wait loop
+             * in qemu_process_cpu_events(). That loop checks cpu_thread_is_idle()
+             * (which reads soft_stopped) under BQL, then enters
+             * qemu_cond_wait(halt_cond, &bql) which atomically releases BQL.
+             * Without BQL here, the kick (broadcast on halt_cond) can be lost
+             * if the vCPU thread is between the idle check and the cond_wait.
+             */
+            m_inst.get().lock_iothread();
             m_cpu.set_soft_stopped(false);
             rearm_deadline_timer();
             m_cpu.kick();
+            m_inst.get().unlock_iothread();
         }
 
         // Have not managed to figure out the root cause of the issue, but the
@@ -548,8 +578,6 @@ public:
         // 0 by some routine. By setting the vcpu as dirty, we trigger pushing
         // registers to KVM just before running it.
         m_cpu.set_vcpu_dirty(true);
-
-        m_started = true;
     }
 
     /* QemuInitiatorIface  */
