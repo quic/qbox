@@ -14,22 +14,42 @@
 #include <device.h>
 #include <qemu-instance.h>
 #include <module_factory_registery.h>
+#ifdef _WIN32
+#include <winsock2.h>
+#include <afunix.h>
+#include <ws2tcpip.h>
+#else
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <atomic>
 #include <poll.h>
+#endif
+#include <atomic>
+
 
 #define QMP_SOCK_POLL_TIMEOUT 300
 #define QMP_RECV_BUFFER_LEN   8192
+
+#ifdef _WIN32
+typedef SOCKET socket_t;
+static constexpr socket_t INVALID_SOCK = INVALID_SOCKET;
+#define CLOSE_SOCKET closesocket
+#define SOCK_POLL    WSAPoll
+#else
+typedef int socket_t;
+static constexpr socket_t INVALID_SOCK = -1;
+#define CLOSE_SOCKET close
+#define SOCK_POLL    poll
+#endif
+
 class qmp : public sc_core::sc_module
 {
     SCP_LOGGER();
 
     gs::biflow_socket_multi<qmp> qmp_socket;
-    int m_sockfd = 0;
+    socket_t m_sockfd = INVALID_SOCK;
 
     std::string buffer = "";
     std::thread reader_thread;
@@ -48,6 +68,12 @@ public:
         , p_monitor("monitor", true, "use the HMP monitor (true, default) - or QMP (false) ")
         , stop_running{ false }
     {
+#ifdef _WIN32
+        WSADATA wsa_data;
+        if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
+            SCP_FATAL(())("WSAStartup failed");
+        }
+#endif
         SCP_TRACE(())("qmp constructor");
         if (p_qmp_str.get_value().empty()) {
             SCP_FATAL(())("qmp options string is empty!");
@@ -90,8 +116,8 @@ public:
                              R"(" } }")";
                 }
             }
-            if (m_sockfd > 0) {
-                send(m_sockfd, buffer.c_str(), buffer.length(), 0);
+            if (m_sockfd != INVALID_SOCK) {
+                send(m_sockfd, buffer.c_str(), (int)buffer.length(), 0);
             }
             buffer = "";
         }
@@ -112,7 +138,7 @@ public:
             qmp_poll.events = POLLIN;
             int ret;
             while (!stop_running) {
-                ret = poll(&qmp_poll, 1, QMP_SOCK_POLL_TIMEOUT);
+                ret = SOCK_POLL(&qmp_poll, 1, QMP_SOCK_POLL_TIMEOUT);
                 if ((ret == -1 && errno == EINTR) || (ret == 0) /*timeout*/) {
                     continue;
                 } else if ((ret > 0) && (qmp_poll.revents & POLLIN)) {
@@ -122,16 +148,16 @@ public:
                 }
             }
 
-            if (m_sockfd > 0) {
-                close(m_sockfd);
+            if (m_sockfd != INVALID_SOCK) {
+                CLOSE_SOCKET(m_sockfd);
             }
-            m_sockfd = 0;
+            m_sockfd = INVALID_SOCK;
         });
     }
 
     bool qmp_recv()
     {
-        unsigned char buffer[QMP_RECV_BUFFER_LEN];
+        char buffer[QMP_RECV_BUFFER_LEN];
         int l = recv(m_sockfd, buffer, QMP_RECV_BUFFER_LEN, 0);
         if (l < 0) return false;
         for (int i = 0; i < l; i++) {
@@ -145,7 +171,7 @@ public:
         SCP_INFO(())("Connecting QMP socket to unix socket {}", socket_path);
 
         m_sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (m_sockfd <= 0) {
+        if (m_sockfd == INVALID_SOCK) {
             SCP_ERR(())("Unable to connect to QMP socket");
         }
 
@@ -160,7 +186,7 @@ public:
 
         if (!p_monitor) {
             std::string msg = R"({ "execute": "qmp_capabilities", "arguments": { "enable": ["oob"] } })";
-            if (write(m_sockfd, msg.c_str(), msg.size()) == -1) {
+            if (send(m_sockfd, msg.c_str(), (int)msg.size(), 0) == -1) {
                 SCP_ERR(())("Can't send initialization command");
             }
         }
@@ -172,6 +198,9 @@ public:
         if (reader_thread.joinable()) {
             reader_thread.join();
         }
+#ifdef _WIN32
+        WSACleanup();
+#endif
     }
 };
 
