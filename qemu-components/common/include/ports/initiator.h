@@ -663,12 +663,10 @@ public:
     void end_of_simulation()
     {
         m_finished = true;
-        cancel_all();
     }
 
     ~QemuInitiatorSocket()
     {
-        cancel_all();
 #if 0
     // This could happen during void end_of_simulation() but there is a race with other units trying
     // to pull down their DMI's
@@ -747,8 +745,6 @@ public:
 
         m_dev = dev;
     }
-
-    void cancel_all() { m_on_sysc.cancel_all(); }
 
     /* tlm::tlm_bw_transport_if<> */
     virtual tlm::tlm_sync_enum nb_transport_bw(tlm::tlm_generic_payload& trans, tlm::tlm_phase& phase,

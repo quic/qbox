@@ -418,9 +418,6 @@ public:
         /* Unblock the CPU thread if it's sleeping */
         set_signaled();
 
-        /* Unblock it if it's waiting for some I/O to complete */
-        socket.cancel_all();
-
         /* Wait for QEMU to terminate the CPU thread */
         /*
          * Theoretically we should m_cpu.remove_sync(); here, however if QEMU is in the process of an io operation or an
