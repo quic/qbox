@@ -108,64 +108,32 @@ void MainThreadQemuDisplay::window_create(DisplayChangeListener* dcl)
 {
     qemu::LibQemu& lib = inst->get();
     MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
-    if (display->m_simulation_started) {
-        lib.unlock_iothread();
-    }
-
     // SDL2 window create should run on main-thread
-    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_window_create(dcl); }, display->m_simulation_started);
-
-    if (display->m_simulation_started) {
-        lib.lock_iothread();
-    }
+    display->m_on_sysc.fork_on_systemc([&lib, dcl]() { lib.sdl2_window_create(dcl); });
 }
 
 void MainThreadQemuDisplay::window_destroy(DisplayChangeListener* dcl)
 {
     qemu::LibQemu& lib = inst->get();
     MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
-    if (display->m_simulation_started) {
-        lib.unlock_iothread();
-    }
-
     // SDL2 window destroy should run on main-thread
-    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_window_destroy(dcl); }, display->m_simulation_started);
-
-    if (display->m_simulation_started) {
-        lib.lock_iothread();
-    }
+    display->m_on_sysc.fork_on_systemc([&lib, dcl]() { lib.sdl2_window_destroy(dcl); });
 }
 
 void MainThreadQemuDisplay::window_resize(DisplayChangeListener* dcl)
 {
     qemu::LibQemu& lib = inst->get();
     MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
-    if (display->m_simulation_started) {
-        lib.unlock_iothread();
-    }
-
     // SDL2 window resize should run on main-thread
-    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_window_resize(dcl); }, display->m_simulation_started);
-
-    if (display->m_simulation_started) {
-        lib.lock_iothread();
-    }
+    display->m_on_sysc.fork_on_systemc([&lib, dcl]() { lib.sdl2_window_resize(dcl); });
 }
 
 void MainThreadQemuDisplay::poll_events(DisplayChangeListener* dcl)
 {
     qemu::LibQemu& lib = inst->get();
     MainThreadQemuDisplay* display = reinterpret_cast<MainThreadQemuDisplay*>(lib.dcl_new(dcl).get_user_data());
-    if (display->m_simulation_started) {
-        lib.unlock_iothread();
-    }
-
     // SDL2 poll events should run on main-thread
-    display->m_on_sysc.run_on_sysc([&lib, dcl]() { lib.sdl2_poll_events(dcl); }, display->m_simulation_started);
-
-    if (display->m_simulation_started) {
-        lib.lock_iothread();
-    }
+    display->m_on_sysc.fork_on_systemc([&lib, dcl]() { lib.sdl2_poll_events(dcl); });
 }
 
 bool MainThreadQemuDisplay::is_compatible_dcl(DisplayGLCtx* ctx, DisplayChangeListener* dcl)
