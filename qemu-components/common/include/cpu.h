@@ -427,11 +427,11 @@ public:
          * exclusive cpu region, it will end up waiting for the io operation to finish (effectively waiting for the
          * SystemC thread, or potentially another CPU that wont get the chance to exit)
          */
-        m_cpu.set_unplug(true);
         m_cpu.halt(true);
 
         m_inst.get().unlock_iothread();
         m_cpu.kick(); // Just in case the CPU is currently in the big lock waiting
+        m_cpu.set_unplug(true);
     }
 
     /* NB this is usd to determin if this cpu can run in SINGLE mode
