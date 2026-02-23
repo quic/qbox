@@ -598,6 +598,8 @@ public:
 
         int64_t vclock_now;
 
+        if (m_finished) return sc_core::SC_ZERO_TIME;
+
         vclock_now = m_inst.get().get_virtual_clock();
         sc_core::sc_time sc_t = sc_core::sc_time_stamp();
         if (sc_time(vclock_now, SC_NS) > sc_t) {
@@ -614,6 +616,7 @@ public:
      */
     virtual void initiator_set_local_time(const sc_core::sc_time& t) override
     {
+        if (m_finished) return;
         m_qk->set(t);
 
         if (m_qk->need_sync()) {
