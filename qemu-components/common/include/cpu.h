@@ -288,6 +288,7 @@ protected:
         m_cpu.set_soft_stopped(true);
 
         m_inst.get().unlock_iothread();
+        if (m_finished) return;
         if (!m_coroutines) {
             m_qk->start(); // we may have switched the QK off, so switch it on before setting
         }
