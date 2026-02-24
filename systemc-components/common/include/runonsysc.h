@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * Copyright (c) 2022-2026 Qualcomm Innovation Center, Inc. All Rights Reserved.
  * Author: GreenSocs 2022
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -8,163 +8,191 @@
 #ifndef RUNONSYSTEMC_H
 #define RUNONSYSTEMC_H
 
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <queue>
+#include <systemc>
+#include <atomic>
+#include <functional>
 #include <future>
-#include <chrono>
-
-#include <async_event.h>
-#include <uutils.h>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 namespace gs {
+
 class runonsysc : public sc_core::sc_module
 {
-protected:
-    class AsyncJob
-    {
-    public:
-        using Ptr = std::shared_ptr<AsyncJob>;
+private:
+    // ============================================================
+    // Core: shared lifetime state
+    // ============================================================
+    struct Core {
+        // --------------------------------------------------------
+        // AsyncJob (private implementation detail)
+        // --------------------------------------------------------
+        struct AsyncJob {
+            using Ptr = std::shared_ptr<AsyncJob>;
 
-    private:
-        std::packaged_task<void()> m_task;
+            std::function<void()> job;
 
-        bool m_cancelled = false;
+            std::promise<void> done_promise;
+            std::shared_future<void> done_future;
 
-        void run_job() { m_task(); }
+            std::atomic<bool> cancelled{ false };
 
-    public:
-        AsyncJob(std::function<void()>&& job): m_task(job) {}
-
-        AsyncJob(std::function<void()>& job): m_task(job) {}
-
-        AsyncJob() = delete;
-        AsyncJob(const AsyncJob&) = delete;
-
-        void operator()() { run_job(); }
-
-        /**
-         * @brief Cancel a job
-         *
-         * @details Cancel a job by setting m_cancelled to true and by
-         * resetting the task. Any waiter will then be unblocked immediately.
-         */
-        void cancel()
-        {
-            m_cancelled = true;
-            m_task.reset();
-        }
-
-        void wait()
-        {
-            auto future = m_task.get_future();
-
-            while (!m_cancelled && future.wait_for(std::chrono::milliseconds(500)) == std::future_status::timeout) {
+            explicit AsyncJob(std::function<void()> j)
+                : job(std::move(j)), done_future(done_promise.get_future().share())
+            {
             }
 
-            if (!m_cancelled) {
-                future.get();
+            void operator()()
+            {
+                try {
+                    if (!cancelled.load(std::memory_order_relaxed)) {
+                        job();
+                    }
+                    done_promise.set_value();
+                } catch (...) {
+                    try {
+                        done_promise.set_exception(std::current_exception());
+                    } catch (...) {
+                        // Likely that this is due to jobs being canceled (at cleanup)
+                    }
+                }
             }
-        }
 
-        bool is_cancelled() const { return m_cancelled; }
+            void cancel()
+            {
+                cancelled.store(true, std::memory_order_relaxed);
+                try {
+                    done_promise.set_value(); // unblock waiters immediately
+                } catch (...) {
+                    // Too late to cancel the job, it already threw itself!
+                }
+            }
+
+            void wait()
+            {
+                done_future.wait();
+                done_future.get(); // rethrows if job threw
+            }
+
+            bool is_cancelled() const { return cancelled.load(std::memory_order_relaxed); }
+        };
+
+        // --------------------------------------------------------
+        // Core state
+        // --------------------------------------------------------
+        std::thread::id thread_id;
+
+        std::queue<typename AsyncJob::Ptr> async_jobs;
+        typename AsyncJob::Ptr running_job;
+        std::mutex async_jobs_mutex;
+
+        async_event jobs_handler_event;
+        std::atomic<bool> running{ true };
+
+        explicit Core(std::thread::id id): thread_id(id), jobs_handler_event(false) {}
     };
 
-    std::thread::id m_thread_id;
+    std::shared_ptr<Core> m_core;
 
-    /* Async job queue */
-    std::queue<AsyncJob::Ptr> m_async_jobs;
-    AsyncJob::Ptr m_running_job;
-    std::mutex m_async_jobs_mutex;
-
-    async_event m_jobs_handler_event;
-    std::atomic<bool> running = true;
-
-    // Process inside a thread incase the job calls wait
+    // ============================================================
+    // SystemC job handler thread
+    // ============================================================
     void jobs_handler()
     {
-        std::unique_lock<std::mutex> lock(m_async_jobs_mutex);
-        running = true;
-        for (; running;) {
-            while (running && !m_async_jobs.empty()) {
-                m_running_job = m_async_jobs.front();
-                m_async_jobs.pop();
+        auto core = m_core; // hold shared ownership
+        if (!core) return;
+
+        std::unique_lock<std::mutex> lock(core->async_jobs_mutex);
+
+        while (core->running.load(std::memory_order_relaxed)) {
+            while (core->running.load(std::memory_order_relaxed) && !core->async_jobs.empty()) {
+                core->running_job = core->async_jobs.front();
+                core->async_jobs.pop();
 
                 lock.unlock();
-                sc_core::sc_unsuspendable(); // a wait in the job will cause systemc time to advance
-                (*m_running_job)();
-                sc_core::sc_suspendable();
-                lock.lock();
 
-                m_running_job.reset();
+                sc_core::sc_unsuspendable();
+                (*core->running_job)();
+                sc_core::sc_suspendable();
+
+                lock.lock();
+                core->running_job.reset();
             }
+
             lock.unlock();
-            wait(m_jobs_handler_event);
+            wait(core->jobs_handler_event);
             lock.lock();
         }
+
         SC_REPORT_WARNING("RunOnSysc", "Stopped");
-        sc_core::sc_stop();
     }
 
-    void cancel_pendings_locked()
+    void stop()
     {
-        while (!m_async_jobs.empty()) {
-            m_async_jobs.front()->cancel();
-            m_async_jobs.pop();
+        auto core = m_core;
+        if (!core) return;
+
+        core->running.store(false, std::memory_order_relaxed);
+    }
+
+    void cancel_all()
+    {
+        auto core = m_core;
+        if (!core) return;
+
+        std::lock_guard<std::mutex> lock(core->async_jobs_mutex);
+
+        while (!core->async_jobs.empty()) {
+            core->async_jobs.front()->cancel();
+            core->async_jobs.pop();
+        }
+
+        if (core->running_job) {
+            core->running_job->cancel();
+            core->running_job.reset();
         }
     }
 
 public:
-    runonsysc(const sc_core::sc_module_name& n = sc_core::sc_module_name("run-on-sysc"))
-        : sc_module(n)
-        , m_thread_id(std::this_thread::get_id())
-        , m_jobs_handler_event(false) // starve if no more jobs provided
+    // ============================================================
+    // Constructor
+    // ============================================================
+    explicit runonsysc(const sc_core::sc_module_name& n = "run-on-sysc"): sc_module(n)
     {
+        m_core = std::make_shared<Core>(std::this_thread::get_id());
         SC_THREAD(jobs_handler);
     }
 
-    /**
-     * @brief Cancel all pending jobs
-     *
-     * @detail Cancel all the pending jobs. The callers will be unblocked
-     *         if they are waiting for the job.
-     */
-    void cancel_pendings()
+    // ============================================================
+    // Destructor
+    // ============================================================
+    ~runonsysc() override
     {
-        std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
+        auto core = m_core;
+        if (!core) return;
 
-        cancel_pendings_locked();
+        stop();
+
+        m_core.reset(); // safe: state lives until last user exits
     }
 
-    /**
-     * @brief Cancel all pending and running jobs
-     *
-     * @detail Cancel all the pending jobs and the currently running job.
-     *         The callers will be unblocked if they are waiting for the
-     *         job. Note that if the currently running job is resumed, the
-     *         behaviour is undefined. This method is meant to be called
-     *         after simulation has ended.
-     */
-    void cancel_all()
-    {
-        std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
+    // ============================================================
+    // Public API
+    // ============================================================
 
-        cancel_pendings_locked();
-
-        if (m_running_job) {
-            m_running_job->cancel();
-            m_running_job.reset();
-        }
-    }
-    void stop()
+    bool is_on_sysc() const
     {
-        running = false;
-        m_jobs_handler_event.async_notify();
+        auto core = m_core;
+        return core && (std::this_thread::get_id() == core->thread_id);
     }
+
     void end_of_simulation()
     {
-        running = false;
+        auto core = m_core;
+        if (!core) return;
+        stop();
         cancel_all();
     }
 
@@ -182,70 +210,49 @@ public:
      */
     bool run_on_sysc(std::function<void()> job_entry, bool wait = true)
     {
-        if (!running) return false;
+        auto core = m_core; // snapshot lifetime
+        if (!core) return false;
+
+        if (!core->running.load(std::memory_order_relaxed)) return false;
+
         if (is_on_sysc()) {
             job_entry();
             return true;
-        } else {
-            AsyncJob::Ptr job(new AsyncJob(job_entry));
-
-            {
-                std::lock_guard<std::mutex> lock(m_async_jobs_mutex);
-                if (running)
-                    m_async_jobs.push(job);
-                else
-                    return false;
-            }
-
-            m_jobs_handler_event.async_notify();
-
-            if (wait) {
-                /* Wait for job completion */
-                try {
-                    job->wait();
-                } catch (std::runtime_error const& e) {
-                    /* Report unknown runtime errors, without causing a futher excetion */
-                    auto old = sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR,
-                                                                       sc_core::SC_LOG | sc_core::SC_DISPLAY);
-                    SC_REPORT_ERROR(
-                        "RunOnSysc",
-                        ("Run on systemc received a runtime error from job: " + std::string(e.what())).c_str());
-                    sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR, old);
-                    stop();
-                    return false;
-                } catch (const std::exception& exc) {
-                    if (sc_core::sc_report_handler::get_count(sc_core::SC_ERROR) == 0) {
-                        /* Report exceptions that were not caused by SC_ERRORS (which have already been reported)*/
-                        auto old = sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR,
-                                                                           sc_core::SC_LOG | sc_core::SC_DISPLAY);
-                        SC_REPORT_ERROR(
-                            "RunOnSysc",
-                            ("Run on systemc received an exception from job: " + std::string(exc.what())).c_str());
-                        sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR, old);
-                    }
-                    stop();
-                    return false;
-                } catch (...) {
-                    auto old = sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR,
-                                                                       sc_core::SC_LOG | sc_core::SC_DISPLAY);
-                    SC_REPORT_ERROR("RunOnSysc", "Run on systemc received an unknown exception from job");
-                    sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR, old);
-                    stop();
-                    return false;
-                }
-
-                return !job->is_cancelled();
-            }
-
-            return true;
         }
-    }
 
-    /**
-     * @return Whether we are on SystemC thread
-     */
-    bool is_on_sysc() const { return std::this_thread::get_id() == m_thread_id; }
+        auto job = std::make_shared<typename Core::AsyncJob>(std::move(job_entry));
+
+        {
+            std::lock_guard<std::mutex> lock(core->async_jobs_mutex);
+
+            if (!core->running.load(std::memory_order_relaxed)) return false;
+
+            core->async_jobs.push(job);
+        }
+
+        core->jobs_handler_event.async_notify();
+
+        if (wait) {
+            try {
+                job->wait();
+            } catch (...) {
+                auto old = sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR,
+                                                                   sc_core::SC_LOG | sc_core::SC_DISPLAY);
+                SC_REPORT_ERROR("RunOnSysc", "Run on systemc received an unknown exception from job");
+                sc_core::sc_report_handler::set_actions(sc_core::SC_ERROR, old);
+                stop();
+                // Notify the job handler so that it can jump out of it's loop.
+                core->jobs_handler_event.async_notify();
+                return false;
+            }
+
+            return !job->is_cancelled();
+        }
+
+        return true;
+    }
 };
+
 } // namespace gs
 
 #endif // RUNONSYSTEMC_H
