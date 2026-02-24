@@ -16,6 +16,7 @@
 #include <module_factory_registery.h>
 
 #include <qemu_gpex.h>
+#include <unistd.h>
 
 class ivshmem_plain : public qemu_gpex::Device
 {

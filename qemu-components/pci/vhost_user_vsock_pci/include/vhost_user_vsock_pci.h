@@ -17,6 +17,7 @@
 #include <qemu_gpex.h>
 #include <cstring>
 #include <errno.h>
+#include <unistd.h>
 
 class vhost_user_vsock_pci : public qemu_gpex::Device
 {
