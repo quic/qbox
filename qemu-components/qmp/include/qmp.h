@@ -20,6 +20,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <atomic>
+#include <poll.h>
 
 #define QMP_SOCK_POLL_TIMEOUT 300
 #define QMP_RECV_BUFFER_LEN   8192
