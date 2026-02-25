@@ -13,6 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <chrono>
 
 #include <tlm>
 #include <tlm_utils/simple_initiator_socket.h>
@@ -63,6 +64,56 @@ protected:
     QemuCpuHintTlmExtension m_cpu_hint_ext;
 
     uint64_t m_quantum_ns; // For convenience
+
+    /*
+     * Outstanding async work tracking.
+     *
+     * When a job is queued via async_run or async_safe_run we increment this
+     * counter.  The wrapper decrements it (and signals the condvar) once the
+     * job has finished executing.  The destructor waits for the counter to
+     * reach zero before tearing down the object so that any in-flight job
+     * cannot call back into a destroyed member (e.g. m_start_reset_done_ev).
+     *
+     * A timeout is used as a safety valve: if the simulation is exiting
+     * because the async job itself faulted and will never complete, we do not
+     * want to hang forever.
+     */
+    std::atomic<int> m_async_work_outstanding{ 0 };
+    std::mutex m_async_work_mutex;
+    std::condition_variable m_async_work_cv;
+    static constexpr int ASYNC_WORK_TIMEOUT_MS = 500;
+
+    /*
+     * Wrap @job so that m_async_work_outstanding is incremented before the
+     * job is queued and decremented (with a condvar notification) after it
+     * returns.  Must only be called when !m_finished so that the counter
+     * cannot be incremented after the destructor has started waiting.
+     */
+    qemu::Cpu::AsyncJobFn make_tracked_async_job(qemu::Cpu::AsyncJobFn job)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_async_work_mutex);
+            m_async_work_outstanding++;
+        }
+        if (m_finished) return {}; // already shutting down
+        return [this, job = std::move(job)]() mutable {
+            /*
+             * If the CPU is already shutting down (m_finished set by
+             * end_of_simulation()), skip the job body entirely.  The job
+             * will never be able to complete safely anyway (the CPU is being
+             * halted/unplugged), and skipping lets the destructor's wait_for
+             * exit immediately rather than burning the full timeout per CPU.
+             */
+            if (!m_finished) {
+                job();
+            }
+            {
+                std::lock_guard<std::mutex> lock(m_async_work_mutex);
+                m_async_work_outstanding--;
+            }
+            m_async_work_cv.notify_all();
+        };
+    }
 
     /*
      * Request quantum keeper from instance
@@ -347,7 +398,6 @@ public:
     TargetSignalSocket<bool> halt;
     TargetSignalSocket<bool> reset;
 
-
     QemuCpu(const sc_core::sc_module_name& name, QemuInstance& inst, const std::string& type_name)
         : QemuDevice(name, inst, (type_name + "-cpu").c_str())
         , halt("halt")
@@ -381,6 +431,23 @@ public:
     virtual ~QemuCpu()
     {
         end_of_simulation(); // catch the case we exited abnormally
+
+        /*
+         * Wait for any jobs that were already queued via async_run /
+         * async_safe_run to finish executing before we destroy the object.
+         * Those jobs might hold captured references.
+         */
+        {
+            std::unique_lock<std::mutex> lock(m_async_work_mutex);
+            if (!m_async_work_cv.wait_for(lock, std::chrono::milliseconds(ASYNC_WORK_TIMEOUT_MS),
+                                          [this] { return m_async_work_outstanding == 0; })) {
+                SCP_WARN(()) << "Timeout waiting for " << m_async_work_outstanding.load()
+                             << " outstanding async work(s) to complete during destruction";
+                // We may arrive here if the QEMU thread never actually started, there was queue'd work waiting for it,
+                // but the simulation has been terminated.
+            }
+        }
+
         while (!m_can_delete.try_lock()) {
             m_qk->stop();
         }
@@ -400,6 +467,18 @@ public:
         }
 
         if (!m_realized) {
+            return;
+        }
+
+        /*
+         * If start_of_simulation() was never called (e.g. the simulation
+         * aborted during elaboration) then finish_qemu_init() was never
+         * called either, and the QEMU iothread is still in its startup
+         * wait.  Calling lock_iothread() in that state blocks forever
+         * inside wait_for_iothread_startup.  Nothing useful can be done
+         * without a running iothread, so bail out early.
+         */
+        if (!m_started) {
             return;
         }
 
@@ -488,11 +567,11 @@ public:
             if (m_resetting != none) return; // dont double reset!
             SCP_WARN(())("Start reset");
             m_resetting = start_reset;
-            m_cpu.async_safe_run([&] {
+            m_cpu.async_safe_run(make_tracked_async_job([this] {
                 m_cpu.reset(true);
                 m_resetting = hold_reset;
                 m_start_reset_done_ev.async_notify();
-            }); // start the reset (which will pause the CPU)
+            })); // start the reset (which will pause the CPU)
         } else {
             if (m_resetting == none) return; // dont finish a finished reset!
             while (m_resetting == start_reset) {
@@ -631,7 +710,7 @@ public:
     /* expose async run interface for DMI invalidation */
     virtual void initiator_async_run(qemu::Cpu::AsyncJobFn job) override
     {
-        if (!m_finished) m_cpu.async_run(job);
+        if (!m_finished) m_cpu.async_run(make_tracked_async_job(std::move(job)));
     }
 };
 
