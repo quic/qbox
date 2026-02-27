@@ -16,15 +16,15 @@ option(GS_ENABLE_SANITIZERS "Enable ASan+UBSan" OFF)
 option(GS_ENABLE_SCUDO "Enable Scudo allocator" OFF)
 option(GS_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
 option(QEMU_ENABLE_USB_REDIRECT "enable qemu usb redirect" OFF)
+option(WITHOUT_PYTHON_BINDER "without python binder model" OFF)
+
 
 if(WIN32)
     option(GS_ENABLE_VIRCLRENDERER "Enable/Disable virclrenderer" OFF)
     option(GS_ENABLE_VIRGLRENDERER "Enable/Disable virglrenderer" OFF)
-    option(WITHOUT_PYTHON_BINDER "without python binder model" ON)
 else()
     option(GS_ENABLE_VIRCLRENDERER "Enable/Disable virclrenderer" ON)
     option(GS_ENABLE_VIRGLRENDERER "Enable/Disable virglrenderer" ON)
-    option(WITHOUT_PYTHON_BINDER "without python binder model" OFF)
 endif()
 
 

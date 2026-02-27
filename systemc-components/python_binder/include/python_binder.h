@@ -15,6 +15,16 @@
  * using pybind11.
  */
 
+#ifdef _WIN32
+#ifdef python_binder_EXPORTS
+#define PYTHON_BINDER_API __declspec(dllexport)
+#else
+#define PYTHON_BINDER_API __declspec(dllimport)
+#endif
+#else
+#define PYTHON_BINDER_API
+#endif
+
 #include <cci_configuration>
 #include <systemc>
 #include <tlm>
@@ -160,7 +170,7 @@ public:
 };
 
 template <unsigned int BUSWIDTH = DEFAULT_TLM_BUSWIDTH>
-class python_binder : public sc_core::sc_module, public sc_core::sc_stage_callback_if
+class PYTHON_BINDER_API python_binder : public sc_core::sc_module, public sc_core::sc_stage_callback_if
 {
     SCP_LOGGER();
     using MOD = python_binder<BUSWIDTH>;
@@ -251,6 +261,12 @@ private:
     bool m_btspt_ready;
     bool m_btspt_thread_stop;
 };
+// Explicit template instantiation declarations (for consumers of the library)
+#if defined(_WIN32) && !defined(python_binder_EXPORTS)
+extern template class python_binder<32>;
+extern template class python_binder<64>;
+#endif
+
 } // namespace gs
 
 extern "C" void module_register();

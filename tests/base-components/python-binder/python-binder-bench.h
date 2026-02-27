@@ -45,9 +45,15 @@ std::string getexepath()
         exit(EXIT_FAILURE);
     }
     return std::string(dirname(result), count);
-
+#elif _WIN32
+    DWORD size = GetModuleFileNameA(NULL, result, 1024);
+    if (size == 0) {
+        std::cerr << "error executing GetModuleFileNameA() in python-binder-bench.h: " << GetLastError() << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return std::string(dirname(result), size);
 #else
-#error python-binder test supports only Mac OS and linux for now!
+#error python-binder test supports only Mac OS/Window and  Linux for now!
 #endif
 }
 
