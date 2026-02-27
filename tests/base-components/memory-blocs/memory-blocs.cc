@@ -288,10 +288,10 @@ int sc_main(int argc, char* argv[])
         { "test.memory.target_socket.relative_addresses", cci::cci_value(true) },
     });
 
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-                          .msgTypeFieldWidth(10));      // make the msg type column a bit tighter
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                                        .msgTypeFieldWidth(10));      // make the msg type column a bit tighter
 
     MemoryBlocs test("test");
 

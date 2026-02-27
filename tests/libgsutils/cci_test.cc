@@ -90,13 +90,13 @@ TopLevelThree* top_level3;
 int sc_main(int argc, char* argv[])
 {
     std::cout << "Test Start\nstd::cout print\n";
-    SCP_INFO("main") << "SCP_INFO(\"main\") prior to init_logging";
-    scp::init_logging(scp::LogConfig()
-                          .logAsync(false)
-                          .printSimTime(false)
-                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-                          .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
-    SCP_INFO("main") << "SCP_INFO(\"main\") between init_logging and broker construction (Causes "
+    SCP_INFO("main") << "SCP_INFO(\"main\") prior to logging_guard";
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .logAsync(false)
+                                        .printSimTime(false)
+                                        .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                                        .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
+    SCP_INFO("main") << "SCP_INFO(\"main\") between logging_guard and broker construction (Causes "
                         "ERROR which is caught)";
     gs::ConfigurableBroker m_broker{};
     SCP_INFO("main") << "SCP_INFO(\"main\") after broker construction";

@@ -271,11 +271,11 @@ TEST_BENCH(RegisterTestBench, test_registers)
 
 int sc_main(int argc, char* argv[])
 {
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-                          .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                                        .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
 
     gs::ConfigurableBroker m_broker({
         { "test_registers.reg_memory.target_socket.address", cci::cci_value(REG_MEM_ADDR) },
@@ -285,5 +285,6 @@ int sc_main(int argc, char* argv[])
     });
 
     ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    int status = RUN_ALL_TESTS();
+    return status;
 }

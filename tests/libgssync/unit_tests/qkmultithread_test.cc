@@ -65,11 +65,11 @@ void finished_quantum()
 
 int sc_main(int argc, char** argv)
 {
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-                          .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                                        .msgTypeFieldWidth(30));      // make the msg type column a bit tighter
 
     auto m_broker = new gs::ConfigurableBroker();
 

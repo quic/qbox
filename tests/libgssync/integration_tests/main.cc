@@ -703,11 +703,11 @@ public:
 
 int sc_main(int argc, char** argv)
 {
-    scp::init_logging(scp::LogConfig()
-                          .logAsync(false)
-                          .printSimTime(false)
-                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-                          .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .logAsync(false)
+                                        .printSimTime(false)
+                                        .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                                        .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
 
     auto m_broker = new cci_utils::broker("Global Broker");
     auto broker_h = cci::cci_register_broker(m_broker);

@@ -64,11 +64,11 @@ void load_firmware(gs::gs_memory<>& destination, const char* assembly, uint64_t 
 template <typename T>
 bool run_test(int argc, char* argv[])
 {
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::INFO)
-                          .msgTypeFieldWidth(30));
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::INFO)
+                                        .msgTypeFieldWidth(30));
 
     gs::ConfigurableBroker broker{};
     cci::cci_originator originator{ "test" };
@@ -78,7 +78,8 @@ bool run_test(int argc, char* argv[])
 
     T test{ "test" };
 
-    return run_systemc();
+    bool result = run_systemc();
+    return result;
 }
 
 #define RUN_TEST(test) \

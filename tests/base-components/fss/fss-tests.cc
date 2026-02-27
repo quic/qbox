@@ -177,11 +177,11 @@ void FssTestBench::start_of_simulation()
 
 int sc_main(int argc, char* argv[])
 {
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-                          .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                                        .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
     std::string lib_name = getexepath() + "/fss_node";
 #ifdef _WIN32
     lib_name += ".dll";
@@ -209,5 +209,6 @@ int sc_main(int argc, char* argv[])
                                       { "test_fss.quantum_ns", cci::cci_value(100) } });
 
     ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    int status = RUN_ALL_TESTS();
+    return status;
 }

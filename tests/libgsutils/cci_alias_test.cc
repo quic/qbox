@@ -84,9 +84,9 @@ public:
 
 int sc_main(int argc, char* argv[])
 {
-    scp::init_logging(scp::LogConfig()
-                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-                          .msgTypeFieldWidth(10));      // make the msg type column a bit tighter
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                                        .msgTypeFieldWidth(10));      // make the msg type column a bit tighter
 
     auto m_broker = new gs::ConfigurableBroker();
     cci::cci_originator m_originator("MyConfigTool");
