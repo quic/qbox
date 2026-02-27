@@ -6,6 +6,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <cerrno>
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -176,6 +177,8 @@ private:
             return nullptr;
         }
 
+#if defined(_WIN32)
+        // Windows: use counter-based naming, keep file after loading
         fs::path temp_path = create_temp_path(lib_name);
 
         try {
@@ -185,16 +188,44 @@ private:
             return nullptr;
         }
 
-        // Load the copied library
         void* handle = load_library_internal(temp_path.string());
         if (handle == nullptr) {
             m_last_error = get_last_error();
-            // Clean up the temporary file
             fs::remove(temp_path);
             return nullptr;
         }
 
         return std::make_shared<Library>(handle);
+#else
+        // Linux/macOS: use mkstemp for unique temp file, delete after loading
+        char temp_template[] = "/tmp/qbox_lib.XXXXXX";
+        int fd = mkstemp(temp_template);
+        if (fd < 0) {
+            m_last_error = "Unable to create temp file: " + std::string(strerror(errno));
+            return nullptr;
+        }
+        close(fd);
+
+        try {
+            fs::copy_file(original_path, temp_template, fs::copy_options::overwrite_existing);
+        } catch (const fs::filesystem_error& e) {
+            m_last_error = "Failed to create a copy of the library: " + std::string(e.what());
+            fs::remove(temp_template);
+            return nullptr;
+        }
+
+        void* handle = dlopen(temp_template, RTLD_LOCAL | RTLD_NOW);
+        if (handle == nullptr) {
+            m_last_error = dlerror();
+            fs::remove(temp_template);
+            return nullptr;
+        }
+
+        // Delete temp file - library stays mapped in memory until dlclose()
+        fs::remove(temp_template);
+
+        return std::make_shared<Library>(handle);
+#endif
     }
 
 public:
