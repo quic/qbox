@@ -31,6 +31,63 @@ Constructor:
 The `blob_file` parameter is required -- the device will fail
 to initialize without it.
 
+## UFS (Universal Flash Storage)
+
+The `ufs` class wraps the QEMU UFS Host Controller as a PCI
+device that attaches to a GPEX host bridge. Individual storage
+volumes are represented by logical units (`ufs_lu`), each of
+which is added to the controller.
+
+### UFS Host Controller
+
+The `ufs` class provides the UFS Host Controller (QEMU).
+
+#### CCI Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `serial` | string | `""` | Controller serial identifier |
+| `nutrs` | uint32_t | 32 | Number of UTP transfer request slots |
+| `nutmrs` | uint32_t | 8 | Number of UTP task management request slots |
+| `mcq` | bool | `false` | Multiple command queue support |
+| `mcq_maxq` | uint32_t | 2 | MCQ maximum number of queues |
+
+#### Sockets
+
+- `q_socket` -- Target socket for register access
+- `irq_out` -- Interrupt signal output
+
+### UFS Logical Unit
+
+The `ufs_lu` class represents a UFS Logical Unit. It extends
+`ufs::Device`. Each logical unit represents a storage volume
+within the UFS controller.
+
+#### CCI Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `lun` | uint32_t | 0 | Logical unit number |
+| `blkdev_str` | string | `""` | Block device string for QEMU (do not specify ID) |
+
+### Lua Configuration Example
+
+```lua
+ufs_0 = {
+    moduletype = "ufs",
+    args = {"&platform.qemu_inst"},
+    q_socket = {address = 0x1c140000, size = 0x10000, bind = "&router.initiator_socket"},
+    irq_out = {bind = "&gic_0.spi_in_20"},
+};
+
+ufs_lu_0 = {
+    moduletype = "ufs_lu",
+    args = {"&platform.qemu_inst", "&platform.ufs_0"},
+    lun = 0,
+    blkdev_str = "file=disk.img,format=raw,if=none,readonly=off",
+};
+```
+
 ## OpenCores Ethernet MAC
 
 The `opencores_eth` class wraps the QEMU OpenCores Ethernet MAC

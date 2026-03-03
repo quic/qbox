@@ -18,8 +18,7 @@ following load types:
 - Function: `void elf_load(const std::string& path)`
 - Addresses are built into the ELF file; no address or offset
   parameter is available. If used within a memory context,
-  addresses are offset within the memory -- this is probably
-  not the desired behavior.
+  addresses are offset within the memory.
 
 ### Binary Files
 
@@ -161,6 +160,280 @@ This extension holds a `std::vector` of port indices
 on the path that support this extension and can be used to
 identify the originating initiator. The ID extension is held
 in a thread-safe pool.
+
+## Address Translator (addrtr)
+
+The address translator sits between an initiator and a target
+and applies a base address mapping to transactions passing
+through it. It exposes a `target_socket` (for the upstream
+initiator) and an `initiator_socket` (for the downstream
+target).
+
+### CCI Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `p_mapped_base_addr` | `uint64_t` | Base address added to or subtracted from the incoming address to produce the outgoing address |
+
+### Usage
+
+Place the address translator on a path where the initiator
+uses one address space and the target expects another. The
+translator rewrites the transaction address using the
+configured `p_mapped_base_addr`.
+
+## Exclusive Monitor (exclusive_monitor)
+
+The exclusive monitor implements the ARM exclusive access
+protocol. It sits between an initiator and a target to track
+exclusive load/store pairs, providing the semantics required
+by ARM LDREX/STREX (and similar) instructions.
+
+### Sockets
+
+- `front_socket` -- target socket facing the initiator
+- `back_socket` -- initiator socket facing the target
+
+### CCI Parameters
+
+None.
+
+### Behavior
+
+The monitor intercepts TLM transactions and tracks which
+addresses have been exclusively loaded. A subsequent
+exclusive store to the same address succeeds only if no
+other initiator has written to it in the interim. This is
+essential for implementing atomic read-modify-write
+operations in multi-core ARM platforms.
+
+## Pass-Through (pass)
+
+The pass-through component is a transparent bridge between
+an initiator and a target. It exposes an `initiator_socket`
+and a `target_socket` and forwards all transactions without
+modification.
+
+### CCI Parameters
+
+None.
+
+### Sockets
+
+- `initiator_socket` -- binds to the downstream target
+- `target_socket` -- binds to the upstream initiator
+
+### Usage
+
+The pass component is useful for signal aliasing and
+transaction forwarding scenarios where a transparent
+intermediary is needed in the TLM binding topology without
+altering the transaction payload.
+
+## DMI Converter (dmi_converter)
+
+The DMI converter is a caching bridge that sits between
+initiators and targets and caches Direct Memory Interface
+(DMI) regions. By caching DMI pointers, it avoids repeated
+DMI negotiations and improves simulation performance.
+
+### CCI Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `p_tlm_ports_num` | `uint32_t` | Number of TLM port pairs to instantiate |
+
+### Sockets
+
+- `initiator_sockets` -- vector of initiator sockets (one
+  per port)
+- `target_sockets` -- vector of target sockets (one per
+  port)
+
+### Behavior
+
+Each port pair acts as a pass-through that intercepts DMI
+requests and caches the returned DMI regions. Subsequent
+accesses that fall within a cached region are served directly
+from the cached DMI pointer, bypassing the full TLM
+transport path.
+
+## TLM Bus Width Bridges (tlm_bus_width_bridges)
+
+The bus width bridge converts transactions between TLM
+sockets of different bus widths. This is necessary when an
+initiator with one bus width must communicate with a target
+that uses a different width.
+
+### CCI Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `p_tlm_ports_num` | `uint32_t` | Number of TLM port pairs to instantiate |
+
+### Sockets
+
+- `initiator_sockets` -- vector of initiator sockets (one
+  per port)
+- `target_sockets` -- vector of target sockets (one per
+  port)
+
+### Behavior
+
+The bridge transparently adapts the data width of
+transactions so that components with mismatched TLM bus
+widths can interoperate. Each port pair bridges one
+initiator-target connection.
+
+## Register Router (reg_router)
+
+The register router is similar to the standard router but
+adds support for register callback functions. It exposes an
+`initiator_socket` and a `target_socket`.
+
+### CCI Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `lazy_init` | `bool` | When true, defer initialization until first access |
+
+### Sockets
+
+- `initiator_socket` -- binds to the downstream target
+- `target_socket` -- binds to the upstream initiator
+
+### Behavior
+
+The register router allows software-modeled registers to be
+associated with callback functions that are invoked on read
+or write access. This is useful for implementing device
+register maps where side effects must occur on access, rather
+than simple memory-mapped storage.
+
+## Real-Time Limiter (realtimelimiter)
+
+The real-time limiter synchronizes simulation time with
+wall-clock time. It prevents the simulation from running
+faster than real time, which is useful for interactive
+sessions or when the virtual platform must pace itself
+against external real-time events.
+
+### CCI Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `p_RTquantum_ms` | `double` | Real-time quantum in milliseconds; the granularity at which the limiter checks and throttles simulation progress |
+| `p_SCTimeout_ms` | `double` | SystemC timeout in milliseconds; maximum time the simulation may advance before yielding |
+| `p_MaxTime_ms` | `double` | Maximum wall-clock time in milliseconds; stops the simulation after this duration |
+
+### Sockets
+
+None.
+
+### Behavior
+
+At each quantum boundary the limiter compares elapsed
+simulation time against elapsed wall-clock time. If the
+simulation is ahead, it sleeps until real time catches up.
+The `p_MaxTime_ms` parameter can impose a hard wall-clock
+cap on the simulation run.
+
+## Exiter (exiter)
+
+The exiter provides a mechanism to stop the simulation by
+writing to a memory-mapped address. It exposes a single
+target socket named `socket`.
+
+### CCI Parameters
+
+None.
+
+### Sockets
+
+- `socket` -- target socket; any write to this address
+  triggers simulation termination
+
+### Behavior
+
+When any write transaction is received on its target socket,
+the exiter calls `sc_stop()` to end the simulation. This is
+typically mapped to a known address so that guest software
+can cleanly shut down the virtual platform.
+
+## Keep Alive (keep_alive)
+
+The keep-alive component prevents the SystemC simulation
+from ending prematurely. It uses an `async_event` to keep
+the simulation kernel active even when no other events are
+pending.
+
+### CCI Parameters
+
+None.
+
+### Sockets
+
+None.
+
+### Behavior
+
+SystemC simulations terminate when there are no more pending
+events. In platforms that rely on external or asynchronous
+stimuli (for example, QEMU-driven execution), the
+keep-alive component ensures the simulation does not exit
+before those stimuli arrive.
+
+## Time Printer (timeprinter)
+
+The time printer periodically logs the current simulation
+time. This is a simple diagnostic component useful for
+monitoring simulation progress.
+
+### CCI Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `interval_us` | `uint64_t` | Interval in microseconds between successive time-stamp prints |
+
+### Sockets
+
+None.
+
+### Behavior
+
+At each configured interval, the time printer emits the
+current simulation time to the log output. This provides a
+quick visual indication of how far the simulation has
+progressed and at what rate.
+
+## PL011 UART (SystemC)
+
+The PL011 UART is a pure SystemC model of the ARM PL011
+Universal Asynchronous Receiver/Transmitter. It implements
+the register interface, transmit and receive FIFOs, and
+interrupt generation defined by the ARM PL011 specification.
+
+### CCI Parameters
+
+None.
+
+### Sockets
+
+- `socket` -- target socket exposing the PL011 register
+  interface for memory-mapped access
+- `backend_socket` -- biflow socket carrying the character
+  stream to and from a backend (stdio, socket, or file)
+- `irq` -- initiator signal socket for interrupt output
+
+### Behavior
+
+Guest software accesses the UART through its register
+interface on `socket`. Characters written to the transmit
+data register are forwarded through `backend_socket` to a
+character backend. Characters arriving from the backend are
+placed into the receive FIFO and, when enabled, trigger an
+interrupt via `irq`. The model supports both polled and
+interrupt-driven operation.
 
 ## Testing
 

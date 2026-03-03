@@ -165,6 +165,24 @@ platform will wait for GDB to connect before proceeding.
 **Hexagon:**
 - Hexagon DSP
 
+#### CPU CCI Parameters
+
+The following parameters are shared by most ARM A-profile CPUs
+(from `cortex-a53.h`):
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| mp_affinity | unsigned int | 0 | Multi-processor affinity value |
+| has_el2 | bool | true | ARM virtualization extensions |
+| has_el3 | bool | true | ARM secure-mode extensions |
+| start_powered_off | bool | false | Start CPU in powered-off state |
+| psci_conduit | string | "disabled" | PSCI conduit: "disabled", "hvc", or "smc" |
+| rvbar | uint64_t | 0 | Reset vector base address register |
+| cntfrq_hz | uint64_t | 0 | Generic Timer CNTFRQ in Hz |
+| gdb_port | (from base) | 0 | GDB server port (non-zero to enable) |
+
+Note: Cortex-M and Cortex-R CPUs have different parameter sets.
+
 ### Interrupt Controllers
 
 - **ARM GICv2** -- Generic Interrupt Controller v2
@@ -176,6 +194,31 @@ platform will wait for GDB to connect before proceeding.
 - **RISC-V ACLINT SWI** -- Software interrupt controller
 - **Hexagon L2VIC** -- Hexagon L2 vectored interrupt
   controller
+
+#### Interrupt Controller CCI Parameters
+
+**GICv3** (`arm_gicv3`):
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| num_cpus | unsigned int | 0 | Number of CPU interfaces |
+| num_spi | unsigned int | 0 | Number of shared peripheral interrupts |
+| revision | unsigned int | 3 | GIC revision (3=v3, 4=v4) |
+| redist_region | vector<uint> | [] | Redistributor regions configuration |
+| has_security_extensions | bool | false | Enable security extensions |
+| has_lpi | bool | false | Enable Locality-specific Peripheral Interrupts |
+
+**GICv2** (`arm_gicv2`):
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| num_cpu | unsigned int | 0 | Number of CPU interfaces |
+| num_spi | unsigned int | 0 | Number of shared peripheral interrupts |
+| revision | unsigned int | 2 | GIC revision (1=v1, 2=v2, 0=11MPCore) |
+| has_virt_extensions | bool | false | Virtualization extensions (v2 only) |
+| has_security_extensions | bool | false | Security extensions |
+| num_prio_bits | unsigned int | 8 | Priority bits |
+| has_msi_support | bool | false | Enable GICv2m MSI support |
 
 ### UARTs
 
@@ -244,6 +287,158 @@ for QEMU, as well as additional device models including
 timers, PCI devices (virtio-gpu, virtio-net, ivshmem, etc.),
 virtio MMIO devices, USB controllers, and more. See the
 `qemu-components/` source directory for the full list.
+
+### PCI Devices
+
+All PCI devices attach to a GPEX (Generic PCI Express) host
+bridge via `add_device()`. The `qemu_gpex` host bridge
+exposes ECAM, MMIO, MMIO-high, and PIO target sockets, plus
+a `bus_master` initiator socket and four `irq_out` signals.
+
+Available PCI devices:
+
+- **virtio_gpu_pci** / **virtio_gpu_gl_pci** /
+  **virtio_gpu_cl_pci** / **virtio_gpu_qnn_pci** -- GPU
+  variants (software rendering, OpenGL, OpenCL, QNN
+  respectively).
+- **virtio_net_pci** -- Virtio network adapter.
+  CCI: `mac` (string), `netdev_str` (string, default
+  `"type=user"`).
+- **virtio_sound_pci** -- Virtio sound device (default ALSA
+  audio driver).
+- **qemu_xhci** -- USB 3.0 eXtensible Host Controller.
+  Provides `add_device()` for attaching USB devices.
+- **ivshmem_plain** -- Inter-VM shared memory.
+  CCI: `shm_path` (string), `shm_size` (uint32_t, default
+  1024 MB).
+- **rtl8139_pci** -- Realtek 8139 NIC.
+  CCI: `mac` (string), `netdev_str` (string, default
+  `"type=user"`).
+- **vhost_user_vsock_pci** -- Vhost-user virtual socket
+  transport.
+
+### Virtio MMIO Devices
+
+Memory-mapped virtio devices. Each inherits from
+`QemuVirtioMMIO`, which provides a `socket` (target) for
+MMIO register access and an `irq_out` signal.
+
+- **virtio_mmio_blk** -- Block device.
+  CCI: `blkdev_str` (string).
+- **virtio_mmio_net** -- Network device.
+  CCI: `netdev_str` (string, default
+  `"user,hostfwd=tcp::2222-:22"`).
+- **virtio_mmio_gpugl** -- GPU with OpenGL support.
+- **virtio_mmio_sound** -- Sound device (default ALSA audio
+  driver).
+
+### USB Devices
+
+USB devices attach to a `qemu_xhci` host controller via
+`add_device()`:
+
+- **usb_storage** -- USB mass storage.
+  CCI: `blkdev_str` (string, required).
+- **usb_host** -- USB host passthrough. Forwards a physical
+  USB device into the guest.
+- **qemu_kbd** -- USB keyboard.
+- **qemu_tablet** -- USB tablet (absolute pointing device).
+
+### Input Devices
+
+- **virtio_keyboard_pci** -- Virtio PCI keyboard. Attaches
+  to a GPEX host bridge.
+- **virtio_mouse_pci** -- Virtio PCI mouse. Attaches to a
+  GPEX host bridge.
+
+### Firmware and System
+
+- **fw_cfg** -- QEMU firmware configuration device.
+  CCI: `data_width` (uint32_t, default 8), `num_cpus`
+  (uint32_t).
+  Sockets: `ctl_target_socket`, `data_target_socket`,
+  `dma_target_socket`.
+- **pl031** -- ARM PrimeCell Real Time Clock.
+  Sockets: `q_socket` (target), `irq_out`.
+- **ramfb** -- RAM framebuffer display. Requires a `fw_cfg`
+  instance to be created first (passed as a constructor
+  argument).
+- **pflash_cfi** -- Parallel NOR flash (CFI-compliant).
+  Supports both CFI type 01 and type 02. Extensive CCI
+  parameters for flash geometry (`num_blocks`,
+  `sector_length`), bus width (`width`, `device_width`,
+  `max_device_width`), ID bytes (`id0`--`id3`), and unlock
+  addresses.
+  Socket: `socket` (target).
+- **qmp** -- QEMU Machine Protocol / HMP monitor interface.
+  CCI: `qmp_str` (string, QEMU chardev option),
+  `monitor` (bool, default true for HMP mode).
+  Socket: `qmp_socket` (biflow).
+
+### ARM SMMU
+
+ARM MMU-500 System MMU (IOMMU).
+
+CCI parameters:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| pamax | uint32_t | 48 | Physical address size |
+| num_smr | uint16_t | 48 | Number of stream match registers |
+| num_cb | uint16_t | 16 | Number of context banks |
+| num_pages | uint16_t | 16 | Number of register pages |
+| version | uint8_t | 0x21 | SMMU version |
+| num_tbu | uint8_t | 1 | Number of Translation Buffer Units |
+
+Sockets: `register_socket` (target),
+`upstream_socket` (vector of targets, sized by `num_tbu`),
+`downstream_socket` (vector of initiators, sized by
+`num_tbu`), `irq_context` (vector of initiator signals,
+sized by `num_cb`), `irq_global` (initiator signal).
+
+### Timers
+
+- **riscv_aclint_mtimer** -- RISC-V ACLINT machine timer.
+
+  | Name | Type | Default | Description |
+  |------|------|---------|-------------|
+  | hartid_base | uint32_t | 0 | Base hart ID |
+  | num_harts | unsigned int | 0 | Number of harts connected |
+  | timecmp_base | uint64_t | 0 | TIMECMP registers base address |
+  | time_base | uint64_t | 0 | TIME registers base address |
+  | aperture_size | uint64_t | 0 | CLINT address space size |
+  | timebase_freq | uint32_t | 10000000 | Timebase frequency in Hz |
+  | provide_rdtime | bool | false | Provide CPU with rdtime register |
+
+  Sockets: `socket` (target), `timer_irq` (vector of
+  initiator signals, sized by `num_harts`).
+
+- **qemu_hexagon_qtimer** -- Hexagon QTimer.
+
+  | Name | Type | Default | Description |
+  |------|------|---------|-------------|
+  | nr_frames | unsigned int | 2 | Number of timer frames |
+  | nr_views | unsigned int | 1 | Number of views |
+  | cnttid | unsigned int | 0x11 | Value of CNTTID register |
+
+  Sockets: `socket` (target), `view_socket` (target),
+  `irq` (vector of initiator signals, sized by
+  `nr_frames`).
+
+### Other
+
+- **global_peripheral_initiator** -- Provides global memory
+  space access for QEMU SysBus devices that need a
+  system-wide view.
+  Socket: `m_initiator` (initiator).
+- **reset_gpio** -- System reset coordinator. Bridges QEMU
+  system reset and SystemC reset.
+  Sockets: `reset_out` (multi-initiator signal),
+  `reset_in` (target signal).
+- **sifive_test** -- SiFive test/shutdown device. Used for
+  RISC-V system reset and poweroff.
+  Sockets: `q_socket` (target), `initiator_socket`,
+  `target_socket`, `reset` (signal port).
 
 ## QEMU/SystemC Parallelism
 

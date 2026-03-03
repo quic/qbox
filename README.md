@@ -174,6 +174,10 @@ cmake --build build --parallel
   for SystemC models
 - **[Networking](docs/networking.md)** -- SystemC Ethernet MAC
   setup and host configuration
+- **[Character backends](docs/backends.md)** -- stdio, socket,
+  and file backends for UART I/O
+- **[Monitor](docs/monitor.md)** -- Web-based simulation
+  monitoring interface
 
 ### Platforms
 
