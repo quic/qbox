@@ -7,6 +7,7 @@
  */
 
 #include <cerrno>
+#include <chrono>
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -34,6 +35,89 @@
 #endif
 
 namespace fs = std::filesystem;
+
+#if defined(_WIN32)
+/**
+ * Gets the path to the dll_cleanup_helper executable.
+ * It should be located in the same directory as the current executable.
+ */
+static fs::path get_cleanup_helper_path()
+{
+    char exe_path[MAX_PATH];
+    DWORD len = GetModuleFileNameA(NULL, exe_path, MAX_PATH);
+    if (len == 0 || len >= MAX_PATH) {
+        return "";
+    }
+
+    fs::path helper_path = fs::path(exe_path).parent_path() / "dll_cleanup_helper.exe";
+    return helper_path;
+}
+
+/**
+ * Spawns a cleanup process that waits for the parent process to exit,
+ * then deletes the specified DLL file.
+ *
+ * The child process receives an inheritable handle to the parent process
+ * and the path to the DLL. It waits for the parent to terminate, then
+ * deletes the file.
+ */
+static bool spawn_cleanup_process(const fs::path& dll_path)
+{
+    // Find the cleanup helper executable
+    fs::path helper_path = get_cleanup_helper_path();
+    if (helper_path.empty() || !fs::exists(helper_path)) {
+        return false;
+    }
+
+    // Get a handle to the current process that can be inherited by the child
+    HANDLE current_process = GetCurrentProcess();
+    HANDLE inheritable_handle = NULL;
+
+    if (!DuplicateHandle(current_process, current_process, current_process,
+                         &inheritable_handle, SYNCHRONIZE, TRUE, 0)) {
+        return false;
+    }
+
+    // Build the command line: dll_cleanup_helper.exe <handle> <dll_path>
+    std::ostringstream cmd;
+    cmd << "\"" << helper_path.string() << "\" "
+        << reinterpret_cast<uintptr_t>(inheritable_handle) << " "
+        << "\"" << dll_path.string() << "\"";
+
+    std::string cmd_str = cmd.str();
+
+    STARTUPINFOA si = {};
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+
+    PROCESS_INFORMATION pi = {};
+
+    // Create the process with handle inheritance enabled
+    BOOL result = CreateProcessA(
+        NULL,
+        const_cast<char*>(cmd_str.c_str()),
+        NULL,
+        NULL,
+        TRUE,  // Inherit handles
+        CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS | CREATE_NO_WINDOW,
+        NULL,
+        NULL,
+        &si,
+        &pi);
+
+    if (result) {
+        // Close our references to the child process handles
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+    } else {
+        // If we failed to create the process, close the duplicated handle
+        CloseHandle(inheritable_handle);
+    }
+
+    return result != 0;
+}
+#endif
 
 class Library : public qemu::LibraryIface
 {
@@ -166,7 +250,17 @@ private:
         fs::path temp_dir = fs::temp_directory_path();
         std::string filename = fs::path(libname).filename().string();
         uint64_t count = counter.fetch_add(1);
-        std::string temp_filename = std::to_string(count) + "_" + filename;
+#if defined(_WIN32)
+        DWORD pid = GetCurrentProcessId();
+#else
+        pid_t pid = getpid();
+#endif
+        auto now = std::chrono::system_clock::now();
+        auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+            now.time_since_epoch()).count();
+        std::string temp_filename = std::to_string(pid) + "_" +
+                                    std::to_string(timestamp) + "_" +
+                                    std::to_string(count) + "_" + filename;
         return temp_dir / temp_filename;
     }
 
@@ -178,7 +272,7 @@ private:
         }
 
 #if defined(_WIN32)
-        // Windows: use counter-based naming, keep file after loading
+        // Windows: use counter-based naming, spawn cleanup process to delete after parent exits
         fs::path temp_path = create_temp_path(lib_name);
 
         try {
@@ -193,6 +287,11 @@ private:
             m_last_error = get_last_error();
             fs::remove(temp_path);
             return nullptr;
+        }
+
+        // Spawn a cleanup process that will delete the DLL after this process exits
+        if (!spawn_cleanup_process(temp_path)) {
+            std::cerr << "Warning: Failed to spawn cleanup process for: " << temp_path.string() << std::endl;
         }
 
         return std::make_shared<Library>(handle);

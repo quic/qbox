@@ -360,6 +360,17 @@ add_library(${PROJECT_NAME} SHARED
 build_lua()
 
 if (NOT WITHOUT_QEMU)
+    # DLL cleanup helper for Windows - waits for parent to exit, then deletes temp DLLs
+    if (WIN32)
+        add_executable(dll_cleanup_helper
+            qemu-components/common/src/libqemu-cxx/dll_cleanup_helper.cc
+        )
+        set_target_properties(dll_cleanup_helper PROPERTIES
+            WIN32_EXECUTABLE TRUE
+        )
+        install(TARGETS dll_cleanup_helper DESTINATION bin)
+    endif()
+
     # TODO: Remove the "hack" in the future, once support for Ubuntu 20 can be
     # dropped. A fix for it was added in CMake 3.18, but the default version of
     # Ubuntu 20 is 3.16
