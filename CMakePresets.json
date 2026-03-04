@@ -1,0 +1,186 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "_base",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build",
+            "installDir": "${sourceDir}/build/install",
+            "cacheVariables": {
+                "CPM_DOWNLOAD_ALL": {
+                    "type": "BOOL",
+                    "value": "ON"
+                },
+                "LIBQEMU_TARGETS": {
+                    "type": "STRING",
+                    "value": "aarch64;hexagon;xtensa;riscv64;riscv32"
+                }
+            }
+        },
+        {
+            "name": "gcc",
+            "inherits": "_base",
+            "displayName": "GCC (Release, Make)",
+            "description": "Release build with GCC and Unix Makefiles",
+            "generator": "Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "Release"
+                }
+            }
+        },
+        {
+            "name": "gcc-debug",
+            "inherits": "gcc",
+            "displayName": "GCC (Debug, Make)",
+            "description": "Debug build with GCC and Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "Debug"
+                }
+            }
+        },
+        {
+            "name": "clang",
+            "inherits": "gcc",
+            "displayName": "Clang (Release, Make)",
+            "description": "Release build using clang toolchain",
+            "toolchainFile": "${sourceDir}/cmake/clang-toolchain.cmake"
+        },
+        {
+            "name": "clang-debug",
+            "inherits": "clang",
+            "displayName": "Clang (Debug, Make)",
+            "description": "Debug build using clang toolchain with glibc memory checks",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "Debug"
+                }
+            },
+            "environment": {
+                "MALLOC_CHECK_": "3"
+            }
+        },
+        {
+            "name": "clang-lto",
+            "inherits": "clang",
+            "displayName": "Clang (Release, LTO, Make)",
+            "description": "Release build using clang with link-time optimization",
+            "cacheVariables": {
+                "GS_ENABLE_LLD": {
+                    "type": "BOOL",
+                    "value": "ON"
+                },
+                "GS_ENABLE_LTO": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
+            "name": "mac",
+            "inherits": "gcc",
+            "displayName": "macOS (Release, Make)",
+            "description": "Release build for macOS with Unix Makefiles"
+        },
+        {
+            "name": "mac-debug",
+            "inherits": "mac",
+            "displayName": "macOS (Debug, Make)",
+            "description": "Debug build for macOS with Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "Debug"
+                }
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "gcc",
+            "configurePreset": "gcc"
+        },
+        {
+            "name": "gcc-debug",
+            "configurePreset": "gcc-debug"
+        },
+        {
+            "name": "clang",
+            "configurePreset": "clang"
+        },
+        {
+            "name": "clang-debug",
+            "configurePreset": "clang-debug"
+        },
+        {
+            "name": "clang-lto",
+            "configurePreset": "clang-lto"
+        },
+        {
+            "name": "mac",
+            "configurePreset": "mac"
+        },
+        {
+            "name": "mac-debug",
+            "configurePreset": "mac-debug"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "gcc",
+            "configurePreset": "gcc",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "gcc-debug",
+            "configurePreset": "gcc-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "clang",
+            "configurePreset": "clang",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "clang-debug",
+            "configurePreset": "clang-debug",
+            "output": {
+                "outputOnFailure": true
+            },
+            "environment": {
+                "MALLOC_CHECK_": "3"
+            }
+        },
+        {
+            "name": "clang-lto",
+            "configurePreset": "clang-lto",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "mac",
+            "configurePreset": "mac",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "mac-debug",
+            "configurePreset": "mac-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        }
+    ]
+}

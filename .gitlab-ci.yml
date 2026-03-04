@@ -100,18 +100,15 @@ stages:
         git clone --depth=1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${OVERRIDE_URL}" --branch $OVERRIDE_REF override_repo
         override_args="-DCPM_${OVERRIDE_PKG}_SOURCE=$PWD/override_repo"
       fi
-    - echo cmake -B build -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=./${CI_PROJECT_NAME}-${CI_COMMIT_SHORT_SHA} -DCPM_DOWNLOAD_ALL=1
-      ${STEP_CMAKE_ARGS} ${REPO_CMAKE_ARGS} ${override_args} ;
-      cmake -B build -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=./${CI_PROJECT_NAME}-${CI_COMMIT_SHORT_SHA} -DCPM_DOWNLOAD_ALL=1
-      ${STEP_CMAKE_ARGS} ${REPO_CMAKE_ARGS} ${override_args}
+    - echo cmake --preset "${CI_CMAKE_PRESET}" -DCMAKE_INSTALL_PREFIX=./${CI_PROJECT_NAME}-${CI_COMMIT_SHORT_SHA} ${override_args} ;
+      cmake --preset "${CI_CMAKE_PRESET}" -DCMAKE_INSTALL_PREFIX=./${CI_PROJECT_NAME}-${CI_COMMIT_SHORT_SHA} ${override_args}
       2>&1 | tee ${RESULTS_DIR}/cmake.log
-    - make -C build -j      2>&1 | tee ${RESULTS_DIR}/make.log
-    - make -C build install 2>&1 | tee ${RESULTS_DIR}/install.log
+    - cmake --build --preset "${CI_CMAKE_PRESET}" --parallel 2>&1 | tee ${RESULTS_DIR}/make.log
+    - cmake --install build --prefix ./${CI_PROJECT_NAME}-${CI_COMMIT_SHORT_SHA} 2>&1 | tee ${RESULTS_DIR}/install.log
     - tar --exclude-vcs -zcf $CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA.tar.gz $CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA
     - if test "$EXECUTE_TESTS" -ne 0;
       then
-        make -C build test ARGS='--output-junit test_run.xml' 2>&1 | tee ${RESULTS_DIR}/test_run.log;
-        mv build/test_run.xml ${RESULTS_DIR};
+        ctest --preset "${CI_CMAKE_PRESET}" --output-junit ${RESULTS_DIR}/test_run.xml 2>&1 | tee ${RESULTS_DIR}/test_run.log;
       fi
   artifacts:
     when: always
@@ -217,7 +214,7 @@ pages:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-# --- from qbox .gitlab-ci.yml ---
+# --- qbox-specific jobs ---
 
 repolinter:
   stage: build
@@ -232,7 +229,7 @@ repolinter:
   extends:
     - .general_build_job_template
   variables:
-    REPO_CMAKE_ARGS: -DLIBQEMU_TARGETS='aarch64;hexagon;xtensa;riscv64;riscv32'
+    CI_CMAKE_PRESET: gcc
     IMAGE: $CI_REGISTRY/qqvp/containers/qqvp-dev-u22:latest
     EXECUTE_TESTS: 1
 
@@ -250,7 +247,7 @@ build_make:
 build_lto:
   extends: .build_job_template
   variables:
-    STEP_CMAKE_ARGS: -DGS_ENABLE_LLD=ON -DGS_ENABLE_LTO=ON -DCMAKE_TOOLCHAIN_FILE=./cmake/clang-toolchain.cmake
+    CI_CMAKE_PRESET: clang-lto
   rules:
     - if: $CI_COMMIT_TAG
       when: always
@@ -262,8 +259,8 @@ build_lto:
 build_check_cxx_libcxx:
   extends: .build_job_template
   variables:
+    CI_CMAKE_PRESET: clang-debug
     MALLOC_CHECK_: 3
-    STEP_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=./cmake/clang-toolchain.cmake
   rules:
     - if: $CI_COMMIT_TAG
       when: always
@@ -277,6 +274,7 @@ build_macos:
    - mac
   extends: .build_job_template
   variables:
+    CI_CMAKE_PRESET: mac
     SDKROOT_SET_CMD: xcrun --sdk macosx --show-sdk-path
     GIT_STRATEGY: clone
 

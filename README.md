@@ -35,18 +35,45 @@ sudo scripts/install_dependencies.sh
 
 ## Building
 
+QBox uses [CMake Presets](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html)
+(requires CMake 3.21+) to provide ready-made build configurations:
+
 ```bash
-# Basic build
-cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --preset gcc
+cmake --build --preset gcc --parallel
+ctest --preset gcc
+```
+
+### Available Presets
+
+| Preset | Compiler | Build Type | Notes |
+|--------|----------|------------|-------|
+| `gcc` | GCC | Release | Default preset |
+| `gcc-debug` | GCC | Debug | |
+| `clang` | Clang | Release | Uses `cmake/clang-toolchain.cmake` |
+| `clang-debug` | Clang | Debug | Enables `MALLOC_CHECK_=3` |
+| `clang-lto` | Clang | Release | Link-time optimization with lld |
+| `mac` | Apple Clang | Release | macOS builds |
+| `mac-debug` | Apple Clang | Debug | macOS debug builds |
+
+List all presets with `cmake --list-presets`.
+
+Presets can be overridden from the command line:
+
+```bash
+cmake --preset gcc -DLIBQEMU_TARGETS="aarch64;riscv64"
+```
+
+Create a `CMakeUserPresets.json` file for personal overrides
+(git-ignored).
+
+### Manual Configuration
+
+If your CMake version is older than 3.21 or you need full control:
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCPM_DOWNLOAD_ALL=ON
 cmake --build build --parallel
-
-# With specific QEMU targets
-cmake -B build -DLIBQEMU_TARGETS="aarch64;riscv64"
-
-# Download all dependencies via CPM
-cmake -B build -DCPM_DOWNLOAD_ALL=ON
-
-# Install
 cmake --install build
 ```
 
@@ -55,7 +82,7 @@ cmake --install build
 | Option | Description |
 |--------|-------------|
 | `CMAKE_INSTALL_PREFIX` | Install directory for the package and binaries |
-| `CMAKE_BUILD_TYPE` | `DEBUG` or `RELEASE` |
+| `CMAKE_BUILD_TYPE` | `Debug` or `Release` |
 | `LIBQEMU_TARGETS` | Semicolon-separated list of QEMU targets (e.g., `aarch64;riscv64;hexagon`) |
 | `CPM_DOWNLOAD_ALL` | Download all dependencies via CPM |
 | `CPM_SOURCE_CACHE` | Directory to cache downloaded packages |
@@ -102,17 +129,14 @@ automatically use it as a source cache.
 ### Testing
 
 ```bash
-# Run all tests
-ctest --test-dir build
-
-# Run tests with verbose output
-ctest --test-dir build --output-on-failure
+# Run all tests (using preset -- output-on-failure is enabled by default)
+ctest --preset gcc
 
 # Run a specific test
-ctest --test-dir build -R <test_name>
+ctest --preset gcc -R <test_name>
 
-# Or via make
-make -C build test
+# Without presets
+ctest --test-dir build --output-on-failure
 ```
 
 ### Troubleshooting

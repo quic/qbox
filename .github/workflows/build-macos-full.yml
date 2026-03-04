@@ -8,36 +8,24 @@ jobs:
       fail-fast: false
       matrix:
         os: [ macOS-14, macOS-15 ]
-        build_type: [ Debug , Release ]
+        preset: [ mac, mac-debug ]
 
     runs-on: "${{ matrix.os }}"
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set reusable strings
-        id: strings
-        shell: sh
-        run: |
-          echo "build-output-dir=${{ github.workspace }}/build" >> "${GITHUB_OUTPUT}"
-
       - name: Install dependencies
         run: scripts/install_dependencies.sh
 
       - name: Configure
-        run: |
-          cmake \
-            -G Ninja \
-            -B "${{ steps.strings.outputs.build-output-dir }}" \
-            -S "${{ github.workspace }}" \
-            -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++ \
-            -DGREENSOCS_GIT="https://github.com/quic/" \
-            -DLIBQEMU_TARGETS="aarch64;hexagon"
+        run: >
+          cmake --preset "${{ matrix.preset }}"
+          -DGREENSOCS_GIT="https://github.com/quic/"
+          -DLIBQEMU_TARGETS="aarch64;hexagon"
 
       - name: Build
-        run: cmake --build "${{ steps.strings.outputs.build-output-dir }}" --parallel
+        run: cmake --build --preset "${{ matrix.preset }}" --parallel $(sysctl -n hw.logicalcpu)
 
       - name: Test
-        run: ctest --test-dir "${{ steps.strings.outputs.build-output-dir }}" --output-on-failure
+        run: ctest --preset "${{ matrix.preset }}"

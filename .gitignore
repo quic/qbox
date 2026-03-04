@@ -1,4 +1,5 @@
 /build*/
+CMakeUserPresets.json
 /debug*/
 /install*/
 tags
