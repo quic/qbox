@@ -426,6 +426,7 @@ list(APPEND TARGET_LIBS ${PROJECT_NAME})
 if(NOT WITHOUT_QEMU)
     add_subdirectory(qemu-components)
     add_subdirectory(platforms)
+    add_subdirectory(examples/hello-qbox)
 endif()
 
 add_subdirectory(systemc-components)

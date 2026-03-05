@@ -15,8 +15,7 @@ project consists of:
   loaders, exclusive monitor)
 - **QEMU device models** -- CPUs, interrupt controllers, UARTs,
   timers, PCI devices, and more
-- **Example platforms** -- Reference implementations in
-  `platforms/`
+- **Example platforms** -- Reference implementations in `platforms/`
 
 ### Supported Architectures
 
@@ -183,6 +182,12 @@ cmake --build build --parallel
 
 - **[Ubuntu](docs/platforms/ubuntu.md)** -- Ubuntu Linux platform
   (AArch64 and RISC-V 64)
+
+### Tutorials and Examples
+
+- **[hello-qbox](examples/hello-qbox/)** -- Step-by-step
+  tutorial that walks you through building a minimal AArch64
+  virtual platform (Cortex-A53, RAM, UART) from scratch
 
 ## C++ Standard
 
