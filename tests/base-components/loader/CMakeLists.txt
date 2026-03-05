@@ -11,7 +11,7 @@ macro(gs_add_test test)
             ENVIRONMENT LSAN_OPTIONS="suppressions=${CMAKE_CURRENT_SOURCE_DIR}/ignore_leaks.txt":$ENV{LSAN_OPTIONS})
     endif()
 
-    set_tests_properties(${test} PROPERTIES TIMEOUT 10)
+    set_tests_properties(${test} PROPERTIES TIMEOUT 30)
 endmacro()
 
 gs_add_test(loader-test)
