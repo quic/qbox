@@ -409,7 +409,6 @@ void generic_lua_model::reg_action_cb(tlm::tlm_generic_payload& txn, sc_core::sc
 void generic_lua_model::exec_data_thread(action_source act_src)
 {
     while (true) {
-        wait(m_data_peq[act_src]->get_event());
         tlm::tlm_generic_payload* txn_ptr = nullptr;
         while ((txn_ptr = m_data_peq[act_src]->get_next_transaction()) != nullptr) {
             sc_core::sc_time delay = sc_core::SC_ZERO_TIME;
@@ -425,12 +424,12 @@ void generic_lua_model::exec_data_thread(action_source act_src)
                 SCP_FATAL(()) << "Failed to send txn on address: 0x" << std::hex << addr;
             }
         }
+        wait(m_data_peq[act_src]->get_event());
     }
 }
 void generic_lua_model::exec_sig_thread(action_source act_src)
 {
     while (true) {
-        wait(m_signals_peq[act_src]->get_event());
         std::pair<uint32_t, bool>* sig_payload_ptr = nullptr;
         while ((sig_payload_ptr = m_signals_peq[act_src]->get_next_transaction()) != nullptr) {
             SCP_DEBUG(()) << "write to output signal: " << initiator_signal_sockets[sig_payload_ptr->first].basename()
@@ -440,6 +439,7 @@ void generic_lua_model::exec_sig_thread(action_source act_src)
                 return p_sig.sig_num_val_pair.get() == sig_payload_ptr;
             });
         }
+        wait(m_signals_peq[act_src]->get_event());
     }
 }
 
@@ -503,18 +503,20 @@ void generic_lua_model::before_end_of_elaboration()
 }
 void generic_lua_model::start_of_simulation()
 {
-    if (m_registers.empty()) return;
-    for (auto& reg_info : m_registers) {
-        if (reg_info.is_default_value_set) {
-            reg_info.reg_ptr->set_mask(DEFAULT_REG_MASK);
-            *(reg_info.reg_ptr) = reg_info.default_value;
-            reg_info.reg_ptr->set_mask(reg_info.reg_mask);
+    if (!m_registers.empty()) {
+        for (auto& reg_info : m_registers) {
+            if (reg_info.is_default_value_set) {
+                reg_info.reg_ptr->set_mask(DEFAULT_REG_MASK);
+                *(reg_info.reg_ptr) = reg_info.default_value;
+                reg_info.reg_ptr->set_mask(reg_info.reg_mask);
+            }
         }
     }
-    if (m_start_of_sim_ts_ns.empty()) return;
-    for (const auto& ts : m_start_of_sim_ts_ns) {
-        write_data(ts.first, action_source::START_OF_SIM);
-        trigger_signals(ts.second, action_source::START_OF_SIM);
+    if (!m_start_of_sim_ts_ns.empty()) {
+        for (const auto& ts : m_start_of_sim_ts_ns) {
+            write_data(ts.first, action_source::START_OF_SIM);
+            trigger_signals(ts.second, action_source::START_OF_SIM);
+        }
     }
 }
 
