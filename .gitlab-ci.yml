@@ -91,7 +91,7 @@ stages:
         export SDKROOT
       fi
     - mkdir -p build ${RESULTS_DIR}
-    - OVERRIDE_URL="${CI_SERVER_HOST}/${OVERRIDE_MR_PATH:-$OVERRIDE_PATH}.git"
+    - OVERRIDE_URL="${OVERRIDE_URL:-${CI_SERVER_HOST}/${OVERRIDE_MR_PATH:-$OVERRIDE_PATH}.git}"
     - echo "OVERRIDE_PKG = $OVERRIDE_PKG";
       echo "OVERRIDE_REF = $OVERRIDE_REF";
       echo "OVERRIDE_URL = $OVERRIDE_URL"
