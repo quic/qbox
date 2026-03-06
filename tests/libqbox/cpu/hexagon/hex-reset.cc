@@ -20,9 +20,6 @@
 
 /*
  * Hexagon RESET test.
- *  This test will fail if the reset-sequence doesn't flush the translation
- *  blocks, hexagon_cpu_reset_hold must call tb_flush.
- *
  * Debugging:
  *  -p 'test-bench.inst_a.qemu_args="-d in_asm -monitor -S -s tcp:127.0.0.1:5000,server,nowait"'
  *
@@ -122,14 +119,11 @@ public:
             std::snprintf(buf, sizeof(buf), FIRMWARE, static_cast<uint32_t>(CpuTesterMmio::MMIO_ADDR), RESET_DONE,
                           RESET_DONE);
             set_firmware(buf, MEM_ADDR);
-
             /*
-             * If the tb cache isn't flushed during reset we would see this
-             * trip more than once.
+             * Invalidate translation blocks for the firmware region so QEMU re-fetches the new code.
+             * Without this, QEMU would execute stale cached instructions after reset.
              */
-            m_inst_a.get().tb_invalidate_phys_range(CpuTesterMmio::MMIO_ADDR, CpuTesterMmio::MMIO_ADDR + sizeof(buf));
-
-            set_firmware(buf, MEM_ADDR);
+            m_inst_a.get().tb_invalidate_phys_range(MEM_ADDR, MEM_ADDR + sizeof(buf));
             /*
              * Triggers the reset, this is setup via "sensitive << reset_event" above
              */
