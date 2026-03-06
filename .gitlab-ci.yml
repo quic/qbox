@@ -138,7 +138,7 @@ check_format:
       cmake -Bbuild -DCPM_SOURCE_CACHE=Packages -DGREENSOCS_GIT=${CI_SERVER_URL}/qqvp/ -DGS_ONLY=${LOCAL_DEPS_ONLY} )
     - rm -rf build
     - /bin/sh ./scripts/tar_builder.sh $CI_PROJECT_DIR
-    - cd ../../
+    - cd ..
     - tar --exclude-vcs -zcf ${CI_PROJECT_NAME}${TARBALL_SUFFIX}.tgz $CI_PROJECT_NAME
     - mv ${CI_PROJECT_NAME}${TARBALL_SUFFIX}.tgz $CI_PROJECT_NAME/
   artifacts:
