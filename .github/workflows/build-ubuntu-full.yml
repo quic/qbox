@@ -8,7 +8,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-24.04, ubuntu-22.04 ]
-        preset: [ gcc, gcc-debug, clang, clang-debug ]
+        preset: [ gcc, gcc-debug, clang, clang-debug, clang-lto ]
 
     runs-on: "${{ matrix.os }}"
 
