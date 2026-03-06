@@ -16,4 +16,6 @@ jobs:
         run: git fetch origin "${{ github.base_ref }}"
 
       - name: Run clang-format
-        run: git clang-format --diff --verbose FETCH_HEAD
+        run: |
+          git clang-format --diff --verbose --extensions 'cc,cpp,h,c' FETCH_HEAD | tee clang-format.out
+          if grep -q -F 'diff --git' clang-format.out; then exit 1; fi
