@@ -172,7 +172,7 @@ protected:
         m_inst.push_qemu_arg("libqbox"); /* argv[0] */
         m_inst.push_qemu_arg({
             "-M", "none",       /* no machine */
-            "-m", "2048",       /* used by QEMU to set some interal buffer sizes */
+            "-m", "0",       /* Guest memory is managed by gs_memory module */
             "-monitor", "null", /* no monitor */
             "-serial", "null",  /* no serial backend */
         });
