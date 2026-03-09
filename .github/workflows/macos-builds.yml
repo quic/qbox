@@ -1,4 +1,4 @@
-name: Full macOS Build
+name: macOS Builds
 
 on: [ pull_request, push, workflow_dispatch ]
 

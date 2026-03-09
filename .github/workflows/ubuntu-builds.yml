@@ -1,4 +1,4 @@
-name: Full Ubuntu Build
+name: Ubuntu Builds
 
 on: [ pull_request, push, workflow_dispatch ]
 
