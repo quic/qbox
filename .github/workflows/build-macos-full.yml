@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ macOS-14, macOS-15 ]
+        os: [ macOS-15, macOS-26 ]
         preset: [ mac, mac-debug ]
 
     runs-on: "${{ matrix.os }}"
