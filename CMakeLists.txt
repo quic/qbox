@@ -16,7 +16,18 @@ option(GS_ENABLE_SANITIZERS "Enable ASan+UBSan" OFF)
 option(GS_ENABLE_SCUDO "Enable Scudo allocator" OFF)
 option(GS_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
 option(QEMU_ENABLE_USB_REDIRECT "enable qemu usb redirect" OFF)
-option(WITHOUT_PYTHON_BINDER "without python binder model" OFF)
+
+option(ENABLE_PYTHON_BINDER "Enable python binder model" ON)
+option(WITHOUT_PYTHON_BINDER "[DEPRECATED] Use ENABLE_PYTHON_BINDER=OFF instead" OFF)
+
+# Handle deprecated WITHOUT_PYTHON_BINDER option
+if(WITHOUT_PYTHON_BINDER AND NOT ENABLE_PYTHON_BINDER)
+    message(FATAL_ERROR "Cannot use both WITHOUT_PYTHON_BINDER and ENABLE_PYTHON_BINDER. "
+        "WITHOUT_PYTHON_BINDER is deprecated, please use only ENABLE_PYTHON_BINDER.")
+elseif(WITHOUT_PYTHON_BINDER)
+    message(DEPRECATION "WITHOUT_PYTHON_BINDER is deprecated. Use ENABLE_PYTHON_BINDER=OFF instead.")
+    set(ENABLE_PYTHON_BINDER OFF)
+endif()
 
 
 if(WIN32)
@@ -290,7 +301,7 @@ if(NOT GS_ONLY)
     set(CROW_DEP "Crow::Crow")
 endif()
 
-if((NOT WITHOUT_PYTHON_BINDER) AND (NOT GS_ONLY))
+if(ENABLE_PYTHON_BINDER AND (NOT GS_ONLY))
     find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
     set(PYBIND11_FINDPYTHON ON)
     gs_addexpackage("gh:pybind/pybind11#v3.0.1")
@@ -482,7 +493,7 @@ if(NOT WITHOUT_QEMU)
 endif()
 
 add_subdirectory(systemc-components)
-if((NOT WITHOUT_PYTHON_BINDER) AND (NOT GS_ONLY))
+if(ENABLE_PYTHON_BINDER AND (NOT GS_ONLY))
     add_subdirectory(py-models)
 endif()
 add_subdirectory(html)

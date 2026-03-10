@@ -86,7 +86,7 @@ cmake --install build
 | `LIBQEMU_TARGETS` | Semicolon-separated list of QEMU targets (e.g., `aarch64;riscv64;hexagon`) |
 | `CPM_DOWNLOAD_ALL` | Download all dependencies via CPM |
 | `CPM_SOURCE_CACHE` | Directory to cache downloaded packages |
-| `WITHOUT_PYTHON_BINDER` | Build without the PythonBinder component |
+| `ENABLE_PYTHON_BINDER` | Enable the PythonBinder component (default: ON). Note: `WITHOUT_PYTHON_BINDER` is deprecated. |
 | `GS_ENABLE_LTO` | Enable Link-Time Optimization |
 | `UBUNTU_ARCH` | Architecture for Ubuntu platform builds (`aarch64` or `riscv64`) |
 

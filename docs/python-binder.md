@@ -13,7 +13,10 @@ embed a Python interpreter within the virtual platform
 process.
 
 To build QBox without PythonBinder and its pybind11
-dependencies, use: `-DWITHOUT_PYTHON_BINDER=ON`.
+dependencies, use: `-DENABLE_PYTHON_BINDER=OFF`.
+
+Note: `WITHOUT_PYTHON_BINDER` is deprecated and will be
+removed in a future release.
 
 ## CCI Parameters
 
