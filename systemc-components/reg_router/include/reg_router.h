@@ -71,8 +71,8 @@ public:
 #ifdef ENABLE_MODULE_NAME_DBG_INFO
         uint64_t mod_addr = 0;
         bool mod_found = false;
-        const char* mod_name = get_module_name(trans, mod_addr, mod_found);
-        if (mod_name)
+        const auto& mod_name = get_module_name(trans, mod_addr, mod_found);
+        if (!mod_name.empty())
             SCP_DEBUG(()) << "b_transport: " << txn_command_str(trans) << " to Register at address: 0x" << std::hex
                           << trans.get_address() << " which belongs to Module: [" << mod_name << "]";
         if (m_pre_b_transport_callback) m_pre_b_transport_callback(mod_found, mod_addr);
@@ -109,8 +109,8 @@ public:
 #ifdef ENABLE_MODULE_NAME_DBG_INFO
         uint64_t mod_addr = 0;
         bool mod_found = false;
-        const char* mod_name = get_module_name(trans, mod_addr, mod_found);
-        if (mod_name)
+        const auto& mod_name = get_module_name(trans, mod_addr, mod_found);
+        if (!mod_name.empty())
             SCP_DEBUG(()) << "transport_dbg: " << txn_command_str(trans) << " to Register at address: 0x" << std::hex
                           << trans.get_address() << " which belongs to Module: [" << mod_name << "]";
         if (m_pre_b_transport_callback) m_pre_b_transport_callback(mod_found, mod_addr);
@@ -171,10 +171,11 @@ public:
     }
 
 #ifdef ENABLE_MODULE_NAME_DBG_INFO
-    const char* get_module_name(const tlm::tlm_generic_payload& trans, uint64_t& mod_addr, bool& mod_found)
+    const std::string& get_module_name(const tlm::tlm_generic_payload& trans, uint64_t& mod_addr, bool& mod_found)
     {
+        static const std::string empty;
         if (mod_addr_name_map.empty()) {
-            return nullptr;
+            return empty;
         }
         uint64_t addr = trans.get_address();
         auto search = mod_addr_name_map.equal_range(addr);
@@ -196,7 +197,7 @@ public:
         } else {
             mod_found = false;
         }
-        return nullptr;
+        return empty;
     }
 #endif
 
@@ -301,8 +302,8 @@ protected:
 public:
     explicit reg_router(
         const sc_core::sc_module_name& nm,
-        const std::map<uint64_t, std::pair<uint64_t, const char*>>& p_mod_addr_name_map =
-            std::map<uint64_t, std::pair<uint64_t, const char*>>(),
+        const std::map<uint64_t, std::pair<uint64_t, std::string>>& p_mod_addr_name_map =
+            std::map<uint64_t, std::pair<uint64_t, std::string>>(),
         const std::function<void(bool, uint64_t)>& pre_b_transport_callback = std::function<void(bool, uint64_t)>(),
         cci::cci_broker_handle broker = cci::cci_get_broker())
         : sc_core::sc_module(nm)
@@ -338,7 +339,7 @@ public:
 private:
     std::vector<std::shared_ptr<target_info>> mem_targets;
     std::map<sc_dt::uint64, std::shared_ptr<target_info>> cb_targets;
-    std::map<uint64_t, std::pair<uint64_t, const char*>> mod_addr_name_map;
+    std::map<uint64_t, std::pair<uint64_t, std::string>> mod_addr_name_map;
     std::function<void(bool, uint64_t)> m_pre_b_transport_callback;
     bool initialized = false;
 };
