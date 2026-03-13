@@ -374,6 +374,8 @@ template <class TYPE = uint32_t>
 class gs_bitfield;
 template <class TYPE = uint32_t>
 class gs_field;
+template <class TYPE>
+class gs_register_element;
 /**
  * @brief Class that encapsulates a 'register' that proxies it's data via a tlm interface,
  * and uses callbacks (on a tlm interface)
@@ -439,7 +441,7 @@ public:
     void operator<<=(TYPE other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get() << other); }
     void operator>>=(TYPE other) { proxy_data<TYPE>::set(proxy_data<TYPE>::get() >> other); }
 
-    TYPE& operator[](int idx) { return proxy_data_array<TYPE>::operator[](idx); }
+    gs_register_element<TYPE> operator[](int idx);
     void get(TYPE* dst, uint64_t idx, uint64_t length) { return proxy_data_array<TYPE>::get(dst, idx, length); }
     void set(TYPE* src, uint64_t idx, uint64_t length, bool use_mask = true)
     {
@@ -554,7 +556,50 @@ public:
     operator TYPE() { return m_bitfield; }
 
     operator gs::gs_bitfield<TYPE>&() { return m_bitfield; }
+
+    uint32_t bit_start() const { return m_bit_start; }
+    uint32_t bit_length() const { return m_bit_length; }
 };
+
+template <class TYPE>
+class gs_register_element
+{
+    TYPE& m_ref;
+
+    class field_proxy
+    {
+        TYPE& m_ref;
+        uint32_t m_start, m_length;
+
+    public:
+        field_proxy(TYPE& ref, uint32_t start, uint32_t length): m_ref(ref), m_start(start), m_length(length) {}
+        operator TYPE() const { return (m_ref >> m_start) & ((1ull << m_length) - 1); }
+        field_proxy& operator=(TYPE value)
+        {
+            TYPE mask = ((1ull << m_length) - 1) << m_start;
+            m_ref = (m_ref & ~mask) | ((value & ((1ull << m_length) - 1)) << m_start);
+            return *this;
+        }
+    };
+
+public:
+    gs_register_element(TYPE& ref): m_ref(ref) {}
+    operator TYPE&() { return m_ref; }
+    operator TYPE() const { return m_ref; }
+    TYPE* operator&() { return &m_ref; }
+    gs_register_element& operator=(TYPE val)
+    {
+        m_ref = val;
+        return *this;
+    }
+    field_proxy operator[](gs_field<TYPE>& f) { return field_proxy(m_ref, f.bit_start(), f.bit_length()); }
+};
+
+template <class TYPE>
+gs_register_element<TYPE> gs_register<TYPE>::operator[](int idx)
+{
+    return gs_register_element<TYPE>(proxy_data_array<TYPE>::operator[](idx));
+}
 
 } // namespace gs
 
