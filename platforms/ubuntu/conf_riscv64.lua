@@ -195,6 +195,7 @@ if (RISCV_NUM_CPUS > 0) then
             args = {"&platform.qemu_inst", i};
             mem = {bind = "&router.target_socket"};
             reset = { bind = "&reset.reset" };
+            irq_in_7 = { bind = "&mtimer_0.timer_irq_"..tostring(i)};
         };
         platform["cpu_"..tostring(i)]=cpu;
     end

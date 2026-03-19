@@ -51,21 +51,21 @@ public:
         , socket("mem", inst)
         , timer_irq("timer_irq")
     {
+        if (p_num_harts == 0) {
+            SCP_FATAL(()) << "num_harts should be >= 1";
+        }
+        // Initialize timer_irq vector with the correct size based on p_num_harts.
+        timer_irq.init(p_num_harts, [](const char* n, size_t i) { return new QemuInitiatorSignalSocket(n); });
+
+        if (timer_irq.size() != p_num_harts) {
+            SCP_WARN(()) << "Timer IRQ size mismatch: timer_irq.size()=" << timer_irq.size()
+                         << " != p_num_harts=" << (unsigned int)p_num_harts;
+        }
     }
 
     void before_end_of_elaboration() override
     {
         QemuDevice::before_end_of_elaboration();
-
-        // Initialize timer_irq vector with the correct size based on p_num_harts (if not already done)
-        if (timer_irq.size() == 0) {
-            timer_irq.init(p_num_harts, [](const char* n, size_t i) { return new QemuInitiatorSignalSocket(n); });
-        }
-
-        if (timer_irq.size() != p_num_harts) {
-            SCP_WARN(SCMOD) << "Timer IRQ size mismatch: timer_irq.size()=" << timer_irq.size()
-                           << " != p_num_harts=" << (unsigned int)p_num_harts;
-        }
 
         m_dev.set_prop_int("hartid-base", p_hartid_base);
         m_dev.set_prop_int("num-harts", p_num_harts);
