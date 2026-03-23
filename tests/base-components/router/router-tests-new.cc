@@ -206,6 +206,48 @@ TEST_BENCH(DebugTransportTestBench, DebugTransport)
     // Test logic is in test_bench_body() method of the TestBench class
 }
 
+// Test bench for DMI without use_offset (exercises the use_offset=false path in get_direct_mem_ptr)
+class DmiAbsoluteAddressingTestBench : public RouterTestBenchSimple
+{
+public:
+    DmiAbsoluteAddressingTestBench(const sc_core::sc_module_name& name): RouterTestBenchSimple(name) {}
+
+    void before_end_of_elaboration() override
+    {
+        setup_target(0, 0x5000, 0x1000, false); // use_offset=false
+        RouterTestBenchSimple::before_end_of_elaboration();
+
+        // Override the DMI callback to return absolute addresses
+        // When use_offset=false, the target works with absolute addresses
+        m_targets[0]->register_get_direct_mem_ptr_cb([](uint64_t addr, TlmDmi& dmi_data) -> bool {
+            dmi_data.allow_read_write();
+            dmi_data.set_dmi_ptr(nullptr);
+            dmi_data.set_start_address(0x5000); // Absolute start
+            dmi_data.set_end_address(0x5FFF);   // Absolute end
+            return true;
+        });
+    }
+
+    void test_bench_body() override
+    {
+        // Request DMI at address inside target
+        // With use_offset=false, the if(ti->use_offset) branch is NOT taken
+        // DMI addresses from the target are used as-is (no translation)
+        bool ret = m_initiator.do_dmi_request(0x5050);
+        ASSERT_TRUE(ret);
+
+        const tlm::tlm_dmi& dmi_data = m_initiator.get_last_dmi_data();
+        ASSERT_EQ(dmi_data.get_start_address(), 0x5000u);
+        ASSERT_EQ(dmi_data.get_end_address(), 0x5FFFu);
+    }
+};
+
+// Test case: DMI Absolute Addressing (use_offset=false)
+TEST_BENCH(DmiAbsoluteAddressingTestBench, DmiAbsoluteAddressing)
+{
+    // Test logic is in test_bench_body() method of the TestBench class
+}
+
 int sc_main(int argc, char* argv[])
 {
     // Initialize Google Test first
@@ -225,7 +267,8 @@ int sc_main(int argc, char* argv[])
                                                   "OverlappingRangesDifferentPrioritiesTestBench",
                                                   "TransactionCrossesBoundaryTestBench",
                                                   "DmiRequestsTestBench",
-                                                  "DebugTransportTestBench" };
+                                                  "DebugTransportTestBench",
+                                                  "DmiAbsoluteAddressingTestBench" };
 
     for (const auto& bench_name : test_bench_names) {
         std::string default_target_socket_name = bench_name + "_DefaultTarget.simple_target_socket_0";

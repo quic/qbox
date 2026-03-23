@@ -473,6 +473,9 @@ private:
         auto it = m_dmi_info_map.find(dmi.get_start_address());
         if (it != m_dmi_info_map.end()) {
             if (it->second.dmi.get_end_address() != dmi.get_end_address()) {
+                // Defensive guard: unreachable in normal operation. The only caller
+                // (record_dmi) detects differing end addresses and calls
+                // invalidate_direct_mem_ptr_ts to erase the old entry before reaching here.
                 std::stringstream ss;
                 ss << "Can't handle that: DMI overlap with differing end address (0x" << std::hex
                    << it->second.dmi.get_end_address() << " vs 0x" << dmi.get_end_address() << ")";

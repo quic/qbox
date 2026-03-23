@@ -167,6 +167,139 @@ TEST_BENCH(DebugTransportTestBench, DebugTransport)
     // Test logic is in test_bench_body() method of the TestBench class
 }
 
+// Test bench for chained target (exercises b_transport logging suppression)
+class ChainedTargetTestBench : public RouterTestBenchSimple
+{
+public:
+    ChainedTargetTestBench(const sc_core::sc_module_name& name): RouterTestBenchSimple(name) {}
+
+    void before_end_of_elaboration() override
+    {
+        setup_target(0, 0x1000, 0x100); // ID 0, base 0x1000, size 0x100
+        RouterTestBenchSimple::before_end_of_elaboration();
+    }
+
+    void test_bench_body() override
+    {
+        // Transaction through chained target should succeed (TLM_OK_RESPONSE)
+        // The code path `if (!ti->chained)` is exercised as false
+        do_load_and_check(0, 0x1010, 4);
+        do_store_and_check(0, 0x1050, 8);
+    }
+};
+
+// Test bench for lazy_init=true (exercises lazy_initialize during simulation)
+class LazyInitTestBench : public RouterTestBenchSimple
+{
+public:
+    LazyInitTestBench(const sc_core::sc_module_name& name): RouterTestBenchSimple(name) {}
+
+    void before_end_of_elaboration() override
+    {
+        setup_target(0, 0x1000, 0x100); // ID 0, base 0x1000, size 0x100
+        RouterTestBenchSimple::before_end_of_elaboration();
+    }
+
+    void test_bench_body() override
+    {
+        // First b_transport triggers lazy_initialize() during simulation
+        do_load_and_check(0, 0x1010, 4);
+        do_store_and_check(0, 0x1050, 8);
+    }
+};
+
+// Test bench for pre-set response status guard
+class PreSetResponseTestBench : public RouterTestBenchSimple
+{
+public:
+    PreSetResponseTestBench(const sc_core::sc_module_name& name): RouterTestBenchSimple(name) {}
+
+    void before_end_of_elaboration() override
+    {
+        setup_target(0, 0x1000, 0x100); // ID 0, base 0x1000, size 0x100
+        RouterTestBenchSimple::before_end_of_elaboration();
+    }
+
+    void test_bench_body() override
+    {
+        // Manually craft a transaction with pre-set error response
+        tlm::tlm_generic_payload txn;
+        uint8_t data[4] = { 0 };
+        txn.set_address(0x1010);
+        txn.set_data_length(4);
+        txn.set_data_ptr(data);
+        txn.set_command(tlm::TLM_WRITE_COMMAND);
+        txn.set_streaming_width(4);
+        txn.set_byte_enable_ptr(nullptr);
+        txn.set_response_status(tlm::TLM_GENERIC_ERROR_RESPONSE); // Pre-set error!
+
+        m_last_target_txn.valid = false;
+        m_initiator.do_b_transport(txn);
+
+        // The router finds the target but skips b_transport due to response status guard
+        // The target callback should NOT have been invoked
+        ASSERT_FALSE(m_last_target_txn.valid);
+        // Response status should remain as we set it
+        ASSERT_EQ(txn.get_response_status(), tlm::TLM_GENERIC_ERROR_RESPONSE);
+    }
+};
+
+// Test bench for TLM_IGNORE_COMMAND (exercises txn_tostring IGNORE case)
+class IgnoreCommandTestBench : public RouterTestBenchSimple
+{
+public:
+    IgnoreCommandTestBench(const sc_core::sc_module_name& name): RouterTestBenchSimple(name) {}
+
+    void before_end_of_elaboration() override
+    {
+        setup_target(0, 0x1000, 0x100); // ID 0, base 0x1000, size 0x100
+        RouterTestBenchSimple::before_end_of_elaboration();
+    }
+
+    void test_bench_body() override
+    {
+        // Manually craft a transaction with TLM_IGNORE_COMMAND
+        tlm::tlm_generic_payload txn;
+        uint8_t data[4] = { 0 };
+        txn.set_address(0x1010);
+        txn.set_data_length(4);
+        txn.set_data_ptr(data);
+        txn.set_command(tlm::TLM_IGNORE_COMMAND);
+        txn.set_streaming_width(4);
+        txn.set_byte_enable_ptr(nullptr);
+        txn.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+
+        m_initiator.do_b_transport(txn);
+
+        // The transaction should succeed (target returns TLM_OK_RESPONSE for IGNORE)
+        ASSERT_EQ(txn.get_response_status(), tlm::TLM_OK_RESPONSE);
+    }
+};
+
+// Test case: Chained Target
+TEST_BENCH(ChainedTargetTestBench, ChainedTarget)
+{
+    // Test logic is in test_bench_body() method of the TestBench class
+}
+
+// Test case: Lazy Initialization
+TEST_BENCH(LazyInitTestBench, LazyInit)
+{
+    // Test logic is in test_bench_body() method of the TestBench class
+}
+
+// Test case: Pre-Set Response Status Guard
+TEST_BENCH(PreSetResponseTestBench, PreSetResponse)
+{
+    // Test logic is in test_bench_body() method of the TestBench class
+}
+
+// Test case: TLM_IGNORE_COMMAND
+TEST_BENCH(IgnoreCommandTestBench, IgnoreCommand)
+{
+    // Test logic is in test_bench_body() method of the TestBench class
+}
+
 int sc_main(int argc, char* argv[])
 {
     // Initialize Google Test first
@@ -182,8 +315,13 @@ int sc_main(int argc, char* argv[])
 
     // Set for all test benches
     std::vector<std::string> test_bench_names = { "MultipleTargetNonOverlappingTestBench",
-                                                  "OverlappingAddressPriorityTestBench", "RelativeAddressingTestBench",
-                                                  "DebugTransportTestBench" };
+                                                  "OverlappingAddressPriorityTestBench",
+                                                  "RelativeAddressingTestBench",
+                                                  "DebugTransportTestBench",
+                                                  "ChainedTargetTestBench",
+                                                  "LazyInitTestBench",
+                                                  "PreSetResponseTestBench",
+                                                  "IgnoreCommandTestBench" };
 
     for (const auto& bench_name : test_bench_names) {
         std::string default_target_socket_name = bench_name + "_DefaultTarget.simple_target_socket_0";
@@ -197,6 +335,13 @@ int sc_main(int argc, char* argv[])
                                     cci::cci_value(static_cast<unsigned int>(100)),
                                     originator); // Lower priority
     }
+
+    // Set chained=true for ChainedTarget's target socket
+    broker.set_preset_cci_value("ChainedTarget.Target_0.simple_target_socket_0.chained", cci::cci_value(true),
+                                originator);
+
+    // Set lazy_init=true for LazyInit's router
+    broker.set_preset_cci_value("LazyInit.router.lazy_init", cci::cci_value(true), originator);
 
     scp::init_logging(scp::LogConfig()
                           .fileInfoFrom(sc_core::SC_ERROR)

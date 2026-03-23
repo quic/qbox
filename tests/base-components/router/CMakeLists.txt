@@ -17,5 +17,6 @@ gs_add_test(router-advanced-overlap-tests)
 gs_add_test(router-shadowing-warning-test)
 gs_add_test(router-tests-new)
 gs_add_test(router-thread-safety-test)
+gs_add_test(router-coverage-tests)
 
 set_tests_properties(router-cache-bench-enhanced PROPERTIES TIMEOUT 60 SKIP_TEST TRUE)
