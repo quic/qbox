@@ -8,6 +8,7 @@
 #include <systemc>
 
 #include "router-memory-bench.h"
+#include <tests/target-tester.h>
 #include <cci/utils/broker.h>
 
 // Simple read into the memory
@@ -179,17 +180,37 @@ TEST_BENCH(RouterMemoryTestBench, WriteDebugReadBlocking)
 // Request for DMI access to memory
 TEST_BENCH(RouterMemoryTestBench, SimpleDmi)
 {
-    /* Valid DMI request Target 0 (address[0]=0x0) */
-    do_good_dmi_request_and_check(address[0], address[0], memory_size[0] - 1);
+    /*
+     * Memory layout (all memories are size 0x1000):
+     *   Memory_0: address=0x0000, size=0x1000, priority=0 -> [0x0000, 0x1000)
+     *   Memory_1: address=0x0200, size=0x1000, priority=1 -> [0x0200, 0x1200)
+     *   Memory_2: address=0x0400, size=0x1000, priority=2 -> [0x0400, 0x1400)
+     *   Memory_3: address=0x0600, size=0x1000, priority=3 -> [0x0600, 0x1600)
+     *
+     * After priority-based splitting (lower priority value wins):
+     *   [0x0000, 0x0200) -> Memory_0
+     *   [0x0200, 0x0400) -> Memory_0
+     *   [0x0400, 0x0600) -> Memory_0
+     *   [0x0600, 0x1000) -> Memory_0
+     *   [0x1000, 0x1200) -> Memory_1
+     *   [0x1200, 0x1400) -> Memory_2
+     *   [0x1400, 0x1600) -> Memory_3
+     *
+     * DMI regions must respect segment boundaries so they don't span
+     * across a region owned by a different target.
+     */
 
-    /* Address 0x1000 (memory_size[0]) falls into Memory 1 (starts at 0x200) */
-    do_good_dmi_request_and_check(memory_size[0], address[1], memory_size[1] - 1);
+    /* Address 0x0 falls into Memory 0's split segment [0x0, 0x200) */
+    do_good_dmi_request_and_check(address[0], address[0], address[1] - 1);
 
-    /* Address 0x200 (address[1]) falls into Memory 0 (starts at 0x0) */
-    do_good_dmi_request_and_check(address[1], address[0], memory_size[0] - 1);
+    /* Address 0x1000 falls into Memory 1's split segment [0x1000, 0x1200) */
+    do_good_dmi_request_and_check(memory_size[0], memory_size[0], memory_size[1] - 1);
 
-    /* Address 0x1200 (memory_size[1]) falls into Memory 2 (starts at 0x400) */
-    do_good_dmi_request_and_check(memory_size[1], address[2], memory_size[2] - 1);
+    /* Address 0x200 falls into Memory 0's split segment [0x200, 0x400) */
+    do_good_dmi_request_and_check(address[1], address[1], address[2] - 1);
+
+    /* Address 0x1200 falls into Memory 2's split segment [0x1200, 0x1400) */
+    do_good_dmi_request_and_check(memory_size[1], memory_size[1], memory_size[2] - 1);
 
     // Add a check for a truly out-of-bounds address, e.g., beyond the last memory
     // Max address in current config is 0x600 + 0x1000 - 1 = 0x15ff
@@ -202,20 +223,127 @@ TEST_BENCH(RouterMemoryTestBench, DmiWriteRead)
     uint8_t data = 0x04;
     uint8_t data_read;
 
-    /* Valid DMI request target N°0 (address[0]+0x50 = 0x50) */
-    do_good_dmi_request_and_check(address[0] + 0x50, address[0], memory_size[0] - 1);
+    /* Address 0x50 falls into Memory 0's split segment [0x0, 0x200) */
+    do_good_dmi_request_and_check(address[0] + 0x50, address[0], address[1] - 1);
     /* Write with DMI target N°0 */
     dmi_write_or_read(0x50, &data, sizeof(data), false);
     /* Read with DMI target N°0 */
     dmi_write_or_read(0x50, &data_read, sizeof(data), true);
     ASSERT_EQ(data, data_read);
 
-    /* Valid DMI request target N°0 (address[1]+0x50 = 0x250 which falls in Memory 0) */
-    do_good_dmi_request_and_check(address[1] + 0x50, address[0], memory_size[0] - 1);
+    /* Address 0x250 falls into Memory 0's split segment [0x200, 0x400) */
+    do_good_dmi_request_and_check(address[1] + 0x50, address[1], address[2] - 1);
     /* Write with DMI target N°0 */
     dmi_write_or_read(address[1] + 0x50, &data, sizeof(data), false);
     /* Read with DMI target N°0 */
     dmi_write_or_read(address[1] + 0x50, &data_read, sizeof(data), true);
+    ASSERT_EQ(data, data_read);
+}
+
+/*
+ * Test bench for the common case: a low-priority memory with a higher-priority
+ * non-DMI target layered on top. The DMI regions for the memory must not span
+ * across the non-DMI target's address range.
+ *
+ *   Memory:  address=0x0000, size=0x1000, priority=1 -> [0x0000, 0x1000) (grants DMI)
+ *   Device:  address=0x0400, size=0x0100, priority=0 -> [0x0400, 0x0500) (no DMI)
+ *
+ * After priority-based splitting:
+ *   [0x0000, 0x0400) -> Memory
+ *   [0x0400, 0x0500) -> Device
+ *   [0x0500, 0x1000) -> Memory
+ */
+class OverlayNoDmiTestBench : public TestBench
+{
+public:
+    static constexpr uint64_t MEM_ADDR = 0x0;
+    static constexpr uint64_t MEM_SIZE = 0x1000;
+    static constexpr uint64_t DEV_ADDR = 0x400;
+    static constexpr uint64_t DEV_SIZE = 0x100;
+
+protected:
+    InitiatorTester m_initiator;
+    gs::router<> m_router;
+    gs::gs_memory<> m_memory;
+    TargetTester m_device;
+
+    void do_good_dmi_request_and_check(uint64_t addr, uint64_t exp_start, uint64_t exp_end)
+    {
+        bool ret = m_initiator.do_dmi_request(addr);
+        const tlm::tlm_dmi& dmi_data = m_initiator.get_last_dmi_data();
+
+        ASSERT_TRUE(ret);
+        ASSERT_EQ(exp_start, dmi_data.get_start_address());
+        ASSERT_EQ(exp_end, dmi_data.get_end_address());
+    }
+
+    void do_bad_dmi_request_and_check(uint64_t addr)
+    {
+        bool ret = m_initiator.do_dmi_request(addr);
+        ASSERT_FALSE(ret);
+    }
+
+    void dmi_write_or_read(uint64_t addr, uint8_t* data, size_t len, bool is_read)
+    {
+        const tlm::tlm_dmi& dmi_data = m_initiator.get_last_dmi_data();
+        addr -= dmi_data.get_start_address();
+
+        if (is_read) {
+            ASSERT_TRUE(dmi_data.is_read_allowed());
+            memcpy(data, dmi_data.get_dmi_ptr() + addr, len);
+        } else {
+            ASSERT_TRUE(dmi_data.is_write_allowed());
+            memcpy(dmi_data.get_dmi_ptr() + addr, data, len);
+        }
+    }
+
+public:
+    OverlayNoDmiTestBench(const sc_core::sc_module_name& n)
+        : TestBench(n)
+        , m_initiator("initiator")
+        , m_router("router")
+        , m_memory("Memory", MEM_SIZE)
+        , m_device("Device", DEV_SIZE)
+    {
+        m_router.add_initiator(m_initiator.socket);
+        m_router.add_target(m_memory.socket, MEM_ADDR, MEM_SIZE, true, /*priority=*/1);
+        m_router.add_target(m_device.socket, DEV_ADDR, DEV_SIZE, true, /*priority=*/0);
+    }
+};
+
+// DMI regions must stop at the non-DMI device's boundaries
+TEST_BENCH(OverlayNoDmiTestBench, DmiRegionClippedByHigherPriorityNoDmiTarget)
+{
+    /* DMI before the device: segment [0x0, 0x400) */
+    do_good_dmi_request_and_check(0x0, 0x0, DEV_ADDR - 1);
+    do_good_dmi_request_and_check(0x3FF, 0x0, DEV_ADDR - 1);
+
+    /* DMI in the device region: must be denied */
+    do_bad_dmi_request_and_check(DEV_ADDR);
+    do_bad_dmi_request_and_check(DEV_ADDR + DEV_SIZE / 2);
+
+    /* DMI after the device: segment [0x500, 0x1000) */
+    do_good_dmi_request_and_check(DEV_ADDR + DEV_SIZE, DEV_ADDR + DEV_SIZE, MEM_SIZE - 1);
+    do_good_dmi_request_and_check(0xFFF, DEV_ADDR + DEV_SIZE, MEM_SIZE - 1);
+}
+
+// Write and read via DMI on both sides of the non-DMI device
+TEST_BENCH(OverlayNoDmiTestBench, DmiWriteReadAroundNoDmiTarget)
+{
+    uint8_t data, data_read;
+
+    /* Write/read in the region before the device */
+    do_good_dmi_request_and_check(0x50, 0x0, DEV_ADDR - 1);
+    data = 0xAA;
+    dmi_write_or_read(0x50, &data, sizeof(data), false);
+    dmi_write_or_read(0x50, &data_read, sizeof(data_read), true);
+    ASSERT_EQ(data, data_read);
+
+    /* Write/read in the region after the device */
+    do_good_dmi_request_and_check(0x600, DEV_ADDR + DEV_SIZE, MEM_SIZE - 1);
+    data = 0xBB;
+    dmi_write_or_read(0x600, &data, sizeof(data), false);
+    dmi_write_or_read(0x600, &data_read, sizeof(data_read), true);
     ASSERT_EQ(data, data_read);
 }
 

@@ -386,12 +386,13 @@ class router : public sc_core::sc_module, public gs::router_if<BUSWIDTH>
             if (it != m_regions.begin()) {
                 --it;
                 if (addr >= it->second.start && addr < it->second.end) {
-                    // Found mapped region - return the full extent of the original memory region
-                    // This is crucial for DMI: clients expect access to the entire memory,
-                    // not just the split segment that won the priority resolution
+                    // Return the segment boundaries. After split_and_resolve, adjacent
+                    // same-target segments are merged, so this segment represents the
+                    // full contiguous range owned by this target. We must not use the
+                    // original target range as it may span across higher-priority targets.
                     std::shared_ptr<TargetInfoType> target = it->second.target;
-                    dmi.set_start_address(target->address);
-                    dmi.set_end_address(target->address + target->size - 1); // inclusive end
+                    dmi.set_start_address(it->second.start);
+                    dmi.set_end_address(it->second.end - 1); // inclusive end (Region.end is exclusive)
                     return target;
                 }
             }
