@@ -63,11 +63,12 @@ class CpuRiscv32TimerIrqTest : public CpuRiscvTestBench<cpu_riscv32, CpuTesterMm
     // Timer interrupt period (1ms = 10,000 timer ticks at 10MHz)
     static constexpr uint64_t TIMER_PERIOD_TICKS = 10000;
 
+    cci::cci_broker_handle m_broker;
     MultiInitiatorSignalSocket<bool> reset;
     reset_gpio reset_controller;
 
     // Timer components
-    riscv_aclint_mtimer aclint_mtimer;
+    std::unique_ptr<riscv_aclint_mtimer> aclint_mtimer;
 
     std::thread m_thread;
     gs::async_event reset_event;
@@ -143,8 +144,8 @@ class CpuRiscv32TimerIrqTest : public CpuRiscvTestBench<cpu_riscv32, CpuTesterMm
 public:
     CpuRiscv32TimerIrqTest(const sc_core::sc_module_name& n)
         : CpuRiscvTestBench<cpu_riscv32, CpuTesterMmio>(n)
+        , m_broker(cci::cci_get_broker())
         , reset_controller("reset", &m_inst_a)
-        , aclint_mtimer("aclint_mtimer", &m_inst_a)
         , timer_interrupt_count(0)
         , test_status(0)
         , time_elapsed_ms(0)
@@ -152,20 +153,23 @@ public:
         // Debug: Check parameter values during construction
         SCP_INFO(SCMOD) << "Constructor: p_num_cpu=" << (int)p_num_cpu << ", m_cpus.size()=" << m_cpus.size();
 
-        // Configure timer parameters immediately after construction
-        aclint_mtimer.p_num_harts = p_num_cpu;
-        aclint_mtimer.p_hartid_base = 0;
-        aclint_mtimer.p_timecmp_base = 0x0;
-        aclint_mtimer.p_time_base = 0x7ff8;
-        aclint_mtimer.p_aperture_size = ACLINT_MTIMER_SIZE;
-        aclint_mtimer.p_timebase_freq = 10000000;
-        aclint_mtimer.p_provide_rdtime = true;
+        m_broker.set_preset_cci_value(std::string(name()) + ".aclint_mtimer.num_harts",
+                                      cci::cci_value(p_num_cpu.get_value()));
+        m_broker.set_preset_cci_value(std::string(name()) + ".aclint_mtimer.hartid_base", cci::cci_value(0x0));
+        m_broker.set_preset_cci_value(std::string(name()) + ".aclint_mtimer.timecmp_base", cci::cci_value(0x0));
+        m_broker.set_preset_cci_value(std::string(name()) + ".aclint_mtimer.time_base", cci::cci_value(0x7ff8));
+        m_broker.set_preset_cci_value(std::string(name()) + ".aclint_mtimer.aperture_size",
+                                      cci::cci_value(ACLINT_MTIMER_SIZE));
+        m_broker.set_preset_cci_value(std::string(name()) + ".aclint_mtimer.timebase_freq", cci::cci_value(10000000));
+        m_broker.set_preset_cci_value(std::string(name()) + ".aclint_mtimer.provide_rdtime", cci::cci_value(true));
 
-        SCP_INFO(SCMOD) << "Constructor: After setting timer params, aclint_mtimer.p_num_harts="
-                        << (unsigned int)aclint_mtimer.p_num_harts;
+        aclint_mtimer = std::make_unique<riscv_aclint_mtimer>("aclint_mtimer", &m_inst_a);
+
+        SCP_INFO(SCMOD) << "Constructor: After setting timer params, aclint_mtimer->p_num_harts="
+                        << (unsigned int)aclint_mtimer->p_num_harts;
 
         // Map timer device to memory
-        m_router.add_target(aclint_mtimer.socket, ACLINT_MTIMER_BASE, ACLINT_MTIMER_SIZE);
+        m_router.add_target(aclint_mtimer->socket, ACLINT_MTIMER_BASE, ACLINT_MTIMER_SIZE);
 
         SCP_INFO(SCMOD) << "Timer device mapping:";
         SCP_INFO(SCMOD) << "  ACLINT MTimer at 0x" << std::hex << ACLINT_MTIMER_BASE << " (size 0x"
@@ -200,28 +204,18 @@ public:
 
     void before_end_of_elaboration() override
     {
-        // Force re-set the timer parameters before elaboration
-        aclint_mtimer.p_num_harts = p_num_cpu;
-        SCP_INFO(SCMOD) << "Before elaboration: p_num_cpu=" << (int)p_num_cpu
-                        << ", aclint_mtimer.p_num_harts=" << (unsigned int)aclint_mtimer.p_num_harts;
-
         // Call parent before_end_of_elaboration - this will trigger timer component elaboration
         CpuRiscvTestBench<cpu_riscv32, CpuTesterMmio>::before_end_of_elaboration();
 
         // Check if timer component properly initialized the vector
         SCP_INFO(SCMOD) << "After parent elaboration - Timer IRQ binding: m_cpus.size()=" << m_cpus.size()
-                        << ", p_num_cpu=" << (int)p_num_cpu << ", timer_irq.size()=" << aclint_mtimer.timer_irq.size();
-
-        // Force timer component to initialize its vector early by calling its timer initialization method
-        aclint_mtimer.timer_irq.init(p_num_cpu,
-                                     [](const char* n, size_t i) { return new QemuInitiatorSignalSocket(n); });
-        SCP_INFO(SCMOD) << "Forced timer_irq init, size=" << aclint_mtimer.timer_irq.size();
+                        << ", p_num_cpu=" << (int)p_num_cpu << ", timer_irq.size()=" << aclint_mtimer->timer_irq.size();
 
         // Connect timer IRQ outputs to CPU timer interrupt inputs (IRQ pin 7)
         // In SiFive E architecture, ACLINT MTimer connects directly to CPU timer interrupt pin
-        for (int i = 0; i < m_cpus.size() && i < aclint_mtimer.timer_irq.size(); i++) {
+        for (int i = 0; i < m_cpus.size() && i < aclint_mtimer->timer_irq.size(); i++) {
             auto& cpu = m_cpus[i];
-            aclint_mtimer.timer_irq[i].bind(cpu.irq_in[7]);
+            aclint_mtimer->timer_irq[i].bind(cpu.irq_in[7]);
             SCP_INFO(SCMOD) << "Connected ACLINT MTimer timer_irq[" << i << "] to cpu[" << i
                             << "].irq_in[7] (machine timer interrupt)";
         }
@@ -232,7 +226,7 @@ public:
         // Call parent end_of_elaboration - this will realize the QEMU devices
         CpuRiscvTestBench<cpu_riscv32, CpuTesterMmio>::end_of_elaboration();
 
-        SCP_INFO(SCMOD) << "End of elaboration - timer_irq.size()=" << aclint_mtimer.timer_irq.size();
+        SCP_INFO(SCMOD) << "End of elaboration - timer_irq.size()=" << aclint_mtimer->timer_irq.size();
         SCP_INFO(SCMOD) << "End of elaboration - RISC-V ACLINT MTimer -> CPU timer interrupt connections established";
     }
 

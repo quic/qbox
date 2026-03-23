@@ -40,7 +40,7 @@ public:
     riscv_aclint_mtimer(sc_core::sc_module_name nm, QemuInstance& inst)
         : QemuDevice(nm, inst, "riscv.aclint.mtimer")
         , p_hartid_base("hartid_base", 0, "Base hart ID for this ACLINT MTimer")
-        , p_num_harts("num_harts", 0, "Number of HARTS this CLINT is connected to")
+        , p_num_harts("num_harts", 1, "Number of HARTS this CLINT is connected to")
         , p_timecmp_base("timecmp_base", 0, "Base address for the TIMECMP registers")
         , p_time_base("time_base", 0, "Base address for the TIME registers")
         , p_aperture_size("aperture_size", 0, "Size of the whole CLINT address space")
