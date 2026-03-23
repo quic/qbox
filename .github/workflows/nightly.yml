@@ -1,0 +1,13 @@
+name: Nightly Builds
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  ubuntu:
+    uses: ./.github/workflows/ubuntu-builds.yml
+
+  macos:
+    uses: ./.github/workflows/macos-builds.yml
