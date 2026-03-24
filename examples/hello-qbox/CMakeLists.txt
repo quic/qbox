@@ -59,7 +59,7 @@ else()
     )
 
     install(TARGETS hello-qbox-vp
-        RUNTIME DESTINATION bin/examples/hello-qbox
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/examples/hello-qbox
     )
 
     # --- Firmware (AArch64 cross-compilation) ----------------

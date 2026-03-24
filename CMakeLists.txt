@@ -62,6 +62,11 @@ endif()
 include(CMakePackageConfigHelpers)
 include(CTest)
 include(GNUInstallDirs)
+# On Windows, install executables and DLLs directly under CMAKE_INSTALL_PREFIX
+# instead of the default bin/ subdirectory.
+if(WIN32)
+    set(CMAKE_INSTALL_BINDIR "." CACHE PATH "" FORCE)
+endif()
 include(FetchContent)
 include(FindPackageHandleStandardArgs)
 
@@ -368,7 +373,7 @@ if (NOT WITHOUT_QEMU)
         set_target_properties(dll_cleanup_helper PROPERTIES
             WIN32_EXECUTABLE TRUE
         )
-        install(TARGETS dll_cleanup_helper DESTINATION bin)
+        install(TARGETS dll_cleanup_helper DESTINATION ${CMAKE_INSTALL_BINDIR})
     endif()
 
     # TODO: Remove the "hack" in the future, once support for Ubuntu 20 can be
@@ -491,7 +496,7 @@ if (NOT DEFINED GS_ONLY)
     if (NOT WIN32)
         install(TARGETS rpc zip DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
     else()
-        install(TARGETS rpc zip DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+        install(TARGETS rpc zip DESTINATION ${CMAKE_INSTALL_BINDIR})
     endif()
 endif()
 

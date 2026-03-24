@@ -36,7 +36,7 @@ set_target_properties(remote_cpu PROPERTIES
   INSTALL_RPATH "$ORIGIN/../lib;$ORIGIN/../lib/libqemu;$ORIGIN/../../../lib"
 )
 
-install(TARGETS cortex-m55-vp RUNTIME DESTINATION bin/platforms/cortex-m55-remote)
-install(TARGETS remote_cpu RUNTIME DESTINATION bin/platforms/cortex-m55-remote)
+install(TARGETS cortex-m55-vp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/platforms/cortex-m55-remote)
+install(TARGETS remote_cpu RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/platforms/cortex-m55-remote)
 
 gs_enable_testing()

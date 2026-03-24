@@ -85,7 +85,7 @@ function(qbox_add_cpu_test target timeout_s)
     endif()
 
 
-    install(TARGETS ${target} DESTINATION bin)
+    install(TARGETS ${target} DESTINATION ${CMAKE_INSTALL_BINDIR})
 
     target_include_directories(${target} PRIVATE ${PROJECT_SOURCE_DIR}/tests/libqbox/include ${keystone_SOURCE_DIR}/include)
 
@@ -186,7 +186,7 @@ set(QBOX_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 function(qbox_extra_add_test target)
     add_executable(${target} ${ARGN})
-    install(TARGETS ${target} DESTINATION bin)
+    install(TARGETS ${target} DESTINATION ${CMAKE_INSTALL_BINDIR})
     target_include_directories(${target} PRIVATE ${QBOX_TEST_DIR}/include)
     target_link_libraries(${target} PRIVATE ${TARGET_LIBS} display)
     add_test(NAME ${target} COMMAND $<TARGET_FILE:${target}>)
