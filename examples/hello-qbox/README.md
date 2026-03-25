@@ -316,6 +316,94 @@ platform = {
 }
 ```
 
+### The C++ host code (main.cc)
+
+While `platform.lua` describes *what* components exist and how they
+connect, `main.cc` is the C++ program that *runs* the simulation. It
+is intentionally minimal — most of the heavy lifting is done by the
+Qbox libraries.
+
+```cpp
+#include <systemc>
+#include <cci_configuration>
+#include <cciutils.h>
+#include <argparser.h>
+#include <module_factory_container.h>
+
+class GreenSocsPlatform : public gs::ModuleFactory::Container
+{
+protected:
+    cci::cci_param<int> m_quantum_ns;
+    cci::cci_param<int> m_gdb_port;
+
+public:
+    GreenSocsPlatform(const sc_core::sc_module_name& n)
+        : gs::ModuleFactory::Container(n)
+        , m_quantum_ns("quantum_ns", 1000000, "TLM-2.0 global quantum in ns")
+        , m_gdb_port("gdb_port", 0, "GDB port")
+    {
+        using tlm_utils::tlm_quantumkeeper;
+
+        sc_core::sc_time global_quantum(m_quantum_ns, sc_core::SC_NS);
+        tlm_quantumkeeper::set_global_quantum(global_quantum);
+    };
+};
+```
+
+#### The `GreenSocsPlatform` class
+
+This class inherits from `gs::ModuleFactory::Container`, the base class
+that handles dynamic component instantiation. When the simulation starts,
+the `Container` reads `platform.lua` and creates the components defined
+there — CPUs, memory, UARTs, and so on — automatically.
+
+The two CCI parameters (`m_quantum_ns` and `m_gdb_port`) can be set
+from the Lua file or overridden on the command line with `--param`.
+The constructor sets the TLM-2.0 global quantum, which controls how
+often QEMU synchronizes with the rest of the SystemC simulation.
+
+#### The `sc_main` function
+
+```cpp
+int sc_main(int argc, char* argv[])
+{
+    scp::init_logging(...);
+
+    gs::ConfigurableBroker m_broker{};
+    cci::cci_originator orig("sc_main");
+    cci::cci_param<int> p_log_level{ "log_level", 0, ... };
+    auto broker_h = m_broker.create_broker_handle(orig);
+    ArgParser ap{ broker_h, argc, argv };
+
+    GreenSocsPlatform platform("platform");
+
+    sc_core::sc_start();
+
+    // Print simulation statistics
+    return 0;
+}
+```
+
+`sc_main` is the entry point for any SystemC application. The key steps
+are:
+
+1. **Initialize logging** — Sets up the SCP logging framework that
+   components use to print debug and error messages.
+
+2. **Create the CCI broker** — CCI (Configuration, Control, and
+   Inspection) is the SystemC standard for runtime configuration.
+   The broker manages all parameters and allows them to be set via
+   Lua or command-line arguments.
+
+3. **Parse arguments** — `ArgParser` handles `--gs_luafile` (to load
+   `platform.lua`) and `--param` (to override individual values).
+
+4. **Instantiate the platform** — Creating `GreenSocsPlatform` triggers
+   the `Container` to read the Lua file and instantiate all components.
+
+5. **Run the simulation** — `sc_start()` runs until the guest firmware
+   halts (via PSCI `SYSTEM_OFF`) or you press `Ctrl+\`.
+
 ---
 
 ## Building the Example
