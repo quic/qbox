@@ -35,7 +35,7 @@ For prerequisites and Qbox build instructions, see the
 Before writing any configuration, it helps to understand the four key
 ideas behind Qbox.
 
-**SystemC and TLM-2.0**
+### SystemC and TLM-2.0
 SystemC is an IEEE-standard hardware simulation framework written in
 C++. Qbox components communicate with each other using TLM-2.0
 (Transaction Level Modeling), where one component initiates a
@@ -43,19 +43,20 @@ transaction (a read or write) and another responds to it. Connections
 between components are called *sockets* — an initiator socket on one
 component binds to a target socket on another.
 
-**The Router**
+
+### The Router
 Most platforms have a central address router. Every peripheral
 registers an address range with the router, and when a CPU issues a
 memory access, the router forwards it to the right component. Think
 of it as the system bus.
 
-**The QEMU Instance**
+### The QEMU Instance
 The CPU is not a SystemC component itself — it lives inside QEMU. The
 `QemuInstance` component wraps a QEMU process and makes it accessible
 to the rest of the SystemC simulation. CPU components (like
 `cpu_arm_cortexA53`) are then attached to that instance.
 
-**Lua Configuration**
+### Lua Configuration
 Platforms are defined in Lua files, not C++ code. Each component is
 described by a Lua table with a `moduletype` key and whatever
 parameters the component needs. Bindings between components use `"&"`
@@ -214,13 +215,13 @@ platform.pl011_uart_0 = {
 }
 ```
 
-**How `moduletype` and `dylib_path` work.** Qbox components
-are shared libraries loaded at runtime. The `moduletype` string
-is appended with `.so` and passed to `dlopen`. When the `.so`
-filename differs from the class name it registers, set
-`dylib_path` to the actual filename (without the `.so` suffix).
-For example, `char_backend_stdio` maps directly to
-`char_backend_stdio.so`. The PL011 class is called `Pl011` but
+#### How `moduletype` and `dylib_path` work.
+Qbox components are shared libraries loaded at runtime. The
+`moduletype` string is appended with `.so` and passed to
+`dlopen`. When the `.so` filename differs from the class name
+it registers, set `dylib_path` to the actual filename (without
+the `.so` suffix). For example, `char_backend_stdio` maps directly
+to `char_backend_stdio.so`. The PL011 class is called `Pl011` but
 lives in `uart-pl011.so`, so it needs `dylib_path =
 "uart-pl011"` to tell the loader which library to open.
 
@@ -366,14 +367,14 @@ and then branches to `main`, which can safely use the stack.
 
 There are two ways to stop a Qbox simulation:
 
-**From the firmware (automatic).** The firmware calls PSCI
+1. **From the firmware (automatic).** The firmware calls PSCI
 `SYSTEM_OFF` (`0x84000008`) via an `hvc` instruction. QEMU
 handles this as a system shutdown request, and the simulation
 ends cleanly. This works because `platform.lua` configures the
 CPU with `psci_conduit = "hvc"`, which tells QEMU to intercept
 HVC calls and interpret them as PSCI commands.
 
-**From the terminal (manual).** Press `Ctrl+\` (sends SIGQUIT)
+2. **From the terminal (manual).** Press `Ctrl+\` (sends SIGQUIT)
 to terminate the simulation. This is the standard way to stop
 a Qbox platform that runs indefinitely, such as one booting
 Linux. If the firmware has no shutdown path (for example,
