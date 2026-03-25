@@ -17,7 +17,7 @@
 #include <tlm>
 #include <scp/report.h>
 #include <gtest/gtest.h> // For ASSERT_EQ, ASSERT_TRUE, ASSERT_FALSE
-#include "../../systemc-components/common/include/tests/test-bench.h"
+#include <tests/test-bench.h>
 #include <tests/target-tester.h>  // Correct path for TargetTester
 #include <tlm_sockets_buswidth.h> // Include for DEFAULT_TLM_BUSWIDTH
 
