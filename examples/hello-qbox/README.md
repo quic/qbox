@@ -391,7 +391,7 @@ From the Qbox root directory:
 cmake -B build . \
     -DCMAKE_INSTALL_PREFIX=$(pwd)/build/install \
     -DLIBQEMU_TARGETS=aarch64
-cmake --build build
+cmake --build build --parallel $(nproc)
 cmake --install build
 ```
 
