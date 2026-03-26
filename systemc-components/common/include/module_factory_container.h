@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All Rights Reserved.
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  *
- * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef GREENSOCS_MODULE_FACTORY_H
@@ -21,6 +21,8 @@
 
 #include <libgsutils.h>
 #include <libgssync.h>
+
+#include <map>
 
 #include <ports/target-signal-socket.h>
 #include <ports/initiator-signal-socket.h>
@@ -56,6 +58,18 @@ class ContainerBase : public virtual sc_core::sc_module, public transaction_forw
      * @param args The CCI list of arguments passed to the constructor (which will be type punned)
      * @return sc_core::sc_module* The module constructed.
      */
+
+private:
+    // Performance optimization caches (lazy initialization)
+    mutable std::map<std::string, cci::cci_value_list> m_module_args_cache;
+    mutable std::map<std::string, bool> m_is_absolute_path_cache;
+    mutable std::map<std::string, std::map<std::string, std::set<std::string>>>
+        m_bind_refs_cache; // [module_name][target] -> referrers
+    mutable std::map<std::string, std::vector<std::pair<std::string, cci::cci_value>>>
+        m_moduletype_params_cache; // container_full_name -> params
+    mutable std::map<std::string, std::set<std::string>>
+        m_per_pass_nested_deps_cache; // Per-pass cache: container_name -> deps (cleared each pass)
+    mutable std::map<std::string, bool> m_is_container_type_cache; // Cache for is_container_type() results
 
 public:
     SCP_LOGGER(());
@@ -101,6 +115,59 @@ public:
         return module_name.substr(0, module_name.find_last_of("."));
     }
 
+    /**
+     * @brief Check if a name refers to an absolute path (outside this container)
+     *
+     * @param name The name to check (without leading '&')
+     * @return true if the path is absolute (not local to this container)
+     */
+    bool is_absolute_path(const std::string& name)
+    {
+        // Check cache first
+        auto it = m_is_absolute_path_cache.find(name);
+        if (it != m_is_absolute_path_cache.end()) {
+            return it->second;
+        }
+
+        bool result = false;
+        std::string container_name = std::string(this->name());
+
+        // If the name starts with the container's name followed by a dot, it's relative
+        if (name.size() > container_name.size() && name.substr(0, container_name.size()) == container_name &&
+            name[container_name.size()] == '.') {
+            result = false;
+        } else if (name.find('.') != std::string::npos) {
+            // If the name contains dots, it's a hierarchical path
+            // Get the parent container name (e.g., "parent" from "parent.child_container")
+            std::string parent_name = get_parent_name(container_name);
+            if (parent_name.empty()) {
+                // We're at the top level, everything with dots is relative to us
+                result = false;
+            } else if (name.find(parent_name + ".") == 0) {
+                // Check if the name starts with the parent or any ancestor
+                // If it starts with parent name, it's an absolute path from parent's perspective
+                result = true;
+            } else {
+                // Check if it exists in the global hierarchy
+                sc_core::sc_object* obj = find_sc_obj(nullptr, name, true);
+                if (obj != nullptr) {
+                    // Object exists, check if it's inside this container
+                    std::string obj_name = std::string(obj->name());
+                    result = obj_name.find(container_name + ".") != 0;
+                } else {
+                    result = false;
+                }
+            }
+        } else {
+            // For simple names (no dots), check if they exist in global hierarchy
+            result = find_sc_obj(nullptr, name, true) != nullptr;
+        }
+
+        // Cache the result
+        m_is_absolute_path_cache[name] = result;
+        return result;
+    }
+
     bool is_container_arg_mod_name(const std::string& name)
     {
         if (!this->container_mod_arg) return false;
@@ -117,6 +184,12 @@ public:
      */
     cci::cci_value_list get_module_args(std::string modulename)
     {
+        // Check cache first
+        auto cache_it = m_module_args_cache.find(modulename);
+        if (cache_it != m_module_args_cache.end()) {
+            return cache_it->second;
+        }
+
         cci::cci_value_list args;
         for (int i = 0; cci::cci_get_broker().has_preset_value(modulename + ".args." + std::to_string(i)); i++) {
             SCP_TRACE(())("Looking for : {}.args.{}", modulename, std::to_string(i));
@@ -124,14 +197,30 @@ public:
             gs::cci_clear_unused(m_broker, modulename + ".args." + std::to_string(i));
             auto arg = cci::cci_get_broker().get_preset_cci_value(modulename + ".args." + std::to_string(i));
             if (arg.is_string() && std::string(arg.get_string())[0] == '&') {
-                std::string parent = is_container_arg_mod_name(std::string(arg.get_string()).erase(0, 1))
-                                         ? get_parent_name(std::string(this->container_mod_arg->name()))
-                                         : get_parent_name(modulename);
-                if (std::string(arg.get_string()).find(parent, 1) == std::string::npos)
-                    arg.set_string("&" + parent + "." + std::string(arg.get_string()).erase(0, 1));
+                std::string arg_path = std::string(arg.get_string()).substr(1); // Remove leading '&'
+
+                // Check if it's an absolute path (exists in global hierarchy)
+                if (!is_absolute_path(arg_path)) {
+                    // It's a relative path, prepend the parent
+                    std::string parent = is_container_arg_mod_name(arg_path)
+                                             ? get_parent_name(std::string(this->container_mod_arg->name()))
+                                             : get_parent_name(modulename);
+                    // Only prepend if parent is not already in the path
+                    if (arg_path.find(parent) == std::string::npos) {
+                        arg.set_string("&" + parent + "." + arg_path);
+                    } else {
+                        arg.set_string("&" + arg_path);
+                    }
+                } else {
+                    // It's an absolute path, use as-is
+                    arg.set_string("&" + arg_path);
+                }
             }
             args.push_back(arg);
         }
+
+        // Cache the result
+        m_module_args_cache[modulename] = args;
         return args;
     }
 
@@ -196,7 +285,11 @@ public:
                 order_bind(m, initname, targetname);
             } else {
                 initname.erase(0, 1); // remove leading '&'
-                initname = std::string(name()) + "." + initname;
+                // Check if it's an absolute path (exists in global hierarchy)
+                if (!is_absolute_path(initname)) {
+                    // It's a relative path, prepend the container name
+                    initname = std::string(name()) + "." + initname;
+                }
                 SCP_TRACE(())("Bind {} to {}", targetname, initname);
                 do_binding(m, initname, targetname);
             }
@@ -261,49 +354,576 @@ public:
         }
     }
 
-    std::list<std::string> PriorityConstruct(void)
+    /**
+     * @brief Check if a module is a container type
+     *
+     * @param name Module name (without parent container prefix)
+     * @return true if the module is a container type
+     */
+    bool is_container_type(const std::string& name)
     {
-        std::list<std::string> args;
-        std::set<std::string> done;
-        std::list<std::string> todo;
+        // Check cache first
+        auto cache_it = m_is_container_type_cache.find(name);
+        if (cache_it != m_is_container_type_cache.end()) {
+            return cache_it->second;
+        }
+
         std::string module_name = std::string(sc_module::name());
+        std::string mod_type_name = module_name + "." + name + ".moduletype";
 
-        todo = gs::sc_cci_children(name());
+        bool result = false;
+        if (m_broker.has_preset_value(mod_type_name)) {
+            cci::cci_value cci_type = m_broker.get_preset_cci_value(mod_type_name);
+            if (cci_type.is_string()) {
+                std::string mod_type = cci_type.get_string();
+                result = (mod_type == "Container" || mod_type == "ContainerWithArgs" ||
+                          mod_type == "ContainerDeferModulesConstruct" || mod_type == "container_builder");
+            }
+        }
 
-        while (todo.size() > 0) {
-            int i = 0;
-            for (auto it = todo.begin(); it != todo.end();) {
-                int count_args = 0;
-                std::string name = *it;
-                cci::cci_value_list mod_args = get_module_args(module_name + "." + name);
-                for (auto arg : mod_args) {
-                    if (arg.is_string()) {
-                        std::string a = arg.get_string();
-                        if (a.substr(0, module_name.size() + 1) == "&" + module_name) {
-                            if (done.count(a.substr(module_name.size() + 2)) == 0) {
-                                count_args += 1;
+        // Cache the result
+        m_is_container_type_cache[name] = result;
+        return result;
+    }
+
+    /**
+     * @brief Get all EXTERNAL nested dependencies from a container's children
+     * (excludes dependencies that are internal to the container being checked)
+     * Uses CCI configuration parameters to find child modules, then get_module_args for path resolution
+     * Also checks config tables for container_builder types
+     *
+     * @param container_name Container name (without parent prefix)
+     * @param dependencies Set to populate with dependency paths
+     */
+    void get_nested_dependencies(const std::string& container_name, std::set<std::string>& dependencies)
+    {
+        auto cache_it = m_per_pass_nested_deps_cache.find(container_name);
+        if (cache_it != m_per_pass_nested_deps_cache.end()) {
+            dependencies.insert(cache_it->second.begin(), cache_it->second.end());
+            return;
+        }
+
+        std::string module_name = std::string(sc_module::name());
+        std::string container_full_name = module_name + "." + container_name;
+        std::set<std::string> computed_deps;
+
+        std::vector<std::pair<std::string, cci::cci_value>> all_params;
+        auto params_cache_it = m_moduletype_params_cache.find(container_full_name);
+        if (params_cache_it != m_moduletype_params_cache.end()) {
+            all_params = params_cache_it->second;
+        } else {
+            auto params_range = m_broker.get_unconsumed_preset_values(
+                [&container_full_name](const std::pair<std::string, cci::cci_value>& iv) {
+                    return iv.first.find(container_full_name + ".") == 0 &&
+                           iv.first.find(".moduletype") != std::string::npos &&
+                           iv.first.find(".moduletype") == iv.first.length() - 11;
+                });
+            for (const auto& param : params_range) {
+                all_params.push_back(param);
+            }
+            m_moduletype_params_cache[container_full_name] = all_params;
+        }
+
+        std::set<std::string> child_modules;
+        bool config_prefix_used = false;
+        std::string config_prefix = container_full_name + ".config.";
+
+        for (const auto& param : all_params) {
+            std::string param_name = param.first;
+            if (param_name == container_full_name + ".moduletype") continue;
+
+            if (param_name.find(config_prefix) == 0 && param_name.find(".moduletype") == param_name.length() - 11) {
+                std::string child_path = param_name.substr(config_prefix.length());
+                child_path = child_path.substr(0, child_path.length() - 11);
+                size_t dot_pos = child_path.find('.');
+                if (dot_pos != std::string::npos) {
+                    child_path = child_path.substr(0, dot_pos);
+                }
+                child_modules.insert(child_path);
+                config_prefix_used = true;
+            } else if (param_name.length() > container_full_name.length() + 12) {
+                std::string child_path = param_name.substr(container_full_name.length() + 1);
+                if (child_path.find("config.") == 0) continue;
+
+                child_path = child_path.substr(0, child_path.length() - 11);
+                size_t dot_pos = child_path.find('.');
+                if (dot_pos != std::string::npos) {
+                    child_path = child_path.substr(0, dot_pos);
+                }
+                child_modules.insert(child_path);
+            }
+        }
+
+        for (const auto& child : child_modules) {
+            std::string child_config_name;
+            if (config_prefix_used) {
+                child_config_name = config_prefix + child;
+            } else {
+                child_config_name = container_full_name + "." + child;
+            }
+
+            cci::cci_value_list child_args;
+            auto args_cache_it = m_module_args_cache.find(child_config_name);
+            if (args_cache_it != m_module_args_cache.end()) {
+                child_args = args_cache_it->second;
+            } else {
+                for (int i = 0; m_broker.has_preset_value(child_config_name + ".args." + std::to_string(i)); i++) {
+                    child_args.push_back(
+                        m_broker.get_preset_cci_value(child_config_name + ".args." + std::to_string(i)));
+                }
+                m_module_args_cache[child_config_name] = child_args;
+            }
+
+            for (auto arg : child_args) {
+                if (arg.is_string()) {
+                    std::string a = arg.get_string();
+                    if (a.length() > 0 && a[0] == '&') {
+                        std::string ref_path = a.substr(1);
+
+                        if (ref_path.find(module_name) != 0) {
+                            ref_path = container_full_name + "." + ref_path;
+                        }
+
+                        if (!(ref_path.length() >= container_full_name.size() &&
+                              ref_path.substr(0, container_full_name.size()) == container_full_name &&
+                              (ref_path.length() == container_full_name.size() ||
+                               ref_path[container_full_name.size()] == '.'))) {
+                            computed_deps.insert(ref_path);
+                        }
+                    }
+                }
+            }
+
+            // Check bind parameters only if this child is a container type
+            bool child_is_container = false;
+            auto container_cache_it = m_is_container_type_cache.find(child);
+            if (container_cache_it != m_is_container_type_cache.end()) {
+                child_is_container = container_cache_it->second;
+            } else {
+                if (m_broker.has_preset_value(child_config_name + ".moduletype")) {
+                    cci::cci_value mt = m_broker.get_preset_cci_value(child_config_name + ".moduletype");
+                    if (mt.is_string()) {
+                        std::string moduletype = mt.get_string();
+                        child_is_container = (moduletype == "Container" || moduletype == "container_builder");
+                    }
+                }
+                m_is_container_type_cache[child] = child_is_container;
+            }
+
+            if (child_is_container) {
+                // Get bind parameters for this container child
+                auto child_params = m_broker.get_unconsumed_preset_values(
+                    [&child_config_name](const std::pair<std::string, cci::cci_value>& iv) {
+                        return iv.first.find(child_config_name + ".") == 0 &&
+                               iv.first.find(".bind") != std::string::npos;
+                    });
+
+                for (const auto& param : child_params) {
+                    if (param.second.is_string()) {
+                        std::string bind_value = param.second.get_string();
+                        // Handle semicolon-separated bind strings
+                        size_t pos = 0;
+                        while (pos < bind_value.length()) {
+                            size_t end = bind_value.find(';', pos);
+                            if (end == std::string::npos) end = bind_value.length();
+
+                            std::string single_bind = bind_value.substr(pos, end - pos);
+                            // Trim whitespace
+                            size_t start = single_bind.find_first_not_of(" \t\n\r");
+                            if (start != std::string::npos) {
+                                size_t finish = single_bind.find_last_not_of(" \t\n\r");
+                                single_bind = single_bind.substr(start, finish - start + 1);
+                            }
+
+                            if (single_bind.length() > 0 && single_bind[0] == '&') {
+                                std::string ref_path = single_bind.substr(1);
+
+                                // Make absolute if relative
+                                if (ref_path.find(module_name) != 0) {
+                                    ref_path = container_full_name + "." + ref_path;
+                                }
+
+                                // Only add if it's external to this container
+                                if (!(ref_path.length() >= container_full_name.size() &&
+                                      ref_path.substr(0, container_full_name.size()) == container_full_name &&
+                                      (ref_path.length() == container_full_name.size() ||
+                                       ref_path[container_full_name.size()] == '.'))) {
+                                    computed_deps.insert(ref_path);
+                                }
+                            }
+
+                            pos = (end == bind_value.length()) ? end : end + 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check the container's own bind parameters (outside config table)
+        auto container_params = m_broker.get_unconsumed_preset_values(
+            [&container_full_name](const std::pair<std::string, cci::cci_value>& iv) {
+                std::string param_name = iv.first;
+                // Match pattern: container_full_name.<param>.bind but not container_full_name.config.*
+                return param_name.find(container_full_name + ".") == 0 &&
+                       param_name.find(".config.") == std::string::npos &&
+                       param_name.find(".bind") != std::string::npos;
+            });
+
+        for (const auto& param : container_params) {
+            if (param.second.is_string()) {
+                std::string bind_value = param.second.get_string();
+                // Handle semicolon-separated bind strings
+                size_t pos = 0;
+                while (pos < bind_value.length()) {
+                    size_t end = bind_value.find(';', pos);
+                    if (end == std::string::npos) end = bind_value.length();
+
+                    std::string single_bind = bind_value.substr(pos, end - pos);
+                    // Trim whitespace
+                    size_t start = single_bind.find_first_not_of(" \t\n\r");
+                    if (start != std::string::npos) {
+                        size_t finish = single_bind.find_last_not_of(" \t\n\r");
+                        single_bind = single_bind.substr(start, finish - start + 1);
+                    }
+
+                    if (single_bind.length() > 0 && single_bind[0] == '&') {
+                        std::string ref_path = single_bind.substr(1);
+
+                        // Make absolute if relative
+                        if (ref_path.find(module_name) != 0) {
+                            ref_path = container_full_name + "." + ref_path;
+                        }
+
+                        // Only add if it's external to this container
+                        if (!(ref_path.length() >= container_full_name.size() &&
+                              ref_path.substr(0, container_full_name.size()) == container_full_name &&
+                              (ref_path.length() == container_full_name.size() ||
+                               ref_path[container_full_name.size()] == '.'))) {
+                            computed_deps.insert(ref_path);
+                        }
+                    }
+
+                    pos = (end == bind_value.length()) ? end : end + 1;
+                }
+            }
+        }
+
+        m_per_pass_nested_deps_cache[container_name] = computed_deps;
+        dependencies.insert(computed_deps.begin(), computed_deps.end());
+    }
+
+    bool are_dependencies_available(const std::string& name, const std::set<std::string>& done)
+    {
+        std::string module_name = std::string(sc_module::name());
+        std::set<std::string> all_dependencies;
+
+        cci::cci_value_list mod_args = get_module_args(module_name + "." + name);
+        for (auto arg : mod_args) {
+            if (arg.is_string()) {
+                std::string a = arg.get_string();
+                if (a.length() > 0 && a[0] == '&') {
+                    std::string ref_path = a.substr(1);
+                    if (!ref_path.empty()) {
+                        all_dependencies.insert(ref_path);
+                    }
+                }
+            }
+        }
+
+        if (is_container_type(name)) {
+            get_nested_dependencies(name, all_dependencies);
+        }
+
+        for (const auto& ref_path : all_dependencies) {
+            if (ref_path.substr(0, module_name.size()) == module_name && ref_path.length() > module_name.size() &&
+                ref_path[module_name.size()] == '.') {
+                std::string referenced_module = ref_path.substr(module_name.size() + 1);
+                size_t dot_pos = referenced_module.find('.');
+                if (dot_pos != std::string::npos) {
+                    referenced_module = referenced_module.substr(0, dot_pos);
+                }
+                if (done.count(referenced_module) == 0) {
+                    return false;
+                }
+            } else {
+                sc_core::sc_object* dep_obj = find_sc_obj(nullptr, ref_path, true);
+                if (dep_obj == nullptr) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    // Find modules with bind parameters pointing to target_module
+    std::set<std::string> get_bind_references_to_module(const std::string& module_name,
+                                                        const std::string& target_module_name,
+                                                        const std::list<std::string>& all_modules)
+    {
+        // Check cache first
+        auto& module_cache = m_bind_refs_cache[module_name];
+        auto cache_it = module_cache.find(target_module_name);
+        if (cache_it != module_cache.end()) {
+            return cache_it->second;
+        }
+
+        std::set<std::string> modules_that_reference_target;
+        std::string target_full_path = module_name + "." + target_module_name;
+
+        for (const auto& mod : all_modules) {
+            if (mod == target_module_name) continue;
+
+            std::string mod_full_path = module_name + "." + mod;
+
+            // Query broker for this module's parameters
+            auto mod_params = m_broker.get_unconsumed_preset_values(
+                [&mod_full_path](const std::pair<std::string, cci::cci_value>& iv) {
+                    return iv.first.find(mod_full_path + ".") == 0;
+                });
+
+            for (const auto& param : mod_params) {
+                const std::string& param_name = param.first;
+                const cci::cci_value& param_value = param.second;
+
+                if (param_name.length() > 5 && param_name.substr(param_name.length() - 5) == ".bind") {
+                    if (param_value.is_string()) {
+                        std::string bind_target = param_value.get_string();
+                        if (bind_target.length() > 0 && bind_target[0] == '&') {
+                            std::string ref_path = bind_target.substr(1);
+                            if (ref_path == target_full_path ||
+                                (ref_path.length() > target_full_path.length() &&
+                                 ref_path.substr(0, target_full_path.length() + 1) == target_full_path + ".")) {
+                                modules_that_reference_target.insert(mod);
                                 break;
                             }
                         }
                     }
                 }
-                if (count_args == 0) {
-                    done.insert(name);
-                    it = todo.erase(it);
-                    i++;
-                    args.push_back(name);
-                } else {
-                    it++;
-                }
-            }
-            if (i == 0) {
-                // loop dans todo qui n'a pas été construct
-                for (auto t : todo) {
-                    SCP_WARN(()) << "Module name which is not constructable: " << t;
-                }
-                SCP_FATAL(()) << "Module Not constructable";
             }
         }
+
+        // Cache the result
+        module_cache[target_module_name] = modules_that_reference_target;
+        return modules_that_reference_target;
+    }
+
+    int get_construction_priority(const std::string& name)
+    {
+        std::string module_name = std::string(sc_module::name());
+        std::string priority_param = module_name + "." + name + ".construction_priority";
+
+        if (m_broker.has_preset_value(priority_param)) {
+            cci::cci_value cci_priority = m_broker.get_preset_cci_value(priority_param);
+            if (cci_priority.is_int()) {
+                return cci_priority.get_int();
+            } else if (cci_priority.is_int64()) {
+                return static_cast<int>(cci_priority.get_int64());
+            }
+        }
+        return 0; // Default priority
+    }
+
+    std::list<std::string> PriorityConstruct(void)
+    {
+        std::list<std::string> args;
+        std::set<std::string> done;
+        std::list<std::string> all_modules;
+        std::string module_name = std::string(sc_module::name());
+
+        all_modules = gs::sc_cci_children(name());
+
+        for (auto it = all_modules.begin(); it != all_modules.end();) {
+            std::string mod_type_name = module_name + "." + *it + ".moduletype";
+            if (!m_broker.has_preset_value(mod_type_name)) {
+                it = all_modules.erase(it);
+            } else {
+                ++it;
+            }
+        }
+
+        std::map<int, std::list<std::string>> priority_groups;
+        for (const auto& mod : all_modules) {
+            int priority = get_construction_priority(mod);
+            priority_groups[priority].push_back(mod);
+        }
+
+        for (auto& priority_pair : priority_groups) {
+            std::list<std::string> todo = priority_pair.second;
+            int max_passes = todo.size() + 1;
+            int pass = 0;
+
+            bool enforce_bind_deps = true;
+            while (todo.size() > 0 && pass < max_passes) {
+                pass++;
+                int constructed_this_pass = 0;
+
+                m_per_pass_nested_deps_cache.clear();
+
+                std::map<std::string, std::set<std::string>> depends_on_me;
+                std::map<std::string, std::set<std::string>> bind_reverse_index;
+
+                for (const auto& source_mod : todo) {
+                    if (is_container_type(source_mod)) {
+                        continue;
+                    }
+
+                    std::string source_full_path = module_name + "." + source_mod;
+
+                    // Check if source module is a router
+                    std::string source_modtype;
+                    auto source_type_param = m_broker.get_preset_cci_value(source_full_path + ".moduletype");
+                    if (source_type_param.is_string()) {
+                        source_modtype = source_type_param.get_string();
+                    }
+                    bool source_is_router = (source_modtype.find("router") != std::string::npos ||
+                                             source_modtype.find("Router") != std::string::npos);
+
+                    auto mod_params = m_broker.get_unconsumed_preset_values(
+                        [&source_full_path](const std::pair<std::string, cci::cci_value>& iv) {
+                            return iv.first.find(source_full_path + ".") == 0;
+                        });
+
+                    for (const auto& param : mod_params) {
+                        const std::string& param_name = param.first;
+                        const cci::cci_value& param_value = param.second;
+
+                        if (param_name.length() > 5 && param_name.substr(param_name.length() - 5) == ".bind") {
+                            if (param_value.is_string()) {
+                                std::string bind_target = param_value.get_string();
+                                if (bind_target.length() > 0 && bind_target[0] == '&') {
+                                    std::string ref_path = bind_target.substr(1);
+                                    std::string target_mod;
+
+                                    if (ref_path.find(module_name + ".") == 0) {
+                                        target_mod = ref_path.substr(module_name.length() + 1);
+                                    } else {
+                                        target_mod = ref_path;
+                                    }
+
+                                    size_t dot_pos = target_mod.find('.');
+                                    if (dot_pos != std::string::npos) {
+                                        target_mod = target_mod.substr(0, dot_pos);
+                                    }
+
+                                    // Only track bind dependencies for router modules
+                                    if (source_is_router &&
+                                        std::find(todo.begin(), todo.end(), target_mod) != todo.end()) {
+                                        bind_reverse_index[target_mod].insert(source_mod);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                for (const auto& mod : todo) {
+                    std::set<std::string> all_deps;
+                    cci::cci_value_list mod_args = get_module_args(module_name + "." + mod);
+                    for (auto arg : mod_args) {
+                        if (arg.is_string()) {
+                            std::string a = arg.get_string();
+                            if (a.length() > 0 && a[0] == '&') {
+                                std::string ref_path = a.substr(1);
+                                if (!ref_path.empty()) {
+                                    all_deps.insert(ref_path);
+                                }
+                            }
+                        }
+                    }
+
+                    if (is_container_type(mod)) {
+                        get_nested_dependencies(mod, all_deps);
+                    }
+
+                    for (const auto& ref_path : all_deps) {
+                        if (ref_path.substr(0, module_name.size()) == module_name &&
+                            ref_path.length() > module_name.size() && ref_path[module_name.size()] == '.') {
+                            std::string sibling_name = ref_path.substr(module_name.size() + 1);
+                            size_t dot_pos = sibling_name.find('.');
+                            if (dot_pos != std::string::npos) {
+                                sibling_name = sibling_name.substr(0, dot_pos);
+                            }
+                            if (std::find(todo.begin(), todo.end(), sibling_name) != todo.end()) {
+                                depends_on_me[sibling_name].insert(mod);
+                            }
+                        }
+                    }
+
+                    auto bind_it = bind_reverse_index.find(mod);
+                    if (bind_it != bind_reverse_index.end()) {
+                        for (const auto& bind_source : bind_it->second) {
+                            depends_on_me[mod].insert(bind_source);
+                        }
+                    }
+                }
+
+                for (auto it = todo.begin(); it != todo.end();) {
+                    std::string name = *it;
+
+                    bool deps_available = are_dependencies_available(name, done);
+
+                    bool bind_deps_ready = true;
+                    if (deps_available && enforce_bind_deps) {
+                        for (const auto& dep_pair : depends_on_me) {
+                            const std::string& required_module = dep_pair.first;
+                            const std::set<std::string>& modules_depending_on_it = dep_pair.second;
+
+                            if (modules_depending_on_it.count(name) > 0) {
+                                if (done.count(required_module) == 0) {
+                                    bind_deps_ready = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (deps_available && bind_deps_ready) {
+                        done.insert(name);
+                        it = todo.erase(it);
+                        constructed_this_pass++;
+                        args.push_back(name);
+                    } else {
+                        ++it;
+                    }
+                }
+
+                if (constructed_this_pass == 0 && todo.size() > 0) {
+                    if (enforce_bind_deps) {
+                        enforce_bind_deps = false;
+                        pass--;
+                        continue;
+                    }
+                    SCP_WARN(())("No progress in dependency resolution, {} modules remaining", todo.size());
+                    for (auto t : todo) {
+                        SCP_WARN(())("Module with unresolved dependencies: {}", t);
+                        std::set<std::string> all_deps;
+                        cci::cci_value_list mod_args = get_module_args(module_name + "." + t);
+                        for (auto arg : mod_args) {
+                            if (arg.is_string()) {
+                                std::string a = arg.get_string();
+                                if (a.length() > 0 && a[0] == '&') {
+                                    std::string ref_path = a.substr(1);
+                                    if (!ref_path.empty()) {
+                                        all_deps.insert(ref_path);
+                                    }
+                                }
+                            }
+                        }
+                        if (is_container_type(t)) {
+                            get_nested_dependencies(t, all_deps);
+                        }
+                        for (const auto& ref_path : all_deps) {
+                            sc_core::sc_object* dep_obj = find_sc_obj(nullptr, ref_path, true);
+                            if (dep_obj == nullptr) {
+                                SCP_WARN(())("  Missing dependency: {}", ref_path);
+                            }
+                        }
+                    }
+                    SCP_FATAL(())("Unresolvable module dependencies");
+                }
+            }
+        }
+
         return args;
     }
 
@@ -322,21 +942,17 @@ public:
 
         qemu::LibraryLoaderIface::LibraryIfacePtr libraryHandle = m_library_loader.load_library(libname);
         if (!libraryHandle) {
-            SCP_FATAL(())(
-                "Impossible to load the library {}, check the path in the lua file or if the library "
-                "exist in your system. Error:  {}",
-                libname, m_library_loader.get_last_error());
+            SCP_FATAL(())("Failed to load library {}: {}", libname, m_library_loader.get_last_error());
         }
 
         m_dls.insert(libraryHandle);
 
         void (*module_register)() = nullptr;
         if (libraryHandle->symbol_exists("module_register")) {
-            SCP_INFO(()) << "Found module_register in the library " << name;
             module_register = reinterpret_cast<void (*)()>(libraryHandle->get_symbol("module_register"));
             module_register();
         } else {
-            SCP_WARN(()) << "The method module_register has not been found in the library " << libname;
+            SCP_WARN(()) << "module_register not found in library " << libname;
         }
     }
 
@@ -360,10 +976,7 @@ public:
                     cci::cci_value cci_type = gs::cci_get(m_broker, mod_type_name);
                     if (cci_type.is_string()) {
                         std::string mod_type = cci_type.get_string();
-                        SCP_INFO(()) << "Adding a " << mod_type << " with name "
-                                     << std::string(sc_module::name()) + "." + name;
                         cci::cci_value_list mod_args = get_module_args(std::string(sc_module::name()) + "." + name);
-                        SCP_INFO(()) << mod_args.size() << " arguments found for " << mod_type;
                         sc_core::sc_module* m = construct_module(mod_type, name.c_str(), mod_args);
                         if (!m) {
                             SC_REPORT_ERROR(
@@ -376,16 +989,16 @@ public:
                             m_local_pass = dynamic_cast<transaction_forwarder_if<PASS>*>(m);
                         }
                     } else {
-                        SCP_WARN(()) << "The value of the parameter moduletype of the module " << name
-                                     << " is not a string";
+                        SCP_WARN(()) << "moduletype parameter is not a string for " << name;
                     }
                 }
-            } // else it's some other config
+            }
         }
-        // bind everything
+
         for (auto mod : m_allModules) {
             name_bind(mod);
         }
+        SCP_DEBUG(())("ModulesConstruct complete");
     }
 
     using tlm_initiator_socket_type = tlm_utils::simple_initiator_socket_b<
@@ -540,8 +1153,8 @@ public:
 
     void fw_invalidate_direct_mem_ptr(sc_dt::uint64 start, sc_dt::uint64 end) override
     {
-        SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr "
-                      << " start address 0x" << std::hex << start << " end address 0x" << std::hex << end;
+        SCP_DEBUG(()) << " " << name() << " invalidate_direct_mem_ptr " << " start address 0x" << std::hex << start
+                      << " end address 0x" << std::hex << end;
         for (int i = 0; i < target_sockets.size(); i++) {
             target_sockets[i]->invalidate_direct_mem_ptr(start, end);
         }
@@ -630,7 +1243,9 @@ private:
                 std::string target_name = target;
                 if (target_name.at(0) != '&') continue;
                 target_name.erase(0, 1);
-                target_name = std::string(name()) + "." + target_name;
+                if (!is_absolute_path(target_name)) {
+                    target_name = std::string(name()) + "." + target_name;
+                }
                 SCP_TRACE(())("Bind {} to {}", target_name, initiator_name);
                 do_binding(module_obj, target_name, initiator_name);
             }
@@ -653,7 +1268,10 @@ public:
     Container(const sc_core::sc_module_name& n): ContainerBase(n, false, nullptr)
     {
         SCP_DEBUG(()) << "Container constructor";
-        assert(std::string(moduletype.get_value()) == "Container");
+        std::string moduletype_param = std::string(name()) + ".moduletype";
+        if (!m_broker.has_preset_value(moduletype_param)) {
+            m_broker.set_preset_cci_value(moduletype_param, cci::cci_value("Container"));
+        }
     }
 
     virtual ~Container() = default;
@@ -670,7 +1288,10 @@ public:
         : ContainerBase(n, false, p_container_mod_arg)
     {
         SCP_DEBUG(()) << "ContainerWithArgs constructor";
-        assert(std::string(moduletype.get_value()) == "ContainerWithArgs");
+        std::string moduletype_param = std::string(name()) + ".moduletype";
+        if (!m_broker.has_preset_value(moduletype_param)) {
+            m_broker.set_preset_cci_value(moduletype_param, cci::cci_value("ContainerWithArgs"));
+        }
     }
 
     virtual ~ContainerWithArgs() = default;
@@ -686,7 +1307,10 @@ public:
     ContainerDeferModulesConstruct(const sc_core::sc_module_name& n): ContainerBase(n, true, nullptr)
     {
         SCP_DEBUG(()) << "ContainerDeferModulesConstruct constructor";
-        assert(std::string(moduletype.get_value()) == "ContainerDeferModulesConstruct");
+        std::string moduletype_param = std::string(name()) + ".moduletype";
+        if (!m_broker.has_preset_value(moduletype_param)) {
+            m_broker.set_preset_cci_value(moduletype_param, cci::cci_value("ContainerDeferModulesConstruct"));
+        }
     }
 
     virtual ~ContainerDeferModulesConstruct() = default;
@@ -698,7 +1322,4 @@ public:
 typedef gs::ModuleFactory::Container Container;
 typedef gs::ModuleFactory::ContainerDeferModulesConstruct ContainerDeferModulesConstruct;
 typedef gs::ModuleFactory::ContainerWithArgs ContainerWithArgs;
-GSC_MODULE_REGISTER(Container);
-GSC_MODULE_REGISTER(ContainerDeferModulesConstruct);
-GSC_MODULE_REGISTER(ContainerWithArgs, sc_core::sc_object*);
 #endif

@@ -13,6 +13,7 @@ if(ENABLE_PYTHON_BINDER AND (NOT GS_ONLY))
 endif()
 add_subdirectory(gs_register)
 add_subdirectory(generic_lua_model)
+add_subdirectory(container_builder)
 
 if(NOT WIN32)
     add_subdirectory(fss)

@@ -318,6 +318,7 @@ set(systemc_srcs
     systemc-components/common/src/luautils.cc
     systemc-components/common/src/uutils.cc
     systemc-components/common/src/memory_services.cc
+    systemc-components/common/src/module_factory_container.cc
     systemc-components/common/src/libgssync/pre_suspending_sc_support.cc
     systemc-components/common/src/libgssync/qk_factory.cc
     systemc-components/common/src/libgssync/qkmultithread.cc
