@@ -18,7 +18,7 @@
 
 #include <libqemu-cxx/target_info.h>
 #include <libqemu-cxx/exceptions.h>
-#include <libqemu-cxx/loader.h>
+#include <dynlib_loader.h>
 
 #include <scp/report.h>
 

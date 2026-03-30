@@ -1,5 +1,7 @@
 add_subdirectory(base-components)
 add_subdirectory(libgssync)
 add_subdirectory(libgsutils)
-add_subdirectory(libqbox)
+if(NOT WITHOUT_QEMU)
+    add_subdirectory(libqbox)
+endif()
 add_subdirectory(systemc-uarts)

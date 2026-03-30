@@ -17,7 +17,7 @@
 #include <atomic>
 #include <filesystem>
 
-#include <libqemu-cxx/loader.h>
+#include <dynlib_loader.h>
 
 #if defined(_WIN32)
 #include <Lmcons.h>
@@ -73,15 +73,14 @@ static bool spawn_cleanup_process(const fs::path& dll_path)
     HANDLE current_process = GetCurrentProcess();
     HANDLE inheritable_handle = NULL;
 
-    if (!DuplicateHandle(current_process, current_process, current_process,
-                         &inheritable_handle, SYNCHRONIZE, TRUE, 0)) {
+    if (!DuplicateHandle(current_process, current_process, current_process, &inheritable_handle, SYNCHRONIZE, TRUE,
+                         0)) {
         return false;
     }
 
     // Build the command line: dll_cleanup_helper.exe <handle> <dll_path>
     std::ostringstream cmd;
-    cmd << "\"" << helper_path.string() << "\" "
-        << reinterpret_cast<uintptr_t>(inheritable_handle) << " "
+    cmd << "\"" << helper_path.string() << "\" " << reinterpret_cast<uintptr_t>(inheritable_handle) << " "
         << "\"" << dll_path.string() << "\"";
 
     std::string cmd_str = cmd.str();
@@ -94,17 +93,9 @@ static bool spawn_cleanup_process(const fs::path& dll_path)
     PROCESS_INFORMATION pi = {};
 
     // Create the process with handle inheritance enabled
-    BOOL result = CreateProcessA(
-        NULL,
-        const_cast<char*>(cmd_str.c_str()),
-        NULL,
-        NULL,
-        TRUE,  // Inherit handles
-        CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS | CREATE_NO_WINDOW,
-        NULL,
-        NULL,
-        &si,
-        &pi);
+    BOOL result = CreateProcessA(NULL, const_cast<char*>(cmd_str.c_str()), NULL, NULL,
+                                 TRUE, // Inherit handles
+                                 CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS | CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
 
     if (result) {
         // Close our references to the child process handles
@@ -140,9 +131,7 @@ public:
         return symbol;
     }
 
-    ~Library()
-    {
-    }
+    ~Library() {}
 };
 
 class DefaultLibraryLoader : public qemu::LibraryLoaderIface
@@ -256,10 +245,8 @@ private:
         pid_t pid = getpid();
 #endif
         auto now = std::chrono::system_clock::now();
-        auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-            now.time_since_epoch()).count();
-        std::string temp_filename = std::to_string(pid) + "_" +
-                                    std::to_string(timestamp) + "_" +
+        auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+        std::string temp_filename = std::to_string(pid) + "_" + std::to_string(timestamp) + "_" +
                                     std::to_string(count) + "_" + filename;
         return temp_dir / temp_filename;
     }

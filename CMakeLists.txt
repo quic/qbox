@@ -321,6 +321,7 @@ set(systemc_srcs
     systemc-components/common/src/libgssync/pre_suspending_sc_support.cc
     systemc-components/common/src/libgssync/qk_factory.cc
     systemc-components/common/src/libgssync/qkmultithread.cc
+    systemc-components/common/src/dynlib_loader.cc
 )
 
 if (NOT WIN32)
@@ -340,7 +341,6 @@ if (NOT WITHOUT_QEMU)
             qemu-components/common/src/libqemu-cxx/gpex.cc
             qemu-components/common/src/libqemu-cxx/gpio.cc
             qemu-components/common/src/libqemu-cxx/libqemu-cxx.cc
-            qemu-components/common/src/libqemu-cxx/loader.cc
             qemu-components/common/src/libqemu-cxx/memory.cc
             qemu-components/common/src/libqemu-cxx/object.cc
             qemu-components/common/src/libqemu-cxx/rcu-read-lock.cc
@@ -364,18 +364,14 @@ add_library(${PROJECT_NAME} SHARED
 
 build_lua()
 
-if (NOT WITHOUT_QEMU)
-    # DLL cleanup helper for Windows - waits for parent to exit, then deletes temp DLLs
-    if (WIN32)
-        add_executable(dll_cleanup_helper
-            qemu-components/common/src/libqemu-cxx/dll_cleanup_helper.cc
-        )
-        set_target_properties(dll_cleanup_helper PROPERTIES
-            WIN32_EXECUTABLE TRUE
-        )
-        install(TARGETS dll_cleanup_helper DESTINATION ${CMAKE_INSTALL_BINDIR})
-    endif()
+if (WIN32)
+    add_executable(dll_cleanup_helper
+        systemc-components/common/src/dll_cleanup_helper.cc
+    )
+    install(TARGETS dll_cleanup_helper DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
 
+if (NOT WITHOUT_QEMU)
     # TODO: Remove the "hack" in the future, once support for Ubuntu 20 can be
     # dropped. A fix for it was added in CMake 3.18, but the default version of
     # Ubuntu 20 is 3.16
@@ -446,6 +442,10 @@ if (NOT WITHOUT_QEMU)
     set(QEMU_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/qemu-components")
 
 endif() # WITHOUT_QEMU
+
+if (WITHOUT_QEMU)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC WITHOUT_QEMU)
+endif()
 
 if(CMAKE_COMPILER_IS_GNUCC)
         target_compile_options(${PROJECT_NAME} PRIVATE

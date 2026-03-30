@@ -15,7 +15,7 @@
 #include <tlm_utils/simple_initiator_socket.h>
 #include <tlm_utils/simple_target_socket.h>
 
-#include <libqemu-cxx/loader.h>
+#include <dynlib_loader.h>
 #include <scp/report.h>
 #include <scp/helpers.h>
 
