@@ -66,8 +66,6 @@ int sc_main(int argc, char* argv[])
 
         ArgParser arg_parser(m_broker.create_broker_handle(orig), argc, argv);
 
-        cci::cci_param<int> p_rpc_server_port{ "rpc_server_port", 0, "RPC server port", cci::CCI_ABSOLUTE_NAME, orig };
-
         RemoteTest remote("remote");
         SCP_INFO("RemoteMain") << "END OF ELAB for remote";
         sc_core::sc_start();

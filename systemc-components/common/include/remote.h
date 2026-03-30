@@ -1217,13 +1217,17 @@ public:
 
     uint32_t get_rpc_server_port()
     {
-        auto handle = m_broker.get_param_handle("rpc_server_port");
+        cci::cci_value preset_value = m_broker.get_preset_cci_value("rpc_server_port");
         uint32_t rpc_server_port = std::numeric_limits<uint32_t>::max();
-        assert(handle.is_valid());
-        try {
-            rpc_server_port = handle.get_cci_value().get_uint();
-        } catch (const std::exception& e) {
-            std::cerr << e.what() << '\n';
+
+        if (!preset_value.is_null()) {
+            try {
+                rpc_server_port = preset_value.get_uint();
+            } catch (const std::exception& e) {
+                SCP_FATAL(())("Failed to parse rpc_server_port preset value: {}", e.what());
+            }
+        } else {
+            SCP_FATAL(())("rpc_server_port preset value not found in broker");
         }
 
         if (rpc_server_port > 65535) {

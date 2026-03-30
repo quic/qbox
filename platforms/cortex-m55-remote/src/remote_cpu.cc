@@ -57,7 +57,6 @@ int sc_main(int argc, char* argv[])
 
     ArgParser arg_parser(broker_h, argc, argv);
 
-    cci::cci_param<int> p_rpc_server_port{ "rpc_server_port", 0, "RPC server port", cci::CCI_ABSOLUTE_NAME, orig };
     cci::cci_param<int> p_log_level{ "log_level", 0, "Default log level", cci::CCI_ABSOLUTE_NAME, orig };
 
     RemotePlatform remote("remote_platform");
