@@ -1,0 +1,59 @@
+name: Windows Builds
+
+on: [pull_request, push, workflow_dispatch, workflow_call]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { sys: clang64, runs-on: "windows-latest" }
+          - { sys: clangarm64, runs-on: "windows-11-arm" }
+
+    name: ${{ matrix.sys }}
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - uses: actions/checkout@v4
+      - with:
+          msystem: ${{ matrix.sys }}
+          update: true
+          install: >-
+            base-devel
+            binutils
+            bison
+            diffutils
+            flex
+            git
+            make
+            msys2-runtime-devel
+          pacboy: >-
+            toolchain:p
+            cmake:p
+            gtk3:p
+            libnfs:p
+            libssh:p
+            meson:p
+            ninja:p
+            pixman:p
+            pkgconf:p
+            python:p
+            SDL2:p
+            zstd:p
+            libelf:p
+            asio:p
+            libslirp:p
+
+      - name: Generate
+        run: cmake --build build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DLIBQEMU_TARGETS="aarch64;hexagon;riscv32;riscv64"
+
+      - name: Build
+        run: cmake --build build -j $(nproc)
+
+      - name: Test
+        run: ctest --test-dir build --parallel  $(nproc)
