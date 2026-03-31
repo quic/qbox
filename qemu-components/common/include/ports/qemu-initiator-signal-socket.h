@@ -82,6 +82,7 @@ protected:
         auto cb = std::bind(&QemuInitiatorSignalSocket::event_cb, this, _1);
         m_proxy.set_event_callback(cb);
     }
+    void end_of_simulation() { m_proxy.set_event_callback(nullptr); }
 
     void init_internal(qemu::Device& dev)
     {

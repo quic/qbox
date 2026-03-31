@@ -9,7 +9,9 @@
 #ifndef _LIBQEMU_CXX_INTERNALS_
 #define _LIBQEMU_CXX_INTERNALS_
 
+#include <atomic>
 #include <map>
+#include <memory>
 
 #include <libqemu/libqemu.h>
 #include <libqemu-cxx/libqemu-cxx.h>
@@ -27,21 +29,40 @@ template <typename T>
 class LibQemuObjectCallback : public LibQemuObjectCallbackBase
 {
 private:
-    std::map<QemuObject*, T> m_cbs;
+    struct Entry {
+        T cb;
+        std::atomic<bool> active{ true };
+    };
+    std::map<QemuObject*, std::unique_ptr<Entry>> m_cbs;
 
 public:
-    void register_cb(Object obj, T cb) { m_cbs[obj.get_qemu_obj()] = cb; }
+    void register_cb(Object obj, T cb)
+    {
+        auto entry = std::make_unique<Entry>();
+        entry->cb = std::move(cb);
+        entry->active.store(true, std::memory_order_release);
+        m_cbs[obj.get_qemu_obj()] = std::move(entry);
+    }
 
-    void clear(Object obj) { m_cbs.erase(obj.get_qemu_obj()); }
+    void clear(Object obj) override
+    {
+        auto it = m_cbs.find(obj.get_qemu_obj());
+        if (it != m_cbs.end() && it->second) {
+            it->second->active.store(false, std::memory_order_release);
+        }
+    }
 
     template <typename... Args>
     void call(QemuObject* obj, Args... args) const
     {
-        if (m_cbs.find(obj) == m_cbs.end()) {
+        auto it = m_cbs.find(obj);
+        if (it == m_cbs.end() || !it->second) {
             return;
         }
 
-        m_cbs.at(obj)(args...);
+        if (it->second->active.load(std::memory_order_acquire)) {
+            it->second->cb(args...);
+        }
     }
 };
 
@@ -59,6 +80,7 @@ private:
     std::vector<LibQemuObjectCallbackBase*> m_cbs{
         &m_cpu_end_of_loop_cbs,
         &m_cpu_kick_cbs,
+        &m_iommu_translate_cbs,
         &m_riscv_mip_update_cbs,
     };
 

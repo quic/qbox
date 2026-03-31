@@ -15,6 +15,7 @@
 #include <set>
 #include <vector>
 #include <map>
+#include <atomic>
 
 #include <libqemu-cxx/target_info.h>
 #include <libqemu-cxx/exceptions.h>
@@ -281,19 +282,28 @@ public:
         bool m_prev_valid = false;
         bool m_prev;
         GpioEventFn m_cb;
+        std::atomic<bool> m_cb_set{ false };
 
     public:
         void event(bool level)
         {
             if (!m_prev_valid || (level != m_prev)) {
-                if (m_cb) m_cb(level);
+                if (m_cb_set.load(std::memory_order_acquire)) m_cb(level);
             }
 
             m_prev_valid = true;
             m_prev = level;
         }
 
-        void set_callback(GpioEventFn cb) { m_cb = cb; }
+        void set_callback(GpioEventFn cb)
+        {
+            if (cb) {
+                m_cb = std::move(cb);
+                m_cb_set.store(true, std::memory_order_release);
+            } else {
+                m_cb_set.store(false, std::memory_order_release);
+            }
+        }
     };
 
 private:
