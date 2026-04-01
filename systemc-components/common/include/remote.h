@@ -1190,9 +1190,16 @@ public:
 
         // Get unconsumed preset parameters from the cci broker
         auto argv_cci_children = gs::sc_cci_children((std::string(name()) + ".remote_argv").c_str());
-
-        // Add unconsumed preset parameters to the remote command line
-        remote_cmdline.insert(remote_cmdline.end(), argv_cci_children.begin(), argv_cci_children.end());
+        for (const std::string& ss : argv_cci_children) {
+            if (std::count_if(ss.begin(), ss.end(), [](unsigned char c) { return std::isdigit(c); })) {
+                std::string arg_name = std::string(name()) + ".remote_argv." + ss;
+                auto arg = m_broker.get_preset_cci_value(arg_name);
+                if (!arg.is_string()) {
+                    SCP_FATAL(()) << "remote_argv args can only have string type!";
+                }
+                remote_cmdline.push_back(arg.get_string());
+            }
+        }
     }
 
     void send_status()
