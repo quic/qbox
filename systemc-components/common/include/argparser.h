@@ -54,6 +54,15 @@ protected:
             SCP_FATAL(()) << "parameter value not found!" << std::endl;
         }
 
+        // If the value doesn't look like valid JSON, treat it as a string
+        // by wrapping it in quotes. This allows command lines like:
+        //   -p key=multithread    (instead of -p key=\"multithread\")
+        // which makes CTest's "Command:" log line copy-pasteable.
+        if (!value.empty() && value[0] != '"' && value[0] != '[' && value[0] != '{' && value != "true" &&
+            value != "false" && value != "null" && !std::isdigit(value[0]) && value[0] != '-') {
+            value = "\"" + value + "\"";
+        }
+
         SCP_INFO(()) << "Setting param " << key << " to value " << value;
 
         return std::make_pair(key, value);

@@ -144,17 +144,17 @@ function(qbox_add_cpu_test target timeout_s)
 
             add_test(
                 NAME ${test_name}
-                COMMAND $<TARGET_FILE:${target}> -p test-bench.inst_a.sync_policy=\"${sync_pol}\"
-                                                 -p test-bench.inst_b.sync_policy=\"${sync_pol}\"
-                                                 -p test-bench.inst_a.accel=\"${accel}\"
-                                                 -p test-bench.inst_b.accel=\"tcg\"
+                COMMAND $<TARGET_FILE:${target}> -p test-bench.inst_a.sync_policy=${sync_pol}
+                                                 -p test-bench.inst_b.sync_policy=${sync_pol}
+                                                 -p test-bench.inst_a.accel=${accel}
+                                                 -p test-bench.inst_b.accel=tcg
                                                  -p test-bench.num_cpu=${num_cpu}
                                                  -p test-bench.inst_a.icount=${icount}
                                                  -p test-bench.inst_b.icount=${icount}
                                                  $<$<STREQUAL:${icount},true>:-p test-bench.inst_a.icount_mips_shift=3>
                                                  $<$<STREQUAL:${icount},true>:-p test-bench.inst_b.icount_mips_shift=3>
-                                                 -p test-bench.inst_a.tcg_mode=\"${threading}\"
-                                                 -p test-bench.inst_b.tcg_mode=\"${threading}\"
+                                                 -p test-bench.inst_a.tcg_mode=${threading}
+                                                 -p test-bench.inst_b.tcg_mode=${threading}
 
                                                  -p test-bench.bulkmem.max_block_size=1024
                                                  -p test-bench.bulkmem.min_block_size=32
