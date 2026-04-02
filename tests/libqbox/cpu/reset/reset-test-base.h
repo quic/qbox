@@ -76,6 +76,7 @@ protected:
     int reset_threshold = 0;
     int reset_reqs = 0;
     std::vector<int> resets_per_iter;
+    std::vector<int> m_cpu_acked; // per-CPU ack tracking
     gs::async_event reset_ev;
     sc_core::sc_event done_ev;
     sc_core::sc_event resets_done_ev;
@@ -111,6 +112,7 @@ public:
         set_firmware(buf);
 
         m_writes.resize(p_num_cpu);
+        m_cpu_acked.resize(p_num_cpu, 0);
         for (int i = 0; i < p_num_cpu; i++) {
             m_writes[i] = 0;
         }
@@ -140,11 +142,19 @@ public:
     }
     void reset_method()
     {
-        if (this_resets >= reset_threshold + p_num_cpu) {
+        bool all_acked = true;
+        for (int i = 0; i < p_num_cpu; i++) {
+            if (!m_cpu_acked[i]) {
+                all_acked = false;
+                break;
+            }
+        }
+        if (all_acked) {
             // Dont test for overlapping resets !!
             resets_per_iter.push_back(this_resets - reset_threshold);
             reset_threshold = this_resets;
             reset_reqs++;
+            for (int i = 0; i < p_num_cpu; i++) m_cpu_acked[i] = 0;
             SCP_INFO(SCMOD) << "Reset all CPU's";
             reset.async_write_vector({ 1, 0 });
         }
@@ -163,11 +173,19 @@ public:
 
         if (data >= 0x80000000ULL) {
             this_resets++;
+            m_cpu_acked[cpuid] = 1;
             TEST_ASSERT(this_resets <= reset_threshold + p_num_cpu * 10); // We get double hits sometimes.
 
             SCP_INFO(SCMOD)("Done RESET CPU {} (Reset {}/{}) ", cpuid, this_resets - reset_threshold, (int)p_num_cpu);
             resets++;
-            if (this_resets >= reset_threshold + p_num_cpu) {
+            bool all_acked = true;
+            for (int i = 0; i < p_num_cpu; i++) {
+                if (!m_cpu_acked[i]) {
+                    all_acked = false;
+                    break;
+                }
+            }
+            if (all_acked) {
                 resetting = false;
                 resets_done_ev.notify();
             }
