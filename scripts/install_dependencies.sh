@@ -21,23 +21,32 @@ if { [ -e /etc/os-release ] && OS_RELEASE="/etc/os-release"; } || \
                 libglib2.0-dev libjpeg-dev libpixman-1-dev libsdl2-dev \
                 libslirp-dev libasio-dev  libvirglrenderer-dev meson \
                 ninja-build ocl-icd-opencl-dev python3 python3-dev \
-                python3-numpy python3-venv
+                python3-venv
         elif [ "${VERSION_ID}" = "22.04" ]; then
             apt install cmake g++ gcc git libasio-dev libelf-dev libepoxy-dev \
                 libglib2.0-dev libjpeg-dev libpixman-1-dev libsdl2-dev \
                 libslirp-dev libasio-dev libvirglrenderer-dev meson \
                 ninja-build ocl-icd-opencl-dev python3 python3-dev \
-                python3-numpy python3-tomli python3-venv
+                python3-tomli python3-venv
         elif [ "${VERSION_ID}" = "20.04" ]; then
             apt install cmake g++ gcc git libasio-dev libelf-dev libepoxy-dev \
                 libglib2.0-dev libjpeg-dev libpixman-1-dev libsdl2-dev \
                 libslirp-dev libasio-dev libvirglrenderer-dev meson \
                 ninja-build ocl-icd-opencl-dev python3 python3-dev \
-                python3-numpy python3-pip python3-venv
+                python3-pip python3-venv
             pip install --user tomli
         else
             unsupported_operating_system
         fi
+    elif [ "${ID}" = "msys2" ]; then
+        pacman -S --noconfirm --needed \
+            base-devel msys2-runtime-devel pactoys make binutils bison \
+            flex diffutils flex git
+
+        # Pacboy handle package prefixes automatically
+        pacboy -S --noconfirm --needed \
+            toolchain cmake gtk3 libnfs libssh meson ninja pixman pkgconf \
+            python python-pexpect SDL2 zstd libelf asio libslirp
     fi
 else
     case "$(uname)" in

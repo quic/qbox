@@ -97,6 +97,42 @@
                     "value": "Debug"
                 }
             }
+        },
+        {
+            "name": "win-gcc",
+            "inherits": "gcc",
+            "displayName": "Windows (Release, Make)",
+            "description": "Release build for Windows with Unix Makefiles"
+        },
+        {
+            "name": "win-gcc-debug",
+            "inherits": "win-gcc",
+            "displayName": "Windows (Debug, Make)",
+            "description": "Debug build for Windows with Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "Debug"
+                }
+            }
+        },
+        {
+            "name": "win-clang",
+            "inherits": "clang",
+            "displayName": "Windows (Release, Make)",
+            "description": "Release build for Windows with Unix Makefiles"
+        },
+        {
+            "name": "win-clang-debug",
+            "inherits": "win-clang",
+            "displayName": "Windows (Debug, Make)",
+            "description": "Debug build for Windows with Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "Debug"
+                }
+            }
         }
     ],
     "buildPresets": [
@@ -127,6 +163,22 @@
         {
             "name": "mac-debug",
             "configurePreset": "mac-debug"
+        },
+        {
+            "name": "win-gcc",
+            "configurePreset": "win-gcc"
+        },
+        {
+            "name": "win-gcc-debug",
+            "configurePreset": "win-gcc-debug"
+        },
+        {
+            "name": "win-clang",
+            "configurePreset": "win-clang"
+        },
+        {
+            "name": "win-clang-debug",
+            "configurePreset": "win-clang-debug"
         }
     ],
     "testPresets": [
@@ -181,6 +233,35 @@
             "output": {
                 "outputOnFailure": true
             }
+        },
+        {
+            "name": "win-gcc",
+            "configurePreset": "win-gcc",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "win-gcc-debug",
+            "configurePreset": "win-gcc-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "win-clang",
+            "configurePreset": "win-clang",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "win-clang-debug",
+            "configurePreset": "win-clang-debug",
+            "output": {
+                "outputOnFailure": true
+            }
         }
     ]
 }
+

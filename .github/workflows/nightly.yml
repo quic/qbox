@@ -2,7 +2,7 @@ name: Nightly Builds
 
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 jobs:
@@ -11,3 +11,6 @@ jobs:
 
   macos:
     uses: ./.github/workflows/macos-builds.yml
+
+  windows:
+    uses: ./.github/workflows/windows-builds.yml
