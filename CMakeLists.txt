@@ -391,10 +391,6 @@ if (NOT WITHOUT_QEMU)
         list(APPEND TARGET_LIBS "libqemu")
     endif()
 
-    set(LIBQEMU_CXX_SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/qemu-components/common/include/libqemu-cxx)
-    set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX})
-    set(LIBQEMU_CXX_LIB_DIR ${CMAKE_INSTALL_LIBDIR}/libqemu-cxx)
-
     foreach(target ${LIBQEMU_TARGETS})
         # The quite complex generator expressions does the followings:
         #   - fetch the library name through the INTERFACE_LINK_LIBRARIES property
@@ -412,32 +408,10 @@ if (NOT WITHOUT_QEMU)
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}>
     )
 
-    target_link_libraries(${PROJECT_NAME} PUBLIC
-        libqemu
-    )
+    target_link_libraries(${PROJECT_NAME} PUBLIC libqemu)
 
-    install(DIRECTORY ${LIBQEMU_CXX_SRC_INCLUDE_DIR}
-        DESTINATION ${LIBQEMU_CXX_INCLUDE_DIR})
-
-    if (WIN32)
-        install(TARGETS ${PROJECT_NAME} DESTINATION lib/$<IF:$<CONFIG:Debug>,debug,release>)
-    else ()
-        install(TARGETS ${PROJECT_NAME} EXPORT libqemu-cxx-targets)
-    endif ()
-
-    configure_package_config_file(libqemu-cxxConfig.cmake.in
-        ${CMAKE_CURRENT_BINARY_DIR}/libqemu-cxxConfig.cmake
-        INSTALL_DESTINATION ${LIBQEMU_CXX_LIB_DIR}/cmake)
-
-    write_basic_package_version_file(
-        ${CMAKE_CURRENT_BINARY_DIR}/libqemu-cxxConfigVersion.cmake
-        VERSION 1.0.0
-        COMPATIBILITY AnyNewerVersion)
-
-    install(
-        FILES ${CMAKE_CURRENT_BINARY_DIR}/libqemu-cxxConfig.cmake
-                ${CMAKE_CURRENT_BINARY_DIR}/libqemu-cxxConfigVersion.cmake
-                DESTINATION ${LIBQEMU_CXX_LIB_DIR}/cmake)
+    set(LIBQEMU_CXX_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/qemu-components/common/include/libqemu-cxx)
+    install(DIRECTORY ${LIBQEMU_CXX_INCLUDE_DIR} TYPE INCLUDE)
 
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/qemu-components" DESTINATION ${CMAKE_INSTALL_PREFIX})
     set(QEMU_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/qemu-components")
