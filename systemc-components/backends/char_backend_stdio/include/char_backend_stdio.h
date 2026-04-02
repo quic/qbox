@@ -72,17 +72,22 @@ private:
     {
         BOOL res = SetConsoleMode(stdin_fd, old_console_mode);
         if (!res) {
-            set_new_mode();
+            set_default_mode();
         }
     }
 
-    static void set_new_mode(bool save_current_mode = false)
+    static void set_raw_mode()
     {
-        if (save_current_mode && GetConsoleMode(stdin_fd, &old_console_mode)) {
+        if (!old_console_mode_valid && GetConsoleMode(stdin_fd, &old_console_mode)) {
             old_console_mode_valid = true;
         }
 
-        BOOL res = SetConsoleMode(stdin_fd, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
+        BOOL res = SetConsoleMode(stdin_fd, ENABLE_PROCESSED_INPUT);
+    }
+
+    static void set_default_mode()
+    {
+        SetConsoleMode(stdin_fd, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
     }
 
     descriptor_t get_stdin_descriptor()
@@ -134,21 +139,28 @@ private:
 
     static void restore_old_mode()
     {
-        int res = tcsetattr(stdin_fd, TCSANOW, &old_console_mode);
-        if (errno != 0) {
-            set_new_mode();
+        if (tcsetattr(stdin_fd, TCSANOW, &old_console_mode) == -1) {
+            set_default_mode();
         }
     }
 
-    static void set_new_mode(bool save_current_mode = false)
+    static void set_raw_mode()
     {
         console_mode_t tty;
         tcgetattr(stdin_fd, &tty);
-        if (save_current_mode) {
+        if (!old_console_mode_valid) {
             old_console_mode = tty;
             old_console_mode_valid = true;
         }
-        tty.c_lflag |= ECHO | ECHONL | ICANON | IEXTEN;
+        tty.c_lflag &= ~(ECHO | ICANON | IEXTEN);
+        tcsetattr(stdin_fd, TCSANOW, &tty);
+    }
+
+    static void set_default_mode()
+    {
+        console_mode_t tty;
+        tcgetattr(stdin_fd, &tty);
+        tty.c_lflag |= ECHO | ICANON | IEXTEN;
         tcsetattr(stdin_fd, TCSANOW, &tty);
     }
 
@@ -191,7 +203,7 @@ public:
         if (old_console_mode_valid) {
             restore_old_mode();
         } else {
-            set_new_mode();
+            set_default_mode();
         }
     }
 
@@ -263,9 +275,9 @@ public:
      *   \param expect String : An 'expect' like string of commands, each command should be separated by \n
      *  The acceptable commands are:
      *      expect [string] : dont process any more commands until the "string" is seen on the output (STDIO)
-     *      send [string]   : send "string" to the input buffer (NB this will happen whether of not read_write is
-     * set) wait [float]    : Wait for "float" (simulated) seconds, until processing continues. exit            :
-     * Cause the simulation to terminate normally.
+     *      send [string]   : send "string" to the input buffer (NB this will happen whether of not read_write is set
+     *      wait [float]    : Wait for "float" (simulated) seconds, until processing continues.
+     *      exit            : Cause the simulation to terminate normally.
      */
     char_backend_stdio(sc_core::sc_module_name name)
         : sc_core::sc_module(name)
@@ -289,8 +301,8 @@ public:
             SCP_WARN(())("Processing expect string {}", ecmd);
         }
 
-        // gs::SigHandler::get().register_on_exit_cb(std::string(this->name()) + ".char_backend_stdio::tty_reset",
-        //                                           tty_reset);
+        gs::SigHandler::get().register_on_exit_cb(std::string(this->name()) + ".char_backend_stdio::tty_reset",
+                                                  tty_reset);
         gs::SigHandler::get().add_sigint_handler(gs::Handler_CB::PASS);
         gs::SigHandler::get().register_handler(std::string(this->name()) + ".char_backend_stdio::SIGINT_handler",
                                                [&](int signo) {
@@ -328,7 +340,7 @@ public:
     void start_of_simulation()
     {
         if (!old_console_mode_valid) {
-            set_new_mode(true);
+            set_raw_mode();
         }
     }
 
