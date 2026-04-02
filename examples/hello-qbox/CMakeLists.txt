@@ -58,9 +58,6 @@ else()
         "$ORIGIN/../../../lib;$ORIGIN/../../../lib/libqemu"
     )
 
-    install(TARGETS hello-qbox-vp
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/examples/hello-qbox
-    )
 
     # --- Firmware (AArch64 cross-compilation) ----------------
     find_program(AARCH64_GCC aarch64-linux-gnu-gcc)
