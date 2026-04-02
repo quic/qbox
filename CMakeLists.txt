@@ -494,11 +494,7 @@ set(QBOX_INCLUDE_DIR "${QEMU_INCLUDE_DIR};${CMAKE_CURRENT_SOURCE_DIR}/systemc-co
 gs_export(${PROJECT_NAME} ${QBOX_INCLUDE_DIR})
 
 if (NOT DEFINED GS_ONLY)
-    if (NOT WIN32)
-        install(TARGETS rpc zip DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-    else()
-        install(TARGETS rpc zip DESTINATION ${CMAKE_INSTALL_BINDIR})
-    endif()
+    install(TARGETS rpc zip)
 endif()
 
 list(APPEND TARGET_LIBS ${PROJECT_NAME})
