@@ -1,0 +1,6 @@
+add_subdirectory(factory)
+add_subdirectory(cci)
+add_subdirectory(cci_alias)
+add_subdirectory(scp_logging)
+add_subdirectory(lua)
+add_subdirectory(logger)

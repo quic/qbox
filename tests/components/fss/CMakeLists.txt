@@ -1,5 +1,5 @@
 add_library(fss_node SHARED fss_node.cc)
-set_target_properties(fss_node PROPERTIES PREFIX "" LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set_target_properties(fss_node PROPERTIES PREFIX "" LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(fss_node ${TARGET_LIBS})
 
 macro(gs_add_test test)

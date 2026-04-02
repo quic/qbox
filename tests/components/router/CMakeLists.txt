@@ -1,7 +1,7 @@
 macro(gs_add_test test)
     add_executable(${test} ${test}.cc)
     target_include_directories(${test} PRIVATE
-        ${PROJECT_SOURCE_DIR}/tests/libqbox/include
+        ${PROJECT_SOURCE_DIR}/tests/qbox/include
         ${PROJECT_SOURCE_DIR}/systemc-components/common/include
         ${PROJECT_SOURCE_DIR}/systemc-components/common/include/tests
     )

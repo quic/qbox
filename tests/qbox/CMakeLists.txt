@@ -85,7 +85,7 @@ function(qbox_add_cpu_test target timeout_s)
     endif()
 
 
-    target_include_directories(${target} PRIVATE ${PROJECT_SOURCE_DIR}/tests/libqbox/include ${keystone_SOURCE_DIR}/include)
+    target_include_directories(${target} PRIVATE ${PROJECT_SOURCE_DIR}/tests/qbox/include ${keystone_SOURCE_DIR}/include)
 
     target_link_libraries(${target} PRIVATE cpu_arm_cortexA53 qemu_cpu_hexagon cpu_riscv32 global_peripheral_initiator router reset_gpio gs_memory pass exclusive_monitor display plic_sifive ${TARGET_LIBS} keystone hexagon_globalreg)
 
@@ -190,5 +190,3 @@ function(qbox_extra_add_test target)
 endfunction(qbox_extra_add_test)
 
 add_subdirectory(display)
-
-add_subdirectory(hexagon)
