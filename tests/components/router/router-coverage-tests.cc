@@ -506,11 +506,11 @@ int sc_main(int argc, char* argv[])
                                 originator);
 
     // Initialize SCP logging
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::DBGTRACE)
-                          .msgTypeFieldWidth(50));
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::DBGTRACE)
+                                        .msgTypeFieldWidth(50));
 
     RouterCoverageTests test("cov_test");
     sc_core::sc_start();

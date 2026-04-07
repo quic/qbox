@@ -270,11 +270,11 @@ int sc_main(int argc, char* argv[])
     sc_core::sc_report_handler::set_actions("addressMap", sc_core::SC_DISPLAY);
 
     // Set logging to show warnings so we can see the shadowing warnings
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_INFO)
-                          .logAsync(false)
-                          .logLevel(scp::log::DBGTRACE)
-                          .msgTypeFieldWidth(50));
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_INFO)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::DBGTRACE)
+                                        .msgTypeFieldWidth(50));
 
     // Run all Google Tests. The TEST_BENCH macro will handle SystemC simulation
     // setup and teardown automatically for each test.

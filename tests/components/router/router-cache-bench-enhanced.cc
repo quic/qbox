@@ -462,7 +462,7 @@ int sc_main(int argc, char* argv[])
     // Set up CCI and logging
     cci_utils::consuming_broker broker("global_broker");
     cci_register_broker(broker);
-    scp::init_logging(scp::LogConfig().logLevel(scp::log::WARNING));
+    scp::LoggingGuard logging_guard(scp::LogConfig().logLevel(scp::log::WARNING));
 
     // Instantiate the testbench with multi-router architecture
     TestBench tb("TestBench");

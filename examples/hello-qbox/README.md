@@ -367,7 +367,7 @@ often QEMU synchronizes with the rest of the SystemC simulation.
 ```cpp
 int sc_main(int argc, char* argv[])
 {
-    scp::init_logging(...);
+    scp::LoggingGuard logging_guard(...);
 
     gs::ConfigurableBroker m_broker{};
     cci::cci_originator orig("sc_main");

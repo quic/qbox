@@ -196,11 +196,11 @@ TEST_BENCH(Test_generic_lua_model, Tester)
 
 int sc_main(int argc, char* argv[])
 {
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-                          .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                                        .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
     gs::ConfigurableBroker m_broker{};
     cci::cci_originator orig{ "sc_main" };
     auto broker_h = m_broker.create_broker_handle(orig);

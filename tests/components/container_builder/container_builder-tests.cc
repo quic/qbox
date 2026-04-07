@@ -136,11 +136,11 @@ TEST_BENCH(ContainerBuilderTestBench, AllTests)
 
 int sc_main(int argc, char* argv[])
 {
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::INFO)
-                          .msgTypeFieldWidth(50));
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::INFO)
+                                        .msgTypeFieldWidth(50));
 
     gs::ConfigurableBroker m_broker{};
     cci::cci_originator orig{ "sc_main" };

@@ -343,11 +343,11 @@ int sc_main(int argc, char* argv[])
     // Set lazy_init=true for LazyInit's router
     broker.set_preset_cci_value("LazyInit.router.lazy_init", cci::cci_value(true), originator);
 
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
-                          .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::DBGTRACE) // set log level to DBGTRACE = TRACEALL
+                                        .msgTypeFieldWidth(50));      // make the msg type column a bit tighter
 
     // Run all Google Tests. The TEST_BENCH macro will handle SystemC simulation
     // setup and teardown automatically for each test.

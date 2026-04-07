@@ -47,11 +47,11 @@ int sc_main(int argc, char* argv[])
          "UPGRADE\n********************************");
     }
 
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::DBGTRACE)
-                          .msgTypeFieldWidth(30));
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::DBGTRACE)
+                                        .msgTypeFieldWidth(30));
 
     gs::ConfigurableBroker m_broker{};
     cci::cci_originator orig("sc_main");

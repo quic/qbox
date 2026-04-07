@@ -729,11 +729,11 @@ int sc_main(int argc, char* argv[])
     cci_register_broker(broker);
 
     // Initialize SCP logging
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::DBGTRACE)
-                          .msgTypeFieldWidth(50));
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::DBGTRACE)
+                                        .msgTypeFieldWidth(50));
 
     CombinedThreadSafetyTest test("combined_test");
     sc_core::sc_start();

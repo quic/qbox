@@ -462,11 +462,11 @@ int sc_main(int argc, char* argv[])
                                     originator); // Lower priority
     }
 
-    scp::init_logging(scp::LogConfig()
-                          .fileInfoFrom(sc_core::SC_ERROR)
-                          .logAsync(false)
-                          .logLevel(scp::log::WARNING)
-                          .msgTypeFieldWidth(50));
+    scp::LoggingGuard logging_guard(scp::LogConfig()
+                                        .fileInfoFrom(sc_core::SC_ERROR)
+                                        .logAsync(false)
+                                        .logLevel(scp::log::WARNING)
+                                        .msgTypeFieldWidth(50));
 
     // Run all Google Tests. The TEST_BENCH macro will handle SystemC simulation
     // setup and teardown automatically for each test.
