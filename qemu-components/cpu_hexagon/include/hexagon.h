@@ -19,11 +19,13 @@
 
 #include <cpu.h>
 #include <hexagon_globalreg.h>
+#include <hexagon-l2vic.h>
 
 class qemu_cpu_hexagon : public QemuCpu
 {
     cci::cci_broker_handle m_broker;
     hexagon_globalreg* p_hex_greg;
+    hexagon_l2vic* m_l2vic;
 
 public:
     static constexpr qemu::Target ARCH = qemu::Target::HEXAGON;
@@ -33,13 +35,18 @@ public:
         : qemu_cpu_hexagon(name, *(dynamic_cast<QemuInstance*>(o1)), dynamic_cast<hexagon_globalreg*>(o2))
     {
     }
-    qemu_cpu_hexagon(const sc_core::sc_module_name& name, QemuInstance& inst, hexagon_globalreg* hex_greg = nullptr)
+    qemu_cpu_hexagon(const sc_core::sc_module_name& name, sc_core::sc_object* o1, sc_core::sc_object* o2,
+                     sc_core::sc_object* o3)
+        : qemu_cpu_hexagon(name, *(dynamic_cast<QemuInstance*>(o1)), dynamic_cast<hexagon_globalreg*>(o2),
+                           dynamic_cast<hexagon_l2vic*>(o3))
+    {
+    }
+    qemu_cpu_hexagon(const sc_core::sc_module_name& name, QemuInstance& inst, hexagon_globalreg* hex_greg = nullptr,
+                     hexagon_l2vic* l2vic = nullptr)
         : QemuCpu(name, inst, "v67-hexagon")
         , m_broker(cci::cci_get_broker())
         , irq_in("irq_in", 8, [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
         , p_cfgbase("config_table_addr", 0xffffffffULL, "config table address")
-        , p_l2vic_base_addr("l2vic_base_addr", 0xffffffffULL, "l2vic base address")
-        , p_qtimer_base_addr("qtimer_base_addr", 0xffffffffULL, "qtimer base address")
         , p_vp_mode("vp_mode", true, "override the vp_mode for testing")
         , p_semihosting("enable_semihosting", false, "enable semihosting for debugging/testing")
         , p_dsp_arch("dsp_arch", "v68", "DSP arch")
@@ -62,6 +69,7 @@ public:
         , p_num_tlbs("num_tlbs", 0, "number of Joint TLB entries")
         , p_num_dma_tlbs("num_dma_tlbs", 0, "number of DMA TLB entries")
         , p_hex_greg(hex_greg)
+        , m_l2vic(l2vic)
     /*
      * We have no choice but to attach-suspend here. This is fixable but
      * non-trivial. It means that the SystemC kernel will never starve...
@@ -71,6 +79,8 @@ public:
             m_external_ev |= irq_in[i]->default_event();
         }
     }
+
+    void set_l2vic(hexagon_l2vic* l2vic) { m_l2vic = l2vic; }
 
     void before_end_of_elaboration() override
     {
@@ -85,7 +95,6 @@ public:
             SCP_FATAL(())("Unrecognized Architecture Revision: " + dsp_arch);
         }
         cpu.set_prop_int("dsp-rev", dsp_rev);
-        cpu.set_prop_int("l2vic-base-addr", p_l2vic_base_addr);
         cpu.set_prop_bool("start-powered-off", p_start_powered_off);
         cpu.set_prop_bool("sched-limit", p_sched_limit);
         cpu.set_prop_bool("virtual-platform-mode", p_vp_mode);
@@ -112,6 +121,12 @@ public:
             qemu::Device cpu_dev = get_qemu_dev();
             cpu_dev.set_prop_link("global-regs", hex_greg_dev);
         }
+
+        if (m_l2vic) {
+            m_l2vic->before_end_of_elaboration();
+            qemu::Device cpu_dev = get_qemu_dev();
+            cpu_dev.set_prop_link("l2vic", m_l2vic->get_qemu_dev());
+        }
     }
 
     qemu::CpuHexagon get_cpu_hexagon() const { return qemu::CpuHexagon(m_cpu); }
@@ -129,8 +144,6 @@ public:
 
 public:
     cci::cci_param<uint64_t> p_cfgbase;
-    cci::cci_param<uint32_t> p_l2vic_base_addr;
-    cci::cci_param<uint32_t> p_qtimer_base_addr;
     cci::cci_param<bool> p_vp_mode;
     cci::cci_param<bool> p_semihosting;
     cci::cci_param<bool> p_start_powered_off;

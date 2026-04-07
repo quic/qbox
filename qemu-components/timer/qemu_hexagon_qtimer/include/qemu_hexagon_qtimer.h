@@ -61,7 +61,7 @@ public:
 
         m_dev.set_prop_int("nr_frames", p_nr_frames);
         m_dev.set_prop_int("nr_views", p_nr_views);
-        m_dev.set_prop_int("cnttid", p_cnttid);
+        m_dev.set_prop_int("cnttid_0", p_cnttid);
     }
 
     void end_of_elaboration() override
