@@ -23,40 +23,34 @@ void container_builder::dispatch(const std::string& _name)
     }
 
     std::string config_table_prefix;
-    auto config_param = m_broker.get_unconsumed_preset_values(
-        [&_name](const std::pair<std::string, cci_value>& iv) { return iv.first == _name + ".config"; });
 
-    auto all_config_params = m_broker.get_unconsumed_preset_values([](const std::pair<std::string, cci_value>& iv) {
-        return iv.first.find(".config") != std::string::npos || iv.first.find(".sockets.") != std::string::npos;
-    });
+    auto all_config_params = m_broker.get_unconsumed_preset_values(
+        [&_name](const std::pair<std::string, cci_value>& iv) {
+            return iv.first.find(_name + ".config.") != std::string::npos;
+        });
 
     for (const auto& param : all_config_params) {
-        if (param.first.find(".sockets.") != std::string::npos) {
-            size_t sockets_pos = param.first.find(".sockets.");
-            config_table_prefix = param.first.substr(0, sockets_pos);
+        if (param.first.find(".config.") != std::string::npos) {
+            size_t config_pos = param.first.find(".config.");
+            config_table_prefix = param.first.substr(0, config_pos + std::string(".config").size());
             break;
         }
     }
 
     if (config_table_prefix.empty()) {
-        SCP_WARN(()) << "No config table found for container " << _name;
+        SCP_WARN(()) << "No config table found for container_builder" << _name;
         return;
     }
 
-    auto all_params = m_broker.get_unconsumed_preset_values(
-        [&config_table_prefix](const std::pair<std::string, cci_value>& iv) {
-            return iv.first.find(config_table_prefix) == 0;
-        });
-
     std::vector<std::string> params_to_ignore;
 
-    for (const auto& param : all_params) {
+    for (const auto& param : all_config_params) {
         std::string old_name = param.first;
         cci_value param_value = param.second;
 
         if (old_name.find(".sockets.") != std::string::npos) {
             size_t sockets_pos = old_name.find(".sockets.");
-            std::string socket_name = old_name.substr(sockets_pos + 9);
+            std::string socket_name = old_name.substr(sockets_pos + std::string(".sockets.").size());
 
             if (param_value.is_string()) {
                 std::string internal_path = param_value.get_string();
