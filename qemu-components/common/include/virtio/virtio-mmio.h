@@ -71,9 +71,6 @@ public:
         }
 
         virtio_mmio_device.get_qemu_dev().set_prop_bool("force-legacy", true);
-
-        // force MMIO devices to use transport address (which will be 0, causing automatic ID)
-        virtio_mmio_device.get_qemu_dev().set_prop_bool("format_transport_address", false);
     }
 
     void end_of_elaboration() override
