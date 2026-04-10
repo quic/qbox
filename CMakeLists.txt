@@ -352,17 +352,6 @@ if (NOT WITHOUT_QEMU)
         list(APPEND TARGET_LIBS "libqemu")
     endif()
 
-    foreach(target ${LIBQEMU_TARGETS})
-        # The quite complex generator expressions does the followings:
-        #   - fetch the library name through the INTERFACE_LINK_LIBRARIES property
-        #   - evaluate it as a generator expression since it can contains
-        #     $<BUILD_INTERFACE> and $<INSTALL_INTERFACE> in a list
-        #   - join the result to remove empty elements in the final list
-        target_compile_definitions(${PROJECT_NAME}
-            PRIVATE
-                LIBQEMU_TARGET_${target}_LIBRARY="$<JOIN:$<GENEX_EVAL:$<TARGET_PROPERTY:libqemu-${target},INTERFACE_LINK_LIBRARIES>>,>")
-    endforeach()
-
     target_include_directories(
         ${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/qemu-components/common/include>
