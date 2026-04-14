@@ -22,6 +22,7 @@ class nvme : public qemu_gpex::Device
 protected:
     cci::cci_param<std::string> p_serial;
     cci::cci_param<std::string> p_blob_file;
+    cci::cci_param<std::string> p_format;
     cci::cci_param<uint32_t> max_ioqpairs;
     std::string m_drive_id;
 
@@ -34,17 +35,22 @@ public:
         : qemu_gpex::Device(name, inst, "nvme")
         , p_serial("serial", basename(), "Serial name of the nvme disk")
         , p_blob_file("blob_file", "", "Blob file to load as data storage")
+        , p_format("format", "raw", "Format of the blob file (supported: raw, qcow2)")
         , max_ioqpairs("max_ioqpairs", 64, "Passed through to QEMU max_ioqpairs")
         , m_drive_id(basename())
     {
         if (p_blob_file.get_value().empty()) {
             SCP_FATAL(()) << "the nvme device needs blob_file CCI parameter!";
         }
+        std::string format = p_format.get_value();
+        if (format != "raw" && format != "qcow2") {
+            SCP_FATAL(()) << "format parameter must be 'raw' or 'qcow2', got: " << format;
+        }
         m_drive_id += "_drive";
         std::string file = p_blob_file.get_value();
 
         std::stringstream opts;
-        opts << "if=sd,id=" << m_drive_id << ",file=" << file << ",format=raw";
+        opts << "if=sd,id=" << m_drive_id << ",file=" << file << ",format=" << p_format.get_value();
         m_inst.add_arg("-drive");
         m_inst.add_arg(opts.str().c_str());
 
