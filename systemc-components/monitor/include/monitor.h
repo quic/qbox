@@ -7,14 +7,6 @@
 #ifndef _GREENSOCS_MONITOR_H
 #define _GREENSOCS_MONITOR_H
 
-/**
- * PythonBinder is not meant to be used as a full systemc/TLM C++ -> python binder,
- * it is used to offload only part of the processing to a python script so that the powerful
- * and rich python language constructs and packages can be used to extend the capabilities
- * of QQVP. So, only the minimum required systemc/TLM classes/functions will have python bindings
- * using pybind11.
- */
-
 #include <cci_configuration>
 #include <systemc>
 #include <tlm>
