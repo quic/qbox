@@ -63,6 +63,8 @@ public:
     {
         if (inst.is_kvm_enabled()) {
             return "kvm-arm-gicv3";
+        } else if (inst.is_whpx_enabled()) {
+            return "whpx-arm-gicv3";
         } else {
             return "arm-gicv3";
         }
@@ -103,8 +105,9 @@ public:
         m_dev.set_prop_int("num-irq", p_num_spi + NUM_PPI);
         m_dev.set_prop_int("revision", p_revision);
 
-        bool has_security_extensions = m_inst.is_kvm_enabled() ? false : p_has_security_extensions.get_value();
-        bool has_lpi = m_inst.is_kvm_enabled() ? false : p_has_lpi.get_value();
+        bool irqchip_in_kernel = m_inst.is_kvm_enabled() || m_inst.is_whpx_enabled();
+        bool has_security_extensions = irqchip_in_kernel ? false : p_has_security_extensions.get_value();
+        bool has_lpi = irqchip_in_kernel ? false : p_has_lpi.get_value();
         m_dev.set_prop_bool("has-security-extensions", has_security_extensions);
         m_dev.set_prop_bool("has-lpi", has_lpi);
         if (has_lpi) {

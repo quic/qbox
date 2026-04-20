@@ -161,6 +161,7 @@ protected:
     std::string m_display_argument;
 
     cci::cci_param<std::string> p_accel;
+    cci::cci_param<std::string> p_whpx_args;
 
     void push_default_args()
     {
@@ -248,6 +249,14 @@ protected:
             push_tcg_mode_args();
         } else if (accel == "hvf" || accel == "kvm") {
             m_inst.push_qemu_arg(accel.c_str());
+        } else if (accel == "whpx") {
+            auto& whpx_args_str = p_whpx_args.get_value();
+            if (whpx_args_str.empty()) {
+                m_inst.push_qemu_arg("whpx");
+            } else {
+                std::string full_arg = "whpx," + whpx_args_str;
+                m_inst.push_qemu_arg(full_arg.c_str());
+            }
         } else {
             SCP_FATAL(()) << "Invalid accel property '" << accel << "'";
         }
@@ -300,6 +309,7 @@ public:
         , p_icount_mips("icount_mips_shift", 0, "The MIPS shift value for icount mode (1 insn = 2^(mips) ns)")
         , p_args("qemu_args", "", "additional space separated arguments")
         , p_accel("accel", "tcg", "Virtualization accelerator")
+        , p_whpx_args("whpx_args", "", "Additional WHPX accelerator properties (e.g. gicd-base-address=0x17000000)")
     {
         SCP_DEBUG(()) << "Libqbox QemuInstance constructor";
 
@@ -373,6 +383,7 @@ public:
 
     bool is_kvm_enabled() const { return p_accel.get_value() == "kvm"; }
     bool is_hvf_enabled() const { return p_accel.get_value() == "hvf"; }
+    bool is_whpx_enabled() const { return p_accel.get_value() == "whpx"; }
     bool is_tcg_enabled() const { return p_accel.get_value() == "tcg"; }
 
     /**
