@@ -109,8 +109,6 @@ macro(gs_create_dymod MODULE_NAME)
   # Avoid to have the "lib" prefix on the name of the library
   set_target_properties(${MODULE_NAME} PROPERTIES PREFIX "")
 
-
-
   if ( TARGET_LIBS )
     add_dependencies(${MODULE_NAME} ${TARGET_LIBS})
     target_link_libraries(${MODULE_NAME} PUBLIC
@@ -118,9 +116,21 @@ macro(gs_create_dymod MODULE_NAME)
     )
   endif()
 
-    if (WIN32)
-        target_link_libraries(${MODULE_NAME} PRIVATE ws2_32 mswsock)
-    endif()
+  if (WIN32)
+    target_link_libraries(${MODULE_NAME} PRIVATE ws2_32 mswsock)
+
+    # When a dymod links against another dymod, the symbol `module_register`
+    # of the imported dymod shadows the same symbol of the importee.
+    # The .def file forces the export of the local module_register, and
+    # --export-all-symbols ensures every other symbol remains exported too
+    # (without it, the .def file restricts exports to only module_register,
+    # breaking test executables that link against the import library).
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${MODULE_NAME}_exports.def"
+        "EXPORTS\n    module_register\n")
+    target_sources(${MODULE_NAME} PRIVATE
+                  "${CMAKE_CURRENT_BINARY_DIR}/${MODULE_NAME}_exports.def")
+    target_link_options(${MODULE_NAME} PRIVATE -Wl,--export-all-symbols)
+  endif()
 
   foreach(T IN LISTS TARGET_LIBS)
     target_include_directories(
