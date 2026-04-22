@@ -151,7 +151,7 @@ public:
             vfiq_out[cpu].init_sbd(sbd, p_num_cpu * 3 + cpu);
         }
 
-        if (m_inst.is_kvm_enabled()) {
+        if (m_inst.is_kvm_enabled() || m_inst.is_whpx_enabled()) {
             uint64_t val;
             qemu::MemoryRegionOps::MemTxAttrs attrs = {};
             sc_core::sc_object* init_obj = gs::find_sc_obj(nullptr, "platform.global_peripheral_initiator_arm_0");
