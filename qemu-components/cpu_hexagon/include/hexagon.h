@@ -20,12 +20,14 @@
 #include <cpu.h>
 #include <hexagon_globalreg.h>
 #include <hexagon-l2vic.h>
+#include <hexagon_tlb.h>
 
 class qemu_cpu_hexagon : public QemuCpu
 {
     cci::cci_broker_handle m_broker;
     hexagon_globalreg* p_hex_greg;
     hexagon_l2vic* m_l2vic;
+    hexagon_tlb* m_hex_tlb;
 
 public:
     static constexpr qemu::Target ARCH = qemu::Target::HEXAGON;
@@ -41,8 +43,14 @@ public:
                            dynamic_cast<hexagon_l2vic*>(o3))
     {
     }
+    qemu_cpu_hexagon(const sc_core::sc_module_name& name, sc_core::sc_object* o1, sc_core::sc_object* o2,
+                     sc_core::sc_object* o3, sc_core::sc_object* o4)
+        : qemu_cpu_hexagon(name, *(dynamic_cast<QemuInstance*>(o1)), dynamic_cast<hexagon_globalreg*>(o2),
+                           dynamic_cast<hexagon_l2vic*>(o3), dynamic_cast<hexagon_tlb*>(o4))
+    {
+    }
     qemu_cpu_hexagon(const sc_core::sc_module_name& name, QemuInstance& inst, hexagon_globalreg* hex_greg = nullptr,
-                     hexagon_l2vic* l2vic = nullptr)
+                     hexagon_l2vic* l2vic = nullptr, hexagon_tlb* tlb = nullptr)
         : QemuCpu(name, inst, "v67-hexagon")
         , m_broker(cci::cci_get_broker())
         , irq_in("irq_in", 8, [](const char* n, int i) { return new QemuTargetSignalSocket(n); })
@@ -66,10 +74,9 @@ public:
         , p_vtcm_size_kb("vtcm_size_kb", 0, "vtcm size in kb")
         , p_num_coproc_instance("num_coproc_instance", 0, "number of coproc instances")
         , p_hvx_contexts("hvx_contexts", 0, "number of HVX contexts")
-        , p_num_tlbs("num_tlbs", 0, "number of Joint TLB entries")
-        , p_num_dma_tlbs("num_dma_tlbs", 0, "number of DMA TLB entries")
         , p_hex_greg(hex_greg)
         , m_l2vic(l2vic)
+        , m_hex_tlb(tlb)
     /*
      * We have no choice but to attach-suspend here. This is fixable but
      * non-trivial. It means that the SystemC kernel will never starve...
@@ -81,6 +88,7 @@ public:
     }
 
     void set_l2vic(hexagon_l2vic* l2vic) { m_l2vic = l2vic; }
+    void set_hex_tlb(hexagon_tlb* tlb) { m_hex_tlb = tlb; }
 
     void before_end_of_elaboration() override
     {
@@ -108,13 +116,6 @@ public:
         cpu.set_prop_int("vtcm-size-kb", p_vtcm_size_kb);
         cpu.set_prop_int("num-coproc-instance", p_num_coproc_instance);
         cpu.set_prop_int("hvx-contexts", p_hvx_contexts);
-        if (!p_num_tlbs.is_default_value()) {
-            cpu.set_prop_int("jtlb-entries", p_num_tlbs);
-        }
-        if (!p_num_dma_tlbs.is_default_value()) {
-            cpu.set_prop_int("dma-jtlb-entries", p_num_dma_tlbs);
-        }
-
         if (p_hex_greg) {
             p_hex_greg->before_end_of_elaboration();
             qemu::Device hex_greg_dev = p_hex_greg->get_qemu_dev();
@@ -126,6 +127,12 @@ public:
             m_l2vic->before_end_of_elaboration();
             qemu::Device cpu_dev = get_qemu_dev();
             cpu_dev.set_prop_link("l2vic", m_l2vic->get_qemu_dev());
+        }
+
+        if (m_hex_tlb) {
+            m_hex_tlb->before_end_of_elaboration();
+            qemu::Device cpu_dev = get_qemu_dev();
+            cpu_dev.set_prop_link("tlb", m_hex_tlb->get_qemu_dev());
         }
     }
 
@@ -160,8 +167,6 @@ public:
     cci::cci_param<uint32_t> p_vtcm_size_kb;
     cci::cci_param<uint32_t> p_num_coproc_instance;
     cci::cci_param<uint32_t> p_hvx_contexts;
-    cci::cci_param<uint32_t> p_num_tlbs;
-    cci::cci_param<uint32_t> p_num_dma_tlbs;
 };
 
 extern "C" void module_register();
