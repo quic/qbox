@@ -7,7 +7,9 @@
  */
 
 #include <systemc>
+#include <array>
 #include <cstdio>
+#include <memory>
 #include <vector>
 #include <queue>
 #include <thread>
@@ -523,6 +525,7 @@ protected:
     hexagon_globalreg m_hex_gregs_b;
     bool ab = false;
     sc_core::sc_vector<qemu_cpu_hexagon> m_cpus;
+    std::array<std::unique_ptr<hexagon_tlb>, 2> m_tlbs;
 
     // Memory components
     gs::gs_memory<> m_mem;
@@ -667,6 +670,18 @@ public:
         uint32_t num_cpus = p_num_cpu.get_value();
         m_pass_identity.resize(num_cpus);
         m_tbus_high_va.resize(num_cpus);
+        // Hexagon HW has one TLB per core shared by all HW threads; here each
+        // QEMU instance plays the role of a core, so we create exactly two
+        // TLBs and link every CPU to the one on its instance.
+        m_tlbs[0] = std::make_unique<hexagon_tlb>("cpu_tlb_a", m_inst_a);
+        m_tlbs[1] = std::make_unique<hexagon_tlb>("cpu_tlb_b", m_inst_b);
+        for (auto& tlb : m_tlbs) {
+            tlb->p_num_entries = 256;
+            tlb->p_dma_entries = 16;
+        }
+        for (uint32_t i = 0; i < num_cpus; ++i) {
+            m_cpus[i].set_hex_tlb(m_tlbs[i % 2].get());
+        }
 
         for (uint32_t i = 0; i < num_cpus; ++i) {
             // Identity pass-through for each CPU - bypasses SMMU for identity traffic
@@ -790,8 +805,6 @@ public:
             cpu.before_end_of_elaboration();
             cpu.p_vtcm_base_addr = REGION_BASE;
             cpu.p_vtcm_size_kb = REGION_SIZE / 1024;
-            cpu.p_num_tlbs = 256;
-            cpu.p_num_dma_tlbs = 16;
             cpu.p_hexagon_num_threads = (m_cpus.size() + 1) / 2;
             qemu::Device cpu_dev = cpu.get_qemu_dev();
 
