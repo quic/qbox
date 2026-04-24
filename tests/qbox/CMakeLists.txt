@@ -39,7 +39,7 @@ list(APPEND QBOX_CPU_TEST_NUM_CPU_COMBINATION
         "hexagon.*:accel=(hvf|kvm)"
         "riscv.*:accel=(hvf|kvm)"
         "(SINGLE|COROUTINE).*:accel=(hvf|kvm)"
-        "(multithread:|multithread-quantum:).*:accel=(hvf|kvm)"
+        "(multithread:|multithread-quantum:|multithread-unconstrained:).*:accel=(hvf|kvm)"
     )
 
 
