@@ -33,9 +33,7 @@ jobs:
 
       - name: Configure
         run: >
-          cmake --preset=${{ matrix.preset }}
-          -DGREENSOCS_GIT="https://github.com/quic/"
-          -DLIBQEMU_TARGETS="aarch64;hexagon"
+          cmake --preset=${{ matrix.preset }} -DLIBQEMU_TARGETS="aarch64;hexagon"
 
       - name: Build
         run: cmake --build --preset=${{ matrix.preset }} --parallel $(nproc)

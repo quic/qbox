@@ -42,7 +42,6 @@ endif()
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to build all targets.")
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "The with CMAKE_CXX_STANDARD selected C++ standard is a requirement.")
 set(GIT_BRANCH "main" CACHE STRING "Git branch from which to clone all gs repositoies")
-set(GREENSOCS_GIT "" CACHE STRING "Git directory from which to clone all gs repositories")
 set(PKG_LOCK "package-lock.cmake" CACHE STRING "Package lock which will be used by the user")
 set(QEMU_PATH_NAME "" CACHE STRING "The name of the path of qemu in the git directory")
 
@@ -50,6 +49,12 @@ set(CMAKE_FIND_USE_PACKAGE_REGISTRY FALSE)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+# Dependencies URLs
+set(LIBQEMU_GIT "https://github.com/quic/qemu.git" CACHE STRING "libqemu  git url")
+set(SYSTEMC_GIT "https://github.com/accellera-official/systemc.git" CACHE STRING "SystemC git url")
+set(CCI_GIT "https://github.com/accellera-official/cci.git" CACHE STRING "SystemC Configuration, Control and Inspection (CCI) Library git url")
+set(SCP_GIT "https://github.com/accellera-official/systemc-common-practices.git" CACHE STRING "SystemC Common Practices (SCP) git url")
 
 # Generate a compile_commands.json file for our build,
 # for use by clang_complete, YouCompleteMe, vscode, etc.
@@ -84,50 +89,6 @@ file(
 )
 include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/boilerplate.cmake)
-
-macro(determine_qemu_git_path)
-    string(FIND "${GREENSOCS_GIT}" "github" GITHUB_URL)
-
-    if(GITHUB_URL EQUAL -1)
-        set(QEMU_PATH_NAME "qemu/qemu")
-    else()
-        set(QEMU_PATH_NAME "qemu")
-    endif()
-
-    message(STATUS "QEMU_PATH_NAME=${QEMU_PATH_NAME}")
-endmacro()
-
-macro(determine_qbox_git_url)
-    execute_process(
-        COMMAND git config --get remote.origin.url
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        OUTPUT_VARIABLE GIT_URL
-    )
-
-    string(REGEX MATCH "(.*\/)" GREENSOCS_GIT_ORIGIN "${GIT_URL}")
-    string(
-        REGEX
-        REPLACE "(.*)/sandboxes/[^\/]*/(.*)" "\\1/"
-        GREENSOCS_GIT_ORIGIN "${GREENSOCS_GIT_ORIGIN}"
-    )
-
-    if("${GREENSOCS_GIT}" STREQUAL "")
-        set(GREENSOCS_GIT "${GREENSOCS_GIT_ORIGIN}")
-    endif()
-
-    determine_qemu_git_path()
-
-    if(EXISTS "${PROJECT_SOURCE_DIR}/Packages")
-        if("${GREENSOCS_GIT}" STREQUAL "")
-            set(GREENSOCS_GIT "https://git.codelinaro.org/clo/private/qqvp/")
-        endif()
-    endif()
-
-    message(STATUS "GREENSOCS_GIT = ${GREENSOCS_GIT}")
-endmacro()
-
-determine_qbox_git_url()
 
 # Allow using package-lock.cmake files in projects using this boilerplate to
 # pin repos, etc.
@@ -381,7 +342,7 @@ if (NOT WITHOUT_QEMU)
     # submodule. See https://gitlab.kitware.com/cmake/cmake/-/issues/20579
     CPMAddPackage(
         NAME qemu
-        GIT_REPOSITORY "${GREENSOCS_GIT}/${QEMU_PATH_NAME}.git"
+        GIT_REPOSITORY "${LIBQEMU_GIT}"
         GIT_TAG "${GIT_BRANCH}"
         GIT_SHALLOW TRUE
         GIT_SUBMODULES "CMakeLists.txt"
