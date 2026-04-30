@@ -20,7 +20,7 @@ macro(install_systemc)
     else()
         gs_addexpackage(
             NAME SystemCLanguage
-            GIT_REPOSITORY https://github.com/accellera-official/systemc.git
+            GIT_REPOSITORY ${SYSTEMC_GIT}
             GIT_TAG febde7a3e007ce3030cf574a4cb6fcc13d0ed820
             GIT_SHALLOW OFF
             OPTIONS "ENABLE_SUSPEND_ALL" "ENABLE_PHASE_CALLBACKS"
@@ -48,7 +48,7 @@ macro(install_systemc_dependencies)
 
     gs_addexpackage(
         NAME SystemCCCI
-        GIT_REPOSITORY https://github.com/accellera-official/cci.git
+        GIT_REPOSITORY ${CCI_GIT}
         GIT_TAG 915c189f6916ab56db773b2da20ebc06fe8f24e9
         GIT_SHALLOW True
         OPTIONS "SYSTEMCCCI_BUILD_TESTS OFF"
@@ -56,7 +56,7 @@ macro(install_systemc_dependencies)
 
     gs_addexpackage(
         NAME SCP
-        GIT_REPOSITORY https://github.com/accellera-official/systemc-common-practices.git
+        GIT_REPOSITORY ${SCP_GIT}
         GIT_TAG 6830c915bb691d9b505b17ac631f1ff305fe9c17
         GIT_SHALLOW True
     )
