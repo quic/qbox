@@ -1,3 +1,5 @@
+set(_BOILERPLATE_DIR "${CMAKE_CURRENT_LIST_DIR}" CACHE INTERNAL "")
+
 macro(gs_addexpackage)
   # The purpose of 'GS_ONLY' is to provides a tarball without any sources EXCEPT the boilerplate and QEMU
   if (NOT GS_ONLY)
@@ -151,13 +153,14 @@ macro(gs_create_dymod MODULE_NAME)
   file(GLOB _hex_files "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hex")
   file(GLOB _json_files "${CMAKE_CURRENT_SOURCE_DIR}/src/*.json")
   if(_hex_files OR _json_files)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
     list(GET SOURCE_COMPONENT 0 _first_src)
     get_filename_component(_src_name ${_first_src} NAME)
     set(_zip "${CMAKE_CURRENT_SOURCE_DIR}/src/${_src_name}_config.zip")
 
     add_custom_command(
       OUTPUT ${_zip}
-      COMMAND python3 ${CMAKE_SOURCE_DIR}/cmake/make_config_zip.py
+      COMMAND ${Python3_EXECUTABLE} ${_BOILERPLATE_DIR}/make_config_zip.py
               ${_zip} ${_json_files} ${_hex_files}
       DEPENDS ${_json_files} ${_hex_files}
       COMMENT "${MODULE_NAME}: building config zip from hex/json sources"
