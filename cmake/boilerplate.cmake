@@ -145,6 +145,29 @@ macro(gs_create_dymod MODULE_NAME)
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}>
   )
 
+  # If hex/json source files exist, set up a rule to build the config zip.
+  # The zip is rebuilt whenever the hex or json sources change.
+  # The python script handles hex->bin conversion and zip packing.
+  file(GLOB _hex_files "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hex")
+  file(GLOB _json_files "${CMAKE_CURRENT_SOURCE_DIR}/src/*.json")
+  if(_hex_files OR _json_files)
+    list(GET SOURCE_COMPONENT 0 _first_src)
+    get_filename_component(_src_name ${_first_src} NAME)
+    set(_zip "${CMAKE_CURRENT_SOURCE_DIR}/src/${_src_name}_config.zip")
+
+    add_custom_command(
+      OUTPUT ${_zip}
+      COMMAND python3 ${CMAKE_SOURCE_DIR}/cmake/make_config_zip.py
+              ${_zip} ${_json_files} ${_hex_files}
+      DEPENDS ${_json_files} ${_hex_files}
+      COMMENT "${MODULE_NAME}: building config zip from hex/json sources"
+    )
+    add_custom_target(${MODULE_NAME}_config DEPENDS ${_zip})
+    add_dependencies(${MODULE_NAME} ${MODULE_NAME}_config)
+    # Ensure the source that INCBINs the zip is recompiled when it changes
+    set_property(SOURCE ${_first_src} APPEND PROPERTY OBJECT_DEPENDS ${_zip})
+  endif()
+
   install(
     TARGETS ${MODULE_NAME}
     # we export the ${MODULE_NAME}, like that we can use ${MODULE_NAME} with qqvp.
