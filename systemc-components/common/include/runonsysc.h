@@ -188,7 +188,7 @@ public:
         return core && (std::this_thread::get_id() == core->thread_id);
     }
 
-    void end_of_simulation()
+    void end_of_simulation() override
     {
         auto core = m_core;
         if (!core) return;
