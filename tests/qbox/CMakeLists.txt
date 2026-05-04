@@ -47,6 +47,9 @@ list(APPEND QBOX_CPU_TEST_NUM_CPU_COMBINATION
 
     message(STATUS "Applying patches to keystone: ${KEYSTONE_PATCH_FILES}")
 
+    if(WIN32)
+        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+    endif()
     cpmfindpackage(
         NAME keystone
         GIT_REPOSITORY https://github.com/keystone-engine/keystone.git
