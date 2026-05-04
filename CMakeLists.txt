@@ -49,6 +49,7 @@ set(CMAKE_FIND_USE_PACKAGE_REGISTRY FALSE)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries" FORCE)
 
 # Dependencies URLs
 set(LIBQEMU_GIT "https://github.com/quic/qemu.git" CACHE STRING "libqemu  git url")
@@ -224,11 +225,14 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibELF DEFAULT_MSG
 
 mark_as_advanced(LIBELF_INCLUDE_DIR LIBELF_LIBRARIES)
 
+# System / local packages (must be installed on the host)
 find_package(Threads REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBZIP REQUIRED IMPORTED_TARGET libzip)
 
+# CPM packages (fetched from source)
 gs_addexpackage("gh:google/googletest#v1.15.2")
 gs_addexpackage("gh:lua/lua#v5.4.2")
-gs_addexpackage("gh:nih-at/libzip#v1.11.3")
 gs_addexpackage("gh:TheLartians/PackageProject.cmake@1.4.1")
 
 find_package(Git QUIET)
@@ -407,7 +411,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         Threads::Threads
         rpc
         ${CROW_DEP}
-        zip
+        PkgConfig::LIBZIP
         ${PYBIND11_EMBED}
         ${CMAKE_DL_LIBS}
 )
@@ -418,7 +422,7 @@ set(QBOX_INCLUDE_DIR "${QEMU_INCLUDE_DIR};${CMAKE_CURRENT_SOURCE_DIR}/systemc-co
 gs_export(${PROJECT_NAME} ${QBOX_INCLUDE_DIR})
 
 if (NOT DEFINED GS_ONLY)
-    install(TARGETS rpc zip)
+    install(TARGETS rpc)
 endif()
 
 list(APPEND TARGET_LIBS ${PROJECT_NAME})
