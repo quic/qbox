@@ -9,7 +9,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { sys: ucrt64, runs-on: "windows-latest", preset: "gcc" }
+          # Disable ucrt64 build variant due to instabilities
+          # - { sys: ucrt64, runs-on: "windows-latest", preset: "gcc" }
           - { sys: clangarm64, runs-on: "windows-11-arm", preset: "clang" }
 
     name: ${{ matrix.sys }}
