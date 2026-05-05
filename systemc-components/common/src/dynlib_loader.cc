@@ -18,6 +18,7 @@
 #include <filesystem>
 
 #include <dynlib_loader.h>
+#include <scp/report.h>
 
 #if defined(_WIN32)
 #include <Lmcons.h>
@@ -45,12 +46,20 @@ static fs::path get_cleanup_helper_path()
 {
     char exe_path[MAX_PATH];
     DWORD len = GetModuleFileNameA(NULL, exe_path, MAX_PATH);
-    if (len == 0 || len >= MAX_PATH) {
-        return "";
+    if (len > 0 && len < MAX_PATH) {
+        fs::path helper_path = fs::path(exe_path).parent_path() / "dll_cleanup_helper.exe";
+        if (fs::exists(helper_path)) {
+            return helper_path;
+        }
     }
 
-    fs::path helper_path = fs::path(exe_path).parent_path() / "dll_cleanup_helper.exe";
-    return helper_path;
+    // Fallback: search PATH
+    char found[MAX_PATH];
+    if (SearchPathA(NULL, "dll_cleanup_helper.exe", NULL, MAX_PATH, found, NULL)) {
+        return fs::path(found);
+    }
+
+    return "";
 }
 
 /**
@@ -136,6 +145,8 @@ public:
 
 class DefaultLibraryLoader : public qemu::LibraryLoaderIface
 {
+    SCP_LOGGER(());
+
 private:
     std::string m_last_error;
 
@@ -278,7 +289,7 @@ private:
 
         // Spawn a cleanup process that will delete the DLL after this process exits
         if (!spawn_cleanup_process(temp_path)) {
-            std::cerr << "Warning: Failed to spawn cleanup process for: " << temp_path.string() << std::endl;
+            SCP_FATAL(()) << "Failed to spawn cleanup process for: " << temp_path.string();
         }
 
         return std::make_shared<Library>(handle);
