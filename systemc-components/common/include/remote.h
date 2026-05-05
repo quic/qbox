@@ -1064,7 +1064,9 @@ public:
                 m_partner_process_manager.set_partner_process(partner_handle);
                 m_partner_process_manager.on_partner_exit([&]() {
                     std::cerr << "remote process (" << get_current_process_id() << ") detected parent ("
-                              << GetProcessId(partner_handle) << ") exit!" << std::endl;
+                              << GetProcessId(m_partner_process_manager.get_partner_process()) << ") exit!"
+                              << std::endl;
+                    stop_and_exit();
                 });
                 return;
             });
