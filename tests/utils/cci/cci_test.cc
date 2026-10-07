@@ -16,6 +16,7 @@
 #include <scp/report.h>
 // global for test
 int set_value = 0;
+gs::ConfigurableBroker* test_broker = nullptr;
 /*
  * Module with a structural param
  */
@@ -101,6 +102,8 @@ int sc_main(int argc, char* argv[])
     gs::ConfigurableBroker m_broker{};
     SCP_INFO("main") << "SCP_INFO(\"main\") after broker construction";
 
+    test_broker = &m_broker;
+
     cci::cci_originator m_originator("MyConfigTool");
     auto broker_h = m_broker.create_broker_handle(m_originator);
     ArgParser ap{ broker_h, argc, argv };
@@ -142,4 +145,19 @@ TEST(ccitest, three)
 {
     top_level3 = new TopLevelThree("MyTopThree");
     EXPECT_EQ(set_value, 42);
+}
+
+TEST(ccitest, locked_preset_value_is_not_cached)
+{
+    const std::string name = "locked_preset_value";
+    cci::cci_originator originator("locked_preset_value_test");
+
+    test_broker->set_preset_cci_value(name, cci::cci_value(1), originator);
+    test_broker->lock_preset_value(name);
+    EXPECT_THROW(test_broker->set_preset_cci_value(name, cci::cci_value(2), originator), sc_core::sc_report);
+
+    auto values = test_broker->get_unconsumed_preset_values(
+        [&name](const cci::cci_name_value_pair& value) { return value.first == name; });
+    ASSERT_EQ(std::distance(values.begin(), values.end()), 1);
+    EXPECT_EQ(values.begin()->second.get_int(), 1);
 }

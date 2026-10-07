@@ -12,6 +12,7 @@
 #include <iostream>
 #include <list>
 #include <regex>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "luafile_tool.h"
@@ -301,12 +302,28 @@ class ConfigurableBroker : public cci_utils::consuming_broker
 {
 private:
     std::set<std::string> m_unignored; // before conf_file
+    // Retain locally preset values with their names. Repeated filtered
+    // enumeration otherwise performs a broker lookup for every parameter,
+    // and re-exposed parameters retain their value after being consumed.
+    std::unordered_map<std::string, cci_value> m_unignored_values;
 
 public:
     // a set of perameters that should be exposed up the broker stack
     HelpSingleton* m_help_helper;
     std::set<std::string> hide;
     friend class PrivateConfigurableBroker;
+
+    static cci_broker_if& get_broker_interface(cci_broker_handle broker) { return unwrap_broker(broker); }
+
+    std::vector<std::string> get_unconsumed_preset_names_with_prefix(const std::string& prefix) const
+    {
+        std::vector<std::string> names;
+        auto current = m_unignored.lower_bound(prefix);
+        while (current != m_unignored.end() && current->compare(0, prefix.length(), prefix) == 0) {
+            names.emplace_back(*current++);
+        }
+        return names;
+    }
 
 protected:
     std::string m_orig_name;
@@ -641,9 +658,9 @@ public:
     std::vector<cci_name_value_pair> get_unconsumed_preset_values() const override
     {
         std::vector<cci_name_value_pair> r;
-        for (auto u : m_unignored) {
-            auto p = get_preset_cci_value(u);
-            r.push_back(std::make_pair(u, p));
+        for (const auto& u : m_unignored) {
+            auto value_it = m_unignored_values.find(u);
+            r.emplace_back(u, value_it != m_unignored_values.end() ? value_it->second : get_preset_cci_value(u));
         }
         if (has_parent) {
             std::vector<cci_name_value_pair> p = m_parent.get_unconsumed_preset_values();
@@ -670,7 +687,22 @@ public:
 
     cci_preset_value_range get_unconsumed_preset_values(const cci_preset_value_predicate& pred) const override
     {
-        return cci_preset_value_range(pred, ConfigurableBroker::get_unconsumed_preset_values());
+        std::vector<cci_name_value_pair> values;
+        for (const auto& name : m_unignored) {
+            auto value_it = m_unignored_values.find(name);
+            cci_name_value_pair value(name, value_it != m_unignored_values.end()
+                                                ? value_it->second
+                                                : get_preset_cci_value(name));
+            if (pred(value)) {
+                values.emplace_back(std::move(value));
+            }
+        }
+        if (has_parent) {
+            for (const auto& value : m_parent.get_unconsumed_preset_values(pred)) {
+                values.emplace_back(value);
+            }
+        }
+        return cci_preset_value_range(pred, values);
     }
 
     // Functions below here require an orriginator to be passed to the local
@@ -683,7 +715,12 @@ public:
         if (sendToParent(parname)) {
             return m_parent.set_preset_cci_value(parname, cci_value, originator);
         } else {
-            m_unignored.insert(parname);
+            // consuming_broker rejects writes to locked preset values. Keep the
+            // enumeration cache consistent with the value it retains.
+            if (locked.find(parname) == locked.end()) {
+                m_unignored.insert(parname);
+                m_unignored_values[parname] = cci_value;
+            }
             return consuming_broker::set_preset_cci_value(parname, cci_value, originator);
         }
     }
@@ -766,15 +803,25 @@ public:
     virtual std::vector<cci_name_value_pair> get_unconsumed_preset_values() const override
     {
         std::vector<cci_name_value_pair> r;
-        for (auto u : m_unignored) {
-            auto p = get_preset_cci_value(u);
-            r.push_back(std::make_pair(u, p));
+        for (const auto& u : m_unignored) {
+            auto value_it = m_unignored_values.find(u);
+            r.emplace_back(u, value_it != m_unignored_values.end() ? value_it->second : get_preset_cci_value(u));
         }
         return r;
     }
     cci_preset_value_range get_unconsumed_preset_values(const cci_preset_value_predicate& pred) const override
     {
-        return cci_preset_value_range(pred, PrivateConfigurableBroker::get_unconsumed_preset_values());
+        std::vector<cci_name_value_pair> values;
+        for (const auto& name : m_unignored) {
+            auto value_it = m_unignored_values.find(name);
+            cci_name_value_pair value(name, value_it != m_unignored_values.end()
+                                                ? value_it->second
+                                                : get_preset_cci_value(name));
+            if (pred(value)) {
+                values.emplace_back(std::move(value));
+            }
+        }
+        return cci_preset_value_range(pred, values);
     }
 };
 
