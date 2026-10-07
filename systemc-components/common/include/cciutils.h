@@ -12,6 +12,8 @@
 #include <iostream>
 #include <list>
 #include <regex>
+#include <cstdint>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -28,6 +30,13 @@
 
 namespace gs {
 using namespace cci;
+
+// Marks modules that construct child modules through ContainerBase.
+class container_module
+{
+public:
+    virtual ~container_module() = default;
+};
 
 /**
  * @brief Basic function container for CCI
@@ -82,7 +91,10 @@ public:
         FactoryMaker<T, U...>(const char* _t): type(_t) {}
     };
 
-    const char* type; // maintain a string representation of the type.
+    const char* type = ""; // maintain a string representation of the type.
+    bool m_is_container = false;
+
+    bool is_container() const { return m_is_container; }
 
     /**
      * @brief Construct a new cci constructor vl object
@@ -112,6 +124,7 @@ public:
               })
     {
         type = fm.type;
+        m_is_container = std::is_base_of_v<container_module, _T>;
     }
 
     // add operater== as required by CCI
@@ -636,10 +649,7 @@ public:
         if (sendToParent(par->name())) {
             return m_parent.add_param(par);
         } else {
-            auto iter = m_unignored.find(par->name());
-            if (iter != m_unignored.end()) {
-                m_unignored.erase(iter);
-            }
+            m_unignored.erase(par->name());
             return consuming_broker::add_param(par);
         }
     }
@@ -690,15 +700,12 @@ public:
         std::vector<cci_name_value_pair> values;
         for (const auto& name : m_unignored) {
             auto value_it = m_unignored_values.find(name);
-            cci_name_value_pair value(name, value_it != m_unignored_values.end()
-                                                ? value_it->second
-                                                : get_preset_cci_value(name));
-            if (pred(value)) {
-                values.emplace_back(std::move(value));
-            }
+            cci_name_value_pair value(
+                name, value_it != m_unignored_values.end() ? value_it->second : get_preset_cci_value(name));
+            values.emplace_back(std::move(value));
         }
         if (has_parent) {
-            for (const auto& value : m_parent.get_unconsumed_preset_values(pred)) {
+            for (const auto& value : m_parent.get_unconsumed_preset_values()) {
                 values.emplace_back(value);
             }
         }
@@ -814,12 +821,9 @@ public:
         std::vector<cci_name_value_pair> values;
         for (const auto& name : m_unignored) {
             auto value_it = m_unignored_values.find(name);
-            cci_name_value_pair value(name, value_it != m_unignored_values.end()
-                                                ? value_it->second
-                                                : get_preset_cci_value(name));
-            if (pred(value)) {
-                values.emplace_back(std::move(value));
-            }
+            cci_name_value_pair value(
+                name, value_it != m_unignored_values.end() ? value_it->second : get_preset_cci_value(name));
+            values.emplace_back(std::move(value));
         }
         return cci_preset_value_range(pred, values);
     }

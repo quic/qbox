@@ -5,16 +5,76 @@
  */
 
 #include "container_builder-bench.h"
+#include <module_factory_registery.h>
 #include <tests/initiator-tester.h>
+#include <tlm_utils/simple_initiator_socket.h>
 
+class manually_created_module : public sc_core::sc_module
+{
+public:
+    manually_created_module(sc_core::sc_module_name n): sc_core::sc_module(n) {}
+};
+
+class reuse_platform : public ContainerDeferModulesConstruct
+{
+public:
+    manually_created_module existing;
+    ContainerDeferModulesConstruct existing_container;
+
+    reuse_platform(sc_core::sc_module_name n)
+        : ContainerDeferModulesConstruct(n), existing("existing"), existing_container("existing_container")
+    {
+        ModulesConstruct();
+    }
+};
+
+class router_order_probe : public sc_core::sc_module
+{
+public:
+    tlm_utils::simple_initiator_socket<router_order_probe> initiator_socket;
+    bool target_was_constructed;
+
+    router_order_probe(const sc_core::sc_module_name& n)
+        : sc_core::sc_module(n), initiator_socket("initiator_socket"), target_was_constructed(false)
+    {
+        const std::string probe_name = name();
+        const size_t parent_end = probe_name.rfind('.');
+        const std::string parent = probe_name.substr(0, parent_end + 1);
+        const std::string probe_prefix = "a_router_order_probe_";
+        const std::string probe_leaf = probe_name.substr(parent_end + 1);
+        const std::string target_name = parent + "z_order_memory_" + probe_leaf.substr(probe_prefix.size());
+        target_was_constructed = sc_core::sc_find_object(target_name.c_str()) != nullptr;
+    }
+};
+
+GSC_MODULE_REGISTER(router_order_probe);
+
+class nested_router_order_probe : public sc_core::sc_module
+{
+public:
+    bool target_was_constructed;
+
+    nested_router_order_probe(const sc_core::sc_module_name& n)
+        : sc_core::sc_module(n)
+        , target_was_constructed(sc_core::sc_find_object("AllTests.platform.z_nested_router_order_memory") != nullptr)
+    {
+    }
+};
+
+GSC_MODULE_REGISTER(nested_router_order_probe);
 ContainerBuilderTestBench::ContainerBuilderTestBench(const sc_core::sc_module_name& n): TestBench(n)
 {
+    m_reuse_platform = std::make_unique<reuse_platform>("reuse_platform");
     m_platform = std::make_unique<Container>("platform");
 }
 
 TEST_BENCH(ContainerBuilderTestBench, AllTests)
 {
     ASSERT_TRUE(m_platform != nullptr) << "Failed to create platform";
+    EXPECT_FALSE(m_reuse_platform->is_container_type("existing"));
+    EXPECT_TRUE(m_reuse_platform->is_container_type("existing_container"));
+    EXPECT_FALSE(m_reuse_platform->m_broker.get_param_handle("__GS.ModuleFactory.UnregisteredModule").is_valid());
+    EXPECT_FALSE(m_reuse_platform->m_broker.get_param_handle("__GS.ModuleFactory.UnregisteredContainer").is_valid());
 
     InitiatorTester* initiator = dynamic_cast<InitiatorTester*>(sc_core::sc_find_object("AllTests.platform.initiator"));
     ASSERT_TRUE(initiator != nullptr) << "Failed to find main initiator";
@@ -132,6 +192,20 @@ TEST_BENCH(ContainerBuilderTestBench, AllTests)
 
     sc_core::sc_object* memory_x = sc_core::sc_find_object("AllTests.platform.container2.memory_x");
     ASSERT_TRUE(memory_x != nullptr) << "container2.memory_x not created from config";
+    for (unsigned int i = 1; i <= 16; ++i) {
+        const std::string suffix = i < 10 ? "0" + std::to_string(i) : std::to_string(i);
+        auto* order_probe = dynamic_cast<router_order_probe*>(
+            sc_core::sc_find_object(("AllTests.platform.a_router_order_probe_" + suffix).c_str()));
+        ASSERT_TRUE(order_probe != nullptr) << "router ordering probe was not constructed";
+        ASSERT_TRUE(order_probe->target_was_constructed)
+            << "router bind target was constructed after " << order_probe->name();
+    }
+
+    auto* nested_order_probe = dynamic_cast<nested_router_order_probe*>(
+        sc_core::sc_find_object("AllTests.platform.a_nested_router_order_probe"));
+    ASSERT_TRUE(nested_order_probe != nullptr) << "nested router ordering probe was not constructed";
+    ASSERT_TRUE(nested_order_probe->target_was_constructed)
+        << "nested router bind target was constructed after the router";
 }
 
 int sc_main(int argc, char* argv[])
