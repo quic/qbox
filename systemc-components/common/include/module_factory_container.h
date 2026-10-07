@@ -137,10 +137,11 @@ public:
         bool result = false;
         std::string container_name = std::string(this->name());
 
-        // If the name starts with the container's name followed by a dot, it's relative
+        // A path rooted at this container is already a fully qualified
+        // SystemC object name and must not be prefixed again.
         if (name.size() > container_name.size() && name.substr(0, container_name.size()) == container_name &&
             name[container_name.size()] == '.') {
-            result = false;
+            result = true;
         } else if (name.find('.') != std::string::npos) {
             // If the name contains dots, it's a hierarchical path
             // Get the parent container name (e.g., "parent" from "parent.child_container")
