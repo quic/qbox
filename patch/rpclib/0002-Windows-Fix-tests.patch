@@ -1,7 +1,7 @@
 From 4170c63355bad5e206a1cd983aa8b2cf9d3a9d6e Mon Sep 17 00:00:00 2001
 From: Jerome Haxhiaj <jhaxhiaj@qti.qualcomm.com>
 Date: Mon, 9 Mar 2026 08:44:57 +0100
-Subject: [PATCH 2/2] Windows: Fix tests
+Subject: [PATCH 2/3] Windows: Fix tests
 
 - Enable threads
 - Use ip address 127.0.0.1 instead of localhost to reduce test duration.
