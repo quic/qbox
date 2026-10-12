@@ -44,7 +44,7 @@ public:
         , p_pmsav7_dregion("pmsav7_dregion", 8ull, "Number of PMSAv7 MPU data regions")
         , p_clock_hz("clock_hz", 25000000ull, "CPU clock frequency")
         , p_num_irq("num_irq", 64ull, "Number of external NVIC IRQ inputs")
-        , irq_in("irq_in", 64, [](const char* n, size_t) { return new QemuTargetSignalSocket(n); })
+        , irq_in("irq_in", p_num_irq, [](const char* n, size_t) { return new QemuTargetSignalSocket(n); })
     {
     }
 
