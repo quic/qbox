@@ -1,0 +1,31 @@
+From 1c2f07ea9ce2b85c036c08bcf89902f8bb82dbac Mon Sep 17 00:00:00 2001
+From: Romain Malmain <rmalmain@qti.qualcomm.com>
+Date: Mon, 12 Oct 2026 10:02:00 +0200
+Subject: [PATCH 3/3] msgpack: include type_traits explicitly
+
+The bundled msgpack configuration use std::remove_volatile, but does
+not include <type_traits> explicitly. Since it's not included
+anymore through <memory> in libc++ 23, it causes a compilation error.
+
+Include the header that declares the traits directly.
+
+Signed-off-by: Romain Malmain <rmalmain@qti.qualcomm.com>
+---
+ include/rpc/msgpack/v1/cpp_config_decl.hpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/include/rpc/msgpack/v1/cpp_config_decl.hpp b/include/rpc/msgpack/v1/cpp_config_decl.hpp
+index 2ab0c85..377ea31 100644
+--- a/include/rpc/msgpack/v1/cpp_config_decl.hpp
++++ b/include/rpc/msgpack/v1/cpp_config_decl.hpp
+@@ -99,6 +99,7 @@ struct is_pointer;
+ 
+ #include <memory>
+ #include <tuple>
++#include <type_traits>
+ 
+ namespace clmdep_msgpack {
+ /// @cond
+-- 
+2.53.0
+
